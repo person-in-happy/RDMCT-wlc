@@ -8,15 +8,50 @@ from torch.distributions import Normal
 import math
 import numpy as np
 
-import pyscipopt as scip
-from pyscipopt import SCIP_RESULT
+from scip_imports import SCIP_RESULT, scip, scip_core
 
-# from beam_search import Beam
+from beam_search import Beam
 from utils import cut_feature_generator
 from logger import logger
+from global_const import GENERIC_ADVANCED_CUT_FEATURE_DIM
 
 LOG_STD_MAX = 2
 LOG_STD_MIN = -20
+CutselBase = getattr(scip, "Cutsel", getattr(scip_core, "Cutsel", object))
+
+
+class StructureAwareInputAdapter(nn.Module):
+    def __init__(self, input_dim, generic_dim=GENERIC_ADVANCED_CUT_FEATURE_DIM):
+        super(StructureAwareInputAdapter, self).__init__()
+        self.input_dim = input_dim
+        self.generic_dim = min(generic_dim, input_dim)
+        self.structure_dim = max(0, input_dim - self.generic_dim)
+        self.norm = nn.LayerNorm(input_dim)
+
+        if self.structure_dim > 0:
+            self.generic_proj = nn.Linear(self.generic_dim, self.generic_dim)
+            self.structure_proj = nn.Linear(self.structure_dim, self.structure_dim)
+            self.gate = nn.Sequential(
+                nn.Linear(input_dim, input_dim),
+                nn.Sigmoid()
+            )
+        else:
+            self.generic_proj = None
+            self.structure_proj = None
+            self.gate = None
+
+    def forward(self, inputs):
+        normalized = self.norm(inputs)
+        if self.structure_dim <= 0:
+            return normalized
+
+        generic_inputs = normalized[..., :self.generic_dim]
+        structure_inputs = normalized[..., self.generic_dim:]
+        generic_embed = torch.tanh(self.generic_proj(generic_inputs))
+        structure_embed = torch.tanh(self.structure_proj(structure_inputs))
+        fused = torch.cat((generic_embed, structure_embed), dim=-1)
+        gate = self.gate(normalized)
+        return gate * fused + (1.0 - gate) * normalized
 
 class Encoder(nn.Module):
     """Maps a graph represented as an input sequence
@@ -120,11 +155,11 @@ class Decoder(nn.Module):
 
         self.pointer = Attention(hidden_dim, use_tanh=use_tanh, C=tanh_exploration, use_cuda=self.use_cuda)
         self.glimpse = Attention(hidden_dim, use_tanh=False, use_cuda=self.use_cuda)
-        self.sm = nn.Softmax()
+        self.sm = nn.Softmax(dim=1)
 
     def apply_mask_to_logits(self, step, logits, mask, prev_idxs):    
         if mask is None:
-            mask = torch.zeros(logits.size()).byte().to(self.pointer.v.device)
+            mask = torch.zeros(logits.size(), dtype=torch.bool, device=self.pointer.v.device)
             # if self.use_cuda:
             #     mask = mask.cuda()
     
@@ -136,7 +171,7 @@ class Decoder(nn.Module):
         if prev_idxs is not None:
             # set most recently selected idx values to 1
             maskk[[x for x in range(logits.size(0))],
-                    prev_idxs.data] = 1
+                    prev_idxs.data] = True
             logits[maskk] = -np.inf
         return logits, maskk
 
@@ -264,44 +299,41 @@ class Decoder(nn.Module):
             return (outputs, selections), hidden
         
         elif decode_type == "beam_search":
-            raise NotImplementedError
             # Expand input tensors for beam search
-            # decoder_input = Variable(decoder_input.data.repeat(self.beam_size, 1))
-            # context = Variable(context.data.repeat(1, self.beam_size, 1))
-            # hidden = (Variable(hidden[0].data.repeat(self.beam_size, 1)),
-            #         Variable(hidden[1].data.repeat(self.beam_size, 1)))
-            
-            # beam = [
-            #         Beam(self.beam_size, max_length, cuda=self.use_cuda) 
-            #         for k in range(batch_size)
-            # ]
-            
-            # for i in steps:
-            #     hx, cx, probs, mask = recurrence(decoder_input, hidden, mask, idxs, i)
-            #     hidden = (hx, cx)
-                
-            #     probs = probs.view(self.beam_size, batch_size, -1
-            #             ).transpose(0, 1).contiguous()
-                
-            #     n_best = 1
-            #     # select the next inputs for the decoder [batch_size x hidden_dim]
-            #     decoder_input, idxs, active = self.decode_beam(probs,
-            #             embedded_inputs, beam, batch_size, n_best, i)
-               
-            #     inps.append(decoder_input) 
-            #     # use probs to point to next object
-            #     if self.beam_size > 1:
-            #         outputs.append(probs[:, 0,:])
-            #     else:
-            #         outputs.append(probs.squeeze(0))
-            #     # Check for indexing
-            #     selections.append(idxs)
-            #      # Should be done decoding
-            #     if len(active) == 0:
-            #         break
-            #     decoder_input = Variable(decoder_input.data.repeat(self.beam_size, 1))
+            decoder_input = Variable(decoder_input.data.repeat(self.beam_size, 1))
+            context = Variable(context.data.repeat(1, self.beam_size, 1))
+            hidden = (
+                Variable(hidden[0].data.repeat(self.beam_size, 1)),
+                Variable(hidden[1].data.repeat(self.beam_size, 1)),
+            )
 
-            # return (outputs, selections), hidden
+            beam = [
+                Beam(self.beam_size, max_length, cuda=self.use_cuda)
+                for _ in range(batch_size)
+            ]
+
+            for i in steps:
+                hx, cx, probs, mask = recurrence(decoder_input, hidden, mask, idxs, i)
+                hidden = (hx, cx)
+
+                probs = probs.view(self.beam_size, batch_size, -1).transpose(0, 1).contiguous()
+
+                n_best = 1
+                decoder_input, idxs, active = self.decode_beam(
+                    probs, embedded_inputs, beam, batch_size, n_best
+                )
+
+                inps.append(decoder_input)
+                if self.beam_size > 1:
+                    outputs.append(probs[:, 0, :])
+                else:
+                    outputs.append(probs.squeeze(0))
+                selections.append(idxs)
+                if len(active) == 0:
+                    break
+                decoder_input = Variable(decoder_input.data.repeat(self.beam_size, 1))
+
+            return (outputs, selections), hidden
 
         else:
             # TODO: 实现每轮输出最大概率对应的index
@@ -347,48 +379,40 @@ class Decoder(nn.Module):
         return sels, idxs
 
 
-    # def decode_beam(self, probs, embedded_inputs, beam, batch_size, n_best, step):
-    #     active = []
-    #     for b in range(batch_size):
-    #         if beam[b].done:
-    #             continue
+    def decode_beam(self, probs, embedded_inputs, beam, batch_size, n_best):
+        active = []
+        for b in range(batch_size):
+            if beam[b].done:
+                continue
+            if not beam[b].advance(probs.data[b]):
+                active += [b]
 
-    #         if not beam[b].advance(probs.data[b]):
-    #             active += [b]
-        
-        
-    #     all_hyp, all_scores = [], []
-    #     for b in range(batch_size):
-    #         scores, ks = beam[b].sort_best()
-    #         all_scores += [scores[:n_best]]
-    #         hyps = zip(*[beam[b].get_hyp(k) for k in ks[:n_best]])
-    #         all_hyp += [hyps]
-        
-    #     all_idxs = Variable(torch.LongTensor([[x for x in hyp] for hyp in all_hyp]).squeeze())
-      
-    #     if all_idxs.dim() == 2:
-    #         if all_idxs.size(1) > n_best:
-    #             idxs = all_idxs[:,-1]
-    #         else:
-    #             idxs = all_idxs
-    #     elif all_idxs.dim() == 3:
-    #         idxs = all_idxs[:, -1, :]
-    #     else:
-    #         if all_idxs.size(0) > 1:
-    #             idxs = all_idxs[-1]
-    #         else:
-    #             idxs = all_idxs
-        
-    #     # if self.use_cuda:
-    #     #     idxs = idxs.cuda()
-    #     idxs = idxs.to(self.pointer.v.device)
+        selected_tokens = []
+        for b in range(batch_size):
+            _, ks = beam[b].sort_best()
+            batch_tokens = []
+            for k in ks[:n_best]:
+                hyp = beam[b].get_hyp(k)
+                last_token = hyp[-1] if len(hyp) > 0 else 0
+                if torch.is_tensor(last_token):
+                    last_token = int(last_token.item())
+                batch_tokens.append(int(last_token))
+            if not batch_tokens:
+                batch_tokens = [0] * n_best
+            while len(batch_tokens) < n_best:
+                batch_tokens.append(batch_tokens[-1])
+            selected_tokens.append(batch_tokens)
 
-    #     if idxs.dim() > 1:
-    #         x = embedded_inputs[idxs.transpose(0,1).contiguous().data, 
-    #                 [x for x in range(batch_size)], :]
-    #     else:
-    #         x = embedded_inputs[idxs.data, [x for x in range(batch_size)], :]
-    #     return x.view(idxs.size(0) * n_best, embedded_inputs.size(2)), idxs, active
+        idxs = torch.tensor(selected_tokens, dtype=torch.long, device=self.pointer.v.device)
+        if n_best == 1:
+            idxs = idxs.squeeze(1)
+
+        if idxs.dim() > 1:
+            x = embedded_inputs[idxs.transpose(0, 1).contiguous().data,
+                    [x for x in range(batch_size)], :]
+        else:
+            x = embedded_inputs[idxs.data, [x for x in range(batch_size)], :]
+        return x.view(max(int(idxs.numel()), 1), embedded_inputs.size(2)), idxs, active
 
 class PointerNetwork(nn.Module):
     """The pointer network, which is the core seq2seq 
@@ -404,6 +428,7 @@ class PointerNetwork(nn.Module):
         super(PointerNetwork, self).__init__()
 
         self.embedding_dim = embedding_dim
+        self.input_adapter = StructureAwareInputAdapter(embedding_dim)
         self.encoder = Encoder(
                 embedding_dim,
                 hidden_dim,
@@ -432,6 +457,8 @@ class PointerNetwork(nn.Module):
         Args: 
             inputs: [sourceL x batch_size x embedding_dim]
         """
+
+        inputs = self.input_adapter(inputs)
 
         (encoder_hx, encoder_cx) = self.encoder.enc_init_state
         encoder_hx = encoder_hx.unsqueeze(0).repeat(inputs.size(1), 1).unsqueeze(0)       
@@ -469,6 +496,8 @@ class PointerNetwork(nn.Module):
             inputs: [sourceL x batch_size x embedding_dim]
         """
         
+        inputs = self.input_adapter(inputs)
+
         (encoder_hx, encoder_cx) = self.encoder.enc_init_state
         encoder_hx = encoder_hx.unsqueeze(0).repeat(inputs.size(1), 1).unsqueeze(0)       
         encoder_cx = encoder_cx.unsqueeze(0).repeat(inputs.size(1), 1).unsqueeze(0)       
@@ -504,6 +533,7 @@ class CriticNetwork(nn.Module):
         # TODO: check embedding_dim 是否还有必要呢？
         self.hidden_dim = hidden_dim
         self.n_process_block_iters = n_process_block_iters
+        self.input_adapter = StructureAwareInputAdapter(embedding_dim)
 
         self.encoder = Encoder(
                 embedding_dim,
@@ -512,7 +542,7 @@ class CriticNetwork(nn.Module):
         
         self.process_block = Attention(hidden_dim,
                 use_tanh=use_tanh, C=tanh_exploration, use_cuda=use_cuda)
-        self.sm = nn.Softmax()
+        self.sm = nn.Softmax(dim=1)
         self.decoder = nn.Sequential(
                 nn.Linear(hidden_dim, hidden_dim),
                 nn.ReLU(),
@@ -525,6 +555,8 @@ class CriticNetwork(nn.Module):
             inputs: [embedding_dim x batch_size x sourceL] of embedded inputs
         """
          
+        inputs = self.input_adapter(inputs)
+
         (encoder_hx, encoder_cx) = self.encoder.enc_init_state
         encoder_hx = encoder_hx.unsqueeze(0).repeat(inputs.size(1), 1).unsqueeze(0)
         encoder_cx = encoder_cx.unsqueeze(0).repeat(inputs.size(1), 1).unsqueeze(0)       
@@ -552,6 +584,7 @@ class CutsPercentPolicy(nn.Module):
         super(CutsPercentPolicy, self).__init__()
         self.hidden_dim = hidden_dim
         self.n_process_block_iters = n_process_block_iters
+        self.input_adapter = StructureAwareInputAdapter(embedding_dim)
 
         self.encoder = Encoder(
                 embedding_dim,
@@ -560,7 +593,7 @@ class CutsPercentPolicy(nn.Module):
         
         self.process_block = Attention(hidden_dim,
                 use_tanh=use_tanh, C=tanh_exploration, use_cuda=use_cuda)
-        self.sm = nn.Softmax()
+        self.sm = nn.Softmax(dim=1)
         self.decoder = nn.Sequential(
                 nn.Linear(hidden_dim, hidden_dim),
                 nn.ReLU(),
@@ -574,6 +607,8 @@ class CutsPercentPolicy(nn.Module):
             inputs: [embedding_dim x batch_size x sourceL] of embedded inputs
         """
          
+        inputs = self.input_adapter(inputs)
+
         (encoder_hx, encoder_cx) = self.encoder.enc_init_state
         encoder_hx = encoder_hx.unsqueeze(0).repeat(inputs.size(1), 1).unsqueeze(0)
         encoder_cx = encoder_cx.unsqueeze(0).repeat(inputs.size(1), 1).unsqueeze(0)       
@@ -635,7 +670,7 @@ class CutsPercentPolicy(nn.Module):
 
         return log_prob, info 
 
-class CutSelectAgent(scip.Cutsel):
+class CutSelectAgent(CutselBase):
     def __init__(
         self,
         scip_model,

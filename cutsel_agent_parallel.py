@@ -6,15 +6,24 @@ import torch.nn.functional as F
 import math
 import numpy as np
 import time
-import pyscipopt as scip
-from pyscipopt import SCIP_RESULT
+from collections import namedtuple
+from scip_imports import SCIP_RESULT, scip, scip_core
 
 # from beam_search import Beam
-from utils import cut_feature_generator, advanced_cut_feature_generator
+from utils import (
+    cut_feature_generator,
+    advanced_cut_feature_generator,
+    get_structure_family_names,
+)
 # from utils_fix_isp_bug import cut_feature_generator
 from logger import logger
 
-class CutSelectAgent(scip.Cutsel):
+CutselBase = getattr(scip, "Cutsel", getattr(scip_core, "Cutsel", object))
+_BeamState = namedtuple("_BeamState", ["selected", "score"])
+_GENERIC_FEATURE_DIM = 13
+
+
+class CutSelectAgent(CutselBase):
     def __init__(
         self,
         scip_model,
@@ -46,6 +55,199 @@ class CutSelectAgent(scip.Cutsel):
     def _normalize(self, cuts_features):
         # print(f"debug log mean: {self.mean_std.mean}, std: {self.mean_std.std}")
         return (cuts_features-self.mean_std.mean) / (self.mean_std.std + self.mean_std.epsilon)
+
+    def _dedupe_preserve_order(self, idxes, num_cuts):
+        seen = set()
+        ordered = []
+        for idx in idxes:
+            if 0 <= idx < num_cuts and idx not in seen:
+                ordered.append(idx)
+                seen.add(idx)
+        return ordered
+
+    def _compute_structure_scores(self, cut_features, structure_metadata):
+        if len(cut_features) == 0:
+            return np.array([], dtype=np.float64)
+
+        def _minmax(values):
+            values = np.asarray(values, dtype=np.float64)
+            if values.size == 0:
+                return values
+            vmin = values.min()
+            vmax = values.max()
+            if abs(vmax - vmin) <= 1e-12:
+                return np.zeros_like(values)
+            return (values - vmin) / (vmax - vmin)
+
+        efficacy = _minmax(cut_features[:, 1])
+        integral_support = _minmax(cut_features[:, 3])
+        violation = _minmax(cut_features[:, 4])
+        structured_ratio = np.asarray([meta["structured_ratio"] for meta in structure_metadata], dtype=np.float64)
+        dominant_ratio = np.asarray([meta["dominant_family_ratio"] for meta in structure_metadata], dtype=np.float64)
+        entropy = np.asarray([meta["family_entropy"] for meta in structure_metadata], dtype=np.float64)
+
+        return (
+            0.36 * efficacy
+            + 0.24 * violation
+            + 0.15 * integral_support
+            + 0.15 * structured_ratio
+            + 0.10 * dominant_ratio
+            - 0.05 * entropy
+        )
+
+    def _compute_family_quota(self, candidate_rank, structure_metadata, target_count):
+        family_names = get_structure_family_names()[:-1]
+        if target_count <= 0 or not candidate_rank:
+            return {}, family_names
+
+        weighted_mass = np.zeros(len(family_names), dtype=np.float64)
+        top_window = candidate_rank[:max(target_count * 3, target_count)]
+        for idx in top_window:
+            weighted_mass += structure_metadata[idx]["family_fractions"][:-1]
+
+        if weighted_mass.sum() <= 1e-12:
+            return {}, family_names
+
+        shares = weighted_mass / weighted_mass.sum()
+        quota = {family_name: 0 for family_name in family_names}
+        active_indices = [i for i, share in enumerate(shares) if share >= 0.12]
+        if active_indices:
+            for i in active_indices:
+                quota[family_names[i]] = 1
+
+        remaining = max(0, target_count - sum(quota.values()))
+        if remaining > 0:
+            fractional = shares * remaining
+            floors = np.floor(fractional).astype(int)
+            for i, add_count in enumerate(floors):
+                quota[family_names[i]] += int(add_count)
+            assigned = int(floors.sum())
+            if assigned < remaining:
+                residual_order = np.argsort(-(fractional - floors))
+                for i in residual_order[: remaining - assigned]:
+                    quota[family_names[int(i)]] += 1
+
+        total_quota = sum(quota.values())
+        if total_quota > target_count:
+            family_order = sorted(family_names, key=lambda name: quota[name], reverse=True)
+            extra = total_quota - target_count
+            for family_name in family_order:
+                if extra <= 0:
+                    break
+                reducible = min(extra, max(0, quota[family_name] - 1))
+                quota[family_name] -= reducible
+                extra -= reducible
+        return quota, family_names
+
+    def _structure_similarity(self, idx_a, idx_b, cut_features, structure_metadata):
+        feature_vec_a = np.concatenate(
+            [
+                cut_features[idx_a, :5].astype(np.float64),
+                structure_metadata[idx_a]["family_fractions"][:-1].astype(np.float64),
+            ]
+        )
+        feature_vec_b = np.concatenate(
+            [
+                cut_features[idx_b, :5].astype(np.float64),
+                structure_metadata[idx_b]["family_fractions"][:-1].astype(np.float64),
+            ]
+        )
+        denom = (np.linalg.norm(feature_vec_a) * np.linalg.norm(feature_vec_b)) + 1e-12
+        return float(np.dot(feature_vec_a, feature_vec_b) / denom)
+
+    def _apply_structure_aware_selection(
+        self,
+        proposed_idxes,
+        cuts,
+        cut_features,
+        structure_metadata,
+        target_count,
+    ):
+        num_cuts = len(cuts)
+        family_names = get_structure_family_names()
+        proposed_idxes = self._dedupe_preserve_order(proposed_idxes, num_cuts)
+        if len(proposed_idxes) == 0:
+            proposed_idxes = [0]
+
+        base_scores = self._compute_structure_scores(cut_features, structure_metadata)
+        heuristic_tail = list(np.argsort(-base_scores))
+        candidate_rank = self._dedupe_preserve_order(proposed_idxes + heuristic_tail, num_cuts)
+        quota, active_families = self._compute_family_quota(candidate_rank, structure_metadata, target_count)
+
+        if not quota:
+            selected = candidate_rank[:target_count]
+            if len(selected) == 0:
+                selected = [0]
+            return selected, {
+                "family_quota": {},
+                "family_counts": {},
+                "base_scores": base_scores.tolist(),
+            }
+
+        selected = []
+        selected_set = set()
+        family_counts = {family_name: 0 for family_name in active_families}
+
+        for family_name in sorted(active_families, key=lambda name: quota.get(name, 0), reverse=True):
+            need = quota.get(family_name, 0)
+            if need <= 0:
+                continue
+            family_candidates = [
+                idx for idx in candidate_rank
+                if idx not in selected_set and structure_metadata[idx]["dominant_family"] == family_name
+            ]
+            if len(family_candidates) < need:
+                family_index = family_names.index(family_name)
+                family_candidates.extend(
+                    idx for idx in candidate_rank
+                    if idx not in selected_set
+                    and idx not in family_candidates
+                    and structure_metadata[idx]["family_fractions"][family_index] >= 0.25
+                )
+            for idx in family_candidates[:need]:
+                selected.append(idx)
+                selected_set.add(idx)
+                family_counts[family_name] += 1
+                if len(selected) >= target_count:
+                    break
+            if len(selected) >= target_count:
+                break
+
+        while len(selected) < target_count:
+            best_idx = None
+            best_score = -1e18
+            for idx in candidate_rank:
+                if idx in selected_set:
+                    continue
+                family_name = structure_metadata[idx]["dominant_family"]
+                diversity_penalty = 0.0
+                if selected:
+                    diversity_penalty = max(
+                        self._structure_similarity(idx, prev_idx, cut_features, structure_metadata)
+                        for prev_idx in selected
+                    )
+                quota_penalty = 0.0
+                if family_name in family_counts and family_counts[family_name] >= quota.get(family_name, 0):
+                    quota_penalty = 0.08 * (family_counts[family_name] - quota.get(family_name, 0) + 1)
+                score = float(base_scores[idx]) - 0.12 * diversity_penalty - quota_penalty
+                if score > best_score:
+                    best_score = score
+                    best_idx = idx
+            if best_idx is None:
+                break
+            selected.append(best_idx)
+            selected_set.add(best_idx)
+            dominant_family = structure_metadata[best_idx]["dominant_family"]
+            if dominant_family in family_counts:
+                family_counts[dominant_family] += 1
+
+        if len(selected) == 0:
+            selected = [0]
+        return selected[:target_count], {
+            "family_quota": quota,
+            "family_counts": family_counts,
+            "base_scores": base_scores.tolist(),
+        }
     
     def cutselselect(self, cuts, forcedcuts, root, maxnselectedcuts):
         if self.policy_type == 'with_token':
@@ -74,7 +276,11 @@ class CutSelectAgent(scip.Cutsel):
         sel_cuts_num = min(int(num_cuts * self.sel_cuts_percent), int(maxnselectedcuts))
         sel_cuts_num = max(sel_cuts_num, 2)
         st_before_input = time.time()
-        cuts_features = advanced_cut_feature_generator(self.scip_model, cuts)
+        cuts_features, structure_metadata = advanced_cut_feature_generator(
+            self.scip_model,
+            cuts,
+            return_metadata=True,
+        )
         et_feature_extractor = time.time()
         if self.mean_std is not None:
             # normalize cut features
@@ -87,17 +293,25 @@ class CutSelectAgent(scip.Cutsel):
         st_end_input = time.time()
         # 只做选择动作的功能，不做计算梯度的功能
         with torch.no_grad():
-            _, input_idxs =  self.policy(input_cuts.float(), sel_cuts_num, self.decode_type) # (list of tensor, list of tensor)
+            decode_len = sel_cuts_num if self.policy_type != 'with_token' else (num_cuts + 1)
+            _, input_idxs = self.policy(input_cuts.float(), decode_len, self.decode_type)
         st_end_inference = time.time()
         print(f"process input time: {st_end_input-st_before_input} s")
         print(f"input feature extractor time: {et_feature_extractor-st_before_input} s")
         print(f"input cpu data to gpu time: {st_end_input-et_feature_extractor} s")
         print(f"pointer net inference time: {st_end_inference - st_end_input} s")
         idxes = [input.cpu().detach().item() for input in input_idxs]
-        assert len(set(idxes))==len(idxes) # 保证选择的idxes 没有重复的！
+        true_idxes, structure_info = self._apply_structure_aware_selection(
+            idxes,
+            cuts,
+            cuts_features,
+            structure_metadata,
+            sel_cuts_num,
+        )
         all_idxes = list(range(num_cuts))
-        not_sel_idxes = list(set(all_idxes).difference(idxes))
-        sorted_cuts = [cuts[idx] for idx in idxes]
+        selected_set = set(true_idxes)
+        not_sel_idxes = [idx for idx in all_idxes if idx not in selected_set]
+        sorted_cuts = [cuts[idx] for idx in true_idxes]
         not_sel_cuts = [cuts[n_idx] for n_idx in not_sel_idxes]
         sorted_cuts.extend(not_sel_cuts)
         # debug
@@ -106,8 +320,9 @@ class CutSelectAgent(scip.Cutsel):
         if not self.data:
             self.data = {
                 "state": cuts_features,
-                "action": idxes,
-                "sel_cuts_num": sel_cuts_num,
+                "action": true_idxes,
+                "sel_cuts_num": len(true_idxes),
+                "structure_info": structure_info,
             }
             # self.cuts_info = {
             #     "length_cuts": num_cuts,
@@ -117,7 +332,7 @@ class CutSelectAgent(scip.Cutsel):
 
         return {
             'cuts': sorted_cuts, # selected sorted cuts
-            'nselectedcuts': sel_cuts_num, # num of selected cuts
+            'nselectedcuts': len(true_idxes), # num of selected cuts
             'result': SCIP_RESULT.SUCCESS
         }
 
@@ -139,7 +354,11 @@ class CutSelectAgent(scip.Cutsel):
             }            
         max_sel_cuts_num = len(cuts) + 1 
         st_before_input = time.time()
-        cuts_features = advanced_cut_feature_generator(self.scip_model, cuts)
+        cuts_features, structure_metadata = advanced_cut_feature_generator(
+            self.scip_model,
+            cuts,
+            return_metadata=True,
+        )
         et_feature_extractor = time.time()
         if self.mean_std is not None:
             # normalize cut features
@@ -160,26 +379,35 @@ class CutSelectAgent(scip.Cutsel):
         print(f"pointer net inference time: {st_end_inference - st_end_input} s")
 
         idxes = [input.cpu().detach().item() for input in input_idxs]
-        sel_cuts_num = len(idxes)
+        raw_sel_cuts_num = len(idxes)
+        sel_cuts_num = max(2, min(num_cuts, raw_sel_cuts_num - 1))
         if not self.data:
             self.data = {
                 "state": cuts_features,
                 "action": idxes,
-                "sel_cuts_num": sel_cuts_num,
+                "sel_cuts_num": raw_sel_cuts_num,
             }
         # select cuts 
-        assert idxes[-1] == num_cuts
-        true_idxes = idxes[:-1] # remove the last index which is end token
-        assert len(set(true_idxes))==len(true_idxes) # 保证选择的idxes 没有重复的！
+        true_idxes, structure_info = self._apply_structure_aware_selection(
+            [idx for idx in idxes if idx != num_cuts],
+            cuts,
+            cuts_features,
+            structure_metadata,
+            sel_cuts_num,
+        )
         all_idxes = list(range(num_cuts))
-        not_sel_idxes = list(set(all_idxes).difference(true_idxes))
+        selected_set = set(true_idxes)
+        not_sel_idxes = [idx for idx in all_idxes if idx not in selected_set]
         sorted_cuts = [cuts[idx] for idx in true_idxes]
         not_sel_cuts = [cuts[n_idx] for n_idx in not_sel_idxes]
         sorted_cuts.extend(not_sel_cuts)
 
+        if self.data and "structure_info" not in self.data:
+            self.data["structure_info"] = structure_info
+
         return {
             'cuts': sorted_cuts, # selected sorted cuts
-            'nselectedcuts': sel_cuts_num-1, # num of selected cuts
+            'nselectedcuts': len(true_idxes), # num of selected cuts
             'result': SCIP_RESULT.SUCCESS
         }
 
@@ -250,7 +478,11 @@ class HierarchyCutSelectAgent(CutSelectAgent):
         st_before_input = time.time()
 
         # compute states
-        cuts_features = advanced_cut_feature_generator(self.scip_model, cuts)
+        cuts_features, structure_metadata = advanced_cut_feature_generator(
+            self.scip_model,
+            cuts,
+            return_metadata=True,
+        )
         et_feature_extractor = time.time()
         # normalize states
         if self.mean_std is not None:
@@ -265,7 +497,7 @@ class HierarchyCutSelectAgent(CutSelectAgent):
 
         # compute sel cuts percent
         with torch.no_grad():
-            if self.decode_type == 'greedy':
+            if self.decode_type in ['greedy', 'beam_search']:
                 deterministic = True
             else:
                 deterministic = False
@@ -277,7 +509,8 @@ class HierarchyCutSelectAgent(CutSelectAgent):
         sel_cuts_num = max(sel_cuts_num, 2)
         # 只做选择动作的功能，不做计算梯度的功能
         with torch.no_grad():
-            _, input_idxs =  self.policy(input_cuts.float(), sel_cuts_num, self.decode_type) # (list of tensor, list of tensor)
+            decode_len = sel_cuts_num if self.policy_type != 'with_token' else (num_cuts + 1)
+            _, input_idxs = self.policy(input_cuts.float(), decode_len, self.decode_type)
         st_end_pointer_net_inference = time.time()
 
         print(f"process input time: {st_end_input-st_before_input} s")
@@ -287,10 +520,17 @@ class HierarchyCutSelectAgent(CutSelectAgent):
         print(f"pointer net inference time: {st_end_pointer_net_inference - st_end_highlevel_policy_inference} s")
 
         idxes = [input.cpu().detach().item() for input in input_idxs]
-        assert len(set(idxes))==len(idxes) # 保证选择的idxes 没有重复的！
+        true_idxes, structure_info = self._apply_structure_aware_selection(
+            idxes,
+            cuts,
+            cuts_features,
+            structure_metadata,
+            sel_cuts_num,
+        )
         all_idxes = list(range(num_cuts))
-        not_sel_idxes = list(set(all_idxes).difference(idxes))
-        sorted_cuts = [cuts[idx] for idx in idxes]
+        selected_set = set(true_idxes)
+        not_sel_idxes = [idx for idx in all_idxes if idx not in selected_set]
+        sorted_cuts = [cuts[idx] for idx in true_idxes]
         not_sel_cuts = [cuts[n_idx] for n_idx in not_sel_idxes]
         sorted_cuts.extend(not_sel_cuts)
         # debug
@@ -299,8 +539,9 @@ class HierarchyCutSelectAgent(CutSelectAgent):
         if not self.data:
             self.data = {
                 "state": cuts_features,
-                "action": idxes,
-                "sel_cuts_num": sel_cuts_num,
+                "action": true_idxes,
+                "sel_cuts_num": len(true_idxes),
+                "structure_info": structure_info,
             }
         if not self.high_level_data:
             self.high_level_data = {
@@ -310,12 +551,158 @@ class HierarchyCutSelectAgent(CutSelectAgent):
 
         return {
             'cuts': sorted_cuts, # selected sorted cuts
-            'nselectedcuts': sel_cuts_num, # num of selected cuts
+            'nselectedcuts': len(true_idxes), # num of selected cuts
             'result': SCIP_RESULT.SUCCESS
         }
 
     def get_high_level_data(self):
         return self.high_level_data
+
+
+class HeuristicBeamCutSelectAgent(CutselBase):
+    def __init__(
+        self,
+        scip_model,
+        sel_cuts_percent,
+        beam_size=3,
+        redundancy_weight=0.15,
+        score_weights=None,
+    ):
+        super().__init__()
+        self.scip_model = scip_model
+        self.sel_cuts_percent = sel_cuts_percent
+        self.beam_size = beam_size
+        self.redundancy_weight = redundancy_weight
+        self.score_weights = score_weights or {
+            "obj_parallelism": 0.15,
+            "efficacy": 0.35,
+            "support_penalty": 0.10,
+            "integral_support": 0.15,
+            "violation": 0.25,
+        }
+        self.data = {}
+
+    def _minmax(self, values):
+        values = np.asarray(values, dtype=np.float64)
+        if values.size == 0:
+            return values
+        vmin = values.min()
+        vmax = values.max()
+        if abs(vmax - vmin) <= 1e-12:
+            return np.zeros_like(values)
+        return (values - vmin) / (vmax - vmin)
+
+    def _compute_base_scores(self, cut_features):
+        obj_parallelism = self._minmax(cut_features[:, 0])
+        efficacy = self._minmax(cut_features[:, 1])
+        support = self._minmax(cut_features[:, 2])
+        integral_support = self._minmax(cut_features[:, 3])
+        violation = self._minmax(cut_features[:, 4])
+        structured_ratio = self._minmax(1.0 - cut_features[:, 18])
+        dominant_ratio = self._minmax(cut_features[:, 21])
+
+        return (
+            self.score_weights["obj_parallelism"] * obj_parallelism
+            + self.score_weights["efficacy"] * efficacy
+            - self.score_weights["support_penalty"] * support
+            + self.score_weights["integral_support"] * integral_support
+            + self.score_weights["violation"] * violation
+            + 0.08 * structured_ratio
+            + 0.05 * dominant_ratio
+        )
+
+    def _compute_similarity(self, cut_features):
+        core_features = np.concatenate(
+            [cut_features[:, :5], cut_features[:, 13:18]],
+            axis=1
+        ).astype(np.float64)
+        norms = np.linalg.norm(core_features, axis=1, keepdims=True)
+        norms = np.maximum(norms, 1e-12)
+        normalized = core_features / norms
+        similarity = normalized @ normalized.T
+        np.fill_diagonal(similarity, 0.0)
+        return similarity
+
+    def _beam_select(self, base_scores, similarity, target_count):
+        candidate_pool_size = min(len(base_scores), max(self.beam_size * target_count * 2, target_count))
+        candidate_pool = list(np.argsort(-base_scores)[:candidate_pool_size])
+        beam = [_BeamState(selected=tuple(), score=0.0)]
+
+        for _ in range(target_count):
+            next_beam = {}
+            for state in beam:
+                used = set(state.selected)
+                for idx in candidate_pool:
+                    if idx in used:
+                        continue
+                    if state.selected:
+                        redundancy = max(similarity[idx, prev] for prev in state.selected)
+                    else:
+                        redundancy = 0.0
+                    candidate = tuple(list(state.selected) + [int(idx)])
+                    candidate_score = state.score + float(base_scores[idx]) - self.redundancy_weight * float(redundancy)
+                    if candidate not in next_beam or candidate_score > next_beam[candidate]:
+                        next_beam[candidate] = candidate_score
+            if not next_beam:
+                break
+            ranked = sorted(
+                (_BeamState(selected=key, score=val) for key, val in next_beam.items()),
+                key=lambda item: item.score,
+                reverse=True,
+            )
+            beam = ranked[:self.beam_size]
+
+        if not beam:
+            return [0]
+        return list(beam[0].selected) if beam[0].selected else [0]
+
+    def cutselselect(self, cuts, forcedcuts, root, maxnselectedcuts):
+        logger.log("heuristic beam cut selection policy")
+        logger.log(f"forcedcuts length: {len(forcedcuts)}")
+        logger.log(f"len cuts: {len(cuts)}")
+        num_cuts = len(cuts)
+        if num_cuts <= 1:
+            return {
+                'cuts': cuts,
+                'nselectedcuts': 1,
+                'result': SCIP_RESULT.SUCCESS
+            }
+
+        sel_cuts_num = min(int(num_cuts * self.sel_cuts_percent), int(maxnselectedcuts))
+        sel_cuts_num = max(sel_cuts_num, 2)
+
+        cut_features = advanced_cut_feature_generator(self.scip_model, cuts)
+        base_scores = self._compute_base_scores(cut_features)
+        similarity = self._compute_similarity(cut_features)
+        true_idxes = self._beam_select(base_scores, similarity, sel_cuts_num)
+
+        all_idxes = list(range(num_cuts))
+        not_sel_idxes = [idx for idx in all_idxes if idx not in set(true_idxes)]
+        sorted_cuts = [cuts[idx] for idx in true_idxes]
+        sorted_cuts.extend([cuts[idx] for idx in not_sel_idxes])
+
+        if not self.data:
+            self.data = {
+                "state": cut_features,
+                "action": true_idxes,
+                "sel_cuts_num": len(true_idxes),
+                "base_scores": base_scores.tolist(),
+            }
+
+        return {
+            'cuts': sorted_cuts,
+            'nselectedcuts': len(true_idxes),
+            'result': SCIP_RESULT.SUCCESS
+        }
+
+    def get_data(self):
+        return self.data
+
+    def get_lp_info(self):
+        return {}
+
+    def free_problem(self):
+        self.scip_model.freeProb()
 
 ## testing code
 # if __name__ == '__main__':

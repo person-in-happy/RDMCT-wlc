@@ -1,8 +1,9 @@
 import os
 import numpy as np
-import pyscipopt as scip
+from scip_imports import scip
 
 from logger import logger
+from path_utils import resolve_path
 
 class SCIPCutSelEnv():
     def __init__(
@@ -14,8 +15,14 @@ class SCIPCutSelEnv():
         single_instance_file=None,
         **init_scip_kwargs
     ):
-        self.instance_file_path = instance_file_path
-        self.instances = os.listdir(instance_file_path)
+        self.instance_file_path = str(resolve_path(instance_file_path))
+        if not os.path.isdir(self.instance_file_path):
+            raise FileNotFoundError(f"instance_file_path does not exist: {self.instance_file_path}")
+        self.instances = sorted(
+            f_name
+            for f_name in os.listdir(self.instance_file_path)
+            if f_name.endswith((".lp", ".mps", ".cip"))
+        )
         self.single_instance_file = single_instance_file
         self.scip_seed = scip_seed
         self.seed = seed
@@ -185,7 +192,7 @@ class SCIPCutSelEnv():
             self.m.setHeuristics(scip.SCIP_PARAMSETTING.OFF)
 
     def set_seed(self, seed=None):
-        if seed:
+        if seed is not None:
             self.seed = seed
             self.rng = np.random.RandomState(seed)
         else:
@@ -195,12 +202,17 @@ class SCIPCutSelEnv():
         # create scip model
         self.m = scip.Model()
         if self.single_instance_file == 'all':
+            if not self.instances:
+                raise ValueError(f"No instance files found in {self.instance_file_path}")
             instance_file = self.rng.choice(self.instances)
         else:
             instance_file = self.single_instance_file
         # instance_file = 'instance_9575.lp'
         logger.log(f"instance_file: {instance_file}")
-        instance_file = os.path.join(self.instance_file_path, instance_file)
+        if os.path.isabs(instance_file):
+            instance_file = str(resolve_path(instance_file))
+        else:
+            instance_file = os.path.join(self.instance_file_path, instance_file)
         self.m.setIntParam('display/verblevel', 0)
         self.m.readProblem(instance_file)
         self.m.setRealParam('limits/time', self.scip_time_limit)
@@ -210,29 +222,64 @@ class SCIPCutSelEnv():
         return instance_file
 
     def step(self, CutSel):
-        # include cutsel
-        self.m.includeCutsel(
-            cutsel=CutSel,
-            name="RL trained cutsel",
-            desc="",
-            priority=666666
-        )
+        if CutSel is not None:
+            self.m.includeCutsel(
+                cutsel=CutSel,
+                name="RL trained cutsel",
+                desc="",
+                priority=666666
+            )
 
-        # optimize the scip model 
         self.m.optimize()
+        stats = self._collect_stats()
+        self.m.freeProb()
+        return stats
 
-        # get statstics
-        stats={}
+    def solve_default(self):
+        self.m.optimize()
+        stats = self._collect_stats()
+        self.m.freeProb()
+        return stats
+
+    def _collect_stats(self):
+        stats = {}
         stats['solving_time'] = self.m.getSolvingTime()
         stats['ntotal_nodes'] = self.m.getNTotalNodes()
         stats['primal_dual_gap'] = self.m.getGap()
-        stats['primaldualintegral'] = self.m.getPrimalDualIntegral()
-        # stats['primal_dual_integral'] = self.m.getPrimalDualInte()
-
-        # free problem 
-        self.m.freeProb()
-
+        stats['primaldualintegral'] = self._safe_get_primal_dual_integral()
+        stats['status'] = str(self.m.getStatus())
+        stats['best_obj'] = self._safe_get_best_obj()
+        stats['solution'] = self._extract_best_solution()
         return stats
+
+    def _safe_get_best_obj(self):
+        try:
+            return float(self.m.getObjVal())
+        except Exception:
+            return None
+
+    def _safe_get_primal_dual_integral(self):
+        if hasattr(self.m, "getPrimalDualIntegral"):
+            try:
+                return float(self.m.getPrimalDualIntegral())
+            except Exception:
+                pass
+        return 0.0
+
+    def _extract_best_solution(self):
+        best_sol = self.m.getBestSol()
+        if best_sol is None:
+            return {}
+
+        result = {}
+        for var in self.m.getVars():
+            try:
+                value = float(self.m.getSolVal(best_sol, var))
+            except Exception:
+                continue
+            if abs(value) > 1e-12:
+                result[var.name] = value
+        return result
 
     def set_random_seed(self, seed):
         self.rng = np.random.RandomState(seed)

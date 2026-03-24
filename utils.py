@@ -7,7 +7,6 @@ import torch
 import os
 import gtimer as gt 
 import datetime
-import dateutil.tz
 
 from os.path import join
 import os.path as osp
@@ -16,12 +15,75 @@ from numbers import Number
 
 from logger import logger
 from global_const import *
+from path_utils import project_path
 
-_project_dir = join(os.getcwd(), os.pardir)
-_LOCAL_LOG_DIR = join(_project_dir, 'data')
+_LOCAL_LOG_DIR = str(project_path('data'))
 
 ################
 # cut feature constructor utils
+PETRI_VAR_FAMILY_PATTERNS = OrderedDict(
+    [
+        (
+            "route",
+            (
+                "route_full_",
+                "route_mix_",
+                "assign_prod_",
+                "assign_pec_",
+                "prod_on_pm_",
+                "pec_on_pm_",
+                "pec_used_",
+            ),
+        ),
+        (
+            "full_assign",
+            (
+                "assign_full_",
+                "full_slot_used_",
+                "full_pec_pairs_",
+                "full_after_mix_",
+                "batch_used_",
+                "batch_has_pec_",
+                "batch_prod_count_",
+            ),
+        ),
+        (
+            "mix_assign",
+            (
+                "assign_mix_",
+                "mix_pos_used_",
+                "mix_cycle_used_",
+                "mix_active",
+                "mix_active_",
+                "mix_last_cycle_",
+                "seq_atr_",
+                "seq_al_",
+                "seq_llupper_",
+                "seq_lllower_",
+                "seq_vtr_",
+            ),
+        ),
+        (
+            "timing",
+            (
+                "full_start_",
+                "full_end_",
+                "mix_cycle_start_",
+                "mix_cycle_end_",
+                "mix_block_end_",
+                "batch_start_",
+                "batch_end_",
+                "batch_release_",
+                "prod_stage_start_",
+                "prod_stage_end_",
+                "pec_stage_start_",
+                "pec_stage_end_",
+            ),
+        ),
+        ("completion", ("pair_completion_", "product_pair_completion_", "c_max")),
+    ]
+)
+
 def _get_integral_support(cut, model):
     nonz_coeff_cut = cut.getNNonz()
     # cols = cut.getCols()
@@ -62,33 +124,119 @@ def compute_normalized_violation_scores(cut):
     violation = max(0, violation)
     return violation
 
-def advanced_cut_feature_generator(scip_cutsel_env, cuts):
-    # add normalized violation feature
+def _extract_var_name_from_col(col):
+    if hasattr(col, "getVar"):
+        var = col.getVar()
+        if hasattr(var, "name"):
+            return var.name
+        if hasattr(var, "getName"):
+            return var.getName()
+    if hasattr(col, "name"):
+        return col.name
+    if hasattr(col, "getName"):
+        return col.getName()
+    return str(col)
+
+def _classify_petri_var_family(var_name):
+    if not var_name:
+        return "other"
+    for family_name, prefixes in PETRI_VAR_FAMILY_PATTERNS.items():
+        if any(var_name.startswith(prefix) for prefix in prefixes):
+            return family_name
+    return "other"
+
+def _compute_family_entropy(probabilities):
+    probs = np.asarray(probabilities, dtype=np.float64)
+    probs = probs[probs > 1e-12]
+    if probs.size <= 1:
+        return 0.0
+    entropy = -(probs * np.log(probs)).sum()
+    return float(entropy / np.log(len(PETRI_VAR_FAMILY_NAMES)))
+
+def _extract_structure_profile(cut):
+    cols = cut.getCols()
+    coeffs = cut.getVals()
+    abs_coeffs = np.abs(coeffs).astype(np.float64)
+    total_abs_coeff = float(abs_coeffs.sum()) + 1e-12
+
+    family_mass = OrderedDict((name, 0.0) for name in PETRI_VAR_FAMILY_NAMES)
+    binary_mass = 0.0
+    continuous_mass = 0.0
+
+    for col, coeff in zip(cols, abs_coeffs):
+        var_name = _extract_var_name_from_col(col)
+        family_name = _classify_petri_var_family(var_name)
+        family_mass[family_name] += float(coeff)
+
+        if family_name in ("route", "full_assign", "mix_assign"):
+            binary_mass += float(coeff)
+        elif family_name in ("timing", "completion"):
+            continuous_mass += float(coeff)
+        else:
+            if hasattr(col, "isIntegral") and col.isIntegral():
+                binary_mass += float(coeff)
+            else:
+                continuous_mass += float(coeff)
+
+    family_fractions = np.array(
+        [family_mass[name] / total_abs_coeff for name in PETRI_VAR_FAMILY_NAMES],
+        dtype=np.float64,
+    )
+    structural_fractions = family_fractions[:-1]
+    if structural_fractions.sum() > 1e-12:
+        dominant_family_index = int(np.argmax(structural_fractions))
+        dominant_family_ratio = float(structural_fractions[dominant_family_index])
+    else:
+        dominant_family_index = len(PETRI_VAR_FAMILY_NAMES) - 1
+        dominant_family_ratio = float(family_fractions[-1])
+
+    return {
+        "family_fractions": family_fractions,
+        "dominant_family": PETRI_VAR_FAMILY_NAMES[dominant_family_index],
+        "dominant_family_index": dominant_family_index,
+        "binary_ratio": float(binary_mass / total_abs_coeff),
+        "continuous_ratio": float(continuous_mass / total_abs_coeff),
+        "dominant_family_ratio": dominant_family_ratio,
+        "family_entropy": _compute_family_entropy(family_fractions),
+        "structured_ratio": float(1.0 - family_fractions[-1]),
+    }
+
+def _build_structure_feature_tail(profile):
+    family_fractions = profile["family_fractions"]
+    return [
+        float(family_fractions[0]),
+        float(family_fractions[1]),
+        float(family_fractions[2]),
+        float(family_fractions[3]),
+        float(family_fractions[4]),
+        float(family_fractions[5]),
+        float(profile["binary_ratio"]),
+        float(profile["continuous_ratio"]),
+        float(profile["dominant_family_ratio"]),
+        float(profile["family_entropy"]),
+    ]
+
+def get_structure_family_names():
+    return list(PETRI_VAR_FAMILY_NAMES)
+
+def advanced_cut_feature_generator(scip_cutsel_env, cuts, return_metadata=False):
+    # add normalized violation feature and structure-aware features
     cut_features = np.zeros((len(cuts), AdvancedCutFeatureNum))
     mean_coeff_obj, max_coeff_obj, min_coeff_obj, std_coeff_obj = _get_obj_coeff_stats(scip_cutsel_env)
+    structure_metadata = []
     for i, cut in enumerate(cuts):
         obj_parall = scip_cutsel_env.getRowObjParallelism(cut)
         eff = scip_cutsel_env.getCutEfficacy(cut)
-        # directed_cut_off_distance = scip_cutsel_env.getCutLPSolCutoffDistance(cut, best_primal_sol)
-        # nonz_coeff_cut = cut.getNLPNonz()
         nonz_coeff_cut = cut.getNNonz()
         num_vars = scip_cutsel_env.getNVars()
         support = float(nonz_coeff_cut / (num_vars + 1e-3))
-        # st_int_support = time.time()
         integral_support = _get_integral_support(cut, scip_cutsel_env)
-        # time test debug
-        # st_nv_end_int_support = time.time()
         normalized_violation = compute_normalized_violation_scores(cut)
-        # et_nv = time.time()
-        
-        mean_coeff_cut, max_coeff_cut, min_coeff_cut, std_coeff_cut = _get_cut_coeff_stats(cut) # 统计量包不包括0 系数呢？
-        # et_cut_coeff = time.time()
-        # mean_obj_coeff = time.time()
-        # print(f"steps: {i}, time_int_support: {st_nv_end_int_support-st_int_support}")
-        # print(f"steps: {i}, time_nv: {et_nv-st_nv_end_int_support}")
-        # print(f"steps: {i}, time cut coeff: {et_cut_coeff - et_nv}")
-        # print(f"steps: {i}, time obj coeff: {mean_obj_coeff - et_cut_coeff}")
-        
+
+        mean_coeff_cut, max_coeff_cut, min_coeff_cut, std_coeff_cut = _get_cut_coeff_stats(cut)
+        structure_profile = _extract_structure_profile(cut)
+        structure_tail = _build_structure_feature_tail(structure_profile)
+
         cut_feature = [
             obj_parall,
             eff,
@@ -102,12 +250,16 @@ def advanced_cut_feature_generator(scip_cutsel_env, cuts):
             mean_coeff_obj,
             max_coeff_obj,
             min_coeff_obj,
-            std_coeff_obj
+            std_coeff_obj,
+            *structure_tail,
         ]
-        cut_features[i,:] = np.array(cut_feature)    
+        cut_features[i, :] = np.array(cut_feature)
+        structure_metadata.append(structure_profile)
+    if return_metadata:
+        return cut_features, structure_metadata
     return cut_features
 
-def cut_feature_generator(scip_cutsel_env, cuts):
+def cut_feature_generator(scip_cutsel_env, cuts, return_metadata=False):
     """
     Input: scip_model static information + cuts dynamic information
     Output: the sequence of cut features
@@ -116,6 +268,7 @@ def cut_feature_generator(scip_cutsel_env, cuts):
     # scip_cutsel_env.getLPSol()
     # best_primal_sol = scip_cutsel_env.getBestSol()
     mean_coeff_obj, max_coeff_obj, min_coeff_obj, std_coeff_obj = _get_obj_coeff_stats(scip_cutsel_env)
+    structure_metadata = []
     for i, cut in enumerate(cuts):
         obj_parall = scip_cutsel_env.getRowObjParallelism(cut)
         eff = scip_cutsel_env.getCutEfficacy(cut)
@@ -125,7 +278,9 @@ def cut_feature_generator(scip_cutsel_env, cuts):
         num_vars = scip_cutsel_env.getNVars()
         support = float(nonz_coeff_cut / (num_vars + 1e-3))
         integral_support = _get_integral_support(cut, scip_cutsel_env)
-        mean_coeff_cut, max_coeff_cut, min_coeff_cut, std_coeff_cut = _get_cut_coeff_stats(cut) # 统计量包不包括0 系数呢？
+        mean_coeff_cut, max_coeff_cut, min_coeff_cut, std_coeff_cut = _get_cut_coeff_stats(cut)
+        structure_profile = _extract_structure_profile(cut)
+        structure_tail = _build_structure_feature_tail(structure_profile)
         
         cut_feature = [
             obj_parall,
@@ -139,9 +294,13 @@ def cut_feature_generator(scip_cutsel_env, cuts):
             mean_coeff_obj,
             max_coeff_obj,
             min_coeff_obj,
-            std_coeff_obj
+            std_coeff_obj,
+            *structure_tail,
         ]
-        cut_features[i,:] =np.array(cut_feature)    
+        cut_features[i, :] = np.array(cut_feature)
+        structure_metadata.append(structure_profile)
+    if return_metadata:
+        return cut_features, structure_metadata
     return cut_features
 ################
 
@@ -168,7 +327,7 @@ def create_exp_name(exp_prefix, exp_id=0, seed=0):
     :param exp_id:
     :return:
     """
-    now = datetime.datetime.now(dateutil.tz.tzlocal())
+    now = datetime.datetime.now().astimezone()
     timestamp = now.strftime('%Y_%m_%d_%H_%M_%S')
     return "%s_%s_%04d--s-%d" % (exp_prefix, timestamp, exp_id, seed)
 

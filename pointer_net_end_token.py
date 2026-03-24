@@ -8,13 +8,12 @@ from torch.distributions import Normal
 import math
 import numpy as np
 
-import pyscipopt as scip
-from pyscipopt import SCIP_RESULT
+from scip_imports import SCIP_RESULT, scip
 
 from beam_search import Beam
 from utils import cut_feature_generator
 from logger import logger
-from pointer_net import Encoder
+from pointer_net import Encoder, StructureAwareInputAdapter
 
 LOG_STD_MAX = 2
 LOG_STD_MIN = -20
@@ -86,11 +85,11 @@ class DecoderEndToken(nn.Module):
 
         self.pointer = Attention(hidden_dim, use_tanh=use_tanh, C=tanh_exploration, use_cuda=self.use_cuda)
         self.glimpse = Attention(hidden_dim, use_tanh=False, use_cuda=self.use_cuda)
-        self.sm = nn.Softmax()
+        self.sm = nn.Softmax(dim=1)
 
     def apply_mask_to_logits(self, step, logits, mask, prev_idxs):    
         if mask is None:
-            mask = torch.zeros(logits.size()).byte().to(self.pointer.v.device)
+            mask = torch.zeros(logits.size(), dtype=torch.bool, device=self.pointer.v.device)
             # if self.use_cuda:
             #     mask = mask.cuda()
     
@@ -101,7 +100,7 @@ class DecoderEndToken(nn.Module):
         if prev_idxs is not None:
             # set most recently selected idx values to 1
             maskk[[x for x in range(logits.size(0))],
-                    prev_idxs.data] = 1
+                    prev_idxs.data] = True
             logits[maskk] = -np.inf
         return logits, maskk
 
@@ -310,40 +309,35 @@ class DecoderEndToken(nn.Module):
 
             if not beam[b].advance(probs.data[b]):
                 active += [b]
-        
-        
-        all_hyp, all_scores = [], []
+
+        selected_tokens = []
         for b in range(batch_size):
-            scores, ks = beam[b].sort_best()
-            all_scores += [scores[:n_best]]
-            hyps = zip(*[beam[b].get_hyp(k) for k in ks[:n_best]])
-            all_hyp += [hyps]
-        
-        all_idxs = Variable(torch.LongTensor([[x for x in hyp] for hyp in all_hyp]).squeeze())
-      
-        if all_idxs.dim() == 2:
-            if all_idxs.size(1) > n_best:
-                idxs = all_idxs[:,-1]
-            else:
-                idxs = all_idxs
-        elif all_idxs.dim() == 3:
-            idxs = all_idxs[:, -1, :]
-        else:
-            if all_idxs.size(0) > 1:
-                idxs = all_idxs[-1]
-            else:
-                idxs = all_idxs
-        
-        # if self.use_cuda:
-        #     idxs = idxs.cuda()
+            _, ks = beam[b].sort_best()
+            batch_tokens = []
+            for k in ks[:n_best]:
+                hyp = beam[b].get_hyp(k)
+                last_token = hyp[-1] if len(hyp) > 0 else 0
+                if torch.is_tensor(last_token):
+                    last_token = int(last_token.item())
+                batch_tokens.append(int(last_token))
+            if not batch_tokens:
+                batch_tokens = [0] * n_best
+            while len(batch_tokens) < n_best:
+                batch_tokens.append(batch_tokens[-1])
+            selected_tokens.append(batch_tokens)
+
+        idxs = torch.tensor(selected_tokens, dtype=torch.long, device=self.pointer.v.device)
+        if n_best == 1:
+            idxs = idxs.squeeze(1)
+
         idxs = idxs.to(self.pointer.v.device)
 
         if idxs.dim() > 1:
-            x = embedded_inputs[idxs.transpose(0,1).contiguous().data, 
+            x = embedded_inputs[idxs.transpose(0,1).contiguous().data,
                     [x for x in range(batch_size)], :]
         else:
             x = embedded_inputs[idxs.data, [x for x in range(batch_size)], :]
-        return x.view(idxs.size(0) * n_best, embedded_inputs.size(2)), idxs, active
+        return x.view(max(int(idxs.numel()), 1), embedded_inputs.size(2)), idxs, active
 
 class PointerNetworkEndToken(nn.Module):
     """The pointer network, which is the core seq2seq 
@@ -359,6 +353,7 @@ class PointerNetworkEndToken(nn.Module):
         super(PointerNetworkEndToken, self).__init__()
 
         self.embedding_dim = embedding_dim
+        self.input_adapter = StructureAwareInputAdapter(embedding_dim)
         self.encoder = Encoder(
                 embedding_dim,
                 hidden_dim,
@@ -387,6 +382,7 @@ class PointerNetworkEndToken(nn.Module):
         Args: 
             inputs: [sourceL x batch_size x embedding_dim]
         """
+        inputs = self.input_adapter(inputs)
         # preprocess inputs 
         end_token = torch.ones((1,inputs.shape[1],inputs.shape[2]),dtype=torch.float,device=inputs.device)
         inputs = torch.cat((inputs, end_token), axis=0)
@@ -425,6 +421,7 @@ class PointerNetworkEndToken(nn.Module):
         Args: 
             inputs: [sourceL x batch_size x embedding_dim]
         """
+        inputs = self.input_adapter(inputs)
         # preprocess inputs 
         end_token = torch.ones((1,inputs.shape[1],inputs.shape[2]),dtype=torch.float,device=inputs.device)
         inputs = torch.cat((inputs, end_token), axis=0)

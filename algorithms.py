@@ -18,6 +18,18 @@ from logger import logger
 from utils import setup_logger, create_stats_ordered_dict, set_global_seed
 from utilss.mean_std import RunningMeanStd
 
+
+def _log_cuda_memory(log_prefix):
+    if not torch.cuda.is_available():
+        return
+    logger.log(f"{log_prefix}: cuda memory: {torch.cuda.memory_allocated(0)/1024**3} GB")
+    logger.log(f"{log_prefix}: cuda cached: {torch.cuda.memory_reserved(0)/1024**3} GB")
+
+
+def _safe_empty_cuda_cache():
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
 class ReinforceBaselineAlg():
     def __init__(
         self,
@@ -248,11 +260,10 @@ class ReinforceBaselineAlg():
             if self.baseline_type == 'net':
                 neg_baseline_value = torch.zeros((batch_size, 1)).to(self.device)
             for j in range(batch_size):
-                logger.log(f"{log_prefix} step {j}: cuda memory: {torch.cuda.memory_allocated(0)/1024**3} GB")
-                logger.log(f"{log_prefix} step {j}: cuda cached: {torch.cuda.memory_cached(0)/1024**3} GB")
-                if (torch.cuda.memory_cached(0)/1024**3) > 4.5:
+                _log_cuda_memory(f"{log_prefix} step {j}")
+                if torch.cuda.is_available() and (torch.cuda.memory_reserved(0)/1024**3) > 4.5:
                     # empty torch cache
-                    torch.cuda.empty_cache()
+                    _safe_empty_cuda_cache()
                 cur_index = int(i * self.batch_size + j)
                 state = torch.from_numpy(states[cur_index]).float().to(self.device)
                 state = state.reshape(state.shape[0], 1, state.shape[1])
@@ -304,7 +315,7 @@ class ReinforceBaselineAlg():
                         float(self.max_grad_norm), norm_type=2)  
                 self.value_optimizer.step()
 
-            torch.cuda.empty_cache()
+            _safe_empty_cuda_cache()
         # lr update
         if self.lr_decay:
             self.policy_lr_scheduler.step()
@@ -502,8 +513,7 @@ class HRLReinforceAlg(ReinforceBaselineAlg):
             log_prefix = f"training epoch: {self.train_highlevel_epoch}, training loop: {i}/{train_loop}"
             logprobs = torch.zeros((batch_size, 1)).to(self.device)
             for j in range(batch_size):
-                logger.log(f"{log_prefix} step {j}: cuda memory: {torch.cuda.memory_allocated(0)/1024**3} GB")
-                logger.log(f"{log_prefix} step {j}: cuda cached: {torch.cuda.memory_cached(0)/1024**3} GB")
+                _log_cuda_memory(f"{log_prefix} step {j}")
                 cur_index = int(i * self.train_highlevel_batch_size + j)
                 state = torch.from_numpy(states[cur_index]).float().to(self.device)
                 state = state.reshape(state.shape[0], 1, state.shape[1])
@@ -540,7 +550,7 @@ class HRLReinforceAlg(ReinforceBaselineAlg):
                     float(self.max_grad_norm), norm_type=2)            
             self.cutsel_percent_policy_optimizer.step()
 
-            torch.cuda.empty_cache()
+            _safe_empty_cuda_cache()
         # lr update
         if self.lr_decay:
             self.cutsel_percent_policy_lr_scheduler.step()

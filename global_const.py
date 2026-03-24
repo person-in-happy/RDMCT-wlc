@@ -1,2 +1,15 @@
-CutFeatureNum = 12
-AdvancedCutFeatureNum=13
+GENERIC_CUT_FEATURE_DIM = 12
+GENERIC_ADVANCED_CUT_FEATURE_DIM = 13
+STRUCTURE_AWARE_EXTRA_DIM = 10
+
+CutFeatureNum = GENERIC_CUT_FEATURE_DIM + STRUCTURE_AWARE_EXTRA_DIM
+AdvancedCutFeatureNum = GENERIC_ADVANCED_CUT_FEATURE_DIM + STRUCTURE_AWARE_EXTRA_DIM
+
+PETRI_VAR_FAMILY_NAMES = [
+    "route",
+    "full_assign",
+    "mix_assign",
+    "timing",
+    "completion",
+    "other",
+]

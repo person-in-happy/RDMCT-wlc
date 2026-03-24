@@ -26,14 +26,107 @@ from algorithms import ReinforceBaselineAlg, HRLReinforceAlg
 
 from utils import setup_logger, create_stats_ordered_dict, set_global_seed, get_average_models
 from utilss.mean_std import RunningMeanStd
+from petri_mip_generator import (
+    PetriMIPConfig,
+    generate_petri_mip_instance,
+    get_petri_model_description_path,
+)
+from path_utils import append_date_to_filename, resolve_path
 
 # for debug
 # from ipdb import set_trace
 
+
+class _LocalQueue(object):
+    def __init__(self):
+        self._items = []
+
+    def put(self, item):
+        self._items.append(item)
+
+    def get(self):
+        return self._items.pop(0)
+
+
+def _run_single_worker(target, args=(), kwargs=None):
+    local_queue = _LocalQueue()
+    if kwargs is None:
+        kwargs = {}
+    target(local_queue, *args, **kwargs)
+    return [local_queue.get()]
+
+
+def _resolve_main_device(device_hint):
+    if torch.cuda.is_available():
+        try:
+            return torch.device(device_hint)
+        except Exception:
+            return torch.device('cuda:0')
+    return torch.device('cpu')
+
+
+def _resolve_worker_devices(device_hints):
+    if torch.cuda.is_available():
+        return device_hints
+    return ['cpu']
+
+
+def _resolve_worker_device(device_hint):
+    if not torch.cuda.is_available():
+        return torch.device('cpu')
+    if isinstance(device_hint, torch.device):
+        return device_hint
+    if str(device_hint).lower() == 'cpu':
+        return torch.device('cpu')
+    if isinstance(device_hint, str) and str(device_hint).startswith('cuda'):
+        return torch.device(str(device_hint))
+    os.environ['CUDA_VISIBLE_DEVICES'] = str(device_hint)
+    return torch.device('cuda:0')
+
+
+def _log_cuda_memory(log_prefix):
+    if not torch.cuda.is_available():
+        return
+    logger.log(f"{log_prefix}: cuda memory: {torch.cuda.memory_allocated(0)/1024**3} GB")
+    logger.log(f"{log_prefix}: cuda cached: {torch.cuda.memory_reserved(0)/1024**3} GB")
+
+
+def _safe_empty_cuda_cache():
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+
+def _collect_instance_files(instance_dir):
+    return sorted(
+        f_name
+        for f_name in os.listdir(instance_dir)
+        if f_name.endswith(('.lp', '.mps', '.cip'))
+    )
+
+
+def _resolve_runtime_paths(all_kwargs):
+    experiment_kwargs = all_kwargs.setdefault('experiment', {})
+    experiment_kwargs['base_log_dir'] = str(
+        resolve_path(experiment_kwargs.get('base_log_dir') or 'data')
+    )
+
+    env_kwargs = all_kwargs.get('env', {})
+    if env_kwargs.get('instance_file_path'):
+        env_kwargs['instance_file_path'] = str(resolve_path(env_kwargs['instance_file_path']))
+
+    for section_name in ('test_kwargs', 'online_test_kwargs', 'evaluate_kwargs'):
+        section = all_kwargs.get(section_name)
+        if not section:
+            continue
+        if section.get('test_instance_path'):
+            section['test_instance_path'] = str(resolve_path(section['test_instance_path']))
+        if section.get('test_model_path'):
+            section['test_model_path'] = str(resolve_path(section['test_model_path']))
+
 def generate_samples(return_queue,env,policy,value,epoch,samples_per_worker,sel_cuts_percent,device,train_decode_type,reward_type,seed,mean_std,policy_type,random_seed):
-    os.environ['CUDA_VISIBLE_DEVICES'] = device
-    device = 'cuda:0'
-    policy = policy.to(device)
+    runtime_device = _resolve_worker_device(device)
+    device = str(runtime_device)
+    policy = policy.to(runtime_device)
     log_prefix = os.getpid()
     _ = set_global_seed(seed%4096)
     logger.log(f"{log_prefix}: debug log random seed {seed%4096}")
@@ -58,8 +151,7 @@ def generate_samples(return_queue,env,policy,value,epoch,samples_per_worker,sel_
     env.set_seed(seed)
     for step in range(samples_per_worker):
         logger.log(f"{log_prefix}: training...  epoch: {epoch}...  steps: {step+1}")
-        logger.log(f"{log_prefix}: cuda memory: {torch.cuda.memory_allocated(0)/1024**3} GB")
-        logger.log(f"{log_prefix}: cuda cached: {torch.cuda.memory_cached(0)/1024**3} GB")
+        _log_cuda_memory(log_prefix)
         env.reset()
         # reset action agent
         cutsel_agent = CutSelectAgent(
@@ -84,13 +176,14 @@ def generate_samples(return_queue,env,policy,value,epoch,samples_per_worker,sel_
                 continue
             else:
                 neg_reward = lp_info["lp_solution_value"][0] - lp_info["lp_solution_value"][1]
-        for key in env_step_info.keys():
-            assert key in env_step_infos.keys()
-            env_step_infos[key].append(env_step_info[key])
+        for key in env_step_infos.keys():
+            if key in env_step_info:
+                env_step_infos[key].append(env_step_info[key])
         # for key in cuts_info.keys():
         #     cuts_infos[key].append(cuts_info[key])
-        for key in state_action_dict.keys():
-            training_datasets[key].append(state_action_dict[key])
+        for key in training_datasets.keys():
+            if key in state_action_dict:
+                training_datasets[key].append(state_action_dict[key])
         if reward_type == 'lp_solution_value':
             training_datasets['neg_reward'].append(neg_reward)
         else:
@@ -101,9 +194,9 @@ def generate_samples(return_queue,env,policy,value,epoch,samples_per_worker,sel_
     return_queue.put((env_step_infos, training_datasets)) 
 
 def generate_hierarchy_samples(return_queue,env,policy,cutsel_policy,value,epoch,samples_per_worker,sel_cuts_percent,device,train_decode_type,reward_type,seed,mean_std,policy_type,random_seed):
-    os.environ['CUDA_VISIBLE_DEVICES'] = device
-    device = 'cuda:0'
-    policy = policy.to(device)
+    runtime_device = _resolve_worker_device(device)
+    device = str(runtime_device)
+    policy = policy.to(runtime_device)
     cutsel_policy = cutsel_policy.to(device)
     log_prefix = os.getpid()
     _ = set_global_seed(seed%4096)
@@ -129,8 +222,7 @@ def generate_hierarchy_samples(return_queue,env,policy,cutsel_policy,value,epoch
     env.set_seed(seed)
     for step in range(samples_per_worker):
         logger.log(f"{log_prefix}: training...  epoch: {epoch}...  steps: {step+1}")
-        logger.log(f"{log_prefix}: cuda memory: {torch.cuda.memory_allocated(0)/1024**3} GB")
-        logger.log(f"{log_prefix}: cuda cached: {torch.cuda.memory_cached(0)/1024**3} GB")
+        _log_cuda_memory(log_prefix)
         env.reset()
         # reset action agent
         cutsel_agent = HierarchyCutSelectAgent(
@@ -156,14 +248,16 @@ def generate_hierarchy_samples(return_queue,env,policy,cutsel_policy,value,epoch
                 continue
             else:
                 neg_reward = lp_info["lp_solution_value"][0] - lp_info["lp_solution_value"][1]
-        for key in env_step_info.keys():
-            assert key in env_step_infos.keys()
-            env_step_infos[key].append(env_step_info[key])
+        for key in env_step_infos.keys():
+            if key in env_step_info:
+                env_step_infos[key].append(env_step_info[key])
         
-        for key in state_action_dict.keys():
-            training_datasets[key].append(state_action_dict[key])
-        for key in high_level_state_action_dict.keys():
-            training_high_level_datasets[key].append(high_level_state_action_dict[key])
+        for key in training_datasets.keys():
+            if key in state_action_dict:
+                training_datasets[key].append(state_action_dict[key])
+        for key in training_high_level_datasets.keys():
+            if key in high_level_state_action_dict:
+                training_high_level_datasets[key].append(high_level_state_action_dict[key])
 
         if reward_type == 'lp_solution_value':
             training_datasets['neg_reward'].append(neg_reward)
@@ -191,9 +285,9 @@ def evaluate(
     policy_type,
     random_seed
 ):
-    os.environ['CUDA_VISIBLE_DEVICES'] = device
-    device = 'cuda:0'
-    policy = policy.to(device)
+    runtime_device = _resolve_worker_device(device)
+    device = str(runtime_device)
+    policy = policy.to(runtime_device)
     log_prefix = os.getpid()
     _ = set_global_seed(random_seed)
     logger.log(f"{log_prefix}: debug log random seed {random_seed}")
@@ -244,9 +338,9 @@ def evaluate_hierarchy(
     policy_type,
     random_seed
 ):
-    os.environ['CUDA_VISIBLE_DEVICES'] = device
-    device = 'cuda:0'
-    policy = policy.to(device)
+    runtime_device = _resolve_worker_device(device)
+    device = str(runtime_device)
+    policy = policy.to(runtime_device)
     cutsel_percent_policy = cutsel_percent_policy.to(device)
     _ = set_global_seed(random_seed)
     log_prefix = os.getpid()
@@ -297,9 +391,9 @@ def test(
     scip_seed,
     **env_kwargs
 ):
-    os.environ['CUDA_VISIBLE_DEVICES'] = device
-    device = 'cuda:0'
-    policy = policy.to(device)
+    runtime_device = _resolve_worker_device(device)
+    device = str(runtime_device)
+    policy = policy.to(runtime_device)
     _ = set_global_seed(seed)
     print(f"pid: {os.getpid()} debug log random seed {seed}")
     print(f"pid: {os.getpid()}, instance_files: {instance_file_list}")
@@ -312,6 +406,7 @@ def test(
         'cuts_total_num': []
     }
     f_name_list = []
+    final_solve_results = []
     for i, f_name in enumerate(instance_file_list):
         env_kwargs['single_instance_file'] = f_name
         env = SCIPCutSelEnv(
@@ -345,9 +440,23 @@ def test(
         else:
             sel_cuts_info['sel_cuts_num'].append(state_action_dict['sel_cuts_num'])
             sel_cuts_info['cuts_total_num'].append(len(state_action_dict['state']))
+        final_solve_results.append({
+            "instance": f_name,
+            "status": env_step_info.get("status"),
+            "best_obj": env_step_info.get("best_obj"),
+            "solution": env_step_info.get("solution", {})
+        })
 
     return_queue.put(
-        (neg_solving_time, neg_total_nodes,primaldualintegral,primal_dual_gap,f_name_list,sel_cuts_info)
+        (
+            neg_solving_time,
+            neg_total_nodes,
+            primaldualintegral,
+            primal_dual_gap,
+            f_name_list,
+            sel_cuts_info,
+            final_solve_results,
+        )
     )
 
 def test_hierarchy(
@@ -365,9 +474,9 @@ def test_hierarchy(
     scip_seed,
     **env_kwargs
 ):
-    os.environ['CUDA_VISIBLE_DEVICES'] = device
-    device = 'cuda:0'
-    policy = policy.to(device)
+    runtime_device = _resolve_worker_device(device)
+    device = str(runtime_device)
+    policy = policy.to(runtime_device)
     cutsel_percent_policy = cutsel_percent_policy.to(device)
     _ = set_global_seed(seed)
     print(f"pid: {os.getpid()} debug log random seed {seed}")
@@ -381,6 +490,7 @@ def test_hierarchy(
         'cuts_total_num': []
     }
     f_name_list = []
+    final_solve_results = []
     for i, f_name in enumerate(instance_file_list):
         env_kwargs['single_instance_file'] = f_name
         env = SCIPCutSelEnv(
@@ -415,8 +525,22 @@ def test_hierarchy(
             sel_cuts_info['sel_cuts_num'].append(state_action_dict['sel_cuts_num'])
             sel_cuts_info['cuts_total_num'].append(len(state_action_dict['state']))
         f_name_list.append(f_name)
+        final_solve_results.append({
+            "instance": f_name,
+            "status": env_step_info.get("status"),
+            "best_obj": env_step_info.get("best_obj"),
+            "solution": env_step_info.get("solution", {})
+        })
     return_queue.put(
-        (neg_solving_time, neg_total_nodes,primaldualintegral,primal_dual_gap,f_name_list,sel_cuts_info)
+        (
+            neg_solving_time,
+            neg_total_nodes,
+            primaldualintegral,
+            primal_dual_gap,
+            f_name_list,
+            sel_cuts_info,
+            final_solve_results,
+        )
     )    
     
 def online_test(
@@ -434,9 +558,9 @@ def online_test(
     random_seed,
     **test_env_kwargs
 ):
-    os.environ['CUDA_VISIBLE_DEVICES'] = device
-    device = 'cuda:0'
-    policy = policy.to(device)
+    runtime_device = _resolve_worker_device(device)
+    device = str(runtime_device)
+    policy = policy.to(runtime_device)
     _ = set_global_seed(random_seed)
     pid_num = os.getpid()
     logger.log(f"{pid_num}: debug log random seed {random_seed}")
@@ -491,9 +615,9 @@ def online_test_hierarchy(
     random_seed,
     **test_env_kwargs
 ):
-    os.environ['CUDA_VISIBLE_DEVICES'] = device
-    device = 'cuda:0'
-    policy = policy.to(device)
+    runtime_device = _resolve_worker_device(device)
+    device = str(runtime_device)
+    policy = policy.to(runtime_device)
     cutsel_percent_policy = cutsel_percent_policy.to(device)
     _ = set_global_seed(random_seed)
     pid_num = os.getpid()
@@ -548,6 +672,10 @@ def process_and_log_results(raw_results,instance_type,out_dir,cutsel_rule,sel_cu
     for result in raw_results:
         sel_cuts_num.extend(result[5]['sel_cuts_num'])
         cuts_total_num.extend(result[5]['cuts_total_num'])
+    final_solve_results = []
+    if len(raw_results) > 0 and len(raw_results[0]) >= 7:
+        for result in raw_results:
+            final_solve_results.extend(result[6])
     
     new_results = {
         'solving_time': neg_solving_time,
@@ -565,11 +693,29 @@ def process_and_log_results(raw_results,instance_type,out_dir,cutsel_rule,sel_cu
     print(f"sel_cuts_num mean: {np.mean(sel_cuts_num)}, and std: {np.std(sel_cuts_num)}")
     print(f"cuts_total_num mean: {np.mean(cuts_total_num)}, and std: {np.std(cuts_total_num)}")
     
-    out_dir = instance_type + out_dir
+    out_dir = str(resolve_path(instance_type + out_dir))
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
-    save_npy = f"{out_dir}/{log_prefix}_{cutsel_rule}_max_cuts_root_{sel_cuts_percent}.npy"
+    save_npy = os.path.join(
+        out_dir,
+        append_date_to_filename(f"{log_prefix}_{cutsel_rule}_max_cuts_root_{sel_cuts_percent}.npy"),
+    )
     np.save(save_npy, new_results)
+    if final_solve_results:
+        save_json = os.path.join(
+            out_dir,
+            append_date_to_filename(f"{log_prefix}_{cutsel_rule}_max_cuts_root_{sel_cuts_percent}_solutions.json"),
+        )
+        with open(save_json, "w", encoding="utf-8") as f:
+            json.dump(final_solve_results, f, ensure_ascii=False, indent=2)
+        print(f"saved final solutions: {save_json}")
+        try:
+            from petri_gantt import generate_gantt_charts_from_solution_file
+            generated_gantt_files = generate_gantt_charts_from_solution_file(save_json)
+            if generated_gantt_files:
+                print(f"saved gantt outputs under: {os.path.dirname(generated_gantt_files[0])}")
+        except Exception as exc:
+            print(f"warning: failed to generate gantt charts: {exc}")
 
 def online_process_and_log_results(raw_results, epoch, test_type):
     neg_solving_time = np.vstack([result[0] for result in raw_results])
@@ -631,7 +777,7 @@ def main():
     from value_net import CriticNetwork
     # 参数配置：固定参数json 文件；调试参数命令行
     parser = argparse.ArgumentParser(description="RL for learning to cut")
-    parser.add_argument('--config_file', type=str, default='/datasets/learning_to_cut_via_rl/configs/easy_max_independent_set_config.json', help="base config json dir")
+    parser.add_argument('--config_file', type=str, default='configs/petri_mip_test_config.json', help="base config json dir")
     parser.add_argument('--sel_cuts_percent', type=float, default=0.1)
     parser.add_argument('--single_instance_file', type=str, default="all")  
     parser.add_argument('--reward_type', type=str, default="lp_solution_value")
@@ -643,9 +789,23 @@ def main():
     parser.add_argument('--policy_type', type=str, default='with_token')
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--scip_seed', type=int, default=1)
+    parser.add_argument('--test_decode_type', type=str, default='beam_search')
+    parser.add_argument('--generate_petri_instance', type=str, default='False')
+    parser.add_argument('--petri_instance_dir', type=str, default='generated_instances/petri')
+    parser.add_argument('--petri_instance_name', type=str, default='petri_batch10_v2.lp')
+    parser.add_argument('--petri_batches', type=int, default=10)
+    parser.add_argument('--petri_num_pm', type=int, default=2)
+    parser.add_argument('--petri_num_steps', type=int, default=13)
+    parser.add_argument('--petri_total_wafers', type=int, default=20)
+    parser.add_argument('--petri_pec_pool_size', type=int, default=8)
+    parser.add_argument('--petri_mode_sequence', type=str, default='')
 
     args = parser.parse_args()
-    all_kwargs = json.load(open(args.config_file, 'r'))
+    args.config_file = str(resolve_path(args.config_file))
+    args.petri_instance_dir = str(resolve_path(args.petri_instance_dir))
+    with open(args.config_file, 'r', encoding='utf-8') as f:
+        all_kwargs = json.load(f)
+    _resolve_runtime_paths(all_kwargs)
     if args.use_cutsel_percent_policy == 'True':
         all_kwargs['cutsel_percent_policy']['use_cutsel_percent_policy'] = True
     else:
@@ -655,15 +815,51 @@ def main():
         Pointer = PointerNetworkEndToken
     else:
         Pointer = PointerNetwork
+
+    if args.generate_petri_instance == 'True':
+        requested_instance_name = args.petri_instance_name
+        petri_cfg = PetriMIPConfig(
+            num_batches=args.petri_batches,
+            num_pm=args.petri_num_pm,
+            num_steps=args.petri_num_steps,
+            total_wafers=args.petri_total_wafers,
+            pec_pool_size=args.petri_pec_pool_size,
+            mode_sequence=args.petri_mode_sequence,
+        )
+        generated_path = generate_petri_mip_instance(
+            args.petri_instance_dir,
+            args.petri_instance_name,
+            petri_cfg
+        )
+        generated_instance_name = os.path.basename(generated_path)
+        args.petri_instance_name = generated_instance_name
+        logger.log(f"generated petri MIP instance: {generated_path}")
+        logger.log(
+            "generated petri model description: "
+            f"{get_petri_model_description_path(args.petri_instance_dir, generated_instance_name)}"
+        )
+        all_kwargs['env']['instance_file_path'] = args.petri_instance_dir
+        all_kwargs['env']['single_instance_file'] = generated_instance_name
+        if 'test_kwargs' in all_kwargs:
+            all_kwargs['test_kwargs']['test_instance_path'] = args.petri_instance_dir
+        if args.single_instance_file in {'all', requested_instance_name}:
+            args.single_instance_file = generated_instance_name
+
     # test 
     if args.train_type == 'test':
         test_kwargs = all_kwargs['test_kwargs']
         device_kwargs = all_kwargs['devices']
         # get instance file path
         test_instance_path = test_kwargs['test_instance_path']
-        f_name_list = os.listdir(test_instance_path)
+        if args.single_instance_file != 'all':
+            f_name_list = [args.single_instance_file]
+        else:
+            f_name_list = _collect_instance_files(test_instance_path)
+        if len(f_name_list) == 0:
+            raise ValueError(f'No instance files found in {test_instance_path}')
         # assert len(f_name_list) % test_kwargs['n_jobs'] == 0
-        file_num_each_worker = math.ceil(len(f_name_list) / (test_kwargs['n_jobs'] * len(device_kwargs['multi_devices'])))
+        multi_devices = _resolve_worker_devices(device_kwargs['multi_devices'])
+        file_num_each_worker = math.ceil(len(f_name_list) / (test_kwargs['n_jobs'] * len(multi_devices)))
 
         env_kwargs = all_kwargs['env']
         env_kwargs.pop('instance_file_path')
@@ -671,22 +867,31 @@ def main():
         seed = set_global_seed(all_kwargs['experiment']['seed'])
 
         # load policy model
-        device = torch.device(device_kwargs['global_device'])
+        device = _resolve_main_device(device_kwargs['global_device'])
         # multi_devices = [torch.device(d) for d in device_kwargs['multi_devices']]
-        multi_devices = device_kwargs['multi_devices']
+        multi_devices = _resolve_worker_devices(device_kwargs['multi_devices'])
 
         net_share_kwargs = all_kwargs['net_share']
         policy_kwargs = all_kwargs['policy']
         value_kwargs = all_kwargs['value']
         cutsel_percent_policy_kwargs = all_kwargs['cutsel_percent_policy']
 
-        test_model_base_path = test_kwargs['test_model_base_path']
-        test_model_file = test_kwargs['test_model']
-        if len(test_model_file) == 1:
-            state_dict = torch.load(os.path.join(test_model_base_path, test_model_file[0]))
+        if 'test_model_path' in test_kwargs:
+            if not os.path.isfile(test_kwargs['test_model_path']):
+                raise FileNotFoundError(
+                    f"test_model_path does not exist: {test_kwargs['test_model_path']}"
+                )
+            state_dict = torch.load(test_kwargs['test_model_path'], map_location=device)
+            model_tag = os.path.basename(test_kwargs['test_model_path'])
         else:
-            list_state_dict = [torch.load(os.path.join(test_model_base_path, cur_test_model_file)) for cur_test_model_file in test_model_file]
-            state_dict = get_average_models(list_state_dict)
+            test_model_base_path = test_kwargs['test_model_base_path']
+            test_model_file = test_kwargs['test_model']
+            model_tag = str(test_model_file)
+            if len(test_model_file) == 1:
+                state_dict = torch.load(os.path.join(test_model_base_path, test_model_file[0]), map_location=device)
+            else:
+                list_state_dict = [torch.load(os.path.join(test_model_base_path, cur_test_model_file), map_location=device) for cur_test_model_file in test_model_file]
+                state_dict = get_average_models(list_state_dict)
         # load policy
         policy = Pointer(
             embedding_dim=net_share_kwargs['embedding_dim'],
@@ -719,36 +924,52 @@ def main():
             # .to(device)
             cutsel_percent_policy.load_state_dict(state_dict['cutsel_percent_net'])
             cutsel_percent_policy.eval()
-        # running multiprocessing
-        return_queue = mp.SimpleQueue()
-        processes = []
-        for i, worker_device in enumerate(multi_devices):
-            st_index = i * test_kwargs['n_jobs']
-            for num in range(test_kwargs['n_jobs']):
-                if i == (len(multi_devices)-1) and num == (test_kwargs['n_jobs']-1):
-                    cur_f_list = f_name_list[(st_index+num)*file_num_each_worker:]
-                else:
-                    cur_f_list = f_name_list[(st_index+num)*file_num_each_worker:(st_index+num+1)*file_num_each_worker]
-                if cutsel_percent_policy_kwargs['use_cutsel_percent_policy']:
-                    p = mp.Process(
-                        target=test_hierarchy,
-                        args=(return_queue,test_instance_path,cur_f_list,policy,cutsel_percent_policy,args.sel_cuts_percent,worker_device,'greedy',seed,mean_std,args.policy_type,args.scip_seed),
-                        kwargs=env_kwargs
-                    )
-                else:
-                    p = mp.Process(
-                        target=test,
-                        args=(return_queue,test_instance_path,cur_f_list,policy,args.sel_cuts_percent,worker_device,'greedy',seed,mean_std,args.policy_type,args.scip_seed),
-                        kwargs=env_kwargs
-                    )
-                p.start()
-                processes.append(p)
-        raw_results = [return_queue.get() for p in processes] # list of tuple
-        for p in processes:
-            p.join()   
+        if len(multi_devices) == 1 and test_kwargs['n_jobs'] == 1:
+            worker_device = multi_devices[0]
+            cur_f_list = f_name_list
+            if cutsel_percent_policy_kwargs['use_cutsel_percent_policy']:
+                raw_results = _run_single_worker(
+                    test_hierarchy,
+                    args=(test_instance_path, cur_f_list, policy, cutsel_percent_policy, args.sel_cuts_percent, worker_device, args.test_decode_type, seed, mean_std, args.policy_type, args.scip_seed),
+                    kwargs=env_kwargs
+                )
+            else:
+                raw_results = _run_single_worker(
+                    test,
+                    args=(test_instance_path, cur_f_list, policy, args.sel_cuts_percent, worker_device, args.test_decode_type, seed, mean_std, args.policy_type, args.scip_seed),
+                    kwargs=env_kwargs
+                )
+        else:
+            # running multiprocessing
+            return_queue = mp.SimpleQueue()
+            processes = []
+            for i, worker_device in enumerate(multi_devices):
+                st_index = i * test_kwargs['n_jobs']
+                for num in range(test_kwargs['n_jobs']):
+                    if i == (len(multi_devices)-1) and num == (test_kwargs['n_jobs']-1):
+                        cur_f_list = f_name_list[(st_index+num)*file_num_each_worker:]
+                    else:
+                        cur_f_list = f_name_list[(st_index+num)*file_num_each_worker:(st_index+num+1)*file_num_each_worker]
+                    if cutsel_percent_policy_kwargs['use_cutsel_percent_policy']:
+                        p = mp.Process(
+                            target=test_hierarchy,
+                            args=(return_queue,test_instance_path,cur_f_list,policy,cutsel_percent_policy,args.sel_cuts_percent,worker_device,args.test_decode_type,seed,mean_std,args.policy_type,args.scip_seed),
+                            kwargs=env_kwargs
+                        )
+                    else:
+                        p = mp.Process(
+                            target=test,
+                            args=(return_queue,test_instance_path,cur_f_list,policy,args.sel_cuts_percent,worker_device,args.test_decode_type,seed,mean_std,args.policy_type,args.scip_seed),
+                            kwargs=env_kwargs
+                        )
+                    p.start()
+                    processes.append(p)
+            raw_results = [return_queue.get() for p in processes] # list of tuple
+            for p in processes:
+                p.join()   
         # for p in processes:
         #     p.close()     
-        log_prefix = f"seed_{args.scip_seed}_model_{all_kwargs['test_kwargs']['test_model']}"
+        log_prefix = f"seed_{args.scip_seed}_model_{model_tag}"
         process_and_log_results(raw_results, args.instance_type + '_use_hrl_' + str(cutsel_percent_policy_kwargs['use_cutsel_percent_policy']), "heuristics_cutsel", "RL", args.sel_cuts_percent,log_prefix)
 
         # get model
@@ -792,9 +1013,9 @@ def main():
 
         # cutsel agent
         device_kwargs = all_kwargs['devices']
-        device = torch.device(device_kwargs['global_device'])
+        device = _resolve_main_device(device_kwargs['global_device'])
         # worker_devices = [torch.device(worker_device) for worker_device in device_kwargs['multi_devices']]
-        worker_devices = device_kwargs['multi_devices']
+        worker_devices = _resolve_worker_devices(device_kwargs['multi_devices'])
 
         net_share_kwargs = all_kwargs['net_share']
         policy_kwargs = all_kwargs['policy']
@@ -838,7 +1059,7 @@ def main():
 
         # preload model for retraining
         if experiment_kwargs['base_log_dir'] is not None and 'params.pkl' in os.listdir(experiment_kwargs['base_log_dir']):
-            state_dict = torch.load(os.path.join(experiment_kwargs['base_log_dir'], 'params.pkl'))
+            state_dict = torch.load(os.path.join(experiment_kwargs['base_log_dir'], 'params.pkl'), map_location=device)
             pointer_net.load_state_dict(state_dict['pointer_net'])
             if cutsel_percent_policy_kwargs['use_cutsel_percent_policy']:
                 cutsel_percent_policy.load_state_dict(state_dict['cutsel_percent_net'])
@@ -903,7 +1124,7 @@ def main():
                 logger.log(f"testing... epoch: {epoch+1}")
                 # get instance file path
                 test_instance_path = online_test_kwargs['test_instance_path']
-                f_name_list = os.listdir(test_instance_path)
+                f_name_list = _collect_instance_files(test_instance_path)
                 # assert len(f_name_list) % test_kwargs['n_jobs'] == 0
                 file_num_each_worker = math.ceil(len(f_name_list) / (online_test_kwargs['test_n_jobs'] * len(worker_devices)))
                 test_env_kwargs = online_test_kwargs['test_env_kwargs']
@@ -970,7 +1191,7 @@ def main():
                 logger.log(f"evaluating...  epoch: {epoch+1}")
                 # get instance file path
                 test_instance_path = evaluate_kwargs['test_instance_path']
-                f_name_list = os.listdir(test_instance_path)
+                f_name_list = _collect_instance_files(test_instance_path)
                 # assert len(f_name_list) % test_kwargs['n_jobs'] == 0
                 file_num_each_worker = math.ceil(len(f_name_list) / (evaluate_kwargs['test_n_jobs'] * len(worker_devices)))
                 test_env_kwargs = evaluate_kwargs['test_env_kwargs']
@@ -1010,26 +1231,40 @@ def main():
             ####################################################
             # sampling ........
             logger.log(f"training...  epoch: {epoch+1}")
-            return_queue = mp.SimpleQueue()
-            processes = []
-            for i, worker_device in enumerate(worker_devices):
-                for num in range(trainer_kwargs['n_jobs']):
-                    s = train_multiprocess_seeds[num] + i
-                    if cutsel_percent_policy_kwargs['use_cutsel_percent_policy']:
-                        p = mp.Process(
-                            target=generate_hierarchy_samples,
-                            args=(return_queue,env,pointer_net,cutsel_percent_policy,value_net,epoch+1,samples_each_worker,args.sel_cuts_percent,worker_device,alg_kwargs['train_decode_type'],alg_kwargs['reward_type'],s,mean_std,args.policy_type,seed)
-                        )
-                    else:     
-                        p = mp.Process(
-                            target=generate_samples,
-                            args=(return_queue,env,pointer_net,value_net,epoch+1,samples_each_worker,args.sel_cuts_percent,worker_device,alg_kwargs['train_decode_type'],alg_kwargs['reward_type'],s,mean_std,args.policy_type,seed)
-                        )
-                    p.start()
-                    processes.append(p)
-            raw_results = [return_queue.get() for p in processes] # list of tuple
-            for p in processes:
-                p.join()
+            if len(worker_devices) == 1 and trainer_kwargs['n_jobs'] == 1:
+                worker_device = worker_devices[0]
+                s = train_multiprocess_seeds[0]
+                if cutsel_percent_policy_kwargs['use_cutsel_percent_policy']:
+                    raw_results = _run_single_worker(
+                        generate_hierarchy_samples,
+                        args=(env, pointer_net, cutsel_percent_policy, value_net, epoch+1, samples_each_worker, args.sel_cuts_percent, worker_device, alg_kwargs['train_decode_type'], alg_kwargs['reward_type'], s, mean_std, args.policy_type, seed)
+                    )
+                else:
+                    raw_results = _run_single_worker(
+                        generate_samples,
+                        args=(env, pointer_net, value_net, epoch+1, samples_each_worker, args.sel_cuts_percent, worker_device, alg_kwargs['train_decode_type'], alg_kwargs['reward_type'], s, mean_std, args.policy_type, seed)
+                    )
+            else:
+                return_queue = mp.SimpleQueue()
+                processes = []
+                for i, worker_device in enumerate(worker_devices):
+                    for num in range(trainer_kwargs['n_jobs']):
+                        s = train_multiprocess_seeds[num] + i
+                        if cutsel_percent_policy_kwargs['use_cutsel_percent_policy']:
+                            p = mp.Process(
+                                target=generate_hierarchy_samples,
+                                args=(return_queue,env,pointer_net,cutsel_percent_policy,value_net,epoch+1,samples_each_worker,args.sel_cuts_percent,worker_device,alg_kwargs['train_decode_type'],alg_kwargs['reward_type'],s,mean_std,args.policy_type,seed)
+                            )
+                        else:     
+                            p = mp.Process(
+                                target=generate_samples,
+                                args=(return_queue,env,pointer_net,value_net,epoch+1,samples_each_worker,args.sel_cuts_percent,worker_device,alg_kwargs['train_decode_type'],alg_kwargs['reward_type'],s,mean_std,args.policy_type,seed)
+                            )
+                        p.start()
+                        processes.append(p)
+                raw_results = [return_queue.get() for p in processes] # list of tuple
+                for p in processes:
+                    p.join()
             gt.stamp('sampling data', unique=False)
 
             # training policy and value with data 
@@ -1044,7 +1279,7 @@ def main():
                 logger.record_dict(train_highlevel_stats)
             algorithm.train(raw_results, epoch+1)
             # 释放torch cuda 缓存
-            torch.cuda.empty_cache()    
+            _safe_empty_cuda_cache()    
             gt.stamp('training', unique=False)
 
             # log timing data

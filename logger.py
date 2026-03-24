@@ -10,7 +10,6 @@ import os
 import os.path as osp
 import sys
 import datetime
-import dateutil.tz
 import csv
 import json
 import pickle
@@ -18,7 +17,19 @@ import errno
 import torch
 
 from utilss.tabulate import tabulate
-from torch.utils.tensorboard import SummaryWriter
+
+try:
+    from torch.utils.tensorboard import SummaryWriter
+except ModuleNotFoundError:
+    class SummaryWriter:  # type: ignore[override]
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __getattr__(self, name):
+            def _noop(*args, **kwargs):
+                return None
+
+            return _noop
 
 
 class TerminalTablePrinter(object):
@@ -167,7 +178,7 @@ class Logger(object):
         if with_prefix:
             out = self._prefix_str + out
         if with_timestamp:
-            now = datetime.datetime.now(dateutil.tz.tzlocal())
+            now = datetime.datetime.now().astimezone()
             timestamp = now.strftime('%Y-%m-%d %H:%M:%S.%f %Z')
             out = "%s | %s" % (timestamp, out)
         if not self._log_tabular_only:
