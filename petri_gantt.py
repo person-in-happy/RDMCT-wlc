@@ -20,6 +20,11 @@ PROD_STAGE_END_RE = re.compile(r"prod_stage_end_(\d+)_(.+)$")
 PEC_STAGE_START_RE = re.compile(r"pec_stage_start_(\d+)_(.+)$")
 PEC_STAGE_END_RE = re.compile(r"pec_stage_end_(\d+)_(.+)$")
 PRODUCT_PAIR_COMPLETION_RE = re.compile(r"product_pair_completion_(\d+)$")
+NEW_FULL_PAIR_MEMBER_RE = re.compile(r"wafer_to_full_pair_(\d+)_(\d+)$")
+NEW_MIX_PAIR_MEMBER_RE = re.compile(r"wafer_to_mix_pair_(\d+)_(\d+)$")
+NEW_FULL_PAIR_COMPLETION_RE = re.compile(r"full_pair_completion_(\d+)$")
+NEW_MIX_PAIR_COMPLETION_RE = re.compile(r"mix_pair_completion_(\d+)$")
+NEW_WAFER_COMPLETION_RE = re.compile(r"wafer_completion_(\d+)$")
 
 LEGACY_FULL_ASSIGN_RE = re.compile(r"assign_full_(\d+)_(\d+)_(\d+)$")
 LEGACY_FULL_PEC_RE = re.compile(r"full_pec_pairs_(\d+)_(\d+)$")
@@ -310,10 +315,33 @@ def _collect_legacy_schedule(solution: Dict[str, float]) -> Dict[str, object]:
     mix_start: Dict[Tuple[str, int], float] = {}
     mix_end: Dict[Tuple[str, int], float] = {}
     mix_used: Dict[Tuple[str, int], bool] = {}
-    pair_completion: Dict[int, float] = {}
+    full_pair_members: Dict[int, List[int]] = {}
+    mix_pair_members: Dict[int, List[int]] = {}
+    pair_completion: Dict[str, float] = {}
+    wafer_completion: Dict[int, float] = {}
     c_max = _float(solution.get("c_max", 0.0))
 
     for name, value in solution.items():
+        m = NEW_FULL_PAIR_MEMBER_RE.match(name)
+        if m and _bool(value):
+            full_pair_members.setdefault(int(m.group(2)), []).append(int(m.group(1)))
+            continue
+        m = NEW_MIX_PAIR_MEMBER_RE.match(name)
+        if m and _bool(value):
+            mix_pair_members.setdefault(int(m.group(2)), []).append(int(m.group(1)))
+            continue
+        m = NEW_FULL_PAIR_COMPLETION_RE.match(name)
+        if m:
+            pair_completion[f"F{int(m.group(1))}"] = _float(value)
+            continue
+        m = NEW_MIX_PAIR_COMPLETION_RE.match(name)
+        if m:
+            pair_completion[f"M{int(m.group(1))}"] = _float(value)
+            continue
+        m = NEW_WAFER_COMPLETION_RE.match(name)
+        if m:
+            wafer_completion[int(m.group(1))] = _float(value)
+            continue
         m = LEGACY_FULL_ASSIGN_RE.match(name)
         if m and _bool(value):
             pair_id = int(m.group(1))
@@ -355,7 +383,23 @@ def _collect_legacy_schedule(solution: Dict[str, float]) -> Dict[str, object]:
             continue
         m = LEGACY_PAIR_COMPLETION_RE.match(name)
         if m:
-            pair_completion[int(m.group(1))] = _float(value)
+            pair_completion[f"P{int(m.group(1))}"] = _float(value)
+
+    def _full_pair_label(pair_id: int) -> str:
+        wafers = sorted(full_pair_members.get(pair_id, []))
+        if not wafers:
+            return f"F{pair_id}"
+        if len(wafers) == 1:
+            return f"F{pair_id}(W{wafers[0]}+PEC)"
+        return f"F{pair_id}(" + ",".join(f"W{wafer_id}" for wafer_id in wafers) + ")"
+
+    def _mix_pair_label(pair_id: int) -> str:
+        wafers = sorted(mix_pair_members.get(pair_id, []))
+        if not wafers:
+            return f"M{pair_id}"
+        if len(wafers) == 1:
+            return f"M{pair_id}(W{wafers[0]}+PEC)"
+        return f"M{pair_id}(" + ",".join(f"W{wafer_id}" for wafer_id in wafers) + ")"
 
     lanes: List[str] = []
     tasks: List[Dict[str, object]] = []
@@ -376,9 +420,9 @@ def _collect_legacy_schedule(solution: Dict[str, float]) -> Dict[str, object]:
         if lane_name not in lanes:
             lanes.append(lane_name)
         pairs = sorted(full_pairs_by_slot.get((lane_name, slot_id), []))
-        label = ",".join(f"P{pair_id}" for pair_id in pairs) if pairs else "-"
+        label = ",".join(_full_pair_label(pair_id) for pair_id in pairs) if pairs else "-"
         if full_pec_by_slot.get((lane_name, slot_id), False):
-            label = f"{label} + PEC"
+            label = f"{label} + Pure PEC"
         tasks.append(
             {
                 "lane": lane_name,
@@ -407,17 +451,25 @@ def _collect_legacy_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                 continue
             if cycle_id == 1:
                 first_pair = mix_pair_by_pos.get((lane_name, 1))
-                label = f"cycle 1\nPEC + P{first_pair} 1st" if first_pair is not None else "cycle 1\nPEC"
+                label = (
+                    f"cycle 1\nPEC + {_mix_pair_label(first_pair)} 1st"
+                    if first_pair is not None
+                    else "cycle 1\nPEC"
+                )
                 color = "#F58518"
             elif cycle_id == max_pos + 1 and max_pos > 0:
                 prev_pair = mix_pair_by_pos.get((lane_name, max_pos))
-                label = f"cycle {cycle_id}\nP{prev_pair} 2nd + PEC" if prev_pair is not None else f"cycle {cycle_id}\nPEC"
+                label = (
+                    f"cycle {cycle_id}\n{_mix_pair_label(prev_pair)} 2nd + PEC"
+                    if prev_pair is not None
+                    else f"cycle {cycle_id}\nPEC"
+                )
                 color = "#F58518"
             else:
                 prev_pair = mix_pair_by_pos.get((lane_name, cycle_id - 1))
                 curr_pair = mix_pair_by_pos.get((lane_name, cycle_id))
                 label = (
-                    f"cycle {cycle_id}\nP{prev_pair} 2nd + P{curr_pair} 1st"
+                    f"cycle {cycle_id}\n{_mix_pair_label(prev_pair)} 2nd + {_mix_pair_label(curr_pair)} 1st"
                     if prev_pair is not None and curr_pair is not None
                     else f"cycle {cycle_id}"
                 )
@@ -441,7 +493,19 @@ def _collect_legacy_schedule(solution: Dict[str, float]) -> Dict[str, object]:
             {
                 "lane": "Pair completion",
                 "time": completion,
-                "label": f"P{pair_id}",
+                "label": str(pair_id),
+            }
+        )
+        time_candidates.append(completion)
+
+    if wafer_completion:
+        lanes.append("Wafer completion")
+    for wafer_id, completion in sorted(wafer_completion.items()):
+        markers.append(
+            {
+                "lane": "Wafer completion",
+                "time": completion,
+                "label": f"W{wafer_id}",
             }
         )
         time_candidates.append(completion)
@@ -611,6 +675,8 @@ def _normalize_records(payload) -> List[Dict[str, object]]:
     if isinstance(payload, list):
         return payload
     if isinstance(payload, dict):
+        if "solution" in payload:
+            return [payload]
         records = payload.get("results", [])
         if isinstance(records, list):
             return records

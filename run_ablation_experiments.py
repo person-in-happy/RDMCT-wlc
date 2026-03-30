@@ -5,6 +5,10 @@ import os
 from datetime import datetime
 from pathlib import Path
 
+from runtime_compat import configure_openmp_runtime
+
+configure_openmp_runtime()
+
 import numpy as np
 import torch
 
@@ -73,7 +77,9 @@ def _parse_args():
     parser.add_argument("--num_batches", type=int, default=10)
     parser.add_argument("--num_pm", type=int, default=2)
     parser.add_argument("--num_steps", type=int, default=13)
-    parser.add_argument("--total_wafers", type=int, default=40)
+    parser.add_argument("--total_wafers", type=int, default=0)
+    parser.add_argument("--mode_4x1_wafers", type=int, default=20)
+    parser.add_argument("--mode_2x2_wafers", type=int, default=20)
     parser.add_argument("--pec_pool_size", type=int, default=40)
     parser.add_argument("--mode_sequence", type=str, default="")
     return parser.parse_args()
@@ -112,6 +118,8 @@ def _ensure_instance(args):
             total_wafers=args.total_wafers,
             pec_pool_size=args.pec_pool_size,
             mode_sequence=args.mode_sequence,
+            full_mode_wafers=args.mode_4x1_wafers,
+            mix_mode_wafers=args.mode_2x2_wafers,
         )
         lp_path = generate_petri_mip_instance(args.instance_dir, args.instance_name, cfg)
         generated_instance_name = Path(lp_path).name

@@ -1,0 +1,113 @@
+{
+  "algorithm": {
+    "actor_net_lr": 0.0001,
+    "baseline_type": "simple",
+    "batch_size": 8,
+    "critic_beta": 0.9,
+    "critic_net_lr": 0.0001,
+    "evaluate_decode_type": "greedy",
+    "evaluate_freq": 0,
+    "evaluate_samples": 8,
+    "lr_decay": true,
+    "lr_decay_rate": 0.96,
+    "lr_decay_step": 5,
+    "max_grad_norm": 2.0,
+    "normalize": false,
+    "normalize_reward": false,
+    "num_epochs": 50,
+    "optimizer_class": "Adam",
+    "reward_scale": 1,
+    "reward_type": "solving_time",
+    "train_decode_type": "stochastic",
+    "train_steps_per_epoch": 2
+  },
+  "cutsel_percent_policy": {
+    "highlevel_actor_lr": 0.0005,
+    "train_freq": 2,
+    "train_highlevel_batch_size": 8,
+    "use_cutsel_percent_policy": true
+  },
+  "devices": {
+    "global_device": "cuda:0",
+    "multi_devices": [
+      "0"
+    ]
+  },
+  "env": {
+    "conflict": true,
+    "heuristics": true,
+    "instance_file_path": "generated_instances/petri",
+    "max_rounds_root": 1,
+    "presolving": true,
+    "scip_time_limit": 300,
+    "separating": true,
+    "single_instance_file": "petri_batch10_v2.lp"
+  },
+  "experiment": {
+    "base_log_dir": "data",
+    "exp_prefix": "petri_mip_rl_beam_petri_batch10_v2.lp_petri_transfer",
+    "seed": 1,
+    "snapshot_gap": 1,
+    "snapshot_mode": "gap_and_last"
+  },
+  "net_share": {
+    "embedding_dim": 13,
+    "hidden_dim": 128,
+    "tanh_exploration": 5,
+    "use_tanh": true
+  },
+  "online_test_kwargs": {
+    "test_env_kwargs": {
+      "conflict": true,
+      "heuristics": true,
+      "max_rounds_root": 1,
+      "presolving": true,
+      "scip_time_limit": 300,
+      "separating": true,
+      "single_instance_file": "all"
+    },
+    "test_freq": 0,
+    "test_instance_path": "generated_instances/petri",
+    "test_n_jobs": 1
+  },
+  "parser_args": {
+    "baseline_type": "simple",
+    "config_file": "configs/petri_mip_test_config.json",
+    "generate_petri_instance": "True",
+    "instance_type": "petri_transfer",
+    "petri_batches": 10,
+    "petri_instance_dir": "generated_instances/petri",
+    "petri_instance_name": "petri_batch10_v2.lp",
+    "petri_num_pm": 2,
+    "petri_num_steps": 13,
+    "petri_total_wafers": 40,
+    "policy_type": "with_token",
+    "reward_type": "solving_time",
+    "scip_seed": 1,
+    "seed": 1,
+    "sel_cuts_percent": 0.2,
+    "single_instance_file": "petri_batch10_v2.lp",
+    "test_decode_type": "beam_search",
+    "time_limit": 300,
+    "train_type": "train",
+    "use_cutsel_percent_policy": "True"
+  },
+  "policy": {
+    "beam_size": 3,
+    "n_glimpses": 1
+  },
+  "policy_type": "with_token",
+  "start_epoch": 0,
+  "test_kwargs": {
+    "n_jobs": 1,
+    "test_instance_path": "generated_instances/petri",
+    "test_model_path": "PUT_YOUR_TRAINED_MODEL_PATH/params.pkl"
+  },
+  "trainer": {
+    "n_jobs": 1,
+    "samples_per_epoch": 4
+  },
+  "value": {
+    "n_process_block_iters": 3
+  }
+}

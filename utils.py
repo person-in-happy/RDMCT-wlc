@@ -38,6 +38,7 @@ PETRI_VAR_FAMILY_PATTERNS = OrderedDict(
         (
             "full_assign",
             (
+                "wafer_to_full_pair_",
                 "assign_full_",
                 "full_slot_used_",
                 "full_pec_pairs_",
@@ -50,6 +51,7 @@ PETRI_VAR_FAMILY_PATTERNS = OrderedDict(
         (
             "mix_assign",
             (
+                "wafer_to_mix_pair_",
                 "assign_mix_",
                 "mix_pos_used_",
                 "mix_cycle_used_",
@@ -80,7 +82,17 @@ PETRI_VAR_FAMILY_PATTERNS = OrderedDict(
                 "pec_stage_end_",
             ),
         ),
-        ("completion", ("pair_completion_", "product_pair_completion_", "c_max")),
+        (
+            "completion",
+            (
+                "pair_completion_",
+                "product_pair_completion_",
+                "full_pair_completion_",
+                "mix_pair_completion_",
+                "wafer_completion_",
+                "c_max",
+            ),
+        ),
     ]
 )
 

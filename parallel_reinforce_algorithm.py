@@ -5,6 +5,11 @@ from re import L
 from unittest import result
 from sqlalchemy import all_
 from tqdm import tqdm 
+
+from runtime_compat import configure_openmp_runtime
+
+configure_openmp_runtime()
+
 import torch
 import numpy as np
 import json 
@@ -796,7 +801,9 @@ def main():
     parser.add_argument('--petri_batches', type=int, default=10)
     parser.add_argument('--petri_num_pm', type=int, default=2)
     parser.add_argument('--petri_num_steps', type=int, default=13)
-    parser.add_argument('--petri_total_wafers', type=int, default=20)
+    parser.add_argument('--petri_total_wafers', type=int, default=0)
+    parser.add_argument('--petri_4x1_wafers', type=int, default=20)
+    parser.add_argument('--petri_2x2_wafers', type=int, default=20)
     parser.add_argument('--petri_pec_pool_size', type=int, default=8)
     parser.add_argument('--petri_mode_sequence', type=str, default='')
 
@@ -825,6 +832,8 @@ def main():
             total_wafers=args.petri_total_wafers,
             pec_pool_size=args.petri_pec_pool_size,
             mode_sequence=args.petri_mode_sequence,
+            full_mode_wafers=args.petri_4x1_wafers,
+            mix_mode_wafers=args.petri_2x2_wafers,
         )
         generated_path = generate_petri_mip_instance(
             args.petri_instance_dir,

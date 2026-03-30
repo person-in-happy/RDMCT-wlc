@@ -29,8 +29,10 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--num_batches", type=int, default=10)
     parser.add_argument("--num_pm", type=int, default=2)
     parser.add_argument("--num_steps", type=int, default=13)
-    parser.add_argument("--total_wafers", type=int, default=20)
-    parser.add_argument("--pec_pool_size", type=int, default=8)
+    parser.add_argument("--total_wafers", type=int, default=0)
+    parser.add_argument("--mode_4x1_wafers", type=int, default=20)
+    parser.add_argument("--mode_2x2_wafers", type=int, default=20)
+    parser.add_argument("--pec_pool_size", type=int, default=40)
     parser.add_argument("--mode_sequence", type=str, default="")
     return parser.parse_args()
 
@@ -76,6 +78,8 @@ def main() -> None:
         total_wafers=args.total_wafers,
         pec_pool_size=args.pec_pool_size,
         mode_sequence=args.mode_sequence,
+        full_mode_wafers=args.mode_4x1_wafers,
+        mix_mode_wafers=args.mode_2x2_wafers,
     )
     lp_path = generate_petri_mip_instance(args.instance_dir, args.instance_name, petri_cfg)
     generated_instance_name = os.path.basename(lp_path)
@@ -112,6 +116,10 @@ def main() -> None:
         str(args.num_steps),
         "--petri_total_wafers",
         str(args.total_wafers),
+        "--petri_4x1_wafers",
+        str(args.mode_4x1_wafers),
+        "--petri_2x2_wafers",
+        str(args.mode_2x2_wafers),
         "--petri_pec_pool_size",
         str(args.pec_pool_size),
         "--petri_mode_sequence",

@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="350" viewBox="0 0 1400 350">
+<style>text { font-family: "Microsoft YaHei", "SimSun", sans-serif; fill: #222; } .small { font-size: 12px; } .label { font-size: 13px; } .title { font-size: 22px; font-weight: 700; } .subtitle { font-size: 14px; } .tick { font-size: 11px; fill: #666; }</style>
+<rect x="0" y="0" width="1400" height="350" fill="#ffffff"/>
+<text class="title" x="160" y="32">sanity_small.lp 调度甘特图</text>
+<text class="subtitle" x="160" y="54">status=optimal | best_obj=225.99999999999997 | c_max=226.000</text>
+<line x1="160" y1="108" x2="1340" y2="108" stroke="#dddddd" stroke-width="1"/>
+<text class="label" x="16" y="90">PM1 2x2</text>
+<line x1="160" y1="178" x2="1340" y2="178" stroke="#dddddd" stroke-width="1"/>
+<text class="label" x="16" y="160">PM2 4x1</text>
+<line x1="160" y1="248" x2="1340" y2="248" stroke="#dddddd" stroke-width="1"/>
+<text class="label" x="16" y="230">Pair completion</text>
+<line x1="160.00" y1="60" x2="160.00" y2="290" stroke="#f0f0f0" stroke-width="1"/>
+<text class="tick" x="152.00" y="310">0.0</text>
+<line x1="278.00" y1="60" x2="278.00" y2="290" stroke="#f0f0f0" stroke-width="1"/>
+<text class="tick" x="270.00" y="310">22.6</text>
+<line x1="396.00" y1="60" x2="396.00" y2="290" stroke="#f0f0f0" stroke-width="1"/>
+<text class="tick" x="388.00" y="310">45.2</text>
+<line x1="514.00" y1="60" x2="514.00" y2="290" stroke="#f0f0f0" stroke-width="1"/>
+<text class="tick" x="506.00" y="310">67.8</text>
+<line x1="632.00" y1="60" x2="632.00" y2="290" stroke="#f0f0f0" stroke-width="1"/>
+<text class="tick" x="624.00" y="310">90.4</text>
+<line x1="750.00" y1="60" x2="750.00" y2="290" stroke="#f0f0f0" stroke-width="1"/>
+<text class="tick" x="742.00" y="310">113.0</text>
+<line x1="868.00" y1="60" x2="868.00" y2="290" stroke="#f0f0f0" stroke-width="1"/>
+<text class="tick" x="860.00" y="310">135.6</text>
+<line x1="986.00" y1="60" x2="986.00" y2="290" stroke="#f0f0f0" stroke-width="1"/>
+<text class="tick" x="978.00" y="310">158.2</text>
+<line x1="1104.00" y1="60" x2="1104.00" y2="290" stroke="#f0f0f0" stroke-width="1"/>
+<text class="tick" x="1096.00" y="310">180.8</text>
+<line x1="1222.00" y1="60" x2="1222.00" y2="290" stroke="#f0f0f0" stroke-width="1"/>
+<text class="tick" x="1214.00" y="310">203.4</text>
+<line x1="1340.00" y1="60" x2="1340.00" y2="290" stroke="#f0f0f0" stroke-width="1"/>
+<text class="tick" x="1332.00" y="310">226.0</text>
+<rect x="160.00" y="140.00" width="417.70" height="28" rx="4" ry="4" fill="#4C78A8" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.8"/>
+<text class="small" x="166.00" y="158.00" fill="#ffffff">slot 1 | P2 + PEC</text>
+<rect x="609.03" y="140.00" width="417.70" height="28" rx="4" ry="4" fill="#4C78A8" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.8"/>
+<text class="small" x="615.03" y="158.00" fill="#ffffff">slot 2 | P4 + PEC</text>
+<rect x="160.00" y="70.00" width="355.04" height="28" rx="4" ry="4" fill="#F58518" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.8"/>
+<text class="small" x="166.00" y="88.00" fill="#ffffff">cycle 1 | PEC + P1 1st</text>
+<rect x="546.37" y="70.00" width="407.26" height="28" rx="4" ry="4" fill="#54A24B" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.8"/>
+<text class="small" x="552.37" y="88.00" fill="#ffffff">cycle 2 | P1 2nd + P3 1st</text>
+<rect x="984.96" y="70.00" width="355.04" height="28" rx="4" ry="4" fill="#F58518" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.8"/>
+<text class="small" x="990.96" y="88.00" fill="#ffffff">cycle 3 | P3 2nd + PEC</text>
+<polygon points="953.63,214.00 963.63,224.00 953.63,234.00 943.63,224.00" fill="#E45756" stroke="#7A1F1E" stroke-width="0.8"/>
+<text class="small" x="965.63" y="228.00">P1 @ 152.0</text>
+<polygon points="577.70,214.00 587.70,224.00 577.70,234.00 567.70,224.00" fill="#E45756" stroke="#7A1F1E" stroke-width="0.8"/>
+<text class="small" x="589.70" y="228.00">P2 @ 80.0</text>
+<polygon points="1340.00,214.00 1350.00,224.00 1340.00,234.00 1330.00,224.00" fill="#E45756" stroke="#7A1F1E" stroke-width="0.8"/>
+<text class="small" x="1352.00" y="228.00">P3 @ 226.0</text>
+<polygon points="1026.73,214.00 1036.73,224.00 1026.73,234.00 1016.73,224.00" fill="#E45756" stroke="#7A1F1E" stroke-width="0.8"/>
+<text class="small" x="1038.73" y="228.00">P4 @ 166.0</text>
+<line x1="1340.00" y1="50" x2="1340.00" y2="280" stroke="#C00000" stroke-width="2" stroke-dasharray="8 4"/>
+<text class="label" x="1346.00" y="46">c_max=226.0</text>
+</svg>
