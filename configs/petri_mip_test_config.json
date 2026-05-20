@@ -1,15 +1,15 @@
 {
   "experiment": {
     "seed": 1,
-    "exp_prefix": "petri_mip_rl_beam",
-    "base_log_dir": "data",
+    "exp_prefix": "mip_rl_beam",
+    "base_log_dir": "data/mip_rl_beam_clean_20260508.lp_transfer/mip_rl_beam_clean_20260508.lp_transfer_2026_05_08_11_01_44_0000--s-1",
     "snapshot_mode": "gap_and_last",
     "snapshot_gap": 1
   },
   "env": {
-    "instance_file_path": "generated_instances/petri",
-    "scip_time_limit": 300,
-    "single_instance_file": "petri_batch10.lp",
+    "instance_file_path": "generated_instances/MIP",
+    "scip_time_limit": 800,
+    "single_instance_file": "mip_clean_20260508.lp",
     "presolving": true,
     "separating": true,
     "conflict": true,
@@ -17,13 +17,13 @@
     "max_rounds_root": 1
   },
   "algorithm": {
-    "evaluate_freq": 0,
+    "evaluate_freq": 1,
     "evaluate_samples": 8,
     "optimizer_class": "Adam",
     "actor_net_lr": 0.0001,
     "critic_net_lr": 0.0001,
     "reward_scale": 1,
-    "num_epochs": 50,
+    "num_epochs": 20,
     "max_grad_norm": 2.0,
     "batch_size": 8,
     "train_decode_type": "stochastic",
@@ -40,7 +40,7 @@
   },
   "trainer": {
     "samples_per_epoch": 4,
-    "n_jobs": 1
+    "n_jobs": 2
   },
   "net_share": {
     "embedding_dim": 23,
@@ -66,16 +66,29 @@
     "multi_devices": ["0"]
   },
   "test_kwargs": {
-    "test_instance_path": "generated_instances/petri",
-    "test_model_path": "PUT_YOUR_TRAINED_MODEL_PATH/params.pkl",
+    "test_instance_path": "generated_instances/MIP",
+    "test_model_path": "data/mip_rl_beam_clean_20260508.lp_transfer/mip_rl_beam_clean_20260508.lp_transfer_2026_05_08_11_01_44_0000--s-1/mip_rl_beam_mip_clean_20260508.lp_petri_transfer/mip_rl_beam_mip_clean_20260508.lp_petri_transfer_2026_05_12_10_02_27_0000--s-1/params.pkl",
     "n_jobs": 1
   },
-  "online_test_kwargs": {
-    "test_freq": 0,
-    "test_instance_path": "generated_instances/petri",
+  "evaluate_kwargs": {
+    "test_instance_path": "generated_instances/MIP",
     "test_n_jobs": 1,
     "test_env_kwargs": {
-      "scip_time_limit": 300,
+      "scip_time_limit": 3000,
+      "single_instance_file": "all",
+      "presolving": true,
+      "separating": true,
+      "conflict": true,
+      "heuristics": true,
+      "max_rounds_root": 1
+    }
+  },
+  "online_test_kwargs": {
+    "test_freq": 2,
+    "test_instance_path": "generated_instances/MIP",
+    "test_n_jobs": 1,
+    "test_env_kwargs": {
+      "scip_time_limit": 3000,
       "single_instance_file": "all",
       "presolving": true,
       "separating": true,

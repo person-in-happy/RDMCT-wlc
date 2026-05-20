@@ -248,11 +248,14 @@ class SCIPCutSelEnv():
         stats['primal_dual_gap'] = self.m.getGap()
         stats['primaldualintegral'] = self._safe_get_primal_dual_integral()
         stats['status'] = str(self.m.getStatus())
+        stats['n_solutions'] = self.m.getNSols()
         stats['best_obj'] = self._safe_get_best_obj()
         stats['solution'] = self._extract_best_solution()
         return stats
 
     def _safe_get_best_obj(self):
+        if self.m.getNSols() <= 0 or self.m.getBestSol() is None:
+            return None
         try:
             return float(self.m.getObjVal())
         except Exception:

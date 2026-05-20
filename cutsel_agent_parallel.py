@@ -52,6 +52,17 @@ class CutSelectAgent(CutselBase):
         }
         self.mean_std = mean_std
 
+    def _target_cut_count(self, num_cuts, maxnselectedcuts, desired_count, min_when_possible=2):
+        limit = min(int(num_cuts), int(maxnselectedcuts))
+        if limit <= 0:
+            return 0
+        desired_count = int(desired_count)
+        if limit >= min_when_possible:
+            desired_count = max(desired_count, min_when_possible)
+        else:
+            desired_count = max(desired_count, 1)
+        return max(0, min(desired_count, limit))
+
     def _normalize(self, cuts_features):
         # print(f"debug log mean: {self.mean_std.mean}, std: {self.mean_std.std}")
         return (cuts_features-self.mean_std.mean) / (self.mean_std.std + self.mean_std.epsilon)
@@ -270,11 +281,20 @@ class CutSelectAgent(CutselBase):
         if num_cuts <= 1:
             return {
                 'cuts': cuts, # selected sorted cuts
-                'nselectedcuts': 1, # num of selected cuts
+                'nselectedcuts': max(0, min(num_cuts, int(maxnselectedcuts))), # num of selected cuts
                 'result': SCIP_RESULT.SUCCESS
             }            
-        sel_cuts_num = min(int(num_cuts * self.sel_cuts_percent), int(maxnselectedcuts))
-        sel_cuts_num = max(sel_cuts_num, 2)
+        sel_cuts_num = self._target_cut_count(
+            num_cuts,
+            maxnselectedcuts,
+            int(num_cuts * self.sel_cuts_percent),
+        )
+        if sel_cuts_num <= 0:
+            return {
+                'cuts': cuts,
+                'nselectedcuts': 0,
+                'result': SCIP_RESULT.SUCCESS
+            }
         st_before_input = time.time()
         cuts_features, structure_metadata = advanced_cut_feature_generator(
             self.scip_model,
@@ -320,8 +340,12 @@ class CutSelectAgent(CutselBase):
         if not self.data:
             self.data = {
                 "state": cuts_features,
-                "action": true_idxes,
-                "sel_cuts_num": len(true_idxes),
+                # Train on the stochastic trajectory produced by the policy.
+                # Structure-aware reranking is part of the environment transition.
+                "action": idxes,
+                "sel_cuts_num": len(idxes),
+                "selected_action": true_idxes,
+                "selected_cuts_num": len(true_idxes),
                 "structure_info": structure_info,
             }
             # self.cuts_info = {
@@ -349,7 +373,7 @@ class CutSelectAgent(CutselBase):
         if num_cuts <= 1:
             return {
                 'cuts': cuts, # selected sorted cuts
-                'nselectedcuts': 1, # num of selected cuts
+                'nselectedcuts': max(0, min(num_cuts, int(maxnselectedcuts))), # num of selected cuts
                 'result': SCIP_RESULT.SUCCESS
             }            
         max_sel_cuts_num = len(cuts) + 1 
@@ -380,12 +404,16 @@ class CutSelectAgent(CutselBase):
 
         idxes = [input.cpu().detach().item() for input in input_idxs]
         raw_sel_cuts_num = len(idxes)
-        sel_cuts_num = max(2, min(num_cuts, raw_sel_cuts_num - 1))
-        if not self.data:
-            self.data = {
-                "state": cuts_features,
-                "action": idxes,
-                "sel_cuts_num": raw_sel_cuts_num,
+        sel_cuts_num = self._target_cut_count(
+            num_cuts,
+            maxnselectedcuts,
+            raw_sel_cuts_num - 1,
+        )
+        if sel_cuts_num <= 0:
+            return {
+                'cuts': cuts,
+                'nselectedcuts': 0,
+                'result': SCIP_RESULT.SUCCESS
             }
         # select cuts 
         true_idxes, structure_info = self._apply_structure_aware_selection(
@@ -404,6 +432,16 @@ class CutSelectAgent(CutselBase):
 
         if self.data and "structure_info" not in self.data:
             self.data["structure_info"] = structure_info
+        if not self.data:
+            self.data = {
+                "state": cuts_features,
+                # Keep the raw sampled trajectory, including the end token.
+                "action": idxes,
+                "sel_cuts_num": raw_sel_cuts_num,
+                "selected_action": true_idxes,
+                "selected_cuts_num": len(true_idxes),
+                "structure_info": structure_info,
+            }
 
         return {
             'cuts': sorted_cuts, # selected sorted cuts
@@ -471,7 +509,7 @@ class HierarchyCutSelectAgent(CutSelectAgent):
         if num_cuts <= 1:
             return {
                 'cuts': cuts, # selected sorted cuts
-                'nselectedcuts': 1, # num of selected cuts
+                'nselectedcuts': max(0, min(num_cuts, int(maxnselectedcuts))), # num of selected cuts
                 'result': SCIP_RESULT.SUCCESS
             }
         
@@ -505,11 +543,20 @@ class HierarchyCutSelectAgent(CutSelectAgent):
         st_end_highlevel_policy_inference = time.time()
 
         sel_cuts_percent = raw_sel_cuts_percent.item() * 0.5 + 0.5
-        sel_cuts_num = min(int(num_cuts * sel_cuts_percent), int(maxnselectedcuts))
-        sel_cuts_num = max(sel_cuts_num, 2)
+        sel_cuts_num = self._target_cut_count(
+            num_cuts,
+            maxnselectedcuts,
+            int(num_cuts * sel_cuts_percent),
+        )
+        if sel_cuts_num <= 0:
+            return {
+                'cuts': cuts,
+                'nselectedcuts': 0,
+                'result': SCIP_RESULT.SUCCESS
+            }
         # 只做选择动作的功能，不做计算梯度的功能
         with torch.no_grad():
-            decode_len = sel_cuts_num if self.policy_type != 'with_token' else (num_cuts + 1)
+            decode_len = sel_cuts_num
             _, input_idxs = self.policy(input_cuts.float(), decode_len, self.decode_type)
         st_end_pointer_net_inference = time.time()
 
@@ -539,8 +586,12 @@ class HierarchyCutSelectAgent(CutSelectAgent):
         if not self.data:
             self.data = {
                 "state": cuts_features,
-                "action": true_idxes,
-                "sel_cuts_num": len(true_idxes),
+                # Keep the sampled low-level trajectory for policy-gradient replay.
+                "action": idxes,
+                "sel_cuts_num": len(idxes),
+                "selected_action": true_idxes,
+                "selected_cuts_num": len(true_idxes),
+                "target_sel_cuts_num": sel_cuts_num,
                 "structure_info": structure_info,
             }
         if not self.high_level_data:
@@ -664,12 +715,20 @@ class HeuristicBeamCutSelectAgent(CutselBase):
         if num_cuts <= 1:
             return {
                 'cuts': cuts,
-                'nselectedcuts': 1,
+                'nselectedcuts': max(0, min(num_cuts, int(maxnselectedcuts))),
                 'result': SCIP_RESULT.SUCCESS
             }
 
-        sel_cuts_num = min(int(num_cuts * self.sel_cuts_percent), int(maxnselectedcuts))
-        sel_cuts_num = max(sel_cuts_num, 2)
+        limit = min(int(num_cuts), int(maxnselectedcuts))
+        if limit <= 0:
+            return {
+                'cuts': cuts,
+                'nselectedcuts': 0,
+                'result': SCIP_RESULT.SUCCESS
+            }
+        sel_cuts_num = int(num_cuts * self.sel_cuts_percent)
+        sel_cuts_num = max(sel_cuts_num, 2 if limit >= 2 else 1)
+        sel_cuts_num = min(sel_cuts_num, limit)
 
         cut_features = advanced_cut_feature_generator(self.scip_model, cuts)
         base_scores = self._compute_base_scores(cut_features)

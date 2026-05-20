@@ -256,9 +256,22 @@ class ReinforceBaselineAlg():
                 batch_size = self.batch_size
             logger.log(f"training epoch: {epoch}, training loop: {train_loop}")
             log_prefix = f"training epoch: {epoch}, training loop: {train_loop}"
+            if i == (train_loop - 1) :
+                minibatch_neg_rewards = torch.from_numpy(neg_rewards[i*self.batch_size:]).float().to(self.device)
+            else:
+                minibatch_neg_rewards = torch.from_numpy(neg_rewards[i*self.batch_size:(i+1)*self.batch_size]).float().to(self.device)
+
+            raw_logprobs = torch.zeros((batch_size, 1)).to(self.device)
             logprobs = torch.zeros((batch_size, 1)).to(self.device)
+            neg_advantage = torch.zeros((batch_size, 1)).to(self.device)
             if self.baseline_type == 'net':
                 neg_baseline_value = torch.zeros((batch_size, 1)).to(self.device)
+            first_pointer_probs = None
+            reinforce_loss_value = 0.0
+            critic_loss_value = 0.0
+            self.policy_optimizer.zero_grad()
+            if self.baseline_type == 'net':
+                self.value_optimizer.zero_grad()
             for j in range(batch_size):
                 _log_cuda_memory(f"{log_prefix} step {j}")
                 if torch.cuda.is_available() and (torch.cuda.memory_reserved(0)/1024**3) > 4.5:
@@ -269,48 +282,52 @@ class ReinforceBaselineAlg():
                 state = state.reshape(state.shape[0], 1, state.shape[1])
                 action = actions[cur_index]
                 sel_cuts_num = sel_cuts_nums[cur_index]
+                collect_pointer_probs = (i == 0 and j == 0)
                 pointer_probs, logprob = self.pointer_net.logprobs(
-                    state, sel_cuts_num, action
+                    state, sel_cuts_num, action, return_pointer_probs=collect_pointer_probs
                 )
-                if logprob.item() < -4000:
-                    logprobs[j,:] = logprob.detach()
-                    logger.log('warning: logprob too small, we drop it!!!')
+                action_len = max(len(action), 1)
+                mean_logprob = logprob / action_len
+                reward_j = minibatch_neg_rewards[j:j+1]
+                if self.baseline_type == 'simple':
+                    sample_advantage = reward_j - torch.tensor([self.critic_exp_mvg_avg], dtype=torch.float, device=self.device)
+                elif self.baseline_type == 'no_baseline':
+                    sample_advantage = reward_j
+                elif self.baseline_type == 'net':
+                    baseline_value = self.value_net(state).reshape(1, 1)
+                    neg_baseline_value[j,:] = baseline_value.detach().reshape(-1)
+                    sample_advantage = reward_j - baseline_value.detach()
+                    sample_critic_loss = self.critic_mse(baseline_value, reward_j) / batch_size
+                    sample_critic_loss.backward()
+                    critic_loss_value += sample_critic_loss.detach().item()
+                neg_advantage[j,:] = sample_advantage.detach().reshape(-1)
+                raw_logprobs[j,:] = logprob.detach()
+                logprobs[j,:] = mean_logprob.detach()
+                # Use per-step logprob for stability on very long trajectories.
+                if mean_logprob.item() < -20:
+                    logger.log('warning: average logprob per step too small, we drop it!!!')
                 else:
-                    logprobs[j,:] = logprob
-                if self.baseline_type == 'net':
-                    neg_baseline_value[j,:] = self.value_net(state).squeeze()
-                if i == 0 and j == 0:
+                    sample_reinforce_loss = (sample_advantage * mean_logprob).mean() / batch_size
+                    sample_reinforce_loss.backward()
+                    reinforce_loss_value += sample_reinforce_loss.detach().item()
+                if collect_pointer_probs and pointer_probs is not None:
+                    first_pointer_probs = pointer_probs
                     # log tensorboard 
                     logger.tb_logger.add_histogram("selected_idxes", np.array(action), global_step=epoch)
                     for pos, prob_distribution in enumerate(pointer_probs):   
                         logger.tb_logger.add_histogram(f"position {pos} probability distribution", prob_distribution, global_step=epoch)
-            pos_1_entropy = self._compute_sm_entropy(pointer_probs[0])
-            logger.record_tabular('pos_1_entropy', pos_1_entropy.item())
+            if first_pointer_probs is not None:
+                pos_1_entropy = self._compute_sm_entropy(first_pointer_probs[0])
+                logger.record_tabular('pos_1_entropy', pos_1_entropy.item())
 
-            if i == (train_loop - 1) :
-                minibatch_neg_rewards = torch.from_numpy(neg_rewards[i*self.batch_size:]).float().to(self.device)
-            else:
-                minibatch_neg_rewards = torch.from_numpy(neg_rewards[i*self.batch_size:(i+1)*self.batch_size]).float().to(self.device)
-            
-            if self.baseline_type == 'simple':
-                neg_advantage = minibatch_neg_rewards - torch.tensor([self.critic_exp_mvg_avg], dtype=torch.float, device=self.device)
-            elif self.baseline_type == 'no_baseline':
-                neg_advantage = minibatch_neg_rewards
-            elif self.baseline_type == 'net':
-                neg_advantage = minibatch_neg_rewards - neg_baseline_value.detach()
-            # compute policy loss
-            reinforce_loss = (neg_advantage * logprobs).mean()
-            self.policy_optimizer.zero_grad()
-            reinforce_loss.backward() # compute gradient
+            reinforce_loss = torch.tensor(reinforce_loss_value, dtype=torch.float, device=self.device)
             # clip gradient norms
             torch.nn.utils.clip_grad_norm(self.pointer_net.parameters(),
                     float(self.max_grad_norm), norm_type=2)            
             self.policy_optimizer.step()
             # compute value loss 
             if self.baseline_type == 'net':
-                critic_loss = self.critic_mse(neg_baseline_value, minibatch_neg_rewards)
-                self.value_optimizer.zero_grad()
-                critic_loss.backward()
+                critic_loss = torch.tensor(critic_loss_value, dtype=torch.float, device=self.device)
                 torch.nn.utils.clip_grad_norm(self.value_net.parameters(),
                         float(self.max_grad_norm), norm_type=2)  
                 self.value_optimizer.step()
@@ -330,6 +347,7 @@ class ReinforceBaselineAlg():
         # logger.record_tabular('training/Neg Reward', neg_rewards.mean().item())
         logger.record_tabular('training/Neg Advantage', neg_advantage.mean().item())
         logger.record_dict(create_stats_ordered_dict('training/logprobs',logprobs.cpu().detach().numpy()))
+        logger.record_dict(create_stats_ordered_dict('training/raw_logprobs',raw_logprobs.cpu().detach().numpy()))
         logger.record_tabular('training/reinforce loss', reinforce_loss.item())
         logger.record_tabular('training/Critic Value', self.critic_exp_mvg_avg.item())
         if self.baseline_type == 'net':

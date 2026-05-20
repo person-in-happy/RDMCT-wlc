@@ -59,7 +59,7 @@ def _parse_args():
     parser.add_argument("--config_file", type=str, default="configs/petri_mip_test_config.json")
     parser.add_argument("--test_model_path", type=str, default="")
     parser.add_argument("--instance_dir", type=str, default="generated_instances/petri")
-    parser.add_argument("--instance_name", type=str, default="petri_batch10_v2.lp")
+    parser.add_argument("--instance_name", type=str, default="petri_batch10_fullflow_v7.lp")
     parser.add_argument("--generate_petri_instance", type=str, default="True")
     parser.add_argument("--single_instance_file", type=str, default="")
     parser.add_argument("--output_dir", type=str, default="ablation_results")

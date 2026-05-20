@@ -45,6 +45,35 @@ BOTTOM_MARGIN = 96
 LANE_HEIGHT = 74
 BAR_HEIGHT = 28
 
+NEW_PRODUCT_STAGE_ORDER = [
+    "atr_lp_al",
+    "al",
+    "atr_al_llupper",
+    "llupper",
+    "vtr_load",
+    "pm",
+    "vtr_unload",
+    "lllower",
+    "atr_lllower_lp",
+]
+NEW_PRODUCT_STAGE_META = {
+    "atr_lp_al": ("LP->AL", "#4C78A8"),
+    "al": ("AL", "#9C755F"),
+    "atr_al_llupper": ("AL->LLupper", "#72B7B2"),
+    "llupper": ("LLupper", "#54A24B"),
+    "vtr_load": ("VTR Load", "#F58518"),
+    "pm": ("PM", "#E45756"),
+    "vtr_unload": ("VTR Unload", "#FF9DA6"),
+    "lllower": ("LLlower", "#B279A2"),
+    "atr_lllower_lp": ("LLlower->LP", "#79706E"),
+}
+NEW_PEC_STAGE_ORDER = ["vtr_load", "pm", "vtr_unload"]
+NEW_PEC_STAGE_META = {
+    "vtr_load": ("PEC->PM", "#72B7B2"),
+    "pm": ("PM", "#E45756"),
+    "vtr_unload": ("PM->PEC", "#B279A2"),
+}
+
 
 def _float(value):
     try:
@@ -101,8 +130,10 @@ def _time_to_x(value: float, horizon: float) -> float:
 
 
 def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
-    assign_prod: Dict[Tuple[int, int], List[int]] = {}
-    assign_pec: Dict[Tuple[int, int], List[int]] = {}
+    assign_prod_by_batch: Dict[Tuple[int, int], List[int]] = {}
+    assign_prod_by_wafer: Dict[int, Tuple[int, int]] = {}
+    assign_pec_by_batch: Dict[Tuple[int, int], List[int]] = {}
+    assign_pec_by_pec: Dict[int, Tuple[int, int]] = {}
     batch_used: Dict[Tuple[int, int], bool] = {}
     batch_start: Dict[Tuple[int, int], float] = {}
     batch_end: Dict[Tuple[int, int], float] = {}
@@ -116,17 +147,19 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
     for name, value in solution.items():
         m = ASSIGN_PROD_RE.match(name)
         if m and _bool(value):
-            pair_id = int(m.group(1))
+            wafer_id = int(m.group(1))
             pm_id = int(m.group(2))
             slot_id = int(m.group(3))
-            assign_prod.setdefault((pm_id, slot_id), []).append(pair_id)
+            assign_prod_by_batch.setdefault((pm_id, slot_id), []).append(wafer_id)
+            assign_prod_by_wafer[wafer_id] = (pm_id, slot_id)
             continue
         m = ASSIGN_PEC_RE.match(name)
         if m and _bool(value):
-            pair_id = int(m.group(1))
+            pec_id = int(m.group(1))
             pm_id = int(m.group(2))
             slot_id = int(m.group(3))
-            assign_pec.setdefault((pm_id, slot_id), []).append(pair_id)
+            assign_pec_by_batch.setdefault((pm_id, slot_id), []).append(pec_id)
+            assign_pec_by_pec[pec_id] = (pm_id, slot_id)
             continue
         m = BATCH_USED_RE.match(name)
         if m:
@@ -161,8 +194,96 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
             pec_stage_end[(int(m.group(1)), m.group(2))] = _float(value)
             continue
 
-    if not (assign_prod or prod_stage_start or batch_used):
+    if not (assign_prod_by_batch or prod_stage_start or batch_used):
         return {}
+
+    new_product_model = any(stage_name in NEW_PRODUCT_STAGE_ORDER for _, stage_name in prod_stage_start.keys())
+    if new_product_model:
+        lanes: List[str] = []
+        tasks: List[Dict[str, object]] = []
+        time_candidates = [c_max]
+
+        product_ids = sorted(
+            {wafer_id for wafer_id, _ in prod_stage_start.keys()} | {wafer_id for wafer_id, _ in prod_stage_end.keys()},
+            key=lambda wafer_id: (
+                prod_stage_start.get((wafer_id, "atr_lp_al"), prod_stage_end.get((wafer_id, "atr_lp_al"), 0.0)),
+                wafer_id,
+            ),
+        )
+        for wafer_id in product_ids:
+            assignment = assign_prod_by_wafer.get(wafer_id)
+            lane_name = f"Product W{wafer_id}"
+            if assignment is not None:
+                lane_name += f" | PM{assignment[0]}-B{assignment[1]}"
+            lanes.append(lane_name)
+            for stage_name in NEW_PRODUCT_STAGE_ORDER:
+                start = prod_stage_start.get((wafer_id, stage_name), 0.0)
+                end = prod_stage_end.get((wafer_id, stage_name), start)
+                if end <= start + 1e-9:
+                    continue
+                label, color = NEW_PRODUCT_STAGE_META[stage_name]
+                tasks.append(
+                    {
+                        "lane": lane_name,
+                        "start": start,
+                        "end": end,
+                        "label": label,
+                        "short_label": label,
+                        "color": color,
+                    }
+                )
+                time_candidates.extend([start, end])
+
+        pec_ids = sorted(
+            {pec_id for pec_id, _ in pec_stage_start.keys()} | {pec_id for pec_id, _ in pec_stage_end.keys()},
+            key=lambda pec_id: (
+                pec_stage_start.get((pec_id, "vtr_load"), pec_stage_end.get((pec_id, "vtr_load"), 0.0)),
+                pec_id,
+            ),
+        )
+        for pec_id in pec_ids:
+            has_activity = any(
+                pec_stage_end.get((pec_id, stage_name), 0.0) > pec_stage_start.get((pec_id, stage_name), 0.0) + 1e-9
+                for stage_name in NEW_PEC_STAGE_ORDER
+            )
+            if not has_activity:
+                continue
+            assignment = assign_pec_by_pec.get(pec_id)
+            lane_name = f"PEC E{pec_id}"
+            if assignment is not None:
+                lane_name += f" | PM{assignment[0]}-B{assignment[1]}"
+            lanes.append(lane_name)
+            for stage_name in NEW_PEC_STAGE_ORDER:
+                start = pec_stage_start.get((pec_id, stage_name), 0.0)
+                end = pec_stage_end.get((pec_id, stage_name), start)
+                if end <= start + 1e-9:
+                    continue
+                label, color = NEW_PEC_STAGE_META[stage_name]
+                tasks.append(
+                    {
+                        "lane": lane_name,
+                        "start": start,
+                        "end": end,
+                        "label": label,
+                        "short_label": label,
+                        "color": color,
+                    }
+                )
+                time_candidates.extend([start, end])
+
+        if not lanes:
+            return {}
+
+        horizon = max(time_candidates) if time_candidates else 0.0
+        return {
+            "is_petri": True,
+            "layout": "path",
+            "lanes": lanes,
+            "tasks": tasks,
+            "markers": [],
+            "horizon": max(horizon, 1.0),
+            "c_max": c_max,
+        }
 
     used_batches = sorted(
         [
@@ -180,8 +301,8 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
     time_candidates = [c_max]
 
     for pm_id, slot_id in used_batches:
-        prod_members = sorted(assign_prod.get((pm_id, slot_id), []))
-        pec_members = sorted(assign_pec.get((pm_id, slot_id), []))
+        prod_members = sorted(assign_prod_by_batch.get((pm_id, slot_id), []))
+        pec_members = sorted(assign_pec_by_batch.get((pm_id, slot_id), []))
         members = [("prod", pair_id) for pair_id in prod_members] + [("pec", pair_id) for pair_id in pec_members]
 
         for member_type, member_id in members:
@@ -693,6 +814,56 @@ def _normalize_records(payload) -> List[Dict[str, object]]:
     return []
 
 
+def _looks_like_runtime_config(payload) -> bool:
+    return isinstance(payload, dict) and {"experiment", "env", "algorithm"}.issubset(payload.keys())
+
+
+def _summarize_status(records: List[Dict[str, object]]) -> str:
+    status_counts: Dict[str, int] = {}
+    for record in records:
+        status = str(record.get("status", "unknown") or "unknown")
+        status_counts[status] = status_counts.get(status, 0) + 1
+    if not status_counts:
+        return "none"
+    ordered = sorted(status_counts.items(), key=lambda item: item[0])
+    return ", ".join(f"{status}={count}" for status, count in ordered)
+
+
+def _diagnose_solution_payload(payload, records: List[Dict[str, object]]) -> List[str]:
+    if not records:
+        if _looks_like_runtime_config(payload):
+            return [
+                "The provided JSON looks like a runtime/config file, not a solver result file.",
+                "Please pass a *_solutions_*.json file generated by testing/inference instead.",
+            ]
+        return [
+            "The provided JSON does not contain any solution records.",
+            "Expected one of: a record with a 'solution' field, a list of such records, or a 'results' container.",
+        ]
+
+    non_empty_solutions = [record for record in records if record.get("solution", {})]
+    if not non_empty_solutions:
+        return [
+            f"Found {len(records)} record(s), but all of them have empty solution dictionaries.",
+            f"Status summary: {_summarize_status(records)}.",
+            "A Gantt chart can only be generated when a record contains a non-empty feasible solution.",
+        ]
+
+    return [
+        f"Found {len(records)} record(s), including {len(non_empty_solutions)} with non-empty solutions.",
+        "However, none of the solutions matched the scheduling variable patterns expected by petri_gantt.py.",
+        "Please verify that the solution JSON comes from the Petri/MIP pipeline supported by this script.",
+    ]
+
+
+def _load_solution_payload(solution_json: str):
+    solution_path = resolve_path(solution_json)
+    with solution_path.open("r", encoding="utf-8") as f:
+        payload = json.load(f)
+    records = _normalize_records(payload)
+    return solution_path, payload, records
+
+
 def generate_gantt_charts_from_records(records: List[Dict[str, object]], output_dir: str) -> List[str]:
     out_dir = resolve_path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -735,11 +906,7 @@ def generate_gantt_charts_from_records(records: List[Dict[str, object]], output_
 
 
 def generate_gantt_charts_from_solution_file(solution_json: str, output_dir: str = None) -> List[str]:
-    solution_path = resolve_path(solution_json)
-    with solution_path.open("r", encoding="utf-8") as f:
-        payload = json.load(f)
-
-    records = _normalize_records(payload)
+    solution_path, _, records = _load_solution_payload(solution_json)
     if output_dir is None:
         output_dir = str(solution_path.with_name(solution_path.stem + "_gantt"))
     else:
@@ -756,12 +923,15 @@ def _parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = _parse_args()
+    solution_path, payload, records = _load_solution_payload(args.solution_json)
     generated = generate_gantt_charts_from_solution_file(
-        args.solution_json,
+        str(solution_path),
         args.output_dir or None,
     )
     if not generated:
         print("No Petri gantt charts were generated from the provided solution file.")
+        for line in _diagnose_solution_payload(payload, records):
+            print(line)
         return
     print("Generated Gantt outputs:")
     for path in generated:

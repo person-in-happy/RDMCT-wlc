@@ -4,6 +4,7 @@ import torch.autograd as autograd
 from torch.autograd import Variable
 from torch.nn.parameter import Parameter
 import torch.nn.functional as F
+from torch.utils.checkpoint import checkpoint
 from torch.distributions import Normal
 import math
 import numpy as np
@@ -37,6 +38,23 @@ class Attention(nn.Module):
         self.v = nn.Parameter(torch.FloatTensor(dim))
         self.v.data.uniform_(-(1. / math.sqrt(dim)) , 1. / math.sqrt(dim))
         
+    def encode_ref(self, ref):
+        ref = ref.permute(1, 2, 0)
+        return self.project_ref(ref)
+
+    def score(self, query, encoded_ref):
+        q = self.project_query(query).unsqueeze(2)  # batch x dim x 1
+        # batch x 1 x hidden_dim
+        v_view = self.v.unsqueeze(0).expand(
+                q.size(0), len(self.v)).unsqueeze(1)
+        # [batch_size x 1 x hidden_dim] * [batch_size x hidden_dim x sourceL]
+        u = torch.bmm(v_view, self.tanh(q + encoded_ref)).squeeze(1)
+        if self.use_tanh:
+            logits = self.C * self.tanh(u)
+        else:
+            logits = u
+        return logits
+
     def forward(self, query, ref):
         """
         Args: 
@@ -45,22 +63,15 @@ class Attention(nn.Module):
             ref: the set of hidden states from the encoder. 
                 sourceL x batch x hidden_dim
         """
-        # ref is now [batch_size x hidden_dim x sourceL]
-        ref = ref.permute(1, 2, 0)
-        q = self.project_query(query).unsqueeze(2)  # batch x dim x 1
-        e = self.project_ref(ref)  # batch_size x hidden_dim x sourceL 
-        # expand the query by sourceL
-        # batch x dim x sourceL
-        expanded_q = q.repeat(1, 1, e.size(2)) 
-        # batch x 1 x hidden_dim
-        v_view = self.v.unsqueeze(0).expand(
-                expanded_q.size(0), len(self.v)).unsqueeze(1)
-        # [batch_size x 1 x hidden_dim] * [batch_size x hidden_dim x sourceL]
-        u = torch.bmm(v_view, self.tanh(expanded_q + e)).squeeze(1)
-        if self.use_tanh:
-            logits = self.C * self.tanh(u)
+        if ref.dim() == 3 and ref.size(0) == query.size(0):
+            e = ref
+            if query.requires_grad:
+                logits = checkpoint(self.score, query, e, use_reentrant=False)
+            else:
+                logits = self.score(query, e)
         else:
-            logits = u  
+            e = self.encode_ref(ref)
+            logits = self.score(query, e)
         return e, logits
 
 class DecoderEndToken(nn.Module):
@@ -104,7 +115,15 @@ class DecoderEndToken(nn.Module):
             logits[maskk] = -np.inf
         return logits, maskk
 
-    def logprobs(self, decoder_input, embedded_inputs, hidden, context, max_length, seled_idxes):
+    def _attention_logits(self, attention_module, query, encoded_ref, use_checkpoint):
+        if use_checkpoint and query.requires_grad:
+            return checkpoint(attention_module.score, query, encoded_ref, use_reentrant=False)
+        return attention_module.score(query, encoded_ref)
+
+    def logprobs(self, decoder_input, embedded_inputs, hidden, context, max_length, seled_idxes, collect_pointer_probs=False):
+        glimpse_ref = self.glimpse.encode_ref(context)
+        pointer_ref = self.pointer.encode_ref(context)
+
         def recurrence(x, hidden, logit_mask, prev_idxs, step):
             
             hx, cx = hidden  # batch_size x hidden_dim
@@ -122,7 +141,7 @@ class DecoderEndToken(nn.Module):
             
             g_l = hy
             for i in range(self.n_glimpses):
-                ref, logits = self.glimpse(g_l, context)
+                ref, logits = self.glimpse(g_l, glimpse_ref)
                 logits, logit_mask = self.apply_mask_to_logits(step, logits, logit_mask, prev_idxs)
                 # [batch_size x h_dim x sourceL] * [batch_size x sourceL x 1] = 
                 # [batch_size x h_dim x 1]
@@ -130,40 +149,41 @@ class DecoderEndToken(nn.Module):
             _, logits = self.pointer(g_l, context) # logits 代表基于context vector 的概率分布
             
             logits, logit_mask = self.apply_mask_to_logits(step, logits, logit_mask, prev_idxs)
-            probs = self.sm(logits)
-            return hy, cy, probs, logit_mask
+            log_probs = F.log_softmax(logits, dim=1)
+            probs = log_probs.exp()
+            return hy, cy, probs, log_probs, logit_mask
     
         batch_size = context.size(1)
-        outputs = []
-        single_probs = []
+        context = pointer_ref
+        outputs = [] if collect_pointer_probs else None
+        logprob = torch.zeros((batch_size, 1), device=self.pointer.v.device)
         steps = range(max_length)  # or until terminating symbol ?
-        inps = []
         idxs = None
         mask = None
        
         for i in steps:
-            hx, cx, probs, mask = recurrence(decoder_input, hidden, mask, idxs, i)
+            hx, cx, probs, log_probs, mask = recurrence(decoder_input, hidden, mask, idxs, i)
             hidden = (hx, cx)
             # select the next inputs for the decoder [batch_size x hidden_dim]
-            decoder_input, prob = self.decode_logp(
-                probs,
+            selected_idx = int(seled_idxes[i])
+            decoder_input = self.decode_logp(
                 embedded_inputs,
                 seled_idxes[i]) # 每一次decode 都是随机sample 一个输出
-            inps.append(decoder_input) 
-            idxs = torch.tensor([seled_idxes[i]], dtype=torch.int64).to(self.pointer.v.device)
+            idxs = torch.tensor([selected_idx], dtype=torch.int64).to(self.pointer.v.device)
             # if self.use_cuda:
             #     idxs = idxs.cuda()
             # use outs to point to next object
-            outputs.append(probs)
-            single_probs.append(prob)
+            logprob = logprob + log_probs[:, selected_idx:selected_idx+1]
+            if collect_pointer_probs:
+                outputs.append(probs.detach().cpu())
 
-        return (outputs, single_probs), hidden
+        return (outputs, logprob), hidden
 
-    def decode_logp(self, probs, embedded_inputs, idxs):
-        batch_size = probs.size(0)
+    def decode_logp(self, embedded_inputs, idxs):
+        batch_size = embedded_inputs.size(1)
         # due to race conditions, might need to resample here
         sels = embedded_inputs[idxs, [i for i in range(batch_size)], :] 
-        return sels, probs[:,idxs]
+        return sels
 
     def forward(self, decoder_input, embedded_inputs, hidden, context, max_length, decode_type):
         """
@@ -204,6 +224,7 @@ class DecoderEndToken(nn.Module):
             return hy, cy, probs, logit_mask
     
         batch_size = context.size(1)
+        end_token_idx = embedded_inputs.size(0) - 1
         outputs = []
         selections = []
         steps = range(max_length)  # or until terminating symbol ?
@@ -226,8 +247,8 @@ class DecoderEndToken(nn.Module):
                 outputs.append(probs)
                 selections.append(idxs)
 
-                if idxs.item() == (max_length - 1):
-                    # choose the last end token
+                if idxs.numel() == 1 and int(idxs.reshape(-1)[0].item()) == end_token_idx:
+                    # Stop only when the actual appended end token is selected.
                     break
             return (outputs, selections), hidden
         
@@ -416,7 +437,7 @@ class PointerNetworkEndToken(nn.Module):
         
         return logprob
 
-    def logprobs(self, inputs, max_decode_len, seled_idxes):
+    def logprobs(self, inputs, max_decode_len, seled_idxes, return_pointer_probs=False):
         """ Propagate inputs through the network
         Args: 
             inputs: [sourceL x batch_size x embedding_dim]
@@ -438,15 +459,15 @@ class PointerNetworkEndToken(nn.Module):
         # repeat decoder_in_0 across batch
         decoder_input = self.decoder_in_0.unsqueeze(0).repeat(inputs.size(1), 1)
 
-        (pointer_probs, probs), dec_hidden_t = self.decoder.logprobs(decoder_input,
+        (pointer_probs, logprob), dec_hidden_t = self.decoder.logprobs(decoder_input,
                 inputs,
                 dec_init_state,
                 enc_h,
                 max_decode_len,
-                seled_idxes)
-        logprob = self._prob_to_logp(probs)
+                seled_idxes,
+                collect_pointer_probs=return_pointer_probs)
         
-        return [pointer_prob.cpu().detach() for pointer_prob in pointer_probs], logprob
+        return pointer_probs, logprob
 
 
     

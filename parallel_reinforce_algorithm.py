@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 from random import random
 from re import L
 from unittest import result
@@ -448,7 +449,12 @@ def test(
         final_solve_results.append({
             "instance": f_name,
             "status": env_step_info.get("status"),
+            "solving_time": env_step_info.get("solving_time"),
+            "ntotal_nodes": env_step_info.get("ntotal_nodes"),
+            "primal_dual_gap": env_step_info.get("primal_dual_gap"),
+            "primaldualintegral": env_step_info.get("primaldualintegral"),
             "best_obj": env_step_info.get("best_obj"),
+            "nonzero_solution_vars": len(env_step_info.get("solution", {})),
             "solution": env_step_info.get("solution", {})
         })
 
@@ -533,7 +539,12 @@ def test_hierarchy(
         final_solve_results.append({
             "instance": f_name,
             "status": env_step_info.get("status"),
+            "solving_time": env_step_info.get("solving_time"),
+            "ntotal_nodes": env_step_info.get("ntotal_nodes"),
+            "primal_dual_gap": env_step_info.get("primal_dual_gap"),
+            "primaldualintegral": env_step_info.get("primaldualintegral"),
             "best_obj": env_step_info.get("best_obj"),
+            "nonzero_solution_vars": len(env_step_info.get("solution", {})),
             "solution": env_step_info.get("solution", {})
         })
     return_queue.put(
@@ -790,6 +801,7 @@ def main():
     parser.add_argument('--train_type', type=str, default="train")
     parser.add_argument('--instance_type', type=str, default="item_placement") # for log file name 
     parser.add_argument('--time_limit', type=int, default=10) # for log file name 
+    parser.add_argument('--test_time_limit', type=float, default=-1.0)
     parser.add_argument('--use_cutsel_percent_policy', type=str, default='False')
     parser.add_argument('--policy_type', type=str, default='with_token')
     parser.add_argument('--seed', type=int, default=1)
@@ -797,7 +809,7 @@ def main():
     parser.add_argument('--test_decode_type', type=str, default='beam_search')
     parser.add_argument('--generate_petri_instance', type=str, default='False')
     parser.add_argument('--petri_instance_dir', type=str, default='generated_instances/petri')
-    parser.add_argument('--petri_instance_name', type=str, default='petri_batch10_v2.lp')
+    parser.add_argument('--petri_instance_name', type=str, default='petri_batch10_fullflow_v7.lp')
     parser.add_argument('--petri_batches', type=int, default=10)
     parser.add_argument('--petri_num_pm', type=int, default=2)
     parser.add_argument('--petri_num_steps', type=int, default=13)
@@ -807,6 +819,11 @@ def main():
     parser.add_argument('--petri_pec_pool_size', type=int, default=8)
     parser.add_argument('--petri_mode_sequence', type=str, default='')
 
+    cli_args = sys.argv[1:]
+    time_limit_arg_given = any(
+        arg == '--time_limit' or arg.startswith('--time_limit=')
+        for arg in cli_args
+    )
     args = parser.parse_args()
     args.config_file = str(resolve_path(args.config_file))
     args.petri_instance_dir = str(resolve_path(args.petri_instance_dir))
@@ -872,6 +889,12 @@ def main():
 
         env_kwargs = all_kwargs['env']
         env_kwargs.pop('instance_file_path')
+        test_time_limit = args.test_time_limit
+        if test_time_limit <= 0 and time_limit_arg_given:
+            test_time_limit = args.time_limit
+        if test_time_limit > 0:
+            env_kwargs['scip_time_limit'] = test_time_limit
+        print(f"effective test scip_time_limit: {env_kwargs.get('scip_time_limit')}")
         all_kwargs['experiment']['seed'] = args.seed
         seed = set_global_seed(all_kwargs['experiment']['seed'])
 

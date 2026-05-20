@@ -18,11 +18,12 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--config_file", type=str, default="configs/petri_mip_test_config.json")
     parser.add_argument("--test_model_path", type=str, required=True)
     parser.add_argument("--instance_dir", type=str, default="generated_instances/petri")
-    parser.add_argument("--instance_name", type=str, default="petri_batch10_v2.lp")
+    parser.add_argument("--instance_name", type=str, default="petri_batch10_fullflow_v7.lp")
     parser.add_argument("--sel_cuts_percent", type=float, default=0.2)
     parser.add_argument("--policy_type", type=str, default="with_token")
     parser.add_argument("--use_cutsel_percent_policy", type=str, default="True")
     parser.add_argument("--test_decode_type", type=str, default="beam_search")
+    parser.add_argument("--time_limit", type=float, default=-1.0)
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--scip_seed", type=int, default=1)
     parser.add_argument("--instance_type", type=str, default="petri_transfer")
@@ -32,17 +33,29 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--total_wafers", type=int, default=0)
     parser.add_argument("--mode_4x1_wafers", type=int, default=20)
     parser.add_argument("--mode_2x2_wafers", type=int, default=20)
-    parser.add_argument("--pec_pool_size", type=int, default=40)
+    parser.add_argument("--pec_pool_size", type=int, default=8)
     parser.add_argument("--mode_sequence", type=str, default="")
     return parser.parse_args()
 
 
-def _write_runtime_config(base_config_file: str, test_model_path: str, instance_dir: str, runtime_config_file: str) -> None:
+def _write_runtime_config(
+    base_config_file: str,
+    test_model_path: str,
+    instance_dir: str,
+    runtime_config_file: str,
+    time_limit: float = -1.0,
+) -> None:
     with open(resolve_path(base_config_file), "r", encoding="utf-8") as f:
         cfg = json.load(f)
     cfg["test_kwargs"]["test_model_path"] = test_model_path
     cfg["test_kwargs"]["test_instance_path"] = instance_dir
     cfg["env"]["instance_file_path"] = instance_dir
+    if time_limit > 0:
+        cfg["env"]["scip_time_limit"] = time_limit
+        for section_name in ("online_test_kwargs", "evaluate_kwargs"):
+            section_env = cfg.get(section_name, {}).get("test_env_kwargs")
+            if section_env is not None:
+                section_env["scip_time_limit"] = time_limit
     experiment_cfg = cfg.setdefault("experiment", {})
     experiment_cfg["base_log_dir"] = str(resolve_path(experiment_cfg.get("base_log_dir") or "data"))
     if "online_test_kwargs" in cfg and cfg["online_test_kwargs"].get("test_instance_path"):
@@ -93,7 +106,13 @@ def main() -> None:
         args.instance_dir,
         f"runtime_{Path(generated_instance_name).stem}_config.json",
     )
-    _write_runtime_config(args.config_file, args.test_model_path, args.instance_dir, runtime_config)
+    _write_runtime_config(
+        args.config_file,
+        args.test_model_path,
+        args.instance_dir,
+        runtime_config,
+        args.time_limit,
+    )
 
     cmd = [
         "python",
@@ -128,6 +147,8 @@ def main() -> None:
         generated_instance_name,
         "--test_decode_type",
         args.test_decode_type,
+        "--test_time_limit",
+        str(args.time_limit),
         "--policy_type",
         args.policy_type,
         "--use_cutsel_percent_policy",
