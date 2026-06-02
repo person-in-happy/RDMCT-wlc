@@ -817,7 +817,10 @@ def main():
     parser.add_argument('--petri_4x1_wafers', type=int, default=20)
     parser.add_argument('--petri_2x2_wafers', type=int, default=20)
     parser.add_argument('--petri_pec_pool_size', type=int, default=8)
+    parser.add_argument('--petri_process_mode', type=str, default='auto')
     parser.add_argument('--petri_mode_sequence', type=str, default='')
+    parser.add_argument('--petri_wafer_mode_map', '--petri_wafer_modes', dest='petri_wafer_mode_map', type=str, default='')
+    parser.add_argument('--petri_default_wafer_mode', type=str, default='')
 
     cli_args = sys.argv[1:]
     time_limit_arg_given = any(
@@ -848,7 +851,10 @@ def main():
             num_steps=args.petri_num_steps,
             total_wafers=args.petri_total_wafers,
             pec_pool_size=args.petri_pec_pool_size,
+            process_mode=args.petri_process_mode,
             mode_sequence=args.petri_mode_sequence,
+            wafer_mode_map=args.petri_wafer_mode_map,
+            default_wafer_mode=args.petri_default_wafer_mode,
             full_mode_wafers=args.petri_4x1_wafers,
             mix_mode_wafers=args.petri_2x2_wafers,
         )

@@ -11,6 +11,9 @@ from scip_imports import scip
 
 MODE_MIX = "2x2"
 MODE_FULL = "4x1"
+PROCESS_MODE_AUTO = "auto"
+PROCESS_MODE_MIXED = "mixed"
+PROCESS_MODE_CUSTOM = "custom"
 _MODE_TOKEN_RE = re.compile(r"[,\s;|]+")
 
 
@@ -42,6 +45,51 @@ def _normalize_mode_token(token: str) -> str:
     return aliases[cleaned]
 
 
+def _normalize_process_mode(token: str) -> str:
+    cleaned = (
+        (token or PROCESS_MODE_AUTO)
+        .strip()
+        .lower()
+        .replace("脳", "x")
+        .replace("×", "x")
+        .replace("＊", "x")
+        .replace("_", "")
+        .replace("-", "")
+    )
+    aliases = {
+        "": PROCESS_MODE_AUTO,
+        "auto": PROCESS_MODE_AUTO,
+        "default": PROCESS_MODE_AUTO,
+        "count": PROCESS_MODE_AUTO,
+        "counts": PROCESS_MODE_AUTO,
+        "both": PROCESS_MODE_MIXED,
+        "mixed": PROCESS_MODE_MIXED,
+        "mixrun": PROCESS_MODE_MIXED,
+        "hybrid": PROCESS_MODE_MIXED,
+        "custom": PROCESS_MODE_CUSTOM,
+        "sequence": PROCESS_MODE_CUSTOM,
+        "wafer": PROCESS_MODE_CUSTOM,
+        "waferlevel": PROCESS_MODE_CUSTOM,
+        "perwafer": PROCESS_MODE_CUSTOM,
+        "4x1": MODE_FULL,
+        "4": MODE_FULL,
+        "full": MODE_FULL,
+        "fullonly": MODE_FULL,
+        "only4x1": MODE_FULL,
+        "2x2": MODE_MIX,
+        "2": MODE_MIX,
+        "mix": MODE_MIX,
+        "pipeline": MODE_MIX,
+        "mixonly": MODE_MIX,
+        "only2x2": MODE_MIX,
+    }
+    if cleaned not in aliases:
+        raise ValueError(
+            f"Unsupported process_mode `{token}`. Use auto, mixed, custom, 4x1, or 2x2."
+        )
+    return aliases[cleaned]
+
+
 def _parse_mode_sequence(total_wafers: int, mode_sequence: str) -> List[str]:
     raw_tokens = [token for token in _MODE_TOKEN_RE.split(mode_sequence.strip()) if token]
     if not raw_tokens:
@@ -61,6 +109,37 @@ def _parse_mode_sequence(total_wafers: int, mode_sequence: str) -> List[str]:
     return modes
 
 
+def _parse_wafer_mode_map(wafer_mode_map: str) -> Dict[int, str]:
+    assignments: Dict[int, str] = {}
+    raw_tokens = [token for token in _MODE_TOKEN_RE.split(wafer_mode_map.strip()) if token]
+    for raw_token in raw_tokens:
+        if "=" in raw_token:
+            wafer_token, mode_token = raw_token.split("=", 1)
+        elif ":" in raw_token:
+            wafer_token, mode_token = raw_token.split(":", 1)
+        else:
+            raise ValueError(
+                f"Invalid wafer mode assignment `{raw_token}`. Use forms like W3:2x2 or 3=4x1."
+            )
+
+        wafer_token = wafer_token.strip().lower()
+        if wafer_token.startswith("wafer"):
+            wafer_token = wafer_token[5:]
+        if wafer_token.startswith("w"):
+            wafer_token = wafer_token[1:]
+        if not wafer_token.isdigit():
+            raise ValueError(
+                f"Invalid wafer id in assignment `{raw_token}`. Use a 1-based product wafer id."
+            )
+        wafer_id = int(wafer_token)
+        if wafer_id <= 0:
+            raise ValueError(f"Wafer ids are 1-based, got `{wafer_id}` in `{raw_token}`.")
+        if wafer_id in assignments:
+            raise ValueError(f"Duplicate wafer mode assignment for W{wafer_id}.")
+        assignments[wafer_id] = _normalize_mode_token(mode_token)
+    return assignments
+
+
 def _pair_loads(num_mode_wafers: int) -> Dict[int, int]:
     num_pairs = math.ceil(num_mode_wafers / 2.0)
     if num_pairs <= 0:
@@ -75,6 +154,13 @@ def _format_wafer_ids(wafer_ids: List[int], max_items: int = 12) -> str:
     if not wafer_ids:
         return "none"
     labels = [f"W{wafer_id}" for wafer_id in wafer_ids]
+    if len(labels) <= max_items:
+        return ", ".join(labels)
+    return ", ".join(labels[:max_items]) + ", ..."
+
+
+def _format_wafer_mode_summary(modes: List[str], max_items: int = 24) -> str:
+    labels = [f"W{idx}:{mode}" for idx, mode in enumerate(modes, start=1)]
     if len(labels) <= max_items:
         return ", ".join(labels)
     return ", ".join(labels[:max_items]) + ", ..."
@@ -105,7 +191,11 @@ class PetriMIPConfig:
     max_module_residency_time: float = 10000.0
     max_robot_residency_time: float = 10000.0
     pm_balance_penalty: float = 0.01
+    flow_time_penalty: float = 1e-6
+    process_mode: str = PROCESS_MODE_AUTO
     mode_sequence: str = ""
+    wafer_mode_map: str = ""
+    default_wafer_mode: str = ""
     full_mode_wafers: int = 10
     mix_mode_wafers: int = 10
     load_ports: int = 4
@@ -120,20 +210,66 @@ class PetriMIPConfig:
 
     @property
     def product_wafer_modes(self) -> List[str]:
+        modes = self._base_product_wafer_modes()
+        wafer_overrides = _parse_wafer_mode_map(self.wafer_mode_map) if self.wafer_mode_map.strip() else {}
+        if not wafer_overrides:
+            return modes
+
+        target_total = self.total_wafers or len(modes) or max(wafer_overrides)
+        if modes and target_total != len(modes):
+            raise ValueError(
+                "wafer_mode_map target count disagrees with the resolved wafer list. "
+                f"Resolved {len(modes)} wafers but total_wafers is {target_total}."
+            )
+        if not modes:
+            default_mode = _normalize_mode_token(self.default_wafer_mode) if self.default_wafer_mode.strip() else ""
+            if default_mode:
+                modes = [default_mode] * target_total
+            else:
+                missing_ids = [w for w in range(1, target_total + 1) if w not in wafer_overrides]
+                if missing_ids:
+                    raise ValueError(
+                        "wafer_mode_map does not cover every product wafer. "
+                        "Provide --default_wafer_mode or assign all wafer ids. "
+                        f"First missing wafer: W{missing_ids[0]}."
+                    )
+                modes = [wafer_overrides[w] for w in range(1, target_total + 1)]
+
+        for wafer_id, mode in wafer_overrides.items():
+            if wafer_id > len(modes):
+                raise ValueError(
+                    f"wafer_mode_map references W{wafer_id}, but only {len(modes)} product wafers are configured."
+                )
+            modes[wafer_id - 1] = mode
+        return modes
+
+    def _base_product_wafer_modes(self) -> List[str]:
+        process_mode = _normalize_process_mode(self.process_mode)
         explicit_count = self.full_mode_wafers + self.mix_mode_wafers
         if self.mode_sequence and self.mode_sequence.strip():
-            modes = _parse_mode_sequence(self.total_wafers, self.mode_sequence)
-            if explicit_count > 0 and len(modes) != explicit_count:
-                raise ValueError(
-                    "Explicit mode counts and mode_sequence disagree. "
-                    f"Counts imply {explicit_count} wafers but mode_sequence resolves to {len(modes)}."
-                )
-            return modes
+            return _parse_mode_sequence(self.total_wafers, self.mode_sequence)
+        if self.wafer_mode_map.strip() and process_mode == PROCESS_MODE_AUTO:
+            if self.default_wafer_mode.strip() or (
+                self.total_wafers > 0 and self.total_wafers != explicit_count
+            ):
+                return []
+        if process_mode == PROCESS_MODE_CUSTOM:
+            return []
+        if process_mode == MODE_FULL:
+            count = self.total_wafers if self.total_wafers > 0 else self.full_mode_wafers
+            if count <= 0:
+                raise ValueError("process_mode=4x1 requires --total_wafers or --mode_4x1_wafers > 0.")
+            return [MODE_FULL] * count
+        if process_mode == MODE_MIX:
+            count = self.total_wafers if self.total_wafers > 0 else self.mix_mode_wafers
+            if count <= 0:
+                raise ValueError("process_mode=2x2 requires --total_wafers or --mode_2x2_wafers > 0.")
+            return [MODE_MIX] * count
         if explicit_count <= 0:
             if self.total_wafers > 0:
                 raise ValueError(
-                    "Provide either explicit --mode_4x1_wafers / --mode_2x2_wafers counts "
-                    "or a wafer-level mode_sequence. total_wafers alone is no longer sufficient."
+                    "Provide explicit per-mode counts, set --process_mode to 4x1/2x2, "
+                    "or provide wafer-level mode_sequence/wafer_mode_map."
                 )
             raise ValueError("At least one product wafer is required.")
         if self.total_wafers not in (0, explicit_count):
@@ -230,12 +366,17 @@ class PetriMIPConfig:
         return self.load_ports * self.load_port_slots
 
     def validate(self) -> None:
+        _normalize_process_mode(self.process_mode)
+        if self.default_wafer_mode.strip():
+            _normalize_mode_token(self.default_wafer_mode)
         if self.num_pm != 2:
             raise ValueError("This device contains only CH2 and CH3, so num_pm must be 2.")
         if self.num_batches <= 0:
             raise ValueError("num_batches must be positive.")
         if self.batch_size != 4:
             raise ValueError("batch_size is fixed to 4 for the four-pocket rotary chamber.")
+        if self.total_wafers < 0 or self.full_mode_wafers < 0 or self.mix_mode_wafers < 0:
+            raise ValueError("Wafer counts must be non-negative.")
         if self.total_product_wafers <= 0:
             raise ValueError("At least one product wafer is required.")
         if self.total_product_wafers > self.max_product_capacity:
@@ -276,6 +417,7 @@ class PetriMIPConfig:
             self.max_module_residency_time,
             self.max_robot_residency_time,
             self.pm_balance_penalty,
+            self.flow_time_penalty,
         ) < 0:
             raise ValueError("All duration parameters must be non-negative.")
         full_capacity = 2 * self.num_pm * self.num_full_slots_per_pm
@@ -1625,6 +1767,38 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
         w: model.addVar(vtype="C", lb=0.0, name=f"wafer_completion_{w}")
         for w in product_wafers
     }
+    full_pair_llupper_start = {
+        p: model.addVar(vtype="C", lb=0.0, name=f"full_pair_llupper_start_{p}")
+        for p in full_pair_ids
+    }
+    full_pair_llupper_end = {
+        p: model.addVar(vtype="C", lb=0.0, name=f"full_pair_llupper_end_{p}")
+        for p in full_pair_ids
+    }
+    full_pair_lllower_start = {
+        p: model.addVar(vtype="C", lb=0.0, name=f"full_pair_lllower_start_{p}")
+        for p in full_pair_ids
+    }
+    full_pair_lllower_end = {
+        p: model.addVar(vtype="C", lb=0.0, name=f"full_pair_lllower_end_{p}")
+        for p in full_pair_ids
+    }
+    mix_pair_llupper_start = {
+        p: model.addVar(vtype="C", lb=0.0, name=f"mix_pair_llupper_start_{p}")
+        for p in mix_pair_ids
+    }
+    mix_pair_llupper_end = {
+        p: model.addVar(vtype="C", lb=0.0, name=f"mix_pair_llupper_end_{p}")
+        for p in mix_pair_ids
+    }
+    mix_pair_lllower_start = {
+        p: model.addVar(vtype="C", lb=0.0, name=f"mix_pair_lllower_start_{p}")
+        for p in mix_pair_ids
+    }
+    mix_pair_lllower_end = {
+        p: model.addVar(vtype="C", lb=0.0, name=f"mix_pair_lllower_end_{p}")
+        for p in mix_pair_ids
+    }
 
     for w in product_wafers:
         _add_duration_cons(
@@ -1649,6 +1823,11 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
         model.addCons(
             prod_stage_start[(w, "atr_al_llupper")] >= prod_stage_end[(w, "al")],
             name=f"prod_atr_al_llupper_start_{w}",
+        )
+        model.addCons(
+            prod_stage_start[(w, "atr_al_llupper")]
+            <= prod_stage_end[(w, "atr_lp_al")] + cfg.max_module_residency_time,
+            name=f"prod_al_physical_max_residency_{w}",
         )
         _add_duration_cons(
             model,
@@ -1675,6 +1854,11 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
             name=f"prod_llupper_to_vtr_{w}",
         )
         model.addCons(
+            prod_stage_start[(w, "vtr_load")]
+            <= prod_stage_end[(w, "atr_al_llupper")] + cfg.max_module_residency_time,
+            name=f"prod_llupper_physical_max_residency_{w}",
+        )
+        model.addCons(
             prod_stage_end[(w, "pm")] <= prod_stage_start[(w, "pm")] + cfg.max_module_residency_time,
             name=f"prod_pm_max_residency_{w}",
         )
@@ -1694,6 +1878,11 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
         model.addCons(
             prod_stage_start[(w, "atr_lllower_lp")] >= prod_stage_end[(w, "lllower")],
             name=f"prod_atr_lllower_lp_start_{w}",
+        )
+        model.addCons(
+            prod_stage_start[(w, "atr_lllower_lp")]
+            <= prod_stage_end[(w, "vtr_unload")] + cfg.max_module_residency_time,
+            name=f"prod_lllower_physical_max_residency_{w}",
         )
         _add_duration_cons(
             model,
@@ -1745,6 +1934,26 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 big_m,
                 f"prod_full_vtr_unload_link_{w}_{p}",
             )
+            _link_stage_by_binary(
+                model,
+                prod_stage_start[(w, "llupper")],
+                prod_stage_end[(w, "llupper")],
+                full_pair_llupper_start[p],
+                full_pair_llupper_end[p],
+                selector,
+                big_m,
+                f"prod_full_llupper_sync_{w}_{p}",
+            )
+            _link_stage_by_binary(
+                model,
+                prod_stage_start[(w, "lllower")],
+                prod_stage_end[(w, "lllower")],
+                full_pair_lllower_start[p],
+                full_pair_lllower_end[p],
+                selector,
+                big_m,
+                f"prod_full_lllower_sync_{w}_{p}",
+            )
 
     for w in mix_wafers:
         for p in mix_pair_ids:
@@ -1779,6 +1988,140 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 big_m,
                 f"prod_mix_vtr_unload_link_{w}_{p}",
             )
+            _link_stage_by_binary(
+                model,
+                prod_stage_start[(w, "llupper")],
+                prod_stage_end[(w, "llupper")],
+                mix_pair_llupper_start[p],
+                mix_pair_llupper_end[p],
+                selector,
+                big_m,
+                f"prod_mix_llupper_sync_{w}_{p}",
+            )
+            _link_stage_by_binary(
+                model,
+                prod_stage_start[(w, "lllower")],
+                prod_stage_end[(w, "lllower")],
+                mix_pair_lllower_start[p],
+                mix_pair_lllower_end[p],
+                selector,
+                big_m,
+                f"prod_mix_lllower_sync_{w}_{p}",
+            )
+
+    for p in full_pair_ids:
+        model.addCons(
+            full_pair_llupper_end[p] >= full_pair_llupper_start[p] + cfg.llupper_time,
+            name=f"full_pair_llupper_min_duration_{p}",
+        )
+        model.addCons(
+            full_pair_vtr_load_start[p] >= full_pair_llupper_end[p],
+            name=f"full_pair_llupper_to_vtr_{p}",
+        )
+        model.addCons(
+            full_pair_lllower_start[p] >= full_pair_vtr_unload_end[p],
+            name=f"full_pair_vtr_to_lllower_{p}",
+        )
+        model.addCons(
+            full_pair_lllower_end[p] >= full_pair_lllower_start[p] + cfg.lllower_time,
+            name=f"full_pair_lllower_min_duration_{p}",
+        )
+    for p in mix_pair_ids:
+        model.addCons(
+            mix_pair_llupper_end[p] >= mix_pair_llupper_start[p] + cfg.llupper_time,
+            name=f"mix_pair_llupper_min_duration_{p}",
+        )
+        model.addCons(
+            mix_pair_vtr_load_start[p] >= mix_pair_llupper_end[p],
+            name=f"mix_pair_llupper_to_vtr_{p}",
+        )
+        model.addCons(
+            mix_pair_lllower_start[p] >= mix_pair_vtr_unload_end[p],
+            name=f"mix_pair_vtr_to_lllower_{p}",
+        )
+        model.addCons(
+            mix_pair_lllower_end[p] >= mix_pair_lllower_start[p] + cfg.lllower_time,
+            name=f"mix_pair_lllower_min_duration_{p}",
+        )
+
+    def fixed_pair_members(wafer_ids, pair_loads, selector_lookup):
+        groups = {}
+        cursor = 0
+        for pair_id in sorted(pair_loads):
+            load = pair_loads[pair_id]
+            members = wafer_ids[cursor:cursor + load]
+            groups[pair_id] = [(w, selector_lookup[(w, pair_id)]) for w in members]
+            cursor += load
+        return groups
+
+    full_pair_member_selectors = fixed_pair_members(full_wafers, full_pair_loads, wafer_to_full_pair)
+    mix_pair_member_selectors = fixed_pair_members(mix_wafers, mix_pair_loads, wafer_to_mix_pair)
+
+    product_pair_groups = []
+    for p in full_pair_ids:
+        product_pair_groups.append(
+            {
+                "name": f"F{p}",
+                "members": full_pair_member_selectors[p],
+                "vtr_load_end": full_pair_vtr_load_end[p],
+                "vtr_unload_start": full_pair_vtr_unload_start[p],
+            }
+        )
+    for p in mix_pair_ids:
+        product_pair_groups.append(
+            {
+                "name": f"M{p}",
+                "members": mix_pair_member_selectors[p],
+                "vtr_load_end": mix_pair_vtr_load_end[p],
+                "vtr_unload_start": mix_pair_vtr_unload_start[p],
+            }
+        )
+
+    for left_idx in range(len(product_pair_groups)):
+        left = product_pair_groups[left_idx]
+        for right_idx in range(left_idx + 1, len(product_pair_groups)):
+            right = product_pair_groups[right_idx]
+            upper_before = model.addVar(
+                vtype="B",
+                name=f"llupper_pair_order_{left['name']}_{right['name']}",
+            )
+            for wafer_id, selector in right["members"]:
+                model.addCons(
+                    prod_stage_start[(wafer_id, "atr_al_llupper")]
+                    >= left["vtr_load_end"]
+                    - big_m * (1 - upper_before)
+                    - big_m * (1 - selector),
+                    name=f"llupper_pair_order_lb_{left['name']}_{right['name']}_{wafer_id}",
+                )
+            for wafer_id, selector in left["members"]:
+                model.addCons(
+                    prod_stage_start[(wafer_id, "atr_al_llupper")]
+                    >= right["vtr_load_end"]
+                    - big_m * upper_before
+                    - big_m * (1 - selector),
+                    name=f"llupper_pair_order_ub_{left['name']}_{right['name']}_{wafer_id}",
+                )
+
+            lower_before = model.addVar(
+                vtype="B",
+                name=f"lllower_pair_order_{left['name']}_{right['name']}",
+            )
+            for wafer_id, selector in left["members"]:
+                model.addCons(
+                    right["vtr_unload_start"]
+                    >= prod_stage_end[(wafer_id, "atr_lllower_lp")]
+                    - big_m * (1 - lower_before)
+                    - big_m * (1 - selector),
+                    name=f"lllower_pair_order_lb_{left['name']}_{right['name']}_{wafer_id}",
+                )
+            for wafer_id, selector in right["members"]:
+                model.addCons(
+                    left["vtr_unload_start"]
+                    >= prod_stage_end[(wafer_id, "atr_lllower_lp")]
+                    - big_m * lower_before
+                    - big_m * (1 - selector),
+                    name=f"lllower_pair_order_ub_{left['name']}_{right['name']}_{wafer_id}",
+                )
 
     pec_job_specs = {}
     pec_job_counter = 0
@@ -1824,14 +2167,15 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
     for m in pm_ids:
         for b in full_batches:
             for lane in full_sides:
-                add_pec_job(
-                    f"full_fill_{m}_{b}_{lane}",
-                    m,
-                    full_filler_side[(m, b, lane)],
-                    (full_side_load_start[(m, b, lane)], full_side_load_end[(m, b, lane)]),
-                    (full_start[(m, b)], full_end[(m, b)]),
-                    (full_side_unload_start[(m, b, lane)], full_side_unload_end[(m, b, lane)]),
-                )
+                for filler_idx in range(1, 3):
+                    add_pec_job(
+                        f"full_fill_{m}_{b}_{lane}_{filler_idx}",
+                        m,
+                        full_filler_side[(m, b, lane)],
+                        (full_side_load_start[(m, b, lane)], full_side_load_end[(m, b, lane)]),
+                        (full_start[(m, b)], full_end[(m, b)]),
+                        (full_side_unload_start[(m, b, lane)], full_side_unload_end[(m, b, lane)]),
+                    )
         for lane in range(1, 3):
             add_pec_job(
                 f"mix_head_{m}_{lane}",
@@ -1972,12 +2316,17 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 None,
             )
         )
-        al_tasks.append((str(w), prod_stage_start[(w, "al")], prod_stage_end[(w, "al")], None))
+        # Capacity must cover the physical residency interval, not only the
+        # processing interval. A wafer occupies AL after ATR drops it off until
+        # ATR picks it up for LLupper, and similarly for both LL modules.
+        al_tasks.append(
+            (str(w), prod_stage_end[(w, "atr_lp_al")], prod_stage_end[(w, "atr_al_llupper")], None)
+        )
         llupper_tasks.append(
-            (str(w), prod_stage_start[(w, "llupper")], prod_stage_end[(w, "llupper")], None)
+            (str(w), prod_stage_start[(w, "atr_al_llupper")], prod_stage_end[(w, "vtr_load")], None)
         )
         lllower_tasks.append(
-            (str(w), prod_stage_start[(w, "lllower")], prod_stage_end[(w, "lllower")], None)
+            (str(w), prod_stage_start[(w, "vtr_unload")], prod_stage_end[(w, "atr_lllower_lp")], None)
         )
 
     vtr_tasks = []
@@ -2077,6 +2426,10 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
         and cfg.pm_balance_penalty > 0
     ):
         objective = objective + cfg.pm_balance_penalty * (full_pm_imbalance + mix_pm_imbalance)
+    if cfg.flow_time_penalty > 0:
+        objective = objective + cfg.flow_time_penalty * scip.quicksum(
+            wafer_completion[w] for w in product_wafers
+        )
 
     model.setObjective(objective, "minimize")
     return model
@@ -2104,6 +2457,7 @@ def _build_pair_slot_summary(mode_label: str, wafer_ids: List[int], pair_loads: 
 
 def _build_model_description(instance_name: str, cfg: PetriMIPConfig) -> str:
     chamber_labels = ", ".join(f"CH{pm_id}" for pm_id in cfg.pm_ids)
+    product_modes = cfg.product_wafer_modes
     embedded_pec = sum(2 - load for load in cfg.full_pair_product_loads.values()) + sum(
         2 - load for load in cfg.mix_pair_product_loads.values()
     )
@@ -2138,9 +2492,11 @@ The objective is therefore the true end-to-end makespan from the first LP pick t
 
 ## Product Input Semantics
 
+- process mode policy: `{_normalize_process_mode(cfg.process_mode)}`
 - `4x1` wafers: `{len(cfg.full_wafer_ids)}`
 - `2x2` wafers: `{len(cfg.mix_wafer_ids)}`
 - total product wafers: `{cfg.total_product_wafers}`
+- wafer-level modes: `{_format_wafer_mode_summary(product_modes)}`
 
 Per-mode PW-pair formation:
 
@@ -2157,8 +2513,12 @@ Embedded PEC wafers forced by odd product counts: `{embedded_pec}`.
 - a pure `PEC+PEC` filler side is allowed only on the tail `4x1` batch of a chamber sequence. Earlier active `4x1` batches must carry two product PW pairs.
 - `2x2`: product PW pairs form one contiguous prefix block on a chamber, with one pure PEC pair at the head and one pure PEC pair at the tail.
 - per chamber, every active `4x1` batch must finish before that chamber's `2x2` block begins, matching the disclosure rule that `4x1` is completed before `2x2`.
-- time continuity is relaxed to precedence: downstream stages may wait, but they cannot start before the required transfer or process has finished.
+- time continuity is relaxed to precedence: downstream stages may wait, but they cannot start before the required transfer or process has finished. For `AL`, `LLupper`, and `LLlower`, that waiting time still occupies the physical module until the outbound transfer starts.
 - product wafers inherit chamber transfer/process timing from the PW pair to which they belong.
+- `AL` has one physical slot and remains occupied until the outbound `ATR` move to `LLupper` finishes, so two adjacent
+  `AL` calibrations must include the required `ATR` unload/load operations between them.
+- `LLupper` and `LLlower` are synchronized two-slot modules at the PW-pair level: the wafers of one PW pair share the
+  same state-conversion interval, and another PW pair cannot enter that LL module until the current pair has left it.
 - PEC wafers are modeled as reusable, chamber-bound tokens. Each active PEC job occupies exactly one token from its assigned chamber's PEC subset, from `vtr_load` start until `vtr_unload` end.
 - chamber cleaning is modeled as a pure `PEC+PEC` / `PEC+PEC` rotary batch. It uses the same VTR load/unload and chamber rotation semantics as `4x1`, occupies four PEC tokens, and adds a cleaning process interval.
 - per chamber, process epochs are separated by cleaning batches so that each epoch contains at most `{cfg.cleaning_interval}` full-chamber process cycles. `2x2` chains are kept inside one epoch, so the model will split such work across chambers or report infeasibility rather than silently violating the cleaning requirement.
@@ -2166,9 +2526,9 @@ Embedded PEC wafers forced by odd product counts: `{embedded_pec}`.
 ## Resource Constraints Added Explicitly
 
 - `ATR`: unary move resource for `LP->AL`, `AL->LLupper`, and `LLlower->LP`
-- `AL`: unary occupancy resource
-- `LLupper`: 2-slot occupancy resource
-- `LLlower`: 2-slot occupancy resource
+- `AL`: unary physical occupancy resource from `LP->AL` drop-off until `AL->LLupper` pickup
+- `LLupper`: 2-slot physical occupancy resource from `AL->LLupper` drop-off until `VTR` pickup
+- `LLlower`: 2-slot physical occupancy resource from `VTR` drop-off until `LLlower->LP` pickup
 - `VTR`: unary transfer resource across `4x1` load/unload and `2x2` head/bridge/tail transfers
 - `CH2`, `CH3`: chamber-internal sequence constraints for `4x1` slots, one contiguous `2x2` block, and pure-PEC cleaning windows
 
@@ -2191,6 +2551,7 @@ Embedded PEC wafers forced by odd product counts: `{embedded_pec}`.
 - max module residency time: `{cfg.max_module_residency_time:.1f}`
 - max robot residency time: `{cfg.max_robot_residency_time:.1f}`
 - PM balance penalty: `{cfg.pm_balance_penalty:.4f}`
+- flow-time continuity penalty: `{cfg.flow_time_penalty:.8f}`
 
 ## Main Variable Families
 
@@ -2210,8 +2571,10 @@ Embedded PEC wafers forced by odd product counts: `{embedded_pec}`.
 
 ## Objective
 
-`min c_max + lambda * (full_pm_imbalance + mix_pm_imbalance)`, where `c_max` is the latest product wafer return time to `LP`
-and `lambda = {cfg.pm_balance_penalty:.4f}` softly encourages the `4x1` and `2x2` product work to be shared across both chambers.
+`min c_max + lambda * (full_pm_imbalance + mix_pm_imbalance) + epsilon * sum(wafer_completion)`, where `c_max`
+is the latest product wafer return time to `LP`, `lambda = {cfg.pm_balance_penalty:.4f}` softly encourages the `4x1`
+and `2x2` product work to be shared across both chambers, and `epsilon = {cfg.flow_time_penalty:.8f}` favors earlier
+wafer completions among schedules with the same or nearly same makespan.
 
 ## Output Files
 
@@ -2269,7 +2632,33 @@ def main() -> None:
     parser.add_argument("--max_module_residency_time", type=float, default=10000.0)
     parser.add_argument("--max_robot_residency_time", type=float, default=10000.0)
     parser.add_argument("--pm_balance_penalty", type=float, default=0.01)
+    parser.add_argument(
+        "--flow_time_penalty",
+        type=float,
+        default=1e-6,
+        help="Small secondary objective weight that pulls wafer completions earlier for smoother continuous flow.",
+    )
+    parser.add_argument(
+        "--process_mode",
+        type=str,
+        default=PROCESS_MODE_AUTO,
+        help="Mode policy: auto/counts, mixed/both, 4x1, 2x2, or custom/wafer-level.",
+    )
     parser.add_argument("--mode_sequence", type=str, default="")
+    parser.add_argument(
+        "--wafer_mode_map",
+        "--wafer_modes",
+        dest="wafer_mode_map",
+        type=str,
+        default="",
+        help="Sparse wafer-level overrides, e.g. W1:4x1,W3=2x2.",
+    )
+    parser.add_argument(
+        "--default_wafer_mode",
+        type=str,
+        default="",
+        help="Default mode for wafer ids not listed in --wafer_mode_map.",
+    )
 
     args = parser.parse_args()
 
@@ -2297,7 +2686,11 @@ def main() -> None:
         max_module_residency_time=args.max_module_residency_time,
         max_robot_residency_time=args.max_robot_residency_time,
         pm_balance_penalty=args.pm_balance_penalty,
+        flow_time_penalty=args.flow_time_penalty,
+        process_mode=args.process_mode,
         mode_sequence=args.mode_sequence,
+        wafer_mode_map=args.wafer_mode_map,
+        default_wafer_mode=args.default_wafer_mode,
         full_mode_wafers=args.mode_4x1_wafers,
         mix_mode_wafers=args.mode_2x2_wafers,
     )

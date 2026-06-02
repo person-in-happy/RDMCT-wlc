@@ -44,6 +44,7 @@ METHOD_COLORS = {
     "a3c_beam": "#E45756",
 }
 INSTANCE_EXTENSIONS = (".lp", ".mps", ".cip")
+NO_INCUMBENT_GAP_THRESHOLD = 1e19
 
 
 def _str2bool(value):
@@ -73,6 +74,8 @@ def _parse_args():
     parser.add_argument("--a3c_beam_decode_type", type=str, default="beam_search")
     parser.add_argument("--heuristic_beam_size", type=int, default=3)
     parser.add_argument("--heuristic_redundancy_weight", type=float, default=0.15)
+    parser.add_argument("--heuristic_max_candidates", type=int, default=256)
+    parser.add_argument("--heuristic_max_selected_cuts", type=int, default=256)
     parser.add_argument("--time_limit", type=float, default=-1.0)
     parser.add_argument("--num_batches", type=int, default=10)
     parser.add_argument("--num_pm", type=int, default=2)
@@ -81,7 +84,10 @@ def _parse_args():
     parser.add_argument("--mode_4x1_wafers", type=int, default=20)
     parser.add_argument("--mode_2x2_wafers", type=int, default=20)
     parser.add_argument("--pec_pool_size", type=int, default=40)
+    parser.add_argument("--process_mode", type=str, default="auto")
     parser.add_argument("--mode_sequence", type=str, default="")
+    parser.add_argument("--wafer_mode_map", "--wafer_modes", dest="wafer_mode_map", type=str, default="")
+    parser.add_argument("--default_wafer_mode", type=str, default="")
     return parser.parse_args()
 
 
@@ -117,7 +123,10 @@ def _ensure_instance(args):
             num_steps=args.num_steps,
             total_wafers=args.total_wafers,
             pec_pool_size=args.pec_pool_size,
+            process_mode=args.process_mode,
             mode_sequence=args.mode_sequence,
+            wafer_mode_map=args.wafer_mode_map,
+            default_wafer_mode=args.default_wafer_mode,
             full_mode_wafers=args.mode_4x1_wafers,
             mix_mode_wafers=args.mode_2x2_wafers,
         )
@@ -245,6 +254,8 @@ def _build_method_hyperparams(method_name, cfg, args, policy_bundle=None):
                 "decode_type": "heuristic_beam",
                 "heuristic_beam_size": args.heuristic_beam_size,
                 "heuristic_redundancy_weight": args.heuristic_redundancy_weight,
+                "heuristic_max_candidates": args.heuristic_max_candidates,
+                "heuristic_max_selected_cuts": args.heuristic_max_selected_cuts,
                 "score_weights": {
                     "obj_parallelism": 0.15,
                     "efficacy": 0.35,
@@ -311,6 +322,8 @@ def _run_beam_only(instance_dir, instance_file, env_kwargs, args):
             sel_cuts_percent=args.sel_cuts_percent,
             beam_size=args.heuristic_beam_size,
             redundancy_weight=args.heuristic_redundancy_weight,
+            max_candidates=args.heuristic_max_candidates,
+            max_selected_cuts=args.heuristic_max_selected_cuts,
         )
 
     return _run_with_agent(instance_dir, instance_file, env_kwargs, args, _builder)
@@ -345,10 +358,26 @@ def _safe_float(value):
         return None
 
 
+def _has_incumbent(stats):
+    if stats is None:
+        return False
+    n_solutions = stats.get("n_solutions")
+    try:
+        if n_solutions is not None and int(n_solutions) > 0:
+            return True
+    except Exception:
+        pass
+    return stats.get("best_obj") is not None or bool(stats.get("solution"))
+
+
 def _format_instance_result(method_name, instance_file, stats, hyperparams, error=None):
     solution = {}
+    n_solutions = None
+    has_solution = False
     if stats is not None:
         solution = stats.get("solution", {})
+        n_solutions = stats.get("n_solutions")
+        has_solution = _has_incumbent(stats)
     return {
         "method": method_name,
         "instance": instance_file,
@@ -358,6 +387,9 @@ def _format_instance_result(method_name, instance_file, stats, hyperparams, erro
         "ntotal_nodes": None if stats is None else _safe_float(stats.get("ntotal_nodes")),
         "primal_dual_gap": None if stats is None else _safe_float(stats.get("primal_dual_gap")),
         "primaldualintegral": None if stats is None else _safe_float(stats.get("primaldualintegral")),
+        "n_solutions": None if n_solutions is None else int(n_solutions),
+        "has_solution": has_solution,
+        "comparison_valid": error is None and has_solution,
         "nonzero_solution_vars": len(solution),
         "solution": solution,
         "hyperparameters": hyperparams,
@@ -365,7 +397,7 @@ def _format_instance_result(method_name, instance_file, stats, hyperparams, erro
     }
 
 
-def _valid_metric_values(rows, key):
+def _valid_metric_values(rows, key, max_abs=None):
     values = []
     for row in rows:
         value = row.get(key)
@@ -376,24 +408,41 @@ def _valid_metric_values(rows, key):
         except Exception:
             continue
         if np.isfinite(value):
+            if max_abs is not None and abs(value) >= max_abs:
+                continue
             values.append(value)
     return values
+
+
+def _status_is_solved(status):
+    return str(status).lower() in {"optimal", "gaplimit", "bestsollimit"}
 
 
 def _aggregate_results(results):
     summary = {}
     for method_name, method_results in results.items():
-        valid = [r for r in method_results if r["error"] is None and r["solving_time"] is not None]
-        solving_times = _valid_metric_values(valid, "solving_time")
-        best_objs = _valid_metric_values(valid, "best_obj")
-        total_nodes = _valid_metric_values(valid, "ntotal_nodes")
-        primal_dual_gaps = _valid_metric_values(valid, "primal_dual_gap")
-        primal_dual_integrals = _valid_metric_values(valid, "primaldualintegral")
-        nonzero_solution_vars = _valid_metric_values(valid, "nonzero_solution_vars")
+        completed = [r for r in method_results if r["error"] is None and r["solving_time"] is not None]
+        with_solution = [r for r in completed if r.get("has_solution")]
+        solved = [r for r in completed if _status_is_solved(r.get("status"))]
+        solving_times = _valid_metric_values(completed, "solving_time")
+        incumbent_solving_times = _valid_metric_values(with_solution, "solving_time")
+        best_objs = _valid_metric_values(with_solution, "best_obj")
+        total_nodes = _valid_metric_values(completed, "ntotal_nodes")
+        primal_dual_gaps = _valid_metric_values(
+            with_solution,
+            "primal_dual_gap",
+            max_abs=NO_INCUMBENT_GAP_THRESHOLD,
+        )
+        primal_dual_integrals = _valid_metric_values(with_solution, "primaldualintegral")
+        nonzero_solution_vars = _valid_metric_values(with_solution, "nonzero_solution_vars")
         summary[method_name] = {
             "num_instances": len(method_results),
-            "num_valid": len(valid),
+            "num_completed": len(completed),
+            "num_valid": len(completed),
+            "num_with_solution": len(with_solution),
+            "num_solved": len(solved),
             "mean_solving_time": None if not solving_times else float(np.mean(solving_times)),
+            "mean_incumbent_solving_time": None if not incumbent_solving_times else float(np.mean(incumbent_solving_times)),
             "mean_best_obj": None if not best_objs else float(np.mean(best_objs)),
             "mean_ntotal_nodes": None if not total_nodes else float(np.mean(total_nodes)),
             "mean_primal_dual_gap": None if not primal_dual_gaps else float(np.mean(primal_dual_gaps)),
@@ -443,6 +492,12 @@ def _flatten_results(results):
     return flat
 
 
+def _metric_count_label(item, metric_key):
+    if metric_key in {"mean_best_obj", "mean_primal_dual_gap"}:
+        return f"{item['num_with_solution']}/{item['num_instances']} inc."
+    return f"{item['num_completed']}/{item['num_instances']} run"
+
+
 def _render_metric_chart(parts, x, y, width, title, metric_key, summary):
     methods = [method_name for method_name in METHOD_ORDER if method_name in summary]
     values = [summary[method_name].get(metric_key) for method_name in methods]
@@ -474,7 +529,7 @@ def _render_metric_chart(parts, x, y, width, title, metric_key, summary):
                 f'<rect x="{plot_x:.2f}" y="{row_y:.2f}" width="{fill_width:.2f}" height="18" rx="9" fill="{METHOD_COLORS[method_name]}"/>'
             )
         parts.append(
-            f'<text x="{plot_x + plot_width + 10:.2f}" y="{row_y + 13:.2f}" font-size="12" fill="#404040">{_format_display_value(value)} ({summary[method_name]["num_valid"]}/{summary[method_name]["num_instances"]})</text>'
+            f'<text x="{plot_x + plot_width + 10:.2f}" y="{row_y + 13:.2f}" font-size="12" fill="#404040">{_format_display_value(value)} ({_metric_count_label(summary[method_name], metric_key)})</text>'
         )
     return chart_height
 
@@ -504,7 +559,7 @@ def _write_comparison_svg(path, summary, meta):
         '<rect x="0" y="0" width="1780" height="760" fill="#FFFFFF"/>',
         '<text x="42" y="42" font-size="28" font-weight="700" fill="#202020">Ablation Comparison</text>',
         f'<text x="42" y="72" font-size="14" fill="#565656">Instance directory: {_escape_svg(meta.get("instance_dir", ""))}</text>',
-        f'<text x="42" y="96" font-size="14" fill="#565656">Instances: {len(meta.get("instance_files", []))} | Comparison covers efficiency and solution quality.</text>',
+        f'<text x="42" y="96" font-size="14" fill="#565656">Instances: {len(meta.get("instance_files", []))} | Quality metrics only use runs with an incumbent solution.</text>',
         f'<rect x="{left_x}" y="{top_y}" width="{panel_width}" height="560" rx="18" fill="#F8FBFF" stroke="#D6E3F3"/>',
         f'<rect x="{right_x}" y="{top_y}" width="{panel_width}" height="560" rx="18" fill="#FFF9F4" stroke="#F1DFC9"/>',
         f'<text x="{left_x + panel_padding_x}" y="{top_y + panel_title_y}" font-size="22" font-weight="700" fill="#1F3B63">Algorithm Efficiency</text>',
@@ -543,6 +598,9 @@ def _write_csv(path, results):
         "ntotal_nodes",
         "primal_dual_gap",
         "primaldualintegral",
+        "n_solutions",
+        "has_solution",
+        "comparison_valid",
         "nonzero_solution_vars",
         "error",
         "hyperparameters",
@@ -558,6 +616,38 @@ def _write_csv(path, results):
                         "hyperparameters": json.dumps(row["hyperparameters"], ensure_ascii=False),
                     }
                 )
+
+
+def _build_diagnostics(results, summary, meta):
+    diagnostics = []
+    instance_files = meta.get("instance_files", [])
+    if len(instance_files) < 3:
+        diagnostics.append(
+            "The run covers fewer than 3 instances, so method differences are not statistically meaningful."
+        )
+    if not any(item["num_with_solution"] > 0 for item in summary.values()):
+        diagnostics.append(
+            "No method produced an incumbent solution; best objective and gap cannot be used to rank algorithms."
+        )
+
+    completed_rows = [
+        row
+        for method_results in results.values()
+        for row in method_results
+        if row.get("error") is None and row.get("ntotal_nodes") is not None
+    ]
+    if completed_rows and all(float(row.get("ntotal_nodes") or 0.0) <= 1.0 for row in completed_rows):
+        diagnostics.append(
+            "All completed runs stayed at the root node, so this experiment mainly measures root LP/presolve difficulty rather than tree-search cut selection."
+        )
+
+    solver_time = summary.get("solver_only", {}).get("mean_solving_time")
+    beam_time = summary.get("beam_only", {}).get("mean_solving_time")
+    if solver_time and beam_time and beam_time > 1.5 * solver_time:
+        diagnostics.append(
+            "The heuristic beam run is much slower than SCIP default; cap beam candidates/selected cuts or use a smaller cut pool for fair overhead accounting."
+        )
+    return diagnostics
 
 
 def _write_markdown(path, results, summary, meta):
@@ -578,29 +668,38 @@ def _write_markdown(path, results, summary, meta):
     lines.append("")
     lines.append("## Summary")
     lines.append("")
-    lines.append("| Method | Mean Time | Mean Nodes | Mean Best Obj | Mean Gap | Mean Nonzero Vars | Valid Runs |")
-    lines.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: |")
+    lines.append("| Method | Completed | With Incumbent | Solved | Mean Time | Mean Incumbent Time | Mean Nodes | Mean Best Obj | Mean Gap | Mean Nonzero Vars |")
+    lines.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
     for method_name in METHOD_ORDER:
         if method_name not in summary:
             continue
         item = summary[method_name]
         lines.append(
-            f"| {method_name} | {_format_display_value(item['mean_solving_time'])} | "
+            f"| {method_name} | {item['num_completed']}/{item['num_instances']} | "
+            f"{item['num_with_solution']}/{item['num_instances']} | {item['num_solved']}/{item['num_instances']} | "
+            f"{_format_display_value(item['mean_solving_time'])} | {_format_display_value(item['mean_incumbent_solving_time'])} | "
             f"{_format_display_value(item['mean_ntotal_nodes'])} | {_format_display_value(item['mean_best_obj'])} | "
-            f"{_format_display_value(item['mean_primal_dual_gap'])} | {_format_display_value(item['mean_nonzero_solution_vars'])} | "
-            f"{item['num_valid']}/{item['num_instances']} |"
+            f"{_format_display_value(item['mean_primal_dual_gap'])} | {_format_display_value(item['mean_nonzero_solution_vars'])} |"
         )
+    diagnostics = _build_diagnostics(results, summary, meta)
+    if diagnostics:
+        lines.append("")
+        lines.append("## Diagnostics")
+        lines.append("")
+        for diagnostic in diagnostics:
+            lines.append(f"- {diagnostic}")
     lines.append("")
     lines.append("## Per-Instance Results")
     lines.append("")
-    lines.append("| Method | Instance | Status | Time | Best Obj | Nodes | Gap | Nonzero Vars | Error |")
-    lines.append("| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |")
+    lines.append("| Method | Instance | Status | Time | Best Obj | Nodes | Gap | Solutions | Incumbent | Comparable | Nonzero Vars | Error |")
+    lines.append("| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- | ---: | --- |")
     for method_name in METHOD_ORDER:
         for row in results.get(method_name, []):
             lines.append(
                 f"| {row['method']} | {row['instance']} | {row['status']} | {_format_display_value(row['solving_time'])} | "
                 f"{_format_display_value(row['best_obj'])} | {_format_display_value(row['ntotal_nodes'])} | "
-                f"{_format_display_value(row['primal_dual_gap'])} | {row['nonzero_solution_vars']} | {row['error']} |"
+                f"{_format_display_value(row['primal_dual_gap'])} | {row['n_solutions']} | {row['has_solution']} | "
+                f"{row['comparison_valid']} | {row['nonzero_solution_vars']} | {row['error']} |"
             )
     lines.append("")
     lines.append("## Hyperparameters")
@@ -736,6 +835,10 @@ def main():
     except Exception as exc:
         gantt_error = str(exc)
 
+    diagnostics = _build_diagnostics(experiment_results, summary, {
+        "instance_files": instance_files,
+    })
+
     payload = {
         "meta": {
             "instance_dir": args.instance_dir,
@@ -746,6 +849,7 @@ def main():
             "comparison_svg": comparison_svg,
             "gantt_dir": gantt_dir if generated_gantt else "",
         },
+        "diagnostics": diagnostics,
         "summary": summary,
         "results": experiment_results,
         "artifacts": {

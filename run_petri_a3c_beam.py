@@ -34,7 +34,10 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--mode_4x1_wafers", type=int, default=20)
     parser.add_argument("--mode_2x2_wafers", type=int, default=20)
     parser.add_argument("--pec_pool_size", type=int, default=8)
+    parser.add_argument("--process_mode", type=str, default="auto")
     parser.add_argument("--mode_sequence", type=str, default="")
+    parser.add_argument("--wafer_mode_map", "--wafer_modes", dest="wafer_mode_map", type=str, default="")
+    parser.add_argument("--default_wafer_mode", type=str, default="")
     return parser.parse_args()
 
 
@@ -90,7 +93,10 @@ def main() -> None:
         num_steps=args.num_steps,
         total_wafers=args.total_wafers,
         pec_pool_size=args.pec_pool_size,
+        process_mode=args.process_mode,
         mode_sequence=args.mode_sequence,
+        wafer_mode_map=args.wafer_mode_map,
+        default_wafer_mode=args.default_wafer_mode,
         full_mode_wafers=args.mode_4x1_wafers,
         mix_mode_wafers=args.mode_2x2_wafers,
     )
@@ -141,8 +147,14 @@ def main() -> None:
         str(args.mode_2x2_wafers),
         "--petri_pec_pool_size",
         str(args.pec_pool_size),
+        "--petri_process_mode",
+        args.process_mode,
         "--petri_mode_sequence",
         args.mode_sequence,
+        "--petri_wafer_mode_map",
+        args.wafer_mode_map,
+        "--petri_default_wafer_mode",
+        args.default_wafer_mode,
         "--single_instance_file",
         generated_instance_name,
         "--test_decode_type",

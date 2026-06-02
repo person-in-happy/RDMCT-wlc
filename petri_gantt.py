@@ -25,6 +25,18 @@ NEW_MIX_PAIR_MEMBER_RE = re.compile(r"wafer_to_mix_pair_(\d+)_(\d+)$")
 NEW_FULL_PAIR_COMPLETION_RE = re.compile(r"full_pair_completion_(\d+)$")
 NEW_MIX_PAIR_COMPLETION_RE = re.compile(r"mix_pair_completion_(\d+)$")
 NEW_WAFER_COMPLETION_RE = re.compile(r"wafer_completion_(\d+)$")
+NEW_FULL_ASSIGN_RE = re.compile(r"assign_full_(\d+)_(\d+)_(\d+)_(\d+)$")
+NEW_FULL_BATCH_USED_RE = re.compile(r"full_batch_used_(\d+)_(\d+)$")
+NEW_FULL_FILLER_SIDE_RE = re.compile(r"full_filler_side_(\d+)_(\d+)_(\d+)$")
+NEW_MIX_ASSIGN_RE = re.compile(r"assign_mix_(\d+)_(\d+)_(\d+)$")
+NEW_MIX_ACTIVE_RE = re.compile(r"mix_active_(\d+)$")
+NEW_MIX_CYCLE_USED_RE = re.compile(r"mix_cycle_used_(\d+)_(\d+)$")
+NEW_CLEAN_ACTIVE_RE = re.compile(r"clean_active_(\d+)_(\d+)$")
+LLUPPER_SLOT_ASSIGN_RE = re.compile(r"llupper_slot_assign_(\d+)_(\d+)$")
+LLLOWER_SLOT_ASSIGN_RE = re.compile(r"lllower_slot_assign_(\d+)_(\d+)$")
+PEC_TOKEN_ASSIGN_RE = re.compile(r"pec_token_assign_(\d+)_(\d+)$")
+CLEAN_START_RE = re.compile(r"clean_start_(\d+)_(\d+)$")
+CLEAN_END_RE = re.compile(r"clean_end_(\d+)_(\d+)$")
 
 LEGACY_FULL_ASSIGN_RE = re.compile(r"assign_full_(\d+)_(\d+)_(\d+)$")
 LEGACY_FULL_PEC_RE = re.compile(r"full_pec_pairs_(\d+)_(\d+)$")
@@ -43,7 +55,8 @@ RIGHT_MARGIN = 120
 TOP_MARGIN = 118
 BOTTOM_MARGIN = 96
 LANE_HEIGHT = 74
-BAR_HEIGHT = 28
+BAR_HEIGHT = 42
+SECONDS_PER_HOUR = 3600.0
 
 NEW_PRODUCT_STAGE_ORDER = [
     "atr_lp_al",
@@ -142,6 +155,7 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
     prod_stage_end: Dict[Tuple[int, str], float] = {}
     pec_stage_start: Dict[Tuple[int, str], float] = {}
     pec_stage_end: Dict[Tuple[int, str], float] = {}
+    pec_token_by_job: Dict[int, int] = {}
     c_max = _float(solution.get("c_max", 0.0))
 
     for name, value in solution.items():
@@ -193,6 +207,10 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
         if m:
             pec_stage_end[(int(m.group(1)), m.group(2))] = _float(value)
             continue
+        m = PEC_TOKEN_ASSIGN_RE.match(name)
+        if m and _bool(value):
+            pec_token_by_job[int(m.group(1))] = int(m.group(2))
+            continue
 
     if not (assign_prod_by_batch or prod_stage_start or batch_used):
         return {}
@@ -222,13 +240,14 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                 if end <= start + 1e-9:
                     continue
                 label, color = NEW_PRODUCT_STAGE_META[stage_name]
+                entity = f"W{wafer_id}"
                 tasks.append(
                     {
                         "lane": lane_name,
                         "start": start,
                         "end": end,
-                        "label": label,
-                        "short_label": label,
+                        "label": f"{label}\n{entity}",
+                        "short_label": entity,
                         "color": color,
                     }
                 )
@@ -259,13 +278,15 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                 if end <= start + 1e-9:
                     continue
                 label, color = NEW_PEC_STAGE_META[stage_name]
+                token_id = pec_token_by_job.get(pec_id)
+                entity = f"PEC{token_id}" if token_id is not None else f"E{pec_id}"
                 tasks.append(
                     {
                         "lane": lane_name,
                         "start": start,
                         "end": end,
-                        "label": label,
-                        "short_label": label,
+                        "label": f"{label}\n{entity}",
+                        "short_label": entity,
                         "color": color,
                     }
                 )
@@ -645,11 +666,799 @@ def _collect_legacy_schedule(solution: Dict[str, float]) -> Dict[str, object]:
     }
 
 
-def _collect_schedule(solution: Dict[str, float]) -> Dict[str, object]:
+def _collect_chamber_schedule(solution: Dict[str, float]) -> Dict[str, object]:
+    full_pair_members: Dict[int, List[int]] = {}
+    mix_pair_members: Dict[int, List[int]] = {}
+    full_assignment: Dict[Tuple[int, int, int], int] = {}
+    full_used: Dict[Tuple[int, int], bool] = {}
+    full_filler: Dict[Tuple[int, int, int], bool] = {}
+    mix_pair_by_pos: Dict[Tuple[int, int], int] = {}
+    mix_active: Dict[int, bool] = {}
+    mix_cycle_used: Dict[Tuple[int, int], bool] = {}
+    clean_active: Dict[Tuple[int, int], bool] = {}
+    pec_stage_start: Dict[Tuple[int, str], float] = {}
+    pec_stage_end: Dict[Tuple[int, str], float] = {}
+    pec_token_by_job: Dict[int, int] = {}
+    pm_ids = set()
+
+    for name, value in solution.items():
+        m = PEC_STAGE_START_RE.match(name)
+        if m:
+            pec_stage_start[(int(m.group(1)), m.group(2))] = _float(value)
+            continue
+        m = PEC_STAGE_END_RE.match(name)
+        if m:
+            pec_stage_end[(int(m.group(1)), m.group(2))] = _float(value)
+            continue
+        m = PEC_TOKEN_ASSIGN_RE.match(name)
+        if m and _bool(value):
+            pec_token_by_job[int(m.group(1))] = int(m.group(2))
+            continue
+        m = NEW_FULL_PAIR_MEMBER_RE.match(name)
+        if m and _bool(value):
+            full_pair_members.setdefault(int(m.group(2)), []).append(int(m.group(1)))
+            continue
+        m = NEW_MIX_PAIR_MEMBER_RE.match(name)
+        if m and _bool(value):
+            mix_pair_members.setdefault(int(m.group(2)), []).append(int(m.group(1)))
+            continue
+        m = NEW_FULL_ASSIGN_RE.match(name)
+        if m and _bool(value):
+            pair_id = int(m.group(1))
+            pm_id = int(m.group(2))
+            batch_id = int(m.group(3))
+            side_id = int(m.group(4))
+            full_assignment[(pm_id, batch_id, side_id)] = pair_id
+            pm_ids.add(pm_id)
+            continue
+        m = NEW_FULL_BATCH_USED_RE.match(name)
+        if m:
+            key = (int(m.group(1)), int(m.group(2)))
+            full_used[key] = _bool(value)
+            if full_used[key]:
+                pm_ids.add(key[0])
+            continue
+        m = NEW_FULL_FILLER_SIDE_RE.match(name)
+        if m:
+            key = (int(m.group(1)), int(m.group(2)), int(m.group(3)))
+            full_filler[key] = _bool(value)
+            if full_filler[key]:
+                pm_ids.add(key[0])
+            continue
+        m = NEW_MIX_ASSIGN_RE.match(name)
+        if m and _bool(value):
+            pair_id = int(m.group(1))
+            pm_id = int(m.group(2))
+            pos_id = int(m.group(3))
+            mix_pair_by_pos[(pm_id, pos_id)] = pair_id
+            pm_ids.add(pm_id)
+            continue
+        m = NEW_MIX_ACTIVE_RE.match(name)
+        if m:
+            pm_id = int(m.group(1))
+            mix_active[pm_id] = _bool(value)
+            if mix_active[pm_id]:
+                pm_ids.add(pm_id)
+            continue
+        m = NEW_MIX_CYCLE_USED_RE.match(name)
+        if m:
+            key = (int(m.group(1)), int(m.group(2)))
+            mix_cycle_used[key] = _bool(value)
+            if mix_cycle_used[key]:
+                pm_ids.add(key[0])
+            continue
+        m = NEW_CLEAN_ACTIVE_RE.match(name)
+        if m:
+            key = (int(m.group(1)), int(m.group(2)))
+            clean_active[key] = _bool(value)
+            if clean_active[key]:
+                pm_ids.add(key[0])
+
+    def time_var(name: str) -> float:
+        return _float(solution.get(name, 0.0))
+
+    def same_time(left: float, right: float) -> bool:
+        return abs(left - right) <= 1e-6
+
+    def pec_entity(job_id: int) -> str:
+        token_id = pec_token_by_job.get(job_id)
+        return f"PEC{token_id}" if token_id is not None else f"E{job_id}"
+
+    pec_job_ids = sorted({job_id for job_id, _ in pec_stage_start} | {job_id for job_id, _ in pec_stage_end})
+
+    def pec_entities_for_refs(
+        load_start: float,
+        load_end: float,
+        pm_start: float,
+        pm_end: float,
+        unload_start: float,
+        unload_end: float,
+    ) -> List[str]:
+        entities = []
+        for job_id in pec_job_ids:
+            if (
+                same_time(pec_stage_start.get((job_id, "vtr_load"), -1.0), load_start)
+                and same_time(pec_stage_end.get((job_id, "vtr_load"), -1.0), load_end)
+                and same_time(pec_stage_start.get((job_id, "pm"), -1.0), pm_start)
+                and same_time(pec_stage_end.get((job_id, "pm"), -1.0), pm_end)
+                and same_time(pec_stage_start.get((job_id, "vtr_unload"), -1.0), unload_start)
+                and same_time(pec_stage_end.get((job_id, "vtr_unload"), -1.0), unload_end)
+            ):
+                entities.append(pec_entity(job_id))
+        return sorted(entities, key=_entity_sort_key)
+
+    def pec_entities_for_pm_interval(pm_start: float, pm_end: float) -> List[str]:
+        entities = []
+        for job_id in pec_job_ids:
+            if (
+                same_time(pec_stage_start.get((job_id, "pm"), -1.0), pm_start)
+                and same_time(pec_stage_end.get((job_id, "pm"), -1.0), pm_end)
+            ):
+                entities.append(pec_entity(job_id))
+        return sorted(entities, key=_entity_sort_key)
+
+    def pec_text(entities: List[str], fallback: str = "PEC") -> str:
+        if fallback == "PEC+PEC" and len(entities) == 1:
+            return f"{entities[0]}+PEC"
+        return _format_entity_list(entities) if entities else fallback
+
+    def full_pair_label(pair_id: int, pec_entities: List[str] = None) -> str:
+        wafers = sorted(full_pair_members.get(pair_id, []))
+        if not wafers:
+            return f"F{pair_id}"
+        if len(wafers) == 1:
+            return f"F{pair_id}(W{wafers[0]}+{pec_text(pec_entities or [])})"
+        return f"F{pair_id}(" + ",".join(f"W{wafer_id}" for wafer_id in wafers) + ")"
+
+    def mix_pair_label(pair_id: int, pec_entities: List[str] = None) -> str:
+        wafers = sorted(mix_pair_members.get(pair_id, []))
+        if not wafers:
+            return f"M{pair_id}"
+        if len(wafers) == 1:
+            return f"M{pair_id}(W{wafers[0]}+{pec_text(pec_entities or [])})"
+        return f"M{pair_id}(" + ",".join(f"W{wafer_id}" for wafer_id in wafers) + ")"
+
+    def full_side_label(pm_id: int, batch_id: int, side_id: int) -> str:
+        side_prefix = "front" if side_id == 1 else "back"
+        side_pec_entities = pec_entities_for_refs(
+            time_var(f"full_{side_prefix}_load_start_{pm_id}_{batch_id}"),
+            time_var(f"full_{side_prefix}_load_end_{pm_id}_{batch_id}"),
+            time_var(f"full_start_{pm_id}_{batch_id}"),
+            time_var(f"full_end_{pm_id}_{batch_id}"),
+            time_var(f"full_{side_prefix}_unload_start_{pm_id}_{batch_id}"),
+            time_var(f"full_{side_prefix}_unload_end_{pm_id}_{batch_id}"),
+        )
+        if full_filler.get((pm_id, batch_id, side_id), False):
+            return f"S{side_id}: {pec_text(side_pec_entities, 'PEC+PEC')}"
+        pair_id = full_assignment.get((pm_id, batch_id, side_id))
+        if pair_id is None:
+            return f"S{side_id}: -"
+        return f"S{side_id}: {full_pair_label(pair_id, side_pec_entities)}"
+
+    if not (full_assignment or mix_pair_by_pos or clean_active):
+        return {}
+
+    ordered_pm_ids = [2, 3] if not pm_ids or pm_ids.issubset({2, 3}) else sorted(pm_ids)
+    lanes = [f"CH{pm_id} four-pocket module" for pm_id in ordered_pm_ids]
+    tasks: List[Dict[str, object]] = []
+    time_candidates: List[float] = []
+
+    for pm_id in ordered_pm_ids:
+        lane_name = f"CH{pm_id} four-pocket module"
+
+        batch_ids = sorted(
+            batch_id
+            for this_pm, batch_id in set(full_used) | {(pm, batch) for pm, batch, _ in full_assignment}
+            if this_pm == pm_id
+        )
+        for batch_id in batch_ids:
+            if not full_used.get((pm_id, batch_id), False):
+                continue
+            start = time_var(f"full_front_load_start_{pm_id}_{batch_id}")
+            end = time_var(f"full_front_unload_end_{pm_id}_{batch_id}")
+            process_start = time_var(f"full_start_{pm_id}_{batch_id}")
+            process_end = time_var(f"full_end_{pm_id}_{batch_id}")
+            if end <= start + 1e-9:
+                start, end = process_start, process_end
+            if end <= start + 1e-9:
+                continue
+            label = (
+                f"4x1 batch {batch_id}\n"
+                f"{full_side_label(pm_id, batch_id, 1)}\n"
+                f"{full_side_label(pm_id, batch_id, 2)}"
+            )
+            tasks.append(
+                {
+                    "lane": lane_name,
+                    "start": start,
+                    "end": end,
+                    "label": label,
+                    "short_label": f"4x1 B{batch_id}",
+                    "color": "#4C78A8",
+                }
+            )
+            time_candidates.extend([start, end])
+
+        active_mix = mix_active.get(pm_id, False) or any(key_pm == pm_id for key_pm, _ in mix_pair_by_pos)
+        if active_mix:
+            pos_ids = sorted(pos for key_pm, pos in mix_pair_by_pos if key_pm == pm_id)
+            max_pos = max(pos_ids, default=0)
+            head_start = time_var(f"mix_head_start_{pm_id}")
+            head_end = time_var(f"mix_head_end_{pm_id}")
+            cycle1_start = time_var(f"mix_cycle_start_{pm_id}_1")
+            cycle1_end = time_var(f"mix_cycle_end_{pm_id}_1")
+            head_pec = pec_entities_for_refs(
+                head_start,
+                head_end,
+                cycle1_start,
+                cycle1_end,
+                time_var(f"mix_bridge_start_{pm_id}_2"),
+                time_var(f"mix_bridge_end_{pm_id}_2"),
+            )
+            last_cycle_id = max_pos + 1 if max_pos > 0 else 0
+            tail_pec = pec_entities_for_refs(
+                time_var(f"mix_tail_load_start_{pm_id}"),
+                time_var(f"mix_tail_load_end_{pm_id}"),
+                time_var(f"mix_last_cycle_start_{pm_id}"),
+                time_var(f"mix_last_cycle_end_{pm_id}"),
+                time_var(f"mix_tail_start_{pm_id}"),
+                time_var(f"mix_tail_end_{pm_id}"),
+            )
+            first_pair = mix_pair_by_pos.get((pm_id, 1))
+            if head_end > head_start + 1e-9:
+                head_label = f"2x2 head\n{pec_text(head_pec)}"
+                if first_pair is not None:
+                    head_label = f"2x2 head\n{pec_text(head_pec)} + {mix_pair_label(first_pair)} 1st"
+                tasks.append(
+                    {
+                        "lane": lane_name,
+                        "start": head_start,
+                        "end": head_end,
+                        "label": head_label,
+                        "short_label": "2x2 H",
+                        "color": "#72B7B2",
+                    }
+                )
+                time_candidates.extend([head_start, head_end])
+
+            cycle_ids = sorted(cycle for key_pm, cycle in mix_cycle_used if key_pm == pm_id and mix_cycle_used[(key_pm, cycle)])
+            for cycle_id in cycle_ids:
+                if cycle_id >= 2:
+                    bridge_start = time_var(f"mix_bridge_start_{pm_id}_{cycle_id}")
+                    bridge_end = time_var(f"mix_bridge_end_{pm_id}_{cycle_id}")
+                    if bridge_end > bridge_start + 1e-9:
+                        bridge_parts = []
+                        if cycle_id == 2:
+                            bridge_parts.append(f"{pec_text(head_pec)} out")
+                        out_pair = mix_pair_by_pos.get((pm_id, cycle_id - 2))
+                        in_pair = mix_pair_by_pos.get((pm_id, cycle_id))
+                        if out_pair is not None:
+                            bridge_parts.append(f"{mix_pair_label(out_pair)} 2nd out")
+                        if in_pair is not None:
+                            bridge_parts.append(f"{mix_pair_label(in_pair)} 1st in")
+                        if cycle_id == last_cycle_id:
+                            bridge_parts.append(f"{pec_text(tail_pec)} in")
+                        bridge_label = f"2x2 bridge {cycle_id}"
+                        if bridge_parts:
+                            bridge_label += "\n" + " + ".join(bridge_parts)
+                        tasks.append(
+                            {
+                                "lane": lane_name,
+                                "start": bridge_start,
+                                "end": bridge_end,
+                                "label": bridge_label,
+                                "short_label": f"Br{cycle_id}",
+                                "color": "#9C755F",
+                            }
+                        )
+                        time_candidates.extend([bridge_start, bridge_end])
+
+                start = time_var(f"mix_cycle_start_{pm_id}_{cycle_id}")
+                end = time_var(f"mix_cycle_end_{pm_id}_{cycle_id}")
+                if end <= start + 1e-9:
+                    continue
+                if cycle_id == 1:
+                    label = f"cycle 1\n{pec_text(head_pec)}"
+                    if first_pair is not None:
+                        label = f"cycle 1\n{pec_text(head_pec)} + {mix_pair_label(first_pair)} 1st"
+                    color = "#F58518"
+                elif cycle_id == max_pos + 1 and max_pos > 0:
+                    prev_pair = mix_pair_by_pos.get((pm_id, max_pos))
+                    label = f"cycle {cycle_id}\n{pec_text(tail_pec)}"
+                    if prev_pair is not None:
+                        label = f"cycle {cycle_id}\n{mix_pair_label(prev_pair)} 2nd + {pec_text(tail_pec)}"
+                    color = "#F58518"
+                else:
+                    prev_pair = mix_pair_by_pos.get((pm_id, cycle_id - 1))
+                    curr_pair = mix_pair_by_pos.get((pm_id, cycle_id))
+                    label = f"cycle {cycle_id}"
+                    if prev_pair is not None and curr_pair is not None:
+                        label = f"cycle {cycle_id}\n{mix_pair_label(prev_pair)} 2nd + {mix_pair_label(curr_pair)} 1st"
+                    color = "#54A24B"
+                tasks.append(
+                    {
+                        "lane": lane_name,
+                        "start": start,
+                        "end": end,
+                        "label": label,
+                        "short_label": f"C{cycle_id}",
+                        "color": color,
+                    }
+                )
+                time_candidates.extend([start, end])
+
+            tail_start = time_var(f"mix_tail_start_{pm_id}")
+            tail_end = time_var(f"mix_tail_end_{pm_id}")
+            if tail_end > tail_start + 1e-9:
+                tasks.append(
+                    {
+                        "lane": lane_name,
+                        "start": tail_start,
+                        "end": tail_end,
+                        "label": f"2x2 tail\n{pec_text(tail_pec)} return",
+                        "short_label": "2x2 T",
+                        "color": "#B279A2",
+                    }
+                )
+                time_candidates.extend([tail_start, tail_end])
+
+        for clean_pm, clean_id in sorted(clean_active):
+            if clean_pm != pm_id or not clean_active[(clean_pm, clean_id)]:
+                continue
+            start = time_var(f"clean_front_load_start_{pm_id}_{clean_id}")
+            end = time_var(f"clean_front_unload_end_{pm_id}_{clean_id}")
+            if end <= start + 1e-9:
+                continue
+            clean_pec = pec_entities_for_pm_interval(
+                time_var(f"clean_start_{pm_id}_{clean_id}"),
+                time_var(f"clean_end_{pm_id}_{clean_id}"),
+            )
+            tasks.append(
+                {
+                    "lane": lane_name,
+                    "start": start,
+                    "end": end,
+                    "label": f"cleaning {clean_id}\n{pec_text(clean_pec, 'PEC')}",
+                    "short_label": f"Clean {clean_id}",
+                    "color": "#79706E",
+                }
+            )
+            time_candidates.extend([start, end])
+
+    if not tasks:
+        return {}
+    for task in tasks:
+        task["max_label_lines"] = 3
+    horizon = max(time_candidates) if time_candidates else 0.0
+    return {
+        "is_petri": True,
+        "layout": "chambers",
+        "title_suffix": "Chamber Modules Gantt",
+        "lanes": lanes,
+        "tasks": sorted(tasks, key=lambda task: (lanes.index(task["lane"]), float(task["start"]), float(task["end"]))),
+        "markers": [],
+        "horizon": max(horizon, 1.0),
+        "c_max": _float(solution.get("c_max", 0.0)),
+        "show_cmax": False,
+    }
+
+
+def _entity_sort_key(label: str) -> Tuple[int, int, str]:
+    text = str(label)
+    m = re.match(r"W(\d+)$", text)
+    if m:
+        return (0, int(m.group(1)), text)
+    m = re.match(r"PEC(\d+)$", text)
+    if m:
+        return (1, int(m.group(1)), text)
+    m = re.match(r"E(\d+)$", text)
+    if m:
+        return (2, int(m.group(1)), text)
+    return (9, 0, text)
+
+
+def _format_entity_list(entities: List[str]) -> str:
+    unique = {str(entity).strip() for entity in entities if str(entity).strip()}
+    return ", ".join(sorted(unique, key=_entity_sort_key))
+
+
+def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
+    prod_stage_start: Dict[Tuple[int, str], float] = {}
+    prod_stage_end: Dict[Tuple[int, str], float] = {}
+    pec_stage_start: Dict[Tuple[int, str], float] = {}
+    pec_stage_end: Dict[Tuple[int, str], float] = {}
+    full_pair_members: Dict[int, List[int]] = {}
+    mix_pair_members: Dict[int, List[int]] = {}
+    full_assignment: Dict[Tuple[int, int, int], int] = {}
+    mix_pair_by_pos: Dict[Tuple[int, int], int] = {}
+    llupper_slot_by_wafer: Dict[int, int] = {}
+    lllower_slot_by_wafer: Dict[int, int] = {}
+    pec_token_by_job: Dict[int, int] = {}
+    full_process_start: Dict[Tuple[int, int], float] = {}
+    full_process_end: Dict[Tuple[int, int], float] = {}
+    mix_cycle_start: Dict[Tuple[int, int], float] = {}
+    mix_cycle_end: Dict[Tuple[int, int], float] = {}
+    clean_start: Dict[Tuple[int, int], float] = {}
+    clean_end: Dict[Tuple[int, int], float] = {}
+    pm_ids = set()
+
+    for name, value in solution.items():
+        m = PROD_STAGE_START_RE.match(name)
+        if m:
+            prod_stage_start[(int(m.group(1)), m.group(2))] = _float(value)
+            continue
+        m = PROD_STAGE_END_RE.match(name)
+        if m:
+            prod_stage_end[(int(m.group(1)), m.group(2))] = _float(value)
+            continue
+        m = PEC_STAGE_START_RE.match(name)
+        if m:
+            pec_stage_start[(int(m.group(1)), m.group(2))] = _float(value)
+            continue
+        m = PEC_STAGE_END_RE.match(name)
+        if m:
+            pec_stage_end[(int(m.group(1)), m.group(2))] = _float(value)
+            continue
+        m = NEW_FULL_PAIR_MEMBER_RE.match(name)
+        if m and _bool(value):
+            full_pair_members.setdefault(int(m.group(2)), []).append(int(m.group(1)))
+            continue
+        m = NEW_MIX_PAIR_MEMBER_RE.match(name)
+        if m and _bool(value):
+            mix_pair_members.setdefault(int(m.group(2)), []).append(int(m.group(1)))
+            continue
+        m = NEW_FULL_ASSIGN_RE.match(name)
+        if m and _bool(value):
+            pm_id = int(m.group(2))
+            full_assignment[(pm_id, int(m.group(3)), int(m.group(4)))] = int(m.group(1))
+            pm_ids.add(pm_id)
+            continue
+        m = NEW_MIX_ASSIGN_RE.match(name)
+        if m and _bool(value):
+            pm_id = int(m.group(2))
+            mix_pair_by_pos[(pm_id, int(m.group(3)))] = int(m.group(1))
+            pm_ids.add(pm_id)
+            continue
+        m = LLUPPER_SLOT_ASSIGN_RE.match(name)
+        if m and _bool(value):
+            llupper_slot_by_wafer[int(m.group(1))] = int(m.group(2))
+            continue
+        m = LLLOWER_SLOT_ASSIGN_RE.match(name)
+        if m and _bool(value):
+            lllower_slot_by_wafer[int(m.group(1))] = int(m.group(2))
+            continue
+        m = PEC_TOKEN_ASSIGN_RE.match(name)
+        if m and _bool(value):
+            pec_token_by_job[int(m.group(1))] = int(m.group(2))
+            continue
+        m = LEGACY_FULL_START_RE.match(name)
+        if m:
+            key = (int(m.group(1)), int(m.group(2)))
+            full_process_start[key] = _float(value)
+            pm_ids.add(key[0])
+            continue
+        m = LEGACY_FULL_END_RE.match(name)
+        if m:
+            key = (int(m.group(1)), int(m.group(2)))
+            full_process_end[key] = _float(value)
+            pm_ids.add(key[0])
+            continue
+        m = LEGACY_MIX_START_RE.match(name)
+        if m:
+            key = (int(m.group(1)), int(m.group(2)))
+            mix_cycle_start[key] = _float(value)
+            pm_ids.add(key[0])
+            continue
+        m = LEGACY_MIX_END_RE.match(name)
+        if m:
+            key = (int(m.group(1)), int(m.group(2)))
+            mix_cycle_end[key] = _float(value)
+            pm_ids.add(key[0])
+            continue
+        m = CLEAN_START_RE.match(name)
+        if m:
+            key = (int(m.group(1)), int(m.group(2)))
+            clean_start[key] = _float(value)
+            pm_ids.add(key[0])
+            continue
+        m = CLEAN_END_RE.match(name)
+        if m:
+            key = (int(m.group(1)), int(m.group(2)))
+            clean_end[key] = _float(value)
+            pm_ids.add(key[0])
+            continue
+
+    if not (prod_stage_start or pec_stage_start):
+        return _collect_chamber_schedule(solution)
+
+    pm_process_intervals: List[Tuple[int, float, float]] = []
+
+    def add_pm_interval(pm_id: int, start: float, end: float) -> None:
+        if end > start + 1e-9:
+            pm_process_intervals.append((pm_id, start, end))
+            pm_ids.add(pm_id)
+
+    for key in set(full_process_start) | set(full_process_end):
+        add_pm_interval(key[0], full_process_start.get(key, 0.0), full_process_end.get(key, 0.0))
+    for key in set(mix_cycle_start) | set(mix_cycle_end):
+        add_pm_interval(key[0], mix_cycle_start.get(key, 0.0), mix_cycle_end.get(key, 0.0))
+    for key in set(clean_start) | set(clean_end):
+        add_pm_interval(key[0], clean_start.get(key, 0.0), clean_end.get(key, 0.0))
+
+    def infer_pm_for_interval(start: float, end: float) -> int:
+        for pm_id, pm_start, pm_end in pm_process_intervals:
+            if abs(pm_start - start) <= 1e-6 and abs(pm_end - end) <= 1e-6:
+                return pm_id
+        return 0
+
+    wafer_pm: Dict[int, int] = {}
+    for (pm_id, _batch_id, _side_id), pair_id in full_assignment.items():
+        for wafer_id in full_pair_members.get(pair_id, []):
+            wafer_pm[wafer_id] = pm_id
+    for (pm_id, _pos_id), pair_id in mix_pair_by_pos.items():
+        for wafer_id in mix_pair_members.get(pair_id, []):
+            wafer_pm[wafer_id] = pm_id
+
+    product_ids = sorted({wafer_id for wafer_id, _ in prod_stage_start} | {wafer_id for wafer_id, _ in prod_stage_end})
+    for wafer_id in product_ids:
+        if wafer_id in wafer_pm:
+            continue
+        start = prod_stage_start.get((wafer_id, "pm"), 0.0)
+        end = prod_stage_end.get((wafer_id, "pm"), 0.0)
+        pm_id = infer_pm_for_interval(start, end)
+        if pm_id:
+            wafer_pm[wafer_id] = pm_id
+            pm_ids.add(pm_id)
+
+    pec_pm_by_job: Dict[int, int] = {}
+    pec_job_ids = sorted({job_id for job_id, _ in pec_stage_start} | {job_id for job_id, _ in pec_stage_end})
+    for job_id in pec_job_ids:
+        start = pec_stage_start.get((job_id, "pm"), 0.0)
+        end = pec_stage_end.get((job_id, "pm"), 0.0)
+        pm_id = infer_pm_for_interval(start, end)
+        if pm_id:
+            pec_pm_by_job[job_id] = pm_id
+            pm_ids.add(pm_id)
+
+    ordered_pm_ids = [2, 3] if pm_ids and pm_ids.issubset({2, 3}) else sorted(pm_ids)
+    llupper_slots = sorted(set(llupper_slot_by_wafer.values()))
+    lllower_slots = sorted(set(lllower_slot_by_wafer.values()))
+    lane_order: List[str] = ["ATR robot", "AL"]
+    lane_order.extend(f"LLupper slot {slot_id}" for slot_id in llupper_slots)
+    if not llupper_slots:
+        lane_order.append("LLupper")
+    lane_order.append("VTR robot")
+    lane_order.extend(f"CH{pm_id} PM" for pm_id in ordered_pm_ids)
+    if not ordered_pm_ids:
+        lane_order.append("PM")
+    lane_order.extend(f"LLlower slot {slot_id}" for slot_id in lllower_slots)
+    if not lllower_slots:
+        lane_order.append("LLlower")
+
+    aggregated: Dict[Tuple[str, float, float, str, str], Dict[str, object]] = {}
+    time_candidates: List[float] = []
+
+    def add_task(lane: str, start: float, end: float, action: str, entity: str, color: str) -> None:
+        if end <= start + 1e-9:
+            return
+        key = (lane, round(start, 6), round(end, 6), action, color)
+        item = aggregated.setdefault(
+            key,
+            {
+                "lane": lane,
+                "start": start,
+                "end": end,
+                "action": action,
+                "color": color,
+                "entities": [],
+            },
+        )
+        item["entities"].append(entity)
+        time_candidates.extend([start, end])
+
+    def product_start(wafer_id: int, stage_name: str) -> float:
+        return prod_stage_start.get((wafer_id, stage_name), 0.0)
+
+    def product_end(wafer_id: int, stage_name: str) -> float:
+        return prod_stage_end.get((wafer_id, stage_name), product_start(wafer_id, stage_name))
+
+    def pm_lane(pm_id: int) -> str:
+        return f"CH{pm_id} PM" if pm_id else "PM"
+
+    def ch_suffix(pm_id: int) -> str:
+        return f" CH{pm_id}" if pm_id else ""
+
+    def llupper_lane(wafer_id: int) -> str:
+        slot_id = llupper_slot_by_wafer.get(wafer_id)
+        return f"LLupper slot {slot_id}" if slot_id is not None else "LLupper"
+
+    def lllower_lane(wafer_id: int) -> str:
+        slot_id = lllower_slot_by_wafer.get(wafer_id)
+        return f"LLlower slot {slot_id}" if slot_id is not None else "LLlower"
+
+    for wafer_id in product_ids:
+        entity = f"W{wafer_id}"
+        pm_id = wafer_pm.get(wafer_id, 0)
+        add_task("ATR robot", product_start(wafer_id, "atr_lp_al"), product_end(wafer_id, "atr_lp_al"), "LP->AL", entity, "#4C78A8")
+        add_task(
+            "AL",
+            product_end(wafer_id, "atr_lp_al"),
+            product_end(wafer_id, "atr_al_llupper"),
+            "AL occupy",
+            entity,
+            "#9C755F",
+        )
+        add_task("ATR robot", product_start(wafer_id, "atr_al_llupper"), product_end(wafer_id, "atr_al_llupper"), "AL->LLupper", entity, "#72B7B2")
+        llupper_entry = product_end(wafer_id, "atr_al_llupper")
+        llupper_state_start = product_start(wafer_id, "llupper")
+        if llupper_state_start > llupper_entry + 1e-9:
+            add_task(
+                llupper_lane(wafer_id),
+                llupper_entry,
+                llupper_state_start,
+                "LLupper wait",
+                entity,
+                "#8CD17D",
+            )
+        add_task(
+            llupper_lane(wafer_id),
+            llupper_state_start,
+            product_end(wafer_id, "llupper"),
+            "LLupper state",
+            entity,
+            "#54A24B",
+        )
+        add_task("VTR robot", product_start(wafer_id, "vtr_load"), product_end(wafer_id, "vtr_load"), f"VTR load{ch_suffix(pm_id)}", entity, "#F58518")
+        add_task(pm_lane(pm_id), product_start(wafer_id, "pm"), product_end(wafer_id, "pm"), "PM process", entity, "#E45756")
+        add_task("VTR robot", product_start(wafer_id, "vtr_unload"), product_end(wafer_id, "vtr_unload"), f"VTR unload{ch_suffix(pm_id)}", entity, "#FF9DA6")
+        add_task(
+            lllower_lane(wafer_id),
+            product_start(wafer_id, "lllower"),
+            product_end(wafer_id, "lllower"),
+            "LLlower state",
+            entity,
+            "#B279A2",
+        )
+        lllower_exit_start = product_start(wafer_id, "atr_lllower_lp")
+        lllower_state_end = product_end(wafer_id, "lllower")
+        if lllower_exit_start > lllower_state_end + 1e-9:
+            add_task(
+                lllower_lane(wafer_id),
+                lllower_state_end,
+                lllower_exit_start,
+                "LLlower wait",
+                entity,
+                "#D4A6C8",
+            )
+        add_task("ATR robot", product_start(wafer_id, "atr_lllower_lp"), product_end(wafer_id, "atr_lllower_lp"), "LLlower->LP", entity, "#79706E")
+
+    def pec_entity(job_id: int) -> str:
+        token_id = pec_token_by_job.get(job_id)
+        return f"PEC{token_id}" if token_id is not None else f"E{job_id}"
+
+    for job_id in pec_job_ids:
+        entity = pec_entity(job_id)
+        pm_id = pec_pm_by_job.get(job_id, 0)
+        add_task(
+            "VTR robot",
+            pec_stage_start.get((job_id, "vtr_load"), 0.0),
+            pec_stage_end.get((job_id, "vtr_load"), 0.0),
+            f"VTR load{ch_suffix(pm_id)}",
+            entity,
+            "#F58518",
+        )
+        add_task(
+            pm_lane(pm_id),
+            pec_stage_start.get((job_id, "pm"), 0.0),
+            pec_stage_end.get((job_id, "pm"), 0.0),
+            "PM process",
+            entity,
+            "#E45756",
+        )
+        add_task(
+            "VTR robot",
+            pec_stage_start.get((job_id, "vtr_unload"), 0.0),
+            pec_stage_end.get((job_id, "vtr_unload"), 0.0),
+            f"VTR unload{ch_suffix(pm_id)}",
+            entity,
+            "#FF9DA6",
+        )
+
+    tasks: List[Dict[str, object]] = []
+    for item in aggregated.values():
+        entities = _format_entity_list(item["entities"])
+        action = str(item["action"])
+        label = f"{action}\n{entities}" if entities else action
+        tasks.append(
+            {
+                "lane": item["lane"],
+                "start": item["start"],
+                "end": item["end"],
+                "label": label,
+                "short_label": entities or action,
+                "color": item["color"],
+            }
+        )
+
+    if not tasks:
+        return {}
+
+    active_lanes = {str(task["lane"]) for task in tasks}
+    lanes = [lane for lane in lane_order if lane in active_lanes]
+    lanes.extend(sorted(active_lanes - set(lanes)))
+    lane_rank = {lane: idx for idx, lane in enumerate(lanes)}
+    horizon = max(time_candidates) if time_candidates else 0.0
+    return {
+        "is_petri": True,
+        "layout": "resources",
+        "title_suffix": "Resource Gantt",
+        "lanes": lanes,
+        "tasks": sorted(tasks, key=lambda task: (lane_rank.get(task["lane"], 10**6), float(task["start"]), float(task["end"]))),
+        "markers": [],
+        "horizon": max(horizon, 1.0),
+        "c_max": _float(solution.get("c_max", 0.0)),
+    }
+
+
+def _extract_wafer_completion_times(solution: Dict[str, float]) -> Dict[int, float]:
+    wafer_completion: Dict[int, float] = {}
+    for name, value in solution.items():
+        m = NEW_WAFER_COMPLETION_RE.match(name)
+        if m:
+            completion = _float(value)
+            if completion > 0.0:
+                wafer_completion[int(m.group(1))] = completion
+
+    if wafer_completion:
+        return wafer_completion
+
+    for name, value in solution.items():
+        m = PROD_STAGE_END_RE.match(name)
+        if m and m.group(2) == "atr_lllower_lp":
+            completion = _float(value)
+            if completion > 0.0:
+                wafer_completion[int(m.group(1))] = completion
+    return wafer_completion
+
+
+def _attach_wph_stats(solution: Dict[str, float], schedule: Dict[str, object]) -> None:
+    wafer_completion = _extract_wafer_completion_times(solution)
+    if not wafer_completion:
+        return
+
+    last_completion = max(wafer_completion.values())
+    c_max = _float(schedule.get("c_max", solution.get("c_max", 0.0)))
+    processing_time = max(c_max, last_completion)
+    if processing_time <= 0.0:
+        return
+
+    completed_wafers = len(wafer_completion)
+    schedule["wph_stats"] = {
+        "completed_wafers": completed_wafers,
+        "processing_time": processing_time,
+        "wph": completed_wafers * SECONDS_PER_HOUR / processing_time,
+    }
+
+
+def _collect_schedule(solution: Dict[str, float], view: str = "full") -> Dict[str, object]:
+    if view == "resources":
+        schedule = _collect_resource_schedule(solution)
+        if schedule:
+            _attach_wph_stats(solution, schedule)
+        return schedule
+    if view == "chambers":
+        schedule = _collect_chamber_schedule(solution)
+        if schedule:
+            _attach_wph_stats(solution, schedule)
+        return schedule
     new_schedule = _collect_path_schedule(solution)
     if new_schedule:
+        _attach_wph_stats(solution, new_schedule)
         return new_schedule
-    return _collect_legacy_schedule(solution)
+    legacy_schedule = _collect_legacy_schedule(solution)
+    if legacy_schedule:
+        _attach_wph_stats(solution, legacy_schedule)
+    return legacy_schedule
 
 
 def _render_multiline_text(
@@ -693,11 +1502,32 @@ def _render_clipped_task_label(parts: List[str], x: float, bar_y: float, width: 
     )
 
 
+def _render_external_task_label(text: str, x: float, bar_y: float, width: float) -> str:
+    label = " ".join(str(text).split())
+    if not label:
+        return ""
+    line = _wrap_text(label, 26, max_lines=1)
+    if not line:
+        return ""
+    text_x = x + width + 5.0
+    anchor = "start"
+    if text_x > SVG_WIDTH - RIGHT_MARGIN - 90:
+        text_x = x - 5.0
+        anchor = "end"
+    return (
+        f'<text class="bartext-outside" x="{text_x:.2f}" y="{bar_y + 13.5:.2f}" '
+        f'text-anchor="{anchor}">{_escape(line[0])}</text>'
+    )
+
+
 def _render_svg(record: Dict[str, object], schedule: Dict[str, object], output_file: Path) -> None:
     lanes = schedule["lanes"]
     height = TOP_MARGIN + BOTTOM_MARGIN + len(lanes) * LANE_HEIGHT
+    plot_bottom = TOP_MARGIN + len(lanes) * LANE_HEIGHT
     horizon = float(schedule["horizon"])
     c_max = float(schedule["c_max"])
+    title_suffix = str(schedule.get("title_suffix", "Scheduling Gantt"))
+    wph_stats = schedule.get("wph_stats")
 
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{SVG_WIDTH}" height="{height}" viewBox="0 0 {SVG_WIDTH} {height}">',
@@ -708,12 +1538,15 @@ def _render_svg(record: Dict[str, object], schedule: Dict[str, object], output_f
         '.lane { font-size: 13px; font-weight: 600; }'
         '.tick { font-size: 11px; fill: #666; }'
         '.bartext { font-size: 11px; fill: #fff; font-weight: 600; }'
+        '.bartext-outside { font-size: 10px; fill: #222; font-weight: 600; paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }'
         '.marker { font-size: 11px; fill: #333; }'
+        '.wph { font-size: 14px; fill: #222; font-weight: 600; }'
+        '.wph-detail { font-size: 13px; fill: #555; }'
         '</style>',
         f'<rect x="0" y="0" width="{SVG_WIDTH}" height="{height}" fill="#ffffff"/>',
-        f'<text class="title" x="{LEFT_MARGIN}" y="38">{_escape(Path(str(record.get("instance", "instance"))).stem)} Scheduling Gantt</text>',
+        f'<text class="title" x="{LEFT_MARGIN}" y="38">{_escape(Path(str(record.get("instance", "instance"))).stem)} {_escape(title_suffix)}</text>',
         f'<text class="subtitle" x="{LEFT_MARGIN}" y="66">status={_escape(record.get("status", "unknown"))} | best_obj={_escape(record.get("best_obj", "None"))} | c_max={c_max:.3f}</text>',
-        f'<text class="subtitle" x="{LEFT_MARGIN}" y="88">Labels are clipped to the bar width. Narrow bars use short labels or hover titles to avoid overlap.</text>',
+        f'<text class="subtitle" x="{LEFT_MARGIN}" y="88">Bar labels and hover titles include product W ids or PEC token ids; narrow bars are clipped to avoid overlap.</text>',
     ]
 
     tick_count = min(max(int(math.ceil(horizon / 20.0)), 5), 12)
@@ -721,9 +1554,9 @@ def _render_svg(record: Dict[str, object], schedule: Dict[str, object], output_f
         t = horizon * i / tick_count
         x = _time_to_x(t, horizon)
         parts.append(
-            f'<line x1="{x:.2f}" y1="{TOP_MARGIN - 8}" x2="{x:.2f}" y2="{height - BOTTOM_MARGIN + 8}" stroke="#efefef" stroke-width="1"/>'
+            f'<line x1="{x:.2f}" y1="{TOP_MARGIN - 8}" x2="{x:.2f}" y2="{plot_bottom + 8}" stroke="#efefef" stroke-width="1"/>'
         )
-        parts.append(f'<text class="tick" x="{x - 12:.2f}" y="{height - BOTTOM_MARGIN + 34}">{t:.1f}</text>')
+        parts.append(f'<text class="tick" x="{x - 12:.2f}" y="{plot_bottom + 34}">{t:.1f}</text>')
 
     lane_index = {lane_name: idx for idx, lane_name in enumerate(lanes)}
     for lane_idx, lane_name in enumerate(lanes):
@@ -744,12 +1577,15 @@ def _render_svg(record: Dict[str, object], schedule: Dict[str, object], output_f
         parts.append(
             f'<g><title>{_escape(hover_label)}</title><rect x="{x:.2f}" y="{y:.2f}" width="{width:.2f}" height="{BAR_HEIGHT}" rx="4" ry="4" fill="{task["color"]}" fill-opacity="0.9" stroke="#2f2f2f" stroke-width="0.7"/></g>'
         )
-        if width >= 96.0 and full_label:
-            lines = _wrap_text(full_label, max(8, int(width / 8.2)), max_lines=2)
+        max_label_lines = int(task.get("max_label_lines", 2))
+        if width >= 44.0 and full_label:
+            lines = _wrap_text(full_label, max(6, int(width / 8.2)), max_lines=max_label_lines)
             parts.append(_render_clipped_task_label(lines, x, y, width, f"task_clip_{task_idx}"))
-        elif width >= 52.0 and short_label:
+        elif width >= 24.0 and short_label:
             lines = _wrap_text(short_label, max(4, int(width / 8.6)), max_lines=1)
             parts.append(_render_clipped_task_label(lines, x, y, width, f"task_clip_{task_idx}"))
+        elif full_label or short_label:
+            parts.append(_render_external_task_label(full_label or short_label, x, y, width))
 
     for marker in schedule["markers"]:
         lane_name = marker["lane"]
@@ -774,7 +1610,7 @@ def _render_svg(record: Dict[str, object], schedule: Dict[str, object], output_f
             f'<text class="marker" x="{marker_x:.2f}" y="{marker_center_y + 4:.2f}" text-anchor="{marker_anchor}">{_escape(marker["label"])}</text>'
         )
 
-    if c_max > 0.0:
+    if c_max > 0.0 and schedule.get("show_cmax", True):
         x = _time_to_x(c_max, horizon)
         cmax_anchor = "start"
         cmax_x = x + 8.0
@@ -782,10 +1618,26 @@ def _render_svg(record: Dict[str, object], schedule: Dict[str, object], output_f
             cmax_anchor = "end"
             cmax_x = x - 8.0
         parts.append(
-            f'<line x1="{x:.2f}" y1="{TOP_MARGIN - 18}" x2="{x:.2f}" y2="{height - BOTTOM_MARGIN}" stroke="#C00000" stroke-width="2.2" stroke-dasharray="8 4"/>'
+            f'<line x1="{x:.2f}" y1="{TOP_MARGIN - 18}" x2="{x:.2f}" y2="{plot_bottom}" stroke="#C00000" stroke-width="2.2" stroke-dasharray="8 4"/>'
         )
         parts.append(
             f'<text class="lane" x="{cmax_x:.2f}" y="{TOP_MARGIN - 24}" text-anchor="{cmax_anchor}">c_max={c_max:.1f}</text>'
+        )
+
+    if isinstance(wph_stats, dict):
+        completed_wafers = int(wph_stats.get("completed_wafers", 0))
+        processing_time = float(wph_stats.get("processing_time", 0.0))
+        wph = float(wph_stats.get("wph", 0.0))
+        processing_hours = processing_time / SECONDS_PER_HOUR
+        row_y = plot_bottom + 68
+        parts.append(
+            f'<line x1="{LEFT_MARGIN}" y1="{plot_bottom + 50}" x2="{SVG_WIDTH - RIGHT_MARGIN}" y2="{plot_bottom + 50}" stroke="#dddddd" stroke-width="1"/>'
+        )
+        parts.append(f'<text class="wph" x="18" y="{row_y:.2f}">WPH</text>')
+        parts.append(
+            f'<text class="wph-detail" x="{LEFT_MARGIN}" y="{row_y:.2f}">'
+            f'WPH={wph:.3f} wafers/hour | completed={completed_wafers} | processing_time={processing_time:.1f}s ({processing_hours:.3f}h)'
+            "</text>"
         )
 
     parts.append("</svg>")
@@ -864,7 +1716,21 @@ def _load_solution_payload(solution_json: str):
     return solution_path, payload, records
 
 
-def generate_gantt_charts_from_records(records: List[Dict[str, object]], output_dir: str) -> List[str]:
+def _views_to_generate(view: str) -> List[str]:
+    if view == "all":
+        return ["full", "chambers", "resources"]
+    return [view]
+
+
+def _gantt_output_name(file_stem: str, view: str) -> str:
+    if view == "chambers":
+        return f"{file_stem}_chambers_gantt.svg"
+    if view == "resources":
+        return f"{file_stem}_resources_gantt.svg"
+    return f"{file_stem}_gantt.svg"
+
+
+def generate_gantt_charts_from_records(records: List[Dict[str, object]], output_dir: str, view: str = "full") -> List[str]:
     out_dir = resolve_path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     generated = []
@@ -872,18 +1738,19 @@ def generate_gantt_charts_from_records(records: List[Dict[str, object]], output_
 
     for record in records:
         solution = record.get("solution", {}) or {}
-        schedule = _collect_schedule(solution)
-        if not schedule.get("is_petri"):
-            continue
         instance_name = Path(str(record.get("instance", "instance"))).stem
         method_name = re.sub(r"[^0-9A-Za-z_-]+", "_", str(record.get("method", "")).strip()).strip("_")
         file_stem = instance_name if not method_name else f"{instance_name}_{method_name}"
-        output_file = out_dir / f"{file_stem}_gantt.svg"
-        _render_svg(record, schedule, output_file)
-        generated.append(str(output_file))
-        html_items.append(
-            f'<li><a href="{output_file.name}">{_escape(output_file.name)}</a> | status={_escape(record.get("status", "unknown"))} | best_obj={_escape(record.get("best_obj", "None"))}</li>'
-        )
+        for view_name in _views_to_generate(view):
+            schedule = _collect_schedule(solution, view_name)
+            if not schedule.get("is_petri"):
+                continue
+            output_file = out_dir / _gantt_output_name(file_stem, view_name)
+            _render_svg(record, schedule, output_file)
+            generated.append(str(output_file))
+            html_items.append(
+                f'<li><a href="{output_file.name}">{_escape(output_file.name)}</a> | view={_escape(view_name)} | status={_escape(record.get("status", "unknown"))} | best_obj={_escape(record.get("best_obj", "None"))}</li>'
+            )
 
     if generated:
         index_html = out_dir / "index.html"
@@ -905,19 +1772,30 @@ def generate_gantt_charts_from_records(records: List[Dict[str, object]], output_
     return generated
 
 
-def generate_gantt_charts_from_solution_file(solution_json: str, output_dir: str = None) -> List[str]:
+def generate_gantt_charts_from_solution_file(solution_json: str, output_dir: str = None, view: str = "full") -> List[str]:
     solution_path, _, records = _load_solution_payload(solution_json)
     if output_dir is None:
         output_dir = str(solution_path.with_name(solution_path.stem + "_gantt"))
     else:
         output_dir = str(resolve_path(output_dir))
-    return generate_gantt_charts_from_records(records, output_dir)
+    return generate_gantt_charts_from_records(records, output_dir, view=view)
 
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate Petri schedule Gantt charts from solution JSON.")
     parser.add_argument("--solution_json", type=str, required=True)
     parser.add_argument("--output_dir", type=str, default="")
+    parser.add_argument(
+        "--view",
+        choices=["full", "chambers", "resources", "all"],
+        default="full",
+        help=(
+            "full: product/PEC full-flow chart; "
+            "chambers: only CH2/CH3 four-pocket module chart; "
+            "resources: ATR/AL/LL/VTR/PM resource chart with wafer labels; "
+            "all: generate every view."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -927,6 +1805,7 @@ def main() -> None:
     generated = generate_gantt_charts_from_solution_file(
         str(solution_path),
         args.output_dir or None,
+        view=args.view,
     )
     if not generated:
         print("No Petri gantt charts were generated from the provided solution file.")

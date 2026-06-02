@@ -63,6 +63,19 @@ class CutSelectAgent(CutselBase):
             desired_count = max(desired_count, 1)
         return max(0, min(desired_count, limit))
 
+    def _capped_target_cut_count(self, num_cuts, maxnselectedcuts, desired_count, min_when_possible=2):
+        cap_count = int(num_cuts * self.sel_cuts_percent)
+        if self.sel_cuts_percent > 0 and cap_count <= 0:
+            cap_count = 1
+        desired_count = min(int(desired_count), cap_count)
+        min_when_possible = min(min_when_possible, cap_count)
+        return self._target_cut_count(
+            num_cuts,
+            maxnselectedcuts,
+            desired_count,
+            min_when_possible=min_when_possible,
+        )
+
     def _normalize(self, cuts_features):
         # print(f"debug log mean: {self.mean_std.mean}, std: {self.mean_std.std}")
         return (cuts_features-self.mean_std.mean) / (self.mean_std.std + self.mean_std.epsilon)
@@ -404,7 +417,7 @@ class CutSelectAgent(CutselBase):
 
         idxes = [input.cpu().detach().item() for input in input_idxs]
         raw_sel_cuts_num = len(idxes)
-        sel_cuts_num = self._target_cut_count(
+        sel_cuts_num = self._capped_target_cut_count(
             num_cuts,
             maxnselectedcuts,
             raw_sel_cuts_num - 1,
@@ -440,6 +453,7 @@ class CutSelectAgent(CutselBase):
                 "sel_cuts_num": raw_sel_cuts_num,
                 "selected_action": true_idxes,
                 "selected_cuts_num": len(true_idxes),
+                "target_sel_cuts_num": sel_cuts_num,
                 "structure_info": structure_info,
             }
 
@@ -542,7 +556,7 @@ class HierarchyCutSelectAgent(CutSelectAgent):
             raw_sel_cuts_percent = self.cutsel_percent_policy.action(input_cuts.float(), deterministic=deterministic)
         st_end_highlevel_policy_inference = time.time()
 
-        sel_cuts_percent = raw_sel_cuts_percent.item() * 0.5 + 0.5
+        sel_cuts_percent = min(raw_sel_cuts_percent.item() * 0.5 + 0.5, self.sel_cuts_percent)
         sel_cuts_num = self._target_cut_count(
             num_cuts,
             maxnselectedcuts,
@@ -597,7 +611,9 @@ class HierarchyCutSelectAgent(CutSelectAgent):
         if not self.high_level_data:
             self.high_level_data = {
                 "state": cuts_features,
-                "action": raw_sel_cuts_percent.item()
+                "action": raw_sel_cuts_percent.item(),
+                "capped_action": sel_cuts_percent,
+                "target_sel_cuts_num": sel_cuts_num,
             }
 
         return {
@@ -617,6 +633,8 @@ class HeuristicBeamCutSelectAgent(CutselBase):
         sel_cuts_percent,
         beam_size=3,
         redundancy_weight=0.15,
+        max_candidates=256,
+        max_selected_cuts=256,
         score_weights=None,
     ):
         super().__init__()
@@ -624,6 +642,8 @@ class HeuristicBeamCutSelectAgent(CutselBase):
         self.sel_cuts_percent = sel_cuts_percent
         self.beam_size = beam_size
         self.redundancy_weight = redundancy_weight
+        self.max_candidates = max_candidates
+        self.max_selected_cuts = max_selected_cuts
         self.score_weights = score_weights or {
             "obj_parallelism": 0.15,
             "efficacy": 0.35,
@@ -662,6 +682,13 @@ class HeuristicBeamCutSelectAgent(CutselBase):
             + 0.05 * dominant_ratio
         )
 
+    def _candidate_pool_indices(self, base_scores, target_count):
+        raw_pool_size = max(self.beam_size * target_count * 2, target_count)
+        if self.max_candidates is not None and self.max_candidates > 0:
+            raw_pool_size = min(raw_pool_size, int(self.max_candidates))
+        candidate_pool_size = min(len(base_scores), max(target_count, raw_pool_size))
+        return np.argsort(-base_scores)[:candidate_pool_size]
+
     def _compute_similarity(self, cut_features):
         core_features = np.concatenate(
             [cut_features[:, :5], cut_features[:, 13:18]],
@@ -675,8 +702,7 @@ class HeuristicBeamCutSelectAgent(CutselBase):
         return similarity
 
     def _beam_select(self, base_scores, similarity, target_count):
-        candidate_pool_size = min(len(base_scores), max(self.beam_size * target_count * 2, target_count))
-        candidate_pool = list(np.argsort(-base_scores)[:candidate_pool_size])
+        candidate_pool = list(range(len(base_scores)))
         beam = [_BeamState(selected=tuple(), score=0.0)]
 
         for _ in range(target_count):
@@ -729,11 +755,19 @@ class HeuristicBeamCutSelectAgent(CutselBase):
         sel_cuts_num = int(num_cuts * self.sel_cuts_percent)
         sel_cuts_num = max(sel_cuts_num, 2 if limit >= 2 else 1)
         sel_cuts_num = min(sel_cuts_num, limit)
+        if self.max_selected_cuts is not None and self.max_selected_cuts > 0:
+            sel_cuts_num = min(sel_cuts_num, int(self.max_selected_cuts))
+        if self.max_candidates is not None and self.max_candidates > 0:
+            sel_cuts_num = min(sel_cuts_num, int(self.max_candidates))
 
         cut_features = advanced_cut_feature_generator(self.scip_model, cuts)
         base_scores = self._compute_base_scores(cut_features)
-        similarity = self._compute_similarity(cut_features)
-        true_idxes = self._beam_select(base_scores, similarity, sel_cuts_num)
+        candidate_pool = self._candidate_pool_indices(base_scores, sel_cuts_num)
+        candidate_features = cut_features[candidate_pool]
+        candidate_scores = base_scores[candidate_pool]
+        similarity = self._compute_similarity(candidate_features)
+        selected_local_idxes = self._beam_select(candidate_scores, similarity, min(sel_cuts_num, len(candidate_pool)))
+        true_idxes = [int(candidate_pool[idx]) for idx in selected_local_idxes]
 
         all_idxes = list(range(num_cuts))
         not_sel_idxes = [idx for idx in all_idxes if idx not in set(true_idxes)]
@@ -745,6 +779,7 @@ class HeuristicBeamCutSelectAgent(CutselBase):
                 "state": cut_features,
                 "action": true_idxes,
                 "sel_cuts_num": len(true_idxes),
+                "candidate_pool_size": int(len(candidate_pool)),
                 "base_scores": base_scores.tolist(),
             }
 

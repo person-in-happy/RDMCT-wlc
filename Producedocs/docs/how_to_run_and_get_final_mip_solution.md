@@ -82,7 +82,7 @@ Producedocs/docs              说明文档
 ### 3.1 生成一个推荐测试实例
 
 ```powershell
-python petri_mip_generator.py   --output_dir generated_instances/MIP   --instance_name mip_clean.lp  --num_batches 16  --num_pm 2  --num_steps 13  --mode_4x1_wafers 25  --mode_2x2_wafers 15  --pec_pool_size 8  --pm_rotation_time_180 2  --pair_transfer_time 4  --atr_transfer_time 3  --atr_return_time 3  --aligner_time 20   --llupper_time 30  --lllower_time 25  --full_process_time 80   --mix_boundary_process_time 30  --mix_internal_process_time 30   --cleaning_interval 10  --cleaning_process_time 60  --max_module_residency_time 80  --max_robot_residency_time 80  --pm_balance_penalty 0.01
+python petri_mip_generator.py   --output_dir generated_instances/MIP   --instance_name mip_clean.lp  --num_batches 16  --num_pm 2  --num_steps 13  --process_mode mixed  --mode_4x1_wafers 25  --mode_2x2_wafers 15  --pec_pool_size 8  --pm_rotation_time_180 2  --pair_transfer_time 4  --atr_transfer_time 3  --atr_return_time 3  --aligner_time 20   --llupper_time 30  --lllower_time 25  --full_process_time 80   --mix_boundary_process_time 30  --mix_internal_process_time 30   --cleaning_interval 10  --cleaning_process_time 60  --max_module_residency_time 80  --max_robot_residency_time 80  --pm_balance_penalty 0.01
 ```
 
 生成文件会自动带日期后缀，例如在 `2026-05-08` 运行时，输出类似：
@@ -102,28 +102,83 @@ generated_instances/MIP/mip_batch10_cleaning_20260508_model.md
 python petri_mip_generator.py ^
   --output_dir generated_instances/MIP ^
   --instance_name mip_small_check.lp ^
+  --process_mode mixed ^
   --mode_4x1_wafers 4 ^
   --mode_2x2_wafers 2 ^
   --pec_pool_size 8 ^
   --cleaning_interval 10
 ```
 
-### 3.3 使用 wafer 级模式序列
+### 3.3 配置工艺模式
 
-如果每片产品晶圆的模式已知，可以用 `--mode_sequence` 指定。模式支持 `4x1`、`2x2`，也支持简单别名 `full`、`mix`、`4`、`2`。
+`--process_mode` 用来选择本次实例的工艺模式策略：
+
+- `4x1`：全部产品晶圆只跑 `4x1`
+- `2x2`：全部产品晶圆只跑 `2x2`
+- `mixed` / `both`：按 `--mode_4x1_wafers` 和 `--mode_2x2_wafers` 数量混跑
+- `custom`：完全按 wafer 级配置生成
+- `auto`：默认兼容模式；有 `--mode_sequence` 时按序列，否则按两类数量生成
+
+只跑 `4x1`：
+
+```powershell
+python petri_mip_generator.py ^
+  --output_dir generated_instances/MIP ^
+  --instance_name mip_4x1_only.lp ^
+  --process_mode 4x1 ^
+  --total_wafers 20 ^
+  --pec_pool_size 8
+```
+
+只跑 `2x2`：
+
+```powershell
+python petri_mip_generator.py ^
+  --output_dir generated_instances/MIP ^
+  --instance_name mip_2x2_only.lp ^
+  --process_mode 2x2 ^
+  --total_wafers 20 ^
+  --pec_pool_size 8
+```
+
+按数量混跑：
+
+```powershell
+python petri_mip_generator.py ^
+  --output_dir generated_instances/MIP ^
+  --instance_name mip_mixed_counts.lp ^
+  --process_mode mixed ^
+  --mode_4x1_wafers 12 ^
+  --mode_2x2_wafers 8 ^
+  --pec_pool_size 8
+```
+
+如果每片产品晶圆的模式已知，可以用 `--mode_sequence` 指定完整序列。模式支持 `4x1`、`2x2`，也支持简单别名 `full`、`mix`、`4`、`2`。
 
 ```powershell
 python petri_mip_generator.py ^
   --output_dir generated_instances/MIP ^
   --instance_name mip_sequence_case.lp ^
   --total_wafers 8 ^
-  --mode_4x1_wafers 3 ^
-  --mode_2x2_wafers 5 ^
+  --process_mode custom ^
   --mode_sequence "4x1,4x1,4x1,2x2,2x2,2x2,2x2,2x2" ^
   --pec_pool_size 8
 ```
 
-注意：如果同时给出 `--mode_4x1_wafers`、`--mode_2x2_wafers` 和 `--mode_sequence`，三者解析出的产品晶圆总数必须一致。
+也可以用 `--wafer_mode_map` 只覆盖指定编号的晶圆。下面的命令表示共有 8 片产品晶圆，默认跑 `4x1`，其中 `W3` 和 `W7` 改跑 `2x2`：
+
+```powershell
+python petri_mip_generator.py ^
+  --output_dir generated_instances/MIP ^
+  --instance_name mip_wafer_map_case.lp ^
+  --process_mode custom ^
+  --total_wafers 8 ^
+  --default_wafer_mode 4x1 ^
+  --wafer_mode_map "W3:2x2,W7=2x2" ^
+  --pec_pool_size 8
+```
+
+注意：`--mode_sequence` 和 `--wafer_mode_map` 是 wafer 级配置，优先级高于数量参数；若给了 `--total_wafers`，解析出的产品晶圆数量必须与它一致。
 
 ### 3.4 当前关键参数说明
 
@@ -131,8 +186,12 @@ python petri_mip_generator.py ^
 | --- | --- | --- |
 | `--num_pm` | 旋转腔数量 | 当前设备固定为 `2`，对应 `CH2` 和 `CH3` |
 | `--batch_size` | 旋转腔槽位数 | 固定为 `4` |
+| `--process_mode` | 工艺模式策略 | `4x1`、`2x2`、`mixed`、`custom` 或 `auto` |
 | `--mode_4x1_wafers` | 执行 4x1 的产品晶圆数 | 可为奇数，尾片自动与 PEC 组成 PW 对 |
 | `--mode_2x2_wafers` | 执行 2x2 的产品晶圆数 | 可为奇数，尾片自动与 PEC 组成 PW 对 |
+| `--mode_sequence` | wafer 级完整模式序列 | 例如 `4x1,2x2,4x1`；优先级高于数量参数 |
+| `--wafer_mode_map` | wafer 编号模式覆盖 | 例如 `W3:2x2,W7=4x1`；可配合 `--default_wafer_mode` 使用 |
+| `--default_wafer_mode` | 未覆盖 wafer 的默认模式 | 常用于 `--process_mode custom --wafer_mode_map ...` |
 | `--pec_pool_size` | 可复用 PEC wafer 数 | 必须不超过 `pec_storage_slots=10`，且至少为 `4*num_pm=8`，并能被 `num_pm` 整除 |
 | `--cleaning_interval` | 每个腔体连续加工多少次后插入 cleaning | `0` 表示关闭 cleaning 约束，默认 `10` |
 | `--cleaning_process_time` | cleaning 工艺时间 | 若为 `0`，代码使用 `2*full_process_time` |
@@ -208,6 +267,7 @@ python parallel_reinforce_algorithm.py ^
   --petri_batches 10 ^
   --petri_num_pm 2 ^
   --petri_num_steps 13 ^
+  --petri_process_mode mixed ^
   --petri_4x1_wafers 10 ^
   --petri_2x2_wafers 10 ^
   --petri_pec_pool_size 8 ^
@@ -317,6 +377,7 @@ python run_petri_a3c_beam.py ^
   --num_batches 10 ^
   --num_pm 2 ^
   --num_steps 13 ^
+  --process_mode mixed ^
   --mode_4x1_wafers 10 ^
   --mode_2x2_wafers 10 ^
   --pec_pool_size 8 ^
@@ -373,21 +434,7 @@ python parallel_reinforce_algorithm.py  --config_file configs/petri_mip_test_con
 有训练模型时：
 
 ```powershell
-python run_ablation_experiments.py ^
-  --config_file configs/petri_mip_test_config.json ^
-  --test_model_path data\YOUR_RUN\YOUR_EXP\params.pkl ^
-  --instance_dir generated_instances/MIP ^
-  --instance_name mip_ablation_cleaning.lp ^
-  --generate_petri_instance True ^
-  --num_batches 10 ^
-  --num_pm 2 ^
-  --num_steps 13 ^
-  --mode_4x1_wafers 10 ^
-  --mode_2x2_wafers 10 ^
-  --pec_pool_size 8 ^
-  --time_limit 300 ^
-  --instance_type petri_transfer ^
-  --output_dir ablation_results
+python run_ablation_experiments.py   --config_file configs/petri_mip_test_config.json   --test_model_path data\mip_rl_beam_clean_20260508.lp_transfer\mip_rl_beam_clean_20260508.lp_transfer_2026_05_08_11_01_44_0000--s-1\mip_rl_beam_mip_clean_20260508.lp_petri_transfer\mip_rl_beam_mip_clean_20260508.lp_petri_transfer_2026_05_12_10_02_27_0000--s-1\params.pkl   --instance_dir generated_instances/MIP  --instance_name mip_ablation_cleaning.lp  --generate_petri_instance True  --num_batches 10   --num_pm 2   --num_steps 13  --process_mode mixed  --mode_4x1_wafers 51  --mode_2x2_wafers 47  --pec_pool_size 8  --time_limit 3000  --instance_type petri_transfer  --output_dir ablation_results
 ```
 
 没有训练模型时，也可以不传 `--test_model_path`，此时 `a3c_only` 和 `a3c_beam` 会被标记为 skipped，但 `solver_only` 和 `beam_only` 仍可运行。
@@ -421,7 +468,31 @@ python petri_gantt.py ^
   --output_dir generated_instances\MIP\manual_gantt
 ```
 
-甘特图会展示：
+默认 `--view full` 会生成全流程甘特图。若只想检查两个四腔加工模块 `CH2/CH3` 的排程，可生成 chamber-only 甘特图：
+
+```powershell
+python petri_gantt.py ^
+  --solution_json petri_transfer_use_hrl_Trueheuristics_cutsel\YOUR_SOLUTIONS.json ^
+  --view chambers
+```
+
+若要按设备资源/腔室查看每个动作，可生成 resource 甘特图。该视图会把结果按 `ATR robot`、`AL`、`LLupper slot`、`VTR robot`、`CH2/CH3 PM`、`LLlower slot` 分泳道输出，并在每个动作条中标注参与动作的 `Wxx` 产品晶圆和 `PECxx` 晶圆：
+
+```powershell
+python petri_gantt.py ^
+  --solution_json petri_transfer_use_hrl_Trueheuristics_cutsel\YOUR_SOLUTIONS.json ^
+  --view resources
+```
+
+也可以一次生成全流程图、`CH2/CH3` 模块图和资源视角图：
+
+```powershell
+python petri_gantt.py ^
+  --solution_json petri_transfer_use_hrl_Trueheuristics_cutsel\YOUR_SOLUTIONS.json ^
+  --view all
+```
+
+全流程甘特图会展示：
 
 - 产品晶圆的 `ATR / AL / LLupper / VTR / PM / LLlower / Return`
 - PEC wafer 的 `VTR / PM / Return`
@@ -429,6 +500,10 @@ python petri_gantt.py ^
 - 2x2 head、cycle、bridge、tail
 - cleaning 批次
 - 每片产品晶圆的最终回 LP 时间
+
+`--view chambers` 只绘制两条泳道：`CH2 four-pocket module` 和 `CH3 four-pocket module`。图中包含每个 chamber 的 `4x1` batch、`2x2` head/bridge/cycle/tail，以及 cleaning 窗口，适合检查同一时刻每个四腔模块内的 wafer/PEC 组合是否合理。
+
+`--view resources` 生成 `<instance>_resources_gantt.svg`。它面向设备资源占用检查：同一条泳道表示同一个物理资源，动作条文本和鼠标悬停提示都会显示本次动作涉及的晶圆编号，例如 `W1, W2, PEC3, PEC4`。
 
 ## 9. 推荐完整运行顺序
 
@@ -525,7 +600,8 @@ data\...\params.pkl
 | `--num_batches` | `10` | 兼容参数，必须为正数。当前 4x1 每腔批次数上界由产品 PW 对数量自动推导，不直接由该参数决定。 |
 | `--num_pm` | `2` | 旋转腔数量。当前设备固定为 2，对应 `CH2` 和 `CH3`。 |
 | `--num_steps` | `13` | 兼容旧流程的步骤数参数；当前模型主要按具体阶段和资源约束建模。 |
-| `--total_wafers` | `0` | 产品晶圆总数校验值。为 `0` 时由两类模式晶圆数自动确定；非 `0` 时必须等于 `mode_4x1_wafers + mode_2x2_wafers`。 |
+| `--total_wafers` | `0` | 产品晶圆总数。为 `0` 时由模式数量、`mode_sequence` 或 `wafer_mode_map` 自动确定；单模式或 wafer 级配置时可直接指定总片数。 |
+| `--process_mode` | `auto` | 工艺模式策略：`4x1` 只跑 4x1，`2x2` 只跑 2x2，`mixed` / `both` 按两类数量混跑，`custom` 用 wafer 级配置，`auto` 自动推断。 |
 | `--mode_4x1_wafers` / `--full_mode_wafers` | `10` | 执行 4x1 工艺的产品晶圆数量。若为奇数，最后一个 4x1 PW 对自动为 `1 product + 1 PEC`。 |
 | `--mode_2x2_wafers` / `--mix_mode_wafers` | `10` | 执行 2x2 工艺的产品晶圆数量。若为奇数，最后一个 2x2 PW 对自动为 `1 product + 1 PEC`。 |
 | `--pec_pool_size` | `8` | 可复用 PEC wafer 数量。当前要求至少 `4*num_pm=8`，不超过 PEC storage 容量 `10`，且能被 `num_pm` 整除。 |
@@ -547,7 +623,9 @@ data\...\params.pkl
 | `--max_module_residency_time` | `10000.0` | 晶圆在 AL、LL、PM 等模块中的最大驻留时间上限。 |
 | `--max_robot_residency_time` | `10000.0` | 晶圆在 ATR/VTR 搬运动作中的最大驻留时间上限。 |
 | `--pm_balance_penalty` | `0.01` | 目标函数中的腔体负载均衡惩罚权重。主目标仍为最小化 `c_max`。 |
-| `--mode_sequence` | 空字符串 | wafer 级模式序列，可写 `4x1,4x1,2x2` 等；若提供，解析出的数量必须与显式模式数量一致。 |
+| `--mode_sequence` | 空字符串 | wafer 级完整模式序列，可写 `4x1,4x1,2x2` 等；优先级高于两类数量参数。 |
+| `--wafer_mode_map` / `--wafer_modes` | 空字符串 | 按产品晶圆编号覆盖模式，可写 `W3:2x2,W7=4x1`。 |
+| `--default_wafer_mode` | 空字符串 | `wafer_mode_map` 未覆盖晶圆的默认模式；常配合 `--process_mode custom --total_wafers` 使用。 |
 
 ### 11.2 `parallel_reinforce_algorithm.py` 参数
 
@@ -573,10 +651,13 @@ data\...\params.pkl
 | `--petri_num_pm` | `2` | 自动生成实例时的 chamber 数量，当前必须为 `2`。 |
 | `--petri_num_steps` | `13` | 自动生成实例时的兼容 step 参数。 |
 | `--petri_total_wafers` | `0` | 自动生成实例时的产品晶圆总数校验值。 |
+| `--petri_process_mode` | `auto` | 自动生成实例时的工艺模式策略，取值同 `--process_mode`。 |
 | `--petri_4x1_wafers` | `20` | 自动生成实例时的 4x1 产品晶圆数量。 |
 | `--petri_2x2_wafers` | `20` | 自动生成实例时的 2x2 产品晶圆数量。 |
 | `--petri_pec_pool_size` | `8` | 自动生成实例时的 PEC wafer 数量。 |
-| `--petri_mode_sequence` | 空字符串 | 自动生成实例时的 wafer 级模式序列。 |
+| `--petri_mode_sequence` | 空字符串 | 自动生成实例时的 wafer 级完整模式序列。 |
+| `--petri_wafer_mode_map` / `--petri_wafer_modes` | 空字符串 | 自动生成实例时按晶圆编号覆盖模式。 |
+| `--petri_default_wafer_mode` | 空字符串 | 自动生成实例时未覆盖晶圆的默认模式。 |
 
 ### 11.3 `run_petri_a3c_beam.py` 参数
 
@@ -597,10 +678,13 @@ data\...\params.pkl
 | `--num_pm` | `2` | 传给 MIP 生成器的 chamber 数量。当前必须为 `2`。 |
 | `--num_steps` | `13` | 传给 MIP 生成器的兼容 step 参数。 |
 | `--total_wafers` | `0` | 产品晶圆总数校验值。 |
+| `--process_mode` | `auto` | 新实例的工艺模式策略，取值同 `petri_mip_generator.py`。 |
 | `--mode_4x1_wafers` | `20` | 新实例中 4x1 产品晶圆数量。 |
 | `--mode_2x2_wafers` | `20` | 新实例中 2x2 产品晶圆数量。 |
-| `--pec_pool_size` | `40` | 新实例中 PEC wafer 数量。当前设备不接受默认值 `40`，应显式传 `8` 或 `10`。 |
-| `--mode_sequence` | 空字符串 | 新实例的 wafer 级模式序列。 |
+| `--pec_pool_size` | `8` | 新实例中 PEC wafer 数量。当前设备通常传 `8` 或 `10`。 |
+| `--mode_sequence` | 空字符串 | 新实例的 wafer 级完整模式序列。 |
+| `--wafer_mode_map` / `--wafer_modes` | 空字符串 | 新实例中按晶圆编号覆盖模式。 |
+| `--default_wafer_mode` | 空字符串 | 新实例中未覆盖晶圆的默认模式。 |
 
 ### 11.4 `run_ablation_experiments.py` 参数
 
@@ -628,10 +712,13 @@ data\...\params.pkl
 | `--num_pm` | `2` | 生成消融实例时的 chamber 数量，当前必须为 `2`。 |
 | `--num_steps` | `13` | 生成消融实例时的兼容 step 参数。 |
 | `--total_wafers` | `0` | 生成消融实例时的产品晶圆总数校验值。 |
+| `--process_mode` | `auto` | 生成消融实例时的工艺模式策略，取值同 `petri_mip_generator.py`。 |
 | `--mode_4x1_wafers` | `20` | 生成消融实例时的 4x1 产品晶圆数量。 |
 | `--mode_2x2_wafers` | `20` | 生成消融实例时的 2x2 产品晶圆数量。 |
 | `--pec_pool_size` | `40` | 生成消融实例时的 PEC wafer 数量。当前设备不接受默认值 `40`，应显式传 `8` 或 `10`。 |
-| `--mode_sequence` | 空字符串 | 生成消融实例时的 wafer 级模式序列。 |
+| `--mode_sequence` | 空字符串 | 生成消融实例时的 wafer 级完整模式序列。 |
+| `--wafer_mode_map` / `--wafer_modes` | 空字符串 | 生成消融实例时按晶圆编号覆盖模式。 |
+| `--default_wafer_mode` | 空字符串 | 生成消融实例时未覆盖晶圆的默认模式。 |
 
 ### 11.5 辅助脚本参数
 
@@ -639,6 +726,7 @@ data\...\params.pkl
 | --- | --- | --- | --- |
 | `petri_gantt.py` | `--solution_json` | 必填 | 求解结果 JSON 文件路径，需包含非空 `solution` 字段。 |
 | `petri_gantt.py` | `--output_dir` | 空字符串 | 甘特图输出目录；为空时自动创建 `<solution_stem>_gantt`。 |
+| `petri_gantt.py` | `--view` | `full` | 甘特图视图：`full` 为全流程，`chambers` 只绘制 `CH2/CH3` 四腔加工模块，`resources` 按 `ATR/AL/LL/VTR/PM` 资源泳道输出并标注晶圆编号，`all` 同时生成全部视图。 |
 | `plot_progress_curves.py` | `--progress_csv` | 空字符串 | 指定要绘图的 `progress.csv`；若传目录，则默认使用目录下的 `progress.csv`。 |
 | `plot_progress_curves.py` | `--data_dir` | `data` | 未指定 `progress_csv` 时，从该目录递归寻找最新 `progress.csv`。 |
 | `plot_progress_curves.py` | `--output` | 空字符串 | SVG 输出路径；为空时写到 `progress.csv` 所在目录。 |
@@ -712,6 +800,7 @@ data\...\params.pkl
 python petri_mip_generator.py ^
   --output_dir generated_instances/MIP ^
   --instance_name mip_small_check.lp ^
+  --process_mode mixed ^
   --mode_4x1_wafers 4 ^
   --mode_2x2_wafers 2 ^
   --pec_pool_size 8
@@ -739,6 +828,7 @@ python run_petri_a3c_beam.py ^
   --test_model_path data\YOUR_RUN\YOUR_EXP\params.pkl ^
   --instance_dir generated_instances/MIP ^
   --instance_name mip_test.lp ^
+  --process_mode mixed ^
   --mode_4x1_wafers 4 ^
   --mode_2x2_wafers 2 ^
   --pec_pool_size 8 ^
@@ -750,4 +840,12 @@ python run_petri_a3c_beam.py ^
 ```powershell
 python petri_gantt.py ^
   --solution_json petri_transfer_use_hrl_Trueheuristics_cutsel\YOUR_SOLUTIONS.json
+```
+
+按 AL、机械手、PM 等资源输出并标注晶圆：
+
+```powershell
+python petri_gantt.py ^
+  --solution_json petri_transfer_use_hrl_Trueheuristics_cutsel\YOUR_SOLUTIONS.json ^
+  --view resources
 ```
