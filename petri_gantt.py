@@ -56,6 +56,8 @@ TOP_MARGIN = 118
 BOTTOM_MARGIN = 96
 LANE_HEIGHT = 74
 BAR_HEIGHT = 42
+LABEL_ROW_HEIGHT = 24
+LABEL_ROW_GAP = 6.0
 SECONDS_PER_HOUR = 3600.0
 
 NEW_PRODUCT_STAGE_ORDER = [
@@ -221,6 +223,35 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
         tasks: List[Dict[str, object]] = []
         time_candidates = [c_max]
 
+        def add_path_task(
+            lane: str,
+            start: float,
+            end: float,
+            label: str,
+            entity: str,
+            color: str,
+            short_label: str = "",
+        ) -> None:
+            if end <= start + 1e-9:
+                return
+            tasks.append(
+                {
+                    "lane": lane,
+                    "start": start,
+                    "end": end,
+                    "label": f"{label}\n{entity}",
+                    "short_label": short_label or entity,
+                    "color": color,
+                }
+            )
+            time_candidates.extend([start, end])
+
+        def product_start(wafer_id: int, stage_name: str) -> float:
+            return prod_stage_start.get((wafer_id, stage_name), 0.0)
+
+        def product_end(wafer_id: int, stage_name: str) -> float:
+            return prod_stage_end.get((wafer_id, stage_name), product_start(wafer_id, stage_name))
+
         product_ids = sorted(
             {wafer_id for wafer_id, _ in prod_stage_start.keys()} | {wafer_id for wafer_id, _ in prod_stage_end.keys()},
             key=lambda wafer_id: (
@@ -234,24 +265,144 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
             if assignment is not None:
                 lane_name += f" | PM{assignment[0]}-B{assignment[1]}"
             lanes.append(lane_name)
-            for stage_name in NEW_PRODUCT_STAGE_ORDER:
-                start = prod_stage_start.get((wafer_id, stage_name), 0.0)
-                end = prod_stage_end.get((wafer_id, stage_name), start)
-                if end <= start + 1e-9:
-                    continue
-                label, color = NEW_PRODUCT_STAGE_META[stage_name]
-                entity = f"W{wafer_id}"
-                tasks.append(
-                    {
-                        "lane": lane_name,
-                        "start": start,
-                        "end": end,
-                        "label": f"{label}\n{entity}",
-                        "short_label": entity,
-                        "color": color,
-                    }
-                )
-                time_candidates.extend([start, end])
+            entity = f"W{wafer_id}"
+
+            add_path_task(
+                lane_name,
+                product_start(wafer_id, "atr_lp_al"),
+                product_end(wafer_id, "atr_lp_al"),
+                "ATR LP->AL",
+                entity,
+                "#4C78A8",
+            )
+            add_path_task(
+                lane_name,
+                product_end(wafer_id, "atr_lp_al"),
+                product_start(wafer_id, "al"),
+                "AL wait",
+                entity,
+                "#C6A07A",
+            )
+            add_path_task(
+                lane_name,
+                product_start(wafer_id, "al"),
+                product_end(wafer_id, "al"),
+                "AL align",
+                entity,
+                "#9C755F",
+            )
+            add_path_task(
+                lane_name,
+                product_end(wafer_id, "al"),
+                product_start(wafer_id, "atr_al_llupper"),
+                "AL wait",
+                entity,
+                "#C6A07A",
+            )
+            add_path_task(
+                lane_name,
+                product_start(wafer_id, "atr_al_llupper"),
+                product_end(wafer_id, "atr_al_llupper"),
+                "ATR AL->LLupper",
+                entity,
+                "#72B7B2",
+            )
+            add_path_task(
+                lane_name,
+                product_end(wafer_id, "atr_al_llupper"),
+                product_start(wafer_id, "llupper"),
+                "LLupper wait",
+                entity,
+                "#8CD17D",
+            )
+            add_path_task(
+                lane_name,
+                product_start(wafer_id, "llupper"),
+                product_end(wafer_id, "llupper"),
+                "LLupper state",
+                entity,
+                "#54A24B",
+            )
+            add_path_task(
+                lane_name,
+                product_end(wafer_id, "llupper"),
+                product_start(wafer_id, "vtr_load"),
+                "LLupper ready",
+                entity,
+                "#8CD17D",
+            )
+            add_path_task(
+                lane_name,
+                product_start(wafer_id, "vtr_load"),
+                product_end(wafer_id, "vtr_load"),
+                "VTR load",
+                entity,
+                "#F58518",
+            )
+            add_path_task(
+                lane_name,
+                product_end(wafer_id, "vtr_load"),
+                product_start(wafer_id, "pm"),
+                "PM wait",
+                entity,
+                "#F2A09A",
+            )
+            add_path_task(
+                lane_name,
+                product_start(wafer_id, "pm"),
+                product_end(wafer_id, "pm"),
+                "PM process",
+                entity,
+                "#E45756",
+            )
+            add_path_task(
+                lane_name,
+                product_end(wafer_id, "pm"),
+                product_start(wafer_id, "vtr_unload"),
+                "PM wait",
+                entity,
+                "#F2A09A",
+            )
+            add_path_task(
+                lane_name,
+                product_start(wafer_id, "vtr_unload"),
+                product_end(wafer_id, "vtr_unload"),
+                "VTR unload",
+                entity,
+                "#FF9DA6",
+            )
+            add_path_task(
+                lane_name,
+                product_end(wafer_id, "vtr_unload"),
+                product_start(wafer_id, "lllower"),
+                "LLlower wait",
+                entity,
+                "#D4A6C8",
+            )
+            add_path_task(
+                lane_name,
+                product_start(wafer_id, "lllower"),
+                product_end(wafer_id, "lllower"),
+                "LLlower state",
+                entity,
+                "#B279A2",
+            )
+            add_path_task(
+                lane_name,
+                product_end(wafer_id, "lllower"),
+                product_start(wafer_id, "atr_lllower_lp"),
+                "LLlower wait",
+                entity,
+                "#D4A6C8",
+            )
+            add_path_task(
+                lane_name,
+                product_start(wafer_id, "atr_lllower_lp"),
+                product_end(wafer_id, "atr_lllower_lp"),
+                "ATR LLlower->LP",
+                entity,
+                "#79706E",
+            )
 
         pec_ids = sorted(
             {pec_id for pec_id, _ in pec_stage_start.keys()} | {pec_id for pec_id, _ in pec_stage_end.keys()},
@@ -272,25 +423,19 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
             if assignment is not None:
                 lane_name += f" | PM{assignment[0]}-B{assignment[1]}"
             lanes.append(lane_name)
-            for stage_name in NEW_PEC_STAGE_ORDER:
-                start = pec_stage_start.get((pec_id, stage_name), 0.0)
-                end = pec_stage_end.get((pec_id, stage_name), start)
-                if end <= start + 1e-9:
-                    continue
-                label, color = NEW_PEC_STAGE_META[stage_name]
-                token_id = pec_token_by_job.get(pec_id)
-                entity = f"PEC{token_id}" if token_id is not None else f"E{pec_id}"
-                tasks.append(
-                    {
-                        "lane": lane_name,
-                        "start": start,
-                        "end": end,
-                        "label": f"{label}\n{entity}",
-                        "short_label": entity,
-                        "color": color,
-                    }
-                )
-                time_candidates.extend([start, end])
+            token_id = pec_token_by_job.get(pec_id)
+            entity = f"PEC{token_id}" if token_id is not None else f"E{pec_id}"
+            load_start = pec_stage_start.get((pec_id, "vtr_load"), 0.0)
+            load_end = pec_stage_end.get((pec_id, "vtr_load"), load_start)
+            pm_start = pec_stage_start.get((pec_id, "pm"), load_end)
+            pm_end = pec_stage_end.get((pec_id, "pm"), pm_start)
+            unload_start = pec_stage_start.get((pec_id, "vtr_unload"), pm_end)
+            unload_end = pec_stage_end.get((pec_id, "vtr_unload"), unload_start)
+            add_path_task(lane_name, load_start, load_end, "VTR PEC->PM", entity, "#72B7B2")
+            add_path_task(lane_name, load_end, pm_start, "PM wait", entity, "#F2A09A")
+            add_path_task(lane_name, pm_start, pm_end, "PM process", entity, "#E45756")
+            add_path_task(lane_name, pm_end, unload_start, "PM wait", entity, "#F2A09A")
+            add_path_task(lane_name, unload_start, unload_end, "VTR PM->PEC", entity, "#B279A2")
 
         if not lanes:
             return {}
@@ -1221,8 +1366,8 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
             pm_ids.add(pm_id)
 
     ordered_pm_ids = [2, 3] if pm_ids and pm_ids.issubset({2, 3}) else sorted(pm_ids)
-    llupper_slots = sorted(set(llupper_slot_by_wafer.values()))
-    lllower_slots = sorted(set(lllower_slot_by_wafer.values()))
+    llupper_slots = sorted(set(llupper_slot_by_wafer.values()) | ({1, 2} if llupper_slot_by_wafer else set()))
+    lllower_slots = sorted(set(lllower_slot_by_wafer.values()) | ({1, 2} if lllower_slot_by_wafer else set()))
     lane_order: List[str] = ["ATR robot", "AL"]
     lane_order.extend(f"LLupper slot {slot_id}" for slot_id in llupper_slots)
     if not llupper_slots:
@@ -1275,6 +1420,33 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
     def lllower_lane(wafer_id: int) -> str:
         slot_id = lllower_slot_by_wafer.get(wafer_id)
         return f"LLlower slot {slot_id}" if slot_id is not None else "LLlower"
+
+    def add_single_product_pair_empty_slot(pair_label: str, members: List[int]) -> None:
+        if len(members) != 1:
+            return
+        wafer_id = members[0]
+        upper_slot = llupper_slot_by_wafer.get(wafer_id)
+        if upper_slot in (1, 2):
+            empty_slot = 2 if upper_slot == 1 else 1
+            add_task(
+                f"LLupper slot {empty_slot}",
+                product_start(wafer_id, "llupper"),
+                product_end(wafer_id, "llupper"),
+                "LLupper sync empty",
+                f"{pair_label} empty",
+                "#BAB0AC",
+            )
+        lower_slot = lllower_slot_by_wafer.get(wafer_id)
+        if lower_slot in (1, 2):
+            empty_slot = 2 if lower_slot == 1 else 1
+            add_task(
+                f"LLlower slot {empty_slot}",
+                product_start(wafer_id, "lllower"),
+                product_end(wafer_id, "lllower"),
+                "LLlower sync empty",
+                f"{pair_label} empty",
+                "#BAB0AC",
+            )
 
     for wafer_id in product_ids:
         entity = f"W{wafer_id}"
@@ -1331,6 +1503,11 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                 "#D4A6C8",
             )
         add_task("ATR robot", product_start(wafer_id, "atr_lllower_lp"), product_end(wafer_id, "atr_lllower_lp"), "LLlower->LP", entity, "#79706E")
+
+    for pair_id, members in sorted(full_pair_members.items()):
+        add_single_product_pair_empty_slot(f"F{pair_id}", sorted(members))
+    for pair_id, members in sorted(mix_pair_members.items()):
+        add_single_product_pair_empty_slot(f"M{pair_id}", sorted(members))
 
     def pec_entity(job_id: int) -> str:
         token_id = pec_token_by_job.get(job_id)
@@ -1520,14 +1697,128 @@ def _render_external_task_label(text: str, x: float, bar_y: float, width: float)
     )
 
 
+def _estimate_text_width(lines: List[str]) -> float:
+    if not lines:
+        return 0.0
+    return max(len(line) for line in lines) * 6.4 + 8.0
+
+
+def _render_floating_task_label(
+    lines: List[str],
+    text_class: str,
+    x: float,
+    y: float,
+    text_anchor: str = "start",
+) -> str:
+    if not lines:
+        return ""
+    anchor_attr = "" if text_anchor == "start" else f' text-anchor="{text_anchor}"'
+    tspan = []
+    for idx, line in enumerate(lines):
+        dy = 0 if idx == 0 else 12
+        tspan.append(f'<tspan x="{x:.2f}" dy="{dy}">{_escape(line)}</tspan>')
+    return f'<text class="{text_class}" x="{x:.2f}" y="{y:.2f}"{anchor_attr}>' + "".join(tspan) + "</text>"
+
+
 def _render_svg(record: Dict[str, object], schedule: Dict[str, object], output_file: Path) -> None:
     lanes = schedule["lanes"]
-    height = TOP_MARGIN + BOTTOM_MARGIN + len(lanes) * LANE_HEIGHT
-    plot_bottom = TOP_MARGIN + len(lanes) * LANE_HEIGHT
     horizon = float(schedule["horizon"])
     c_max = float(schedule["c_max"])
     title_suffix = str(schedule.get("title_suffix", "Scheduling Gantt"))
     wph_stats = schedule.get("wph_stats")
+
+    label_rows: Dict[str, List[List[Tuple[float, float]]]] = {}
+    label_bottom_by_lane: Dict[str, float] = {}
+    task_draws: List[Dict[str, object]] = []
+    task_labels: List[Dict[str, object]] = []
+
+    def _make_label(task: Dict[str, object], x: float, width: float) -> Dict[str, object]:
+        full_label = str(task.get("label", "")).strip()
+        short_label = str(task.get("short_label", "")).strip()
+        if not full_label and not short_label:
+            return {}
+        max_label_lines = int(task.get("max_label_lines", 2))
+        if width >= 84.0 and full_label:
+            lines = _wrap_text(full_label, max(8, int(width / 7.4)), max_lines=max_label_lines)
+            text_width = _estimate_text_width(lines)
+            label_left = x + 3.0
+            label_right = x + max(width, text_width)
+            return {
+                "lines": lines,
+                "text_class": "bartext",
+                "x": x + 7.0,
+                "anchor": "start",
+                "left": label_left,
+                "right": label_right,
+                "height": 10.0 + 12.0 * max(0, len(lines) - 1),
+            }
+
+        label = " ".join((full_label or short_label).split())
+        lines = _wrap_text(label, 30, max_lines=1)
+        text_width = _estimate_text_width(lines)
+        text_x = x + width + 5.0
+        anchor = "start"
+        label_left = text_x
+        label_right = text_x + text_width
+        if label_right > SVG_WIDTH - RIGHT_MARGIN + 4.0:
+            text_x = x - 5.0
+            anchor = "end"
+            label_left = text_x - text_width
+            label_right = text_x
+        return {
+            "lines": lines,
+            "text_class": "bartext-outside",
+            "x": text_x,
+            "anchor": anchor,
+            "left": label_left,
+            "right": label_right,
+            "height": 10.0,
+        }
+
+    def _assign_label_row(lane: str, label_spec: Dict[str, object]) -> int:
+        left = float(label_spec["left"])
+        right = float(label_spec["right"])
+        rows = label_rows.setdefault(lane, [])
+        row_idx = 0
+        while True:
+            if row_idx == len(rows):
+                rows.append([])
+            overlaps = any(
+                left < existing_right + LABEL_ROW_GAP and right > existing_left - LABEL_ROW_GAP
+                for existing_left, existing_right in rows[row_idx]
+            )
+            if not overlaps:
+                rows[row_idx].append((left, right))
+                return row_idx
+            row_idx += 1
+
+    for task_idx, task in enumerate(schedule["tasks"]):
+        lane_name = str(task["lane"])
+        x = _time_to_x(float(task["start"]), horizon)
+        width = max(_time_to_x(float(task["end"]), horizon) - x, 2.0)
+        draw = {"task": task, "lane": lane_name, "x": x, "width": width}
+        task_draws.append(draw)
+        label_spec = _make_label(task, x, width)
+        if label_spec:
+            row_idx = _assign_label_row(lane_name, label_spec)
+            label_spec["row"] = row_idx
+            label_spec["lane"] = lane_name
+            label_spec["task_idx"] = task_idx
+            task_labels.append(label_spec)
+            label_bottom = 13.5 + row_idx * LABEL_ROW_HEIGHT + float(label_spec["height"]) + 6.0
+            label_bottom_by_lane[lane_name] = max(label_bottom_by_lane.get(lane_name, 0.0), label_bottom)
+
+    lane_heights: Dict[str, float] = {}
+    for lane_name in lanes:
+        lane_heights[lane_name] = max(float(LANE_HEIGHT), BAR_HEIGHT + 18.0, label_bottom_by_lane.get(lane_name, 0.0) + 12.0)
+
+    lane_tops: Dict[str, float] = {}
+    cursor_y = float(TOP_MARGIN)
+    for lane_name in lanes:
+        lane_tops[lane_name] = cursor_y
+        cursor_y += lane_heights[lane_name]
+    plot_bottom = cursor_y
+    height = int(math.ceil(plot_bottom + BOTTOM_MARGIN))
 
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{SVG_WIDTH}" height="{height}" viewBox="0 0 {SVG_WIDTH} {height}">',
@@ -1537,7 +1828,7 @@ def _render_svg(record: Dict[str, object], schedule: Dict[str, object], output_f
         '.subtitle { font-size: 14px; fill: #555; }'
         '.lane { font-size: 13px; font-weight: 600; }'
         '.tick { font-size: 11px; fill: #666; }'
-        '.bartext { font-size: 11px; fill: #fff; font-weight: 600; }'
+        '.bartext { font-size: 11px; fill: #fff; font-weight: 600; paint-order: stroke; stroke: #1f1f1f; stroke-width: 2px; stroke-linejoin: round; }'
         '.bartext-outside { font-size: 10px; fill: #222; font-weight: 600; paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }'
         '.marker { font-size: 11px; fill: #333; }'
         '.wph { font-size: 14px; fill: #222; font-weight: 600; }'
@@ -1558,40 +1849,31 @@ def _render_svg(record: Dict[str, object], schedule: Dict[str, object], output_f
         )
         parts.append(f'<text class="tick" x="{x - 12:.2f}" y="{plot_bottom + 34}">{t:.1f}</text>')
 
-    lane_index = {lane_name: idx for idx, lane_name in enumerate(lanes)}
-    for lane_idx, lane_name in enumerate(lanes):
-        y = _lane_y(lane_idx)
+    for lane_name in lanes:
+        y = lane_tops[lane_name]
         parts.append(
-            f'<line x1="{LEFT_MARGIN}" y1="{y + BAR_HEIGHT + 14}" x2="{SVG_WIDTH - RIGHT_MARGIN}" y2="{y + BAR_HEIGHT + 14}" stroke="#dddddd" stroke-width="1"/>'
+            f'<line x1="{LEFT_MARGIN}" y1="{y + lane_heights[lane_name] - 10.0:.2f}" x2="{SVG_WIDTH - RIGHT_MARGIN}" y2="{y + lane_heights[lane_name] - 10.0:.2f}" stroke="#dddddd" stroke-width="1"/>'
         )
         lane_lines = _wrap_text(lane_name, max(18, int((LEFT_MARGIN - 42) / 8.6)), max_lines=2)
         parts.append(_render_multiline_text("lane", lane_lines, 18, y + 16, line_height=16))
 
-    for task_idx, task in enumerate(schedule["tasks"]):
-        y = _lane_y(lane_index[task["lane"]])
-        x = _time_to_x(float(task["start"]), horizon)
-        width = max(_time_to_x(float(task["end"]), horizon) - x, 2.0)
+    for draw in task_draws:
+        task = draw["task"]
+        y = lane_tops[str(draw["lane"])]
+        x = float(draw["x"])
+        width = float(draw["width"])
         full_label = str(task.get("label", "")).strip()
         short_label = str(task.get("short_label", "")).strip()
         hover_label = full_label or short_label or str(task["lane"])
         parts.append(
             f'<g><title>{_escape(hover_label)}</title><rect x="{x:.2f}" y="{y:.2f}" width="{width:.2f}" height="{BAR_HEIGHT}" rx="4" ry="4" fill="{task["color"]}" fill-opacity="0.9" stroke="#2f2f2f" stroke-width="0.7"/></g>'
         )
-        max_label_lines = int(task.get("max_label_lines", 2))
-        if width >= 44.0 and full_label:
-            lines = _wrap_text(full_label, max(6, int(width / 8.2)), max_lines=max_label_lines)
-            parts.append(_render_clipped_task_label(lines, x, y, width, f"task_clip_{task_idx}"))
-        elif width >= 24.0 and short_label:
-            lines = _wrap_text(short_label, max(4, int(width / 8.6)), max_lines=1)
-            parts.append(_render_clipped_task_label(lines, x, y, width, f"task_clip_{task_idx}"))
-        elif full_label or short_label:
-            parts.append(_render_external_task_label(full_label or short_label, x, y, width))
 
     for marker in schedule["markers"]:
         lane_name = marker["lane"]
-        if lane_name not in lane_index:
+        if lane_name not in lane_tops:
             continue
-        marker_center_y = _lane_y(lane_index[lane_name]) + BAR_HEIGHT / 2
+        marker_center_y = lane_tops[lane_name] + BAR_HEIGHT / 2
         x = _time_to_x(float(marker["time"]), horizon)
         points = [
             (x, marker_center_y - 8),
@@ -1622,6 +1904,19 @@ def _render_svg(record: Dict[str, object], schedule: Dict[str, object], output_f
         )
         parts.append(
             f'<text class="lane" x="{cmax_x:.2f}" y="{TOP_MARGIN - 24}" text-anchor="{cmax_anchor}">c_max={c_max:.1f}</text>'
+        )
+
+    for label in task_labels:
+        lane_name = str(label["lane"])
+        y = lane_tops[lane_name] + 13.5 + int(label["row"]) * LABEL_ROW_HEIGHT
+        parts.append(
+            _render_floating_task_label(
+                label["lines"],
+                str(label["text_class"]),
+                float(label["x"]),
+                y,
+                str(label["anchor"]),
+            )
         )
 
     if isinstance(wph_stats, dict):
