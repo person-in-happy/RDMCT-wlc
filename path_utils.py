@@ -34,3 +34,17 @@ def append_date_to_filename(filename: str, date_tag: str = None) -> str:
         return str(path)
     tag = date_tag or current_date_tag()
     return str(path.with_name(f"{stem}_{tag}{path.suffix}"))
+
+
+def latest_matching_file(root, pattern: str, description: str = "file") -> Path:
+    root_path = resolve_path(root)
+    if not root_path.exists():
+        raise FileNotFoundError(f"Cannot find latest {description}: directory does not exist: {root_path}")
+    matches = [path for path in root_path.rglob(pattern) if path.is_file()]
+    if not matches:
+        raise FileNotFoundError(f"Cannot find latest {description}: no `{pattern}` under {root_path}")
+    return max(matches, key=lambda path: path.stat().st_mtime).resolve()
+
+
+def is_latest_keyword(value) -> bool:
+    return str(value).strip().lower() in {"latest", "auto"}

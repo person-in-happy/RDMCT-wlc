@@ -64,6 +64,8 @@ PEC wafer 路径：
 - `full_batch_used_(m,b)`：该 `4x1` 批次是否被启用
 - `full_filler_side_(m,b,s)`：该 side-slot 是否由 `PEC+PEC` 纯 PEC 对补满
 - `full_batch_serial_order_(m,b,b+1)`：同一 chamber 的 `4x1` 批次按编号串行执行，后一批必须在前一批完全卸载后才能开始
+- `full_batch_idle_(m,b,b+1,epoch)`：同一清洁 epoch 内相邻 `4x1` 批次之间的可避免空闲，用于二级目标压缩组间等待
+- `full_to_mix_idle_(m,b,epoch)`：尾部 `4x1` 批次到同一 CH 后续 `2x2` 链之间的切换空闲
 - 技术交底书要求同一 chamber 上 `4x1` 在 `2x2` 之前完成，因此代码不再包含旧版“2x2之后再追加4x1”的尾段变量
 
 ### 3.3 核心约束
@@ -143,9 +145,9 @@ PEC wafer 路径：
 
 目标函数为：
 
-- `min c_max + lambda * (full_pm_imbalance + mix_pm_imbalance)`
+- `min c_max + lambda * (full_pm_imbalance + mix_pm_imbalance) + gamma * sum(chamber_idle_slack) + epsilon * sum(wafer_completion)`
 
-主目标是最小化“第一片产品 wafer 离开 LP 到最后一片产品 wafer 回到 LP”的端到端总完工时间；`lambda` 为很小的软惩罚权重，用于鼓励 `4x1` 与 `2x2` 产品负载在 CH2/CH3 之间合理分担。
+主目标是最小化“第一片产品 wafer 离开 LP 到最后一片产品 wafer 回到 LP”的端到端总完工时间；`lambda` 为很小的软惩罚权重，用于鼓励 `4x1` 与 `2x2` 产品负载在 CH2/CH3 之间合理分担；`gamma` 用于压缩同一 CH 上相邻加工组之间的可避免空闲；`epsilon` 用于鼓励产品晶圆更早完成。`chamber_idle_slack` 包括 `full_batch_idle_*`、`full_to_mix_idle_*` 以及 `2x2` 链内部的 `mix_head_idle_*`、`mix_cycle_to_bridge_idle_*`、`mix_bridge_to_cycle_idle_*`、`mix_tail_idle_*`。这些 idle 项是软惩罚，不会在上游资源、PEC token 或 cleaning 未就绪时强行要求零等待。
 
 ## 6. PEC wafer 显式复用
 

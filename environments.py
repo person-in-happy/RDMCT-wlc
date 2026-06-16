@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import numpy as np
 from scip_imports import scip
 
@@ -31,6 +32,51 @@ class SCIPCutSelEnv():
 
         # self.reset()
         self.set_seed()
+
+    def _resolve_instance_file(self, instance_file):
+        instance_text = str(instance_file)
+        candidate = Path(instance_text).expanduser()
+
+        if candidate.is_absolute() or len(candidate.parts) > 1:
+            resolved_candidate = resolve_path(candidate)
+            if resolved_candidate.is_file():
+                return str(resolved_candidate)
+
+        configured_candidate = Path(self.instance_file_path) / instance_text
+        if configured_candidate.is_file():
+            return str(configured_candidate.resolve())
+
+        generated_root = resolve_path("generated_instances")
+        if generated_root.is_dir():
+            matches = sorted(
+                path.resolve()
+                for path in generated_root.rglob(Path(instance_text).name)
+                if path.is_file()
+            )
+            if len(matches) == 1:
+                logger.log(
+                    "warning: instance file not found in "
+                    f"{self.instance_file_path}; using {matches[0]}"
+                )
+                return str(matches[0])
+            if len(matches) > 1:
+                shown_matches = "\n".join(f"  - {path}" for path in matches[:10])
+                extra = "" if len(matches) <= 10 else f"\n  ... and {len(matches) - 10} more"
+                raise FileNotFoundError(
+                    f"Instance file `{instance_text}` was not found in {self.instance_file_path}, "
+                    "and the same filename exists in multiple generated instance directories:\n"
+                    f"{shown_matches}{extra}\n"
+                    "Pass an absolute path or update env.instance_file_path."
+                )
+
+        available = ", ".join(self.instances[:10])
+        if len(self.instances) > 10:
+            available += f", ... and {len(self.instances) - 10} more"
+        available_text = available or "none"
+        raise FileNotFoundError(
+            f"Instance file does not exist: {configured_candidate.resolve()}. "
+            f"Available instances in {self.instance_file_path}: {available_text}"
+        )
 
     def _set_scip_separator_params(self, max_rounds_root=-1, max_rounds=-1, max_cuts_root=10000, max_cuts=10000,
                                 frequency=10):
@@ -209,10 +255,8 @@ class SCIPCutSelEnv():
             instance_file = self.single_instance_file
         # instance_file = 'instance_9575.lp'
         logger.log(f"instance_file: {instance_file}")
-        if os.path.isabs(instance_file):
-            instance_file = str(resolve_path(instance_file))
-        else:
-            instance_file = os.path.join(self.instance_file_path, instance_file)
+        instance_file = self._resolve_instance_file(instance_file)
+        logger.log(f"resolved_instance_file: {instance_file}")
         self.m.setIntParam('display/verblevel', 0)
         self.m.readProblem(instance_file)
         self.m.setRealParam('limits/time', self.scip_time_limit)

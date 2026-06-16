@@ -21,41 +21,33 @@
 
 ## 1. 快速开始
 
-### 1.1 生成 MIP
+下面的命令都默认在项目根目录执行。路径和参数直接写在命令里；每条命令下面给出说明。需要完整参数说明时再看 `Producedocs/docs/how_to_run_and_get_final_mip_solution.md`。
+
+### 1.1 生成训练集
 
 ```powershell
 python petri_mip_generator.py ^
-  --output_dir generated_instances/petri ^
+  --output_dir generated_instances\petri ^
   --instance_name petri_batch10_fullflow_v7.lp ^
   --num_batches 10 ^
   --num_pm 2 ^
+  --process_mode mixed ^
   --mode_4x1_wafers 10 ^
   --mode_2x2_wafers 10 ^
   --pec_pool_size 8 ^
-  --pm_rotation_time_180 2 ^
-  --pair_transfer_time 4 ^
-  --atr_transfer_time 3 ^
-  --atr_return_time 3 ^
-  --aligner_time 20 ^
-  --llupper_time 30 ^
-  --lllower_time 25 ^
-  --full_process_time 80 ^
-  --mix_boundary_process_time 30 ^
-  --mix_internal_process_time 30
+  --chamber_idle_penalty 0.0001
 ```
 
-输出：
+说明：该命令会把训练实例生成到 `generated_instances\petri`，并自动给 `.lp` 文件名追加日期后缀；同时会生成对应的模型说明文档。记下终端输出的真实 `.lp` 文件名，下一步训练时填到 `--single_instance_file`。
 
-- `generated_instances/petri/<instance>_<YYYYMMDD>.lp`
-- `generated_instances/petri/<instance>_<YYYYMMDD>_model.md`
-
-### 1.2 训练 cut selection 模型
+### 1.2 训练模型
 
 ```powershell
 python parallel_reinforce_algorithm.py ^
-  --config_file configs/petri_mip_test_config.json ^
+  --config_file configs\petri_mip_quick_config.json ^
   --train_type train ^
-  --single_instance_file petri_batch10_fullflow_v7_<YYYYMMDD>.lp ^
+  --generate_petri_instance False ^
+  --single_instance_file petri_batch10_fullflow_v7_<date>.lp ^
   --sel_cuts_percent 0.2 ^
   --reward_type solving_time ^
   --baseline_type simple ^
@@ -67,59 +59,116 @@ python parallel_reinforce_algorithm.py ^
   --instance_type petri_transfer
 ```
 
-其中 `petri_batch10_fullflow_v7_<YYYYMMDD>.lp` 需要替换成上一步实际生成出来的 LP 文件名。
+说明：该命令会读取 `configs\petri_mip_quick_config.json` 中的训练实例目录，默认是 `generated_instances\petri`；请把 `petri_batch10_fullflow_v7_<date>.lp` 替换成上一步真实生成的文件名。训练输出写入 `data`，快速配置默认 `num_epochs=5`、`samples_per_epoch=2`，适合先打通流程。
 
-训练完成后，模型默认会保存到：
+### 1.3 绘制训练曲线
 
-- `data/petri_mip_rl_beam_<single_instance_file>_<instance_type>/<exp_name>/params.pkl`
+```powershell
+python plot_progress_curves.py ^
+  --data_dir data ^
+  --output data\latest_convergence_curves.svg ^
+  --window 3 ^
+  --title "Petri Cut Selection Training"
+```
 
-后续 `run_petri_a3c_beam.py` 和 `run_ablation_experiments.py` 里的 `--test_model_path` 需要指向这个 `params.pkl`。
+说明：该命令从 `data` 中递归寻找最新的 `progress.csv`，并把训练曲线输出到 `data\latest_convergence_curves.svg`。
 
-### 1.3 运行 A3C + Beam 求解
+### 1.4 运行 A3C + Beam 求解
 
 ```powershell
 python run_petri_a3c_beam.py ^
-  --config_file configs/petri_mip_test_config.json ^
-  --test_model_path data/petri_mip_rl_beam/YOUR_EXPERIMENT_DIR/params.pkl ^
+  --config_file configs\petri_mip_quick_config.json ^
+  --test_model_path latest ^
   --instance_dir generated_instances/petri ^
   --instance_name petri_batch10_fullflow_v7.lp ^
   --num_batches 10 ^
   --num_pm 2 ^
+  --process_mode mixed ^
   --mode_4x1_wafers 10 ^
   --mode_2x2_wafers 10 ^
   --pec_pool_size 8 ^
+  --chamber_idle_penalty 0.0001 ^
   --instance_type petri_transfer
 ```
 
-### 1.4 运行消融实验
+说明：`--test_model_path latest` 会自动使用 `data` 目录下最新的 `params.pkl`。
+
+### 1.5 运行消融实验
 
 ```powershell
 python run_ablation_experiments.py ^
-  --config_file configs/petri_mip_test_config.json ^
-  --test_model_path data/petri_mip_rl_beam/YOUR_EXPERIMENT_DIR/params.pkl ^
+  --config_file configs\petri_mip_quick_config.json ^
+  --test_model_path latest ^
   --instance_dir generated_instances/petri ^
   --instance_name petri_batch10_fullflow_v7.lp ^
   --generate_petri_instance True ^
   --num_batches 10 ^
   --num_pm 2 ^
+  --process_mode mixed ^
   --mode_4x1_wafers 10 ^
   --mode_2x2_wafers 10 ^
   --pec_pool_size 8 ^
+  --chamber_idle_penalty 0.0001 ^
+  --time_limit 300 ^
   --instance_type petri_transfer
 ```
 
-### 1.5 画甘特图
+说明：消融结果写入 `ablation_results`；带模型时会比较 `solver_only`、`a3c_only`、`beam_only`、`a3c_beam`。
+
+### 1.6 画甘特图
 
 ```powershell
 python petri_gantt.py ^
-  --solution_json generated_instances/petri/YOUR_SOLUTION.json
+  --solution_json latest ^
+  --output_dir gantt_manual ^
+  --view all
+
+Start-Process "gantt_manual\index.html"
 ```
+
+说明：`--solution_json latest` 会自动读取 `petri_transfer_use_hrl_Trueheuristics_cutsel` 下最新的 `*solutions*.json`；`Start-Process` 会用默认浏览器打开静态前端。
 
 新版甘特图会展示：
 
 - 产品 wafer 的 `ATR / AL / LL / VTR / PM / Return` 全路径阶段
 - PEC wafer 的 `VTR / PM / Return` 阶段
 - 每片产品 wafer 的最终回仓时间
+
+### 1.7 常用命令参数说明
+
+更完整的逐项说明见 `Producedocs/docs/how_to_run_and_get_final_mip_solution.md` 的“命令参数速查”章节。快速开始里最常用的参数含义如下：
+
+| 参数 | 含义 |
+| --- | --- |
+| `--output_dir` / `--instance_dir` | 生成或读取 MIP 实例的目录。 |
+| `--instance_name` | 实例原始文件名，生成器会自动追加日期后缀。 |
+| `--num_batches` | 候选批次数上界兼容参数，当前会结合产品 PW 对数量自动收紧。 |
+| `--num_pm` | 旋转腔数量，当前设备固定为 `2`，对应 `CH2` 和 `CH3`。 |
+| `--mode_4x1_wafers` | 走 `4x1` 工艺的产品晶圆数量。 |
+| `--mode_2x2_wafers` | 走 `2x2` 工艺的产品晶圆数量。 |
+| `--pec_pool_size` | 可循环复用的 PEC wafer 数，当前常用 `8` 或 `10`。 |
+| `--chamber_idle_penalty` / `--petri_chamber_idle_penalty` | CH 组间空闲软惩罚权重，默认 `0.0001`，用于压缩相邻 `4x1` 批次、`4x1 -> 2x2` 切换和 `2x2` 链内部的可避免等待。 |
+| `--pm_rotation_time_180` | 旋转腔 180 度转动时间。 |
+| `--pair_transfer_time` | VTR 搬运一个 PW 对的时间。 |
+| `--atr_transfer_time` / `--atr_return_time` | ATR 送片和回片动作时间。 |
+| `--aligner_time` | 产品晶圆占用 AL 校准器的最短时间。 |
+| `--llupper_time` / `--lllower_time` | 产品晶圆在上下 load lock 中的最短停留时间。 |
+| `--full_process_time` | `4x1` 满片加工时间。 |
+| `--mix_boundary_process_time` / `--mix_internal_process_time` | `2x2` 边界 cycle 和内部 cycle 加工时间。 |
+| `--config_file` | 训练、测试或消融实验使用的基础 JSON 配置文件。 |
+| `--train_type` | `train` 表示训练，`test` 表示加载模型测试。 |
+| `--single_instance_file` | 指定单个 `.lp` 实例；`all` 表示读取实例目录下全部实例。 |
+| `--sel_cuts_percent` | cut 保留比例基础值，例如 `0.2` 表示约 20%。 |
+| `--reward_type` | 强化学习奖励类型，当前 Petri 调度实验推荐 `solving_time`。 |
+| `--baseline_type` | 强化学习 baseline 类型，常用 `simple`。 |
+| `--policy_type` | 策略网络类型，当前推荐 `with_token`。 |
+| `--use_cutsel_percent_policy` | 是否启用高层 cut 数量策略，当前推荐 `True`。 |
+| `--test_model_path` | 训练完成后的模型文件路径；也可传 `latest` 自动使用 `data` 下最新的 `params.pkl`。 |
+| `--time_limit` | 测试或消融中的 SCIP 求解时限覆盖值；训练时主要仍看配置文件中的 `env.scip_time_limit`。 |
+| `--seed` / `--scip_seed` | 主程序和 SCIP 求解器的随机种子。 |
+| `--instance_type` | 实例类型标识，用于日志和结果目录命名，当前推荐 `petri_transfer`。 |
+| `--generate_petri_instance` | 消融或训练前是否自动生成新的 Petri/MIP 实例。 |
+| `--solution_json` | 甘特图脚本读取的求解结果 JSON 文件；也可传 `latest` 自动读取最新测试 solution JSON。 |
 
 ## 2. 当前 MIP 的核心语义
 
@@ -146,6 +195,14 @@ python petri_gantt.py ^
 - 链尾需要 PEC 尾边界
 - 产品 PW 对要经历 first-pass 与 second-pass 两次相关 chamber 占用
 
+### 2.5 CH 组间连续性软惩罚
+
+- 主目标仍是最小化 `c_max`，即最后一片产品 wafer 回到 `LP` 的时间
+- `full_batch_idle_*` 衡量同一 CH 上相邻 `4x1` 批次之间的可避免空闲
+- `full_to_mix_idle_*` 衡量尾部 `4x1` 批次到后续 `2x2` 链之间的切换空闲
+- `mix_head_idle_*`、`mix_cycle_to_bridge_idle_*`、`mix_bridge_to_cycle_idle_*`、`mix_tail_idle_*` 衡量 `2x2` 链内部可避免等待
+- `--chamber_idle_penalty` / `--petri_chamber_idle_penalty` 把这些 slack 加入二级目标；它鼓励加工更连续，但不会在上游资源未就绪或 cleaning 必须插入时强行要求零间隔
+
 ### 2.6 训练耗时为什么长
 
 - 训练阶段的每个 sample 都会真正调用一次 SCIP 求解，不是轻量级仿真。
@@ -153,7 +210,7 @@ python petri_gantt.py ^
 - 如果把 `--time_limit` 提到 `3000`，理论上界会放大到约 `166.7` 小时。
 - 当前版本已经把 `4x1` 候选批次收紧为最小安全上界，并修正为前后槽位语义；以 `4x1=10, 2x2=10` 为例，模型规模已由 `15086 / 31871` 降到 `6326 / 14179`（变量 / 约束）。
 
-### 2.5 显式资源约束
+### 2.7 显式资源约束
 
 - `ATR`：按操作任务互斥
 - `AL`：一次仅允许 1 片 wafer 占用

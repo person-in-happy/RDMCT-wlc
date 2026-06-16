@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Petri Gantt Explorer</title>
+<style>
+:root { color-scheme: light; --ink: #17212b; --muted: #687385; --line: #d7dde5; --paper: #ffffff; --wash: #f5f7f4; --accent: #236b5c; --accent-2: #bf6f24; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Segoe UI, Microsoft YaHei, Arial, sans-serif; color: var(--ink); background: var(--wash); }
+.shell { min-height: 100vh; display: flex; flex-direction: column; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 24px; background: #ffffff; border-bottom: 1px solid var(--line); }
+.topbar h1 { margin: 0; font-size: 22px; line-height: 1.2; letter-spacing: 0; }
+.badge { color: #ffffff; background: var(--accent); border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.toolbar { display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)) auto; gap: 12px; align-items: end; padding: 14px 24px; background: #fbfcfd; border-bottom: 1px solid var(--line); }
+.control { display: grid; gap: 6px; }
+.control span { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0; }
+select, .button { height: 38px; border: 1px solid #b9c2ce; border-radius: 8px; background: #ffffff; color: var(--ink); font: inherit; }
+select { width: 100%; padding: 0 34px 0 10px; }
+.button { display: inline-flex; align-items: center; justify-content: center; padding: 0 14px; text-decoration: none; font-weight: 700; color: #ffffff; background: var(--accent-2); border-color: var(--accent-2); white-space: nowrap; }
+main { display: grid; gap: 18px; padding: 18px 24px 28px; }
+.section { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.section h2 { margin: 0; font-size: 16px; line-height: 1.3; letter-spacing: 0; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: #f8fafb; }
+.meta-item { display: inline-flex; gap: 6px; align-items: baseline; border: 1px solid #dfe5ec; border-radius: 8px; padding: 6px 8px; background: #ffffff; font-size: 12px; }
+.meta-item strong { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0; }
+.viewport { background: #ffffff; }
+object { display: block; width: 100%; border: 0; background: #ffffff; }
+.chart-object { height: 74vh; min-height: 560px; }
+.comparison-object { height: 520px; min-height: 420px; }
+.empty { padding: 36px 16px; color: var(--muted); font-weight: 700; text-align: center; }
+[hidden] { display: none !important; }
+@media (max-width: 860px) { .toolbar { grid-template-columns: 1fr; } .topbar { align-items: flex-start; flex-direction: column; } .button { width: 100%; } .chart-object { height: 68vh; min-height: 420px; } }
+</style>
+</head>
+<body>
+<div class="shell">
+<header class="topbar">
+<h1>Petri Gantt Explorer</h1>
+<div id="countBadge" class="badge">0 charts</div>
+</header>
+<div class="toolbar">
+<label class="control"><span>View</span><select id="viewSelect"></select></label>
+<label class="control"><span>Algorithm</span><select id="methodSelect"></select></label>
+<label class="control"><span>Instance</span><select id="instanceSelect"></select></label>
+<a id="openSvg" class="button" href="#" target="_blank" rel="noopener">Open SVG</a>
+</div>
+<main>
+<section class="section">
+<div class="section-head"><h2 id="chartTitle">Gantt Chart</h2></div>
+<div id="chartMeta" class="meta"></div>
+<div id="emptyState" class="empty" hidden>No Gantt chart is available.</div>
+<div class="viewport"><object id="chartObject" class="chart-object" type="image/svg+xml"></object></div>
+</section>
+<section id="comparisonSection" class="section" hidden>
+<div class="section-head"><h2>Ablation Comparison</h2><a id="comparisonLink" class="button" href="#" target="_blank" rel="noopener">Open SVG</a></div>
+<div class="viewport"><object id="comparisonObject" class="comparison-object" type="image/svg+xml"></object></div>
+</section>
+</main>
+</div>
+<script>
+var CHARTS = [{"path": "mip_ablation_demo_20260613_solver_only_gantt.svg", "view": "full", "view_label": "Full process", "method": "solver_only", "instance": "mip_ablation_demo_20260613.lp", "status": "timelimit", "best_obj": "820.749", "solving_time": "1800.000", "c_max": "810.000", "horizon": "810.000", "wph": "75.556", "title": "mip_ablation_demo_20260613 / solver_only / Full process"}, {"path": "mip_ablation_demo_20260613_solver_only_chambers_gantt.svg", "view": "chambers", "view_label": "Chamber modules", "method": "solver_only", "instance": "mip_ablation_demo_20260613.lp", "status": "timelimit", "best_obj": "820.749", "solving_time": "1800.000", "c_max": "810.000", "horizon": "779.000", "wph": "75.556", "title": "mip_ablation_demo_20260613 / solver_only / Chamber modules"}, {"path": "mip_ablation_demo_20260613_solver_only_resources_gantt.svg", "view": "resources", "view_label": "Resources", "method": "solver_only", "instance": "mip_ablation_demo_20260613.lp", "status": "timelimit", "best_obj": "820.749", "solving_time": "1800.000", "c_max": "810.000", "horizon": "810.000", "wph": "75.556", "title": "mip_ablation_demo_20260613 / solver_only / Resources"}, {"path": "mip_ablation_demo_20260613_a3c_only_gantt.svg", "view": "full", "view_label": "Full process", "method": "a3c_only", "instance": "mip_ablation_demo_20260613.lp", "status": "timelimit", "best_obj": "725.626", "solving_time": "1800.000", "c_max": "715.000", "horizon": "715.000", "wph": "85.594", "title": "mip_ablation_demo_20260613 / a3c_only / Full process"}, {"path": "mip_ablation_demo_20260613_a3c_only_chambers_gantt.svg", "view": "chambers", "view_label": "Chamber modules", "method": "a3c_only", "instance": "mip_ablation_demo_20260613.lp", "status": "timelimit", "best_obj": "725.626", "solving_time": "1800.000", "c_max": "715.000", "horizon": "684.000", "wph": "85.594", "title": "mip_ablation_demo_20260613 / a3c_only / Chamber modules"}, {"path": "mip_ablation_demo_20260613_a3c_only_resources_gantt.svg", "view": "resources", "view_label": "Resources", "method": "a3c_only", "instance": "mip_ablation_demo_20260613.lp", "status": "timelimit", "best_obj": "725.626", "solving_time": "1800.000", "c_max": "715.000", "horizon": "715.000", "wph": "85.594", "title": "mip_ablation_demo_20260613 / a3c_only / Resources"}, {"path": "mip_ablation_demo_20260613_beam_only_gantt.svg", "view": "full", "view_label": "Full process", "method": "beam_only", "instance": "mip_ablation_demo_20260613.lp", "status": "timelimit", "best_obj": "812.206", "solving_time": "1800.000", "c_max": "801.000", "horizon": "801.000", "wph": "76.404", "title": "mip_ablation_demo_20260613 / beam_only / Full process"}, {"path": "mip_ablation_demo_20260613_beam_only_chambers_gantt.svg", "view": "chambers", "view_label": "Chamber modules", "method": "beam_only", "instance": "mip_ablation_demo_20260613.lp", "status": "timelimit", "best_obj": "812.206", "solving_time": "1800.000", "c_max": "801.000", "horizon": "770.000", "wph": "76.404", "title": "mip_ablation_demo_20260613 / beam_only / Chamber modules"}, {"path": "mip_ablation_demo_20260613_beam_only_resources_gantt.svg", "view": "resources", "view_label": "Resources", "method": "beam_only", "instance": "mip_ablation_demo_20260613.lp", "status": "timelimit", "best_obj": "812.206", "solving_time": "1800.000", "c_max": "801.000", "horizon": "801.000", "wph": "76.404", "title": "mip_ablation_demo_20260613 / beam_only / Resources"}];
+var VIEW_LABELS = {"full": "Full process", "chambers": "Chamber modules", "resources": "Resources"};
+var COMPARISON_SVG = "../ablation_petri_transfer_20260613_170345_comparison.svg";
+(function () {
+  var charts = CHARTS || [];
+  var viewSelect = document.getElementById('viewSelect');
+  var methodSelect = document.getElementById('methodSelect');
+  var instanceSelect = document.getElementById('instanceSelect');
+  var chartObject = document.getElementById('chartObject');
+  var openSvg = document.getElementById('openSvg');
+  var emptyState = document.getElementById('emptyState');
+  var chartTitle = document.getElementById('chartTitle');
+  var chartMeta = document.getElementById('chartMeta');
+  var countBadge = document.getElementById('countBadge');
+  function unique(key) {
+    var seen = Object.create(null);
+    var values = [];
+    charts.forEach(function (chart) {
+      var value = String(chart[key] || '');
+      if (value && !seen[value]) { seen[value] = true; values.push(value); }
+    });
+    return values;
+  }
+  function setOptions(select, values, labels) {
+    var previous = select.value;
+    select.innerHTML = '';
+    values.forEach(function (value) {
+      var option = document.createElement('option');
+      option.value = value;
+      option.textContent = labels && labels[value] ? labels[value] : value;
+      select.appendChild(option);
+    });
+    if (values.indexOf(previous) >= 0) { select.value = previous; }
+  }
+  function renderMeta(entry) {
+    chartMeta.innerHTML = '';
+    [['Status', entry.status], ['Best obj', entry.best_obj], ['Solve time', entry.solving_time], ['c_max', entry.c_max], ['WPH', entry.wph]].forEach(function (item) {
+      var node = document.createElement('div');
+      var key = document.createElement('strong');
+      var value = document.createElement('span');
+      node.className = 'meta-item';
+      key.textContent = item[0];
+      value.textContent = item[1] || 'n/a';
+      node.appendChild(key);
+      node.appendChild(value);
+      chartMeta.appendChild(node);
+    });
+  }
+  function findEntry() {
+    var method = methodSelect.value;
+    var view = viewSelect.value;
+    var instance = instanceSelect.value;
+    return charts.find(function (chart) { return chart.method === method && chart.view === view && chart.instance === instance; }) ||
+      charts.find(function (chart) { return chart.method === method && chart.view === view; }) ||
+      charts.find(function (chart) { return chart.view === view; }) || charts[0];
+  }
+  function render() {
+    if (!charts.length) {
+      [viewSelect, methodSelect, instanceSelect].forEach(function (select) { select.disabled = true; });
+      chartObject.hidden = true;
+      openSvg.removeAttribute('href');
+      emptyState.hidden = false;
+      chartTitle.textContent = 'Gantt Chart';
+      countBadge.textContent = '0 charts';
+      return;
+    }
+    var entry = findEntry();
+    if (!entry) { return; }
+    viewSelect.value = entry.view;
+    methodSelect.value = entry.method;
+    instanceSelect.value = entry.instance;
+    chartObject.hidden = false;
+    emptyState.hidden = true;
+    chartObject.data = entry.path;
+    openSvg.href = entry.path;
+    chartTitle.textContent = entry.title;
+    renderMeta(entry);
+    countBadge.textContent = charts.length + ' charts';
+  }
+  setOptions(viewSelect, unique('view'), VIEW_LABELS);
+  setOptions(methodSelect, unique('method'));
+  setOptions(instanceSelect, unique('instance'));
+  [viewSelect, methodSelect, instanceSelect].forEach(function (select) { select.addEventListener('change', render); });
+  render();
+  if (COMPARISON_SVG) {
+    document.getElementById('comparisonSection').hidden = false;
+    document.getElementById('comparisonObject').data = COMPARISON_SVG;
+    document.getElementById('comparisonLink').href = COMPARISON_SVG;
+  }
+}());
+</script>
+</body>
+</html>

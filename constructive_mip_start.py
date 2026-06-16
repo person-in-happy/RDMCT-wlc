@@ -233,6 +233,7 @@ def build_mip_clean_20260508_start(model):
         _set(vals, f"full_pair_vtr_unload_start_{p}", unload[0])
         _set(vals, f"full_pair_vtr_unload_end_{p}", unload[1])
         _set(vals, f"full_pair_completion_{p}", unload[1])
+        _maybe(vals, names, f"full_pair_post_process_wait_{p}", unload[0] - window["pm"][1])
 
     for p, (m, pos) in mix_map.items():
         window = mix_window[m]
@@ -246,6 +247,7 @@ def build_mip_clean_20260508_start(model):
         _set(vals, f"mix_pair_vtr_unload_start_{p}", unload[0])
         _set(vals, f"mix_pair_vtr_unload_end_{p}", unload[1])
         _set(vals, f"mix_pair_completion_{p}", unload[1])
+        _maybe(vals, names, f"mix_pair_post_process_wait_{p}", unload[0] - pm[1])
         for other_m in cfg.pm_ids:
             for other_pos in range(1, cfg.num_mix_positions_per_pm + 1):
                 _maybe(vals, names, f"mix_pair_tail_link_{p}_{other_m}_{other_pos}", 1 if (m, pos) == (other_m, other_pos) and pos == 4 else 0)
@@ -377,6 +379,15 @@ def build_mip_clean_20260508_start(model):
             for family in ("clean_front_load", "clean_back_load", "clean", "clean_back_unload", "clean_front_unload"):
                 _maybe(vals, names, f"{family}_start_{m}_{j}", 0)
                 _maybe(vals, names, f"{family}_end_{m}_{j}", 0)
+        full_idle = sum(
+            full_window[(m, b)]["window"][1] - full_window[(m, b)]["window"][0] - cfg.full_process_time
+            for b in used_batches_by_pm[m]
+        )
+        mix_process = sum(end - start for start, end in mix_window[m]["cycles"].values())
+        mix_idle = mix_window[m]["block"][1] - mix_window[m]["block"][0] - mix_process
+        idle_total = full_idle + mix_idle
+        _maybe(vals, names, f"chamber_idle_total_{m}", idle_total)
+        _maybe(vals, names, f"chamber_idle_square_{m}", idle_total * idle_total)
 
     atr_tasks = []
     al_tasks = []

@@ -192,6 +192,9 @@ class PetriMIPConfig:
     max_robot_residency_time: float = 10000.0
     pm_balance_penalty: float = 0.01
     flow_time_penalty: float = 1e-6
+    chamber_idle_penalty: float = 1e-4
+    post_process_wait_penalty: float = 0.05
+    chamber_idle_square_penalty: float = 1e-5
     process_mode: str = PROCESS_MODE_AUTO
     mode_sequence: str = ""
     wafer_mode_map: str = ""
@@ -418,6 +421,9 @@ class PetriMIPConfig:
             self.max_robot_residency_time,
             self.pm_balance_penalty,
             self.flow_time_penalty,
+            self.chamber_idle_penalty,
+            self.post_process_wait_penalty,
+            self.chamber_idle_square_penalty,
         ) < 0:
             raise ValueError("All duration parameters must be non-negative.")
         full_capacity = 2 * self.num_pm * self.num_full_slots_per_pm
@@ -439,6 +445,17 @@ def _add_duration_cons(model, start_var, end_var, duration: float, name_prefix: 
     model.addCons(start_var <= 1000000.0 * active_var, name=f"{name_prefix}_start_cap")
     model.addCons(end_var <= 1000000.0 * active_var, name=f"{name_prefix}_end_cap")
     model.addCons(end_var == start_var + duration * active_var, name=f"{name_prefix}_duration")
+
+
+def _add_optional_gap_slack(model, slack_terms, later_start, earlier_end, active_var, big_m: float, name: str):
+    slack = model.addVar(vtype="C", lb=0.0, name=name)
+    model.addCons(
+        slack >= later_start - earlier_end - big_m * (1 - active_var),
+        name=f"{name}_lb",
+    )
+    model.addCons(slack <= big_m * active_var, name=f"{name}_cap")
+    slack_terms.append(slack)
+    return slack
 
 
 def _link_optional_stage(model, start_var, end_var, ref_start, ref_end, active_var, big_m: float, name_prefix: str) -> None:
@@ -578,6 +595,7 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
     mix_pair_ids = cfg.mix_pair_ids
     full_pair_loads = cfg.full_pair_product_loads
     mix_pair_loads = cfg.mix_pair_product_loads
+    chamber_idle_slacks = []
 
     product_lp_assign = {
         (w, lp): model.addVar(vtype="B", name=f"product_lp_assign_{w}_{lp}")
@@ -620,6 +638,11 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
         for m in pm_ids
         for b in full_batches
         for s in full_sides
+    }
+    full_batch_tail = {
+        (m, b): model.addVar(vtype="B", name=f"full_batch_tail_{m}_{b}")
+        for m in pm_ids
+        for b in full_batches
     }
 
     mix_pos_used = {
@@ -913,9 +936,25 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
         p: model.addVar(vtype="C", lb=0.0, name=f"full_pair_completion_{p}")
         for p in full_pair_ids
     }
+    full_pair_post_process_wait = {
+        p: model.addVar(vtype="C", lb=0.0, name=f"full_pair_post_process_wait_{p}")
+        for p in full_pair_ids
+    }
     mix_pair_completion = {
         p: model.addVar(vtype="C", lb=0.0, name=f"mix_pair_completion_{p}")
         for p in mix_pair_ids
+    }
+    mix_pair_post_process_wait = {
+        p: model.addVar(vtype="C", lb=0.0, name=f"mix_pair_post_process_wait_{p}")
+        for p in mix_pair_ids
+    }
+    chamber_idle_total = {
+        m: model.addVar(vtype="C", lb=0.0, name=f"chamber_idle_total_{m}")
+        for m in pm_ids
+    }
+    chamber_idle_square = {
+        m: model.addVar(vtype="C", lb=0.0, name=f"chamber_idle_square_{m}")
+        for m in pm_ids
     }
 
     for w in product_wafers:
@@ -1053,6 +1092,22 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 full_batch_used[(m, b)] >= full_batch_used[(m, b + 1)],
                 name=f"full_batch_prefix_{m}_{b}",
             )
+            model.addCons(
+                full_batch_tail[(m, b)] <= full_batch_used[(m, b)],
+                name=f"full_batch_tail_used_ub_{m}_{b}",
+            )
+            model.addCons(
+                full_batch_tail[(m, b)] <= 1 - full_batch_used[(m, b + 1)],
+                name=f"full_batch_tail_next_ub_{m}_{b}",
+            )
+            model.addCons(
+                full_batch_tail[(m, b)] >= full_batch_used[(m, b)] - full_batch_used[(m, b + 1)],
+                name=f"full_batch_tail_exact_{m}_{b}",
+            )
+        model.addCons(
+            full_batch_tail[(m, full_batches[-1])] == full_batch_used[(m, full_batches[-1])],
+            name=f"full_batch_tail_last_{m}",
+        )
 
         for r in mix_positions:
             assigned_mix = scip.quicksum(assign_mix[(p, m, r)] for p in mix_pair_ids)
@@ -1225,6 +1280,107 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 )
 
     for m in pm_ids:
+        for b in full_batches[:-1]:
+            if clean_slots:
+                for epoch in chamber_epochs:
+                    same_epoch = model.addVar(
+                        vtype="B",
+                        name=f"full_adjacent_same_epoch_{m}_{b}_{epoch}",
+                    )
+                    model.addCons(
+                        same_epoch <= full_batch_epoch[(m, b, epoch)],
+                        name=f"full_adjacent_same_epoch_left_ub_{m}_{b}_{epoch}",
+                    )
+                    model.addCons(
+                        same_epoch <= full_batch_epoch[(m, b + 1, epoch)],
+                        name=f"full_adjacent_same_epoch_right_ub_{m}_{b}_{epoch}",
+                    )
+                    model.addCons(
+                        same_epoch
+                        >= full_batch_epoch[(m, b, epoch)] + full_batch_epoch[(m, b + 1, epoch)] - 1,
+                        name=f"full_adjacent_same_epoch_exact_{m}_{b}_{epoch}",
+                    )
+                    _add_optional_gap_slack(
+                        model,
+                        chamber_idle_slacks,
+                        full_front_load_start[(m, b + 1)],
+                        full_front_unload_end[(m, b)],
+                        same_epoch,
+                        big_m,
+                        f"full_batch_idle_{m}_{b}_{b + 1}_{epoch}",
+                    )
+            else:
+                _add_optional_gap_slack(
+                    model,
+                    chamber_idle_slacks,
+                    full_front_load_start[(m, b + 1)],
+                    full_front_unload_end[(m, b)],
+                    full_batch_used[(m, b + 1)],
+                    big_m,
+                    f"full_batch_idle_{m}_{b}_{b + 1}",
+                )
+
+        for b in full_batches:
+            if clean_slots:
+                for epoch in chamber_epochs:
+                    same_epoch = model.addVar(
+                        vtype="B",
+                        name=f"full_tail_mix_same_epoch_{m}_{b}_{epoch}",
+                    )
+                    model.addCons(
+                        same_epoch <= full_batch_tail[(m, b)],
+                        name=f"full_tail_mix_same_epoch_tail_ub_{m}_{b}_{epoch}",
+                    )
+                    model.addCons(
+                        same_epoch <= full_batch_epoch[(m, b, epoch)],
+                        name=f"full_tail_mix_same_epoch_full_ub_{m}_{b}_{epoch}",
+                    )
+                    model.addCons(
+                        same_epoch <= mix_block_epoch[(m, epoch)],
+                        name=f"full_tail_mix_same_epoch_mix_ub_{m}_{b}_{epoch}",
+                    )
+                    model.addCons(
+                        same_epoch
+                        >= full_batch_tail[(m, b)]
+                        + full_batch_epoch[(m, b, epoch)]
+                        + mix_block_epoch[(m, epoch)]
+                        - 2,
+                        name=f"full_tail_mix_same_epoch_exact_{m}_{b}_{epoch}",
+                    )
+                    _add_optional_gap_slack(
+                        model,
+                        chamber_idle_slacks,
+                        mix_head_start[m],
+                        full_front_unload_end[(m, b)],
+                        same_epoch,
+                        big_m,
+                        f"full_to_mix_idle_{m}_{b}_{epoch}",
+                    )
+            else:
+                tail_to_mix = model.addVar(vtype="B", name=f"full_tail_to_mix_active_{m}_{b}")
+                model.addCons(
+                    tail_to_mix <= full_batch_tail[(m, b)],
+                    name=f"full_tail_to_mix_tail_ub_{m}_{b}",
+                )
+                model.addCons(
+                    tail_to_mix <= mix_active[m],
+                    name=f"full_tail_to_mix_mix_ub_{m}_{b}",
+                )
+                model.addCons(
+                    tail_to_mix >= full_batch_tail[(m, b)] + mix_active[m] - 1,
+                    name=f"full_tail_to_mix_exact_{m}_{b}",
+                )
+                _add_optional_gap_slack(
+                    model,
+                    chamber_idle_slacks,
+                    mix_head_start[m],
+                    full_front_unload_end[(m, b)],
+                    tail_to_mix,
+                    big_m,
+                    f"full_to_mix_idle_{m}_{b}",
+                )
+
+    for m in pm_ids:
         for b in full_batches:
             used = full_batch_used[(m, b)]
             _add_duration_cons(
@@ -1276,13 +1432,9 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 used,
                 cfg.pm_rotation_time_180,
             )
-            _add_precedence_lower_bound(
-                model,
-                full_start[(m, b)],
-                full_back_load_end[(m, b)],
-                big_m,
-                f"full_load_to_proc_lb_{m}_{b}",
-                used,
+            model.addCons(
+                full_start[(m, b)] == full_back_load_end[(m, b)],
+                name=f"full_load_to_proc_sync_{m}_{b}",
             )
             _add_precedence_lower_bound(
                 model,
@@ -1475,6 +1627,15 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
             f"mix_head_to_cycle_lb_{m}",
             mix_active[m],
         )
+        _add_optional_gap_slack(
+            model,
+            chamber_idle_slacks,
+            mix_cycle_start[(m, 1)],
+            mix_head_end[m],
+            mix_active[m],
+            big_m,
+            f"mix_head_idle_{m}",
+        )
 
         for c in mix_cycles[1:]:
             used = mix_cycle_used[(m, c)]
@@ -1494,6 +1655,15 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 f"mix_cycle_to_bridge_lb_{m}_{c}",
                 used,
             )
+            _add_optional_gap_slack(
+                model,
+                chamber_idle_slacks,
+                mix_bridge_start[(m, c)],
+                mix_cycle_end[(m, c - 1)],
+                used,
+                big_m,
+                f"mix_cycle_to_bridge_idle_{m}_{c}",
+            )
             _add_precedence_lower_bound(
                 model,
                 mix_cycle_start[(m, c)],
@@ -1501,6 +1671,15 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 big_m,
                 f"mix_bridge_to_cycle_lb_{m}_{c}",
                 used,
+            )
+            _add_optional_gap_slack(
+                model,
+                chamber_idle_slacks,
+                mix_cycle_start[(m, c)],
+                mix_bridge_end[(m, c)],
+                used,
+                big_m,
+                f"mix_bridge_to_cycle_idle_{m}_{c}",
             )
 
         model.addCons(
@@ -1557,6 +1736,15 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
             big_m,
             f"mix_last_cycle_to_tail_lb_{m}",
             mix_active[m],
+        )
+        _add_optional_gap_slack(
+            model,
+            chamber_idle_slacks,
+            mix_tail_start[m],
+            mix_last_cycle_end[m],
+            mix_active[m],
+            big_m,
+            f"mix_tail_idle_{m}",
         )
 
         for b in full_batches:
@@ -1642,6 +1830,10 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
         model.addCons(
             full_pair_completion[p] == full_pair_vtr_unload_end[p],
             name=f"full_pair_completion_def_{p}",
+        )
+        model.addCons(
+            full_pair_post_process_wait[p] == full_pair_vtr_unload_start[p] - full_pair_pm_end[p],
+            name=f"full_pair_post_process_wait_def_{p}",
         )
 
     mix_pair_mid_link = {}
@@ -1740,6 +1932,10 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
         model.addCons(
             mix_pair_completion[p] == mix_pair_vtr_unload_end[p],
             name=f"mix_pair_completion_def_{p}",
+        )
+        model.addCons(
+            mix_pair_post_process_wait[p] == mix_pair_vtr_unload_start[p] - mix_pair_pm_end[p],
+            name=f"mix_pair_post_process_wait_def_{p}",
         )
 
     product_stage_order = [
@@ -2415,6 +2611,33 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
     _add_parallel_slot_resource(model, lllower_tasks, 2, big_m, "lllower_slot_assign", "seq_lllower")
     _add_unary_resource_no_overlap(model, vtr_tasks, big_m, "seq_vtr")
 
+    for m in pm_ids:
+        full_idle_expr = scip.quicksum(
+            full_front_unload_end[(m, b)]
+            - full_front_load_start[(m, b)]
+            - cfg.full_process_time * full_batch_used[(m, b)]
+            for b in full_batches
+        )
+        mix_process_expr = scip.quicksum(
+            mix_cycle_end[(m, c)] - mix_cycle_start[(m, c)]
+            for c in mix_cycles
+        )
+        mix_idle_expr = mix_block_end[m] - mix_head_start[m] - mix_process_expr
+        clean_idle_expr = scip.quicksum(
+            clean_front_unload_end[(m, clean_slot)]
+            - clean_front_load_start[(m, clean_slot)]
+            - (clean_end[(m, clean_slot)] - clean_start[(m, clean_slot)])
+            for clean_slot in clean_slots
+        )
+        model.addCons(
+            chamber_idle_total[m] == full_idle_expr + mix_idle_expr + clean_idle_expr,
+            name=f"chamber_idle_total_def_{m}",
+        )
+        model.addCons(
+            chamber_idle_square[m] >= chamber_idle_total[m] * chamber_idle_total[m],
+            name=f"chamber_idle_square_def_{m}",
+        )
+
     c_max = model.addVar(vtype="C", lb=0.0, name="c_max")
     for w in product_wafers:
         model.addCons(c_max >= wafer_completion[w], name=f"makespan_lb_{w}")
@@ -2426,9 +2649,18 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
         and cfg.pm_balance_penalty > 0
     ):
         objective = objective + cfg.pm_balance_penalty * (full_pm_imbalance + mix_pm_imbalance)
+    if cfg.chamber_idle_penalty > 0 and chamber_idle_slacks:
+        objective = objective + cfg.chamber_idle_penalty * scip.quicksum(chamber_idle_slacks)
+    post_process_wait_terms = list(full_pair_post_process_wait.values()) + list(mix_pair_post_process_wait.values())
+    if cfg.post_process_wait_penalty > 0 and post_process_wait_terms:
+        objective = objective + cfg.post_process_wait_penalty * scip.quicksum(post_process_wait_terms)
     if cfg.flow_time_penalty > 0:
         objective = objective + cfg.flow_time_penalty * scip.quicksum(
             wafer_completion[w] for w in product_wafers
+        )
+    if cfg.chamber_idle_square_penalty > 0:
+        objective = objective + cfg.chamber_idle_square_penalty * scip.quicksum(
+            chamber_idle_square[m] for m in pm_ids
         )
 
     model.setObjective(objective, "minimize")
@@ -2488,7 +2720,8 @@ Compared with the previous chamber-level MIP, this version explicitly schedules:
 6. when each CH performs mandatory pure-PEC cleaning after a configurable number of full-chamber process cycles
 7. the final return time of every product wafer back to `LP`
 
-The objective is therefore the true end-to-end makespan from the first LP pick to the last LP return.
+The objective keeps the true end-to-end makespan and adds secondary penalties for balance,
+chamber compactness, post-process unload waiting, flow time, and squared chamber idle time.
 
 ## Product Input Semantics
 
@@ -2513,7 +2746,9 @@ Embedded PEC wafers forced by odd product counts: `{embedded_pec}`.
 - a pure `PEC+PEC` filler side is allowed only on the tail `4x1` batch of a chamber sequence. Earlier active `4x1` batches must carry two product PW pairs.
 - `2x2`: product PW pairs form one contiguous prefix block on a chamber, with one pure PEC pair at the head and one pure PEC pair at the tail.
 - per chamber, every active `4x1` batch must finish before that chamber's `2x2` block begins, matching the disclosure rule that `4x1` is completed before `2x2`.
-- time continuity is relaxed to precedence: downstream stages may wait, but they cannot start before the required transfer or process has finished. For `AL`, `LLupper`, and `LLlower`, that waiting time still occupies the physical module until the outbound transfer starts.
+- for every `4x1` batch, PM processing starts exactly when the second side finishes loading, so a full chamber cannot wait before processing (`full_start == full_back_load_end`).
+- downstream stages may wait, but they cannot start before the required transfer or process has finished. For `AL`, `LLupper`, and `LLlower`, that waiting time still occupies the physical module until the outbound transfer starts.
+- chamber compactness slack measures avoidable gaps between adjacent `4x1` batches, between the tail `4x1` batch and the `2x2` block, and inside the `2x2` head/bridge/tail chain. A small objective penalty pulls those gaps toward zero without making the model infeasible when upstream resources are genuinely unavailable.
 - product wafers inherit chamber transfer/process timing from the PW pair to which they belong.
 - `AL` has one physical slot and remains occupied until the outbound `ATR` move to `LLupper` finishes, so two adjacent
   `AL` calibrations must include the required `ATR` unload/load operations between them.
@@ -2552,16 +2787,22 @@ Embedded PEC wafers forced by odd product counts: `{embedded_pec}`.
 - max robot residency time: `{cfg.max_robot_residency_time:.1f}`
 - PM balance penalty: `{cfg.pm_balance_penalty:.4f}`
 - flow-time continuity penalty: `{cfg.flow_time_penalty:.8f}`
+- chamber idle compactness penalty: `{cfg.chamber_idle_penalty:.8f}`
+- post-process unload wait penalty: `{cfg.post_process_wait_penalty:.8f}`
+- chamber idle square penalty: `{cfg.chamber_idle_square_penalty:.8f}`
 
 ## Main Variable Families
 
 - `product_lp_assign_*`: product wafer to LP assignment
 - `wafer_to_full_pair_*`, `wafer_to_mix_pair_*`: product wafer to PW-pair assignment
 - `assign_full_*`, `assign_mix_*`: PW-pair to `4x1` batch-side / `2x2` chain-position assignment
-- `full_batch_used_*`, `full_filler_side_*`
+- `full_batch_used_*`, `full_filler_side_*`, `full_batch_tail_*`
 - `full_front_load_*`, `full_back_load_*`, `full_back_unload_*`, `full_front_unload_*`
 - `mix_pos_used_*`, `mix_cycle_used_*`, `mix_active_*`, `mix_last_cycle_*`, `mix_last_pos_*`
 - `clean_active_*`, `clean_front_load_*`, `clean_back_load_*`, `clean_*`, `clean_back_unload_*`, `clean_front_unload_*`
+- `full_batch_idle_*`, `full_to_mix_idle_*`, `mix_*_idle_*`: soft compactness slacks for avoidable chamber gaps
+- `full_pair_post_process_wait_*`, `mix_pair_post_process_wait_*`: product PW-pair wait from PM process end to unload start
+- `chamber_idle_total_*`, `chamber_idle_square_*`: total per-CH time that is neither processing nor cleaning, plus its squared epigraph variable
 - `process_epoch_used_*`, `full_batch_epoch_*`, `mix_block_epoch_*`, `mix_cycle_epoch_*`: cleaning-separated chamber process epochs
 - `prod_stage_start_*`, `prod_stage_end_*`: full product-wafer path stages
 - `pec_stage_start_*`, `pec_stage_end_*`: PEC circulation stages
@@ -2571,10 +2812,13 @@ Embedded PEC wafers forced by odd product counts: `{embedded_pec}`.
 
 ## Objective
 
-`min c_max + lambda * (full_pm_imbalance + mix_pm_imbalance) + epsilon * sum(wafer_completion)`, where `c_max`
-is the latest product wafer return time to `LP`, `lambda = {cfg.pm_balance_penalty:.4f}` softly encourages the `4x1`
-and `2x2` product work to be shared across both chambers, and `epsilon = {cfg.flow_time_penalty:.8f}` favors earlier
-wafer completions among schedules with the same or nearly same makespan.
+`min c_max
++ lambda * (full_pm_imbalance + mix_pm_imbalance)
++ gamma * sum(chamber_idle_slack)
++ eta * sum(pair_post_process_wait)
++ epsilon * sum(wafer_completion)
++ rho * sum_m chamber_idle_square_m`,
+where `chamber_idle_square_m >= chamber_idle_total_m^2`.
 
 ## Output Files
 
@@ -2639,6 +2883,24 @@ def main() -> None:
         help="Small secondary objective weight that pulls wafer completions earlier for smoother continuous flow.",
     )
     parser.add_argument(
+        "--chamber_idle_penalty",
+        type=float,
+        default=1e-4,
+        help="Secondary objective weight that compacts avoidable gaps between chamber processing groups.",
+    )
+    parser.add_argument(
+        "--post_process_wait_penalty",
+        type=float,
+        default=0.05,
+        help="Secondary objective weight for product PW-pair waiting from PM process end to VTR unload start.",
+    )
+    parser.add_argument(
+        "--chamber_idle_square_penalty",
+        type=float,
+        default=1e-5,
+        help="Secondary objective weight for sum of squared chamber non-process/non-clean idle time.",
+    )
+    parser.add_argument(
         "--process_mode",
         type=str,
         default=PROCESS_MODE_AUTO,
@@ -2687,6 +2949,9 @@ def main() -> None:
         max_robot_residency_time=args.max_robot_residency_time,
         pm_balance_penalty=args.pm_balance_penalty,
         flow_time_penalty=args.flow_time_penalty,
+        chamber_idle_penalty=args.chamber_idle_penalty,
+        post_process_wait_penalty=args.post_process_wait_penalty,
+        chamber_idle_square_penalty=args.chamber_idle_square_penalty,
         process_mode=args.process_mode,
         mode_sequence=args.mode_sequence,
         wafer_mode_map=args.wafer_mode_map,

@@ -1,15 +1,15 @@
 {
   "experiment": {
     "seed": 1,
-    "exp_prefix": "mip_rl_beam",
-    "base_log_dir": "data/mip_rl_beam_clean_20260508.lp_transfer/mip_rl_beam_clean_20260508.lp_transfer_2026_05_08_11_01_44_0000--s-1",
+    "exp_prefix": "",
+    "base_log_dir": "data/mip_20260614",
     "snapshot_mode": "gap_and_last",
     "snapshot_gap": 1
   },
   "env": {
-    "instance_file_path": "generated_instances/MIP",
+    "instance_file_path": "generated_instances/train",
     "scip_time_limit": 800,
-    "single_instance_file": "mip_clean_20260508.lp",
+    "single_instance_file": "mip_fullflow_train_20260611.lp",
     "presolving": true,
     "separating": true,
     "conflict": true,
@@ -28,7 +28,7 @@
     "batch_size": 8,
     "train_decode_type": "stochastic",
     "evaluate_decode_type": "greedy",
-    "reward_type": "solving_time",
+    "reward_type": "primaldualintegral",
     "baseline_type": "simple",
     "critic_beta": 0.9,
     "train_steps_per_epoch": 2,
@@ -66,15 +66,15 @@
     "multi_devices": ["0"]
   },
   "test_kwargs": {
-    "test_instance_path": "generated_instances/MIP",
-    "test_model_path": "data/mip_rl_beam_clean_20260508.lp_transfer/mip_rl_beam_clean_20260508.lp_transfer_2026_05_08_11_01_44_0000--s-1/mip_rl_beam_mip_clean_20260508.lp_petri_transfer/mip_rl_beam_mip_clean_20260508.lp_petri_transfer_2026_05_12_10_02_27_0000--s-1/params.pkl",
-    "n_jobs": 1
+    "test_instance_path": "generated_instances/test",
+    "test_model_path": "data/mip_20260614/params.pkl",
+    "n_jobs": 2
   },
   "evaluate_kwargs": {
-    "test_instance_path": "generated_instances/MIP",
-    "test_n_jobs": 1,
+    "test_instance_path": "generated_instances/train",
+    "test_n_jobs": 2,
     "test_env_kwargs": {
-      "scip_time_limit": 3000,
+      "scip_time_limit": 300,
       "single_instance_file": "all",
       "presolving": true,
       "separating": true,
@@ -84,11 +84,11 @@
     }
   },
   "online_test_kwargs": {
-    "test_freq": 2,
-    "test_instance_path": "generated_instances/MIP",
+    "test_freq": 10,
+    "test_instance_path": "generated_instances/test",
     "test_n_jobs": 1,
     "test_env_kwargs": {
-      "scip_time_limit": 3000,
+      "scip_time_limit": 800,
       "single_instance_file": "all",
       "presolving": true,
       "separating": true,
@@ -97,5 +97,55 @@
       "max_rounds_root": 1
     }
   },
-  "start_epoch": 0
+  "start_epoch": 0,
+  "_config_notes": {
+    "说明": "JSON 文件不能写 // 注释，所以把说明统一放在这个 _config_notes 里面。训练程序只读取 env、algorithm、trainer 等正式字段，不会把这里当作训练参数。",
+    "这个配置适合什么时候用": "这是 test 正式训练配置，比 quick 配置重很多。它适合在快速流程已经跑通以后，再用来做更长时间、更认真、更可记录结果的训练。",
+    "常用训练命令": "python parallel_reinforce_algorithm.py --config_file configs\\petri_mip_test_config.json --train_type train --generate_petri_instance False --single_instance_file <实际生成的lp文件名> --sel_cuts_percent 0.2 --reward_type primaldualintegral --baseline_type simple --policy_type with_token --use_cutsel_percent_policy True --seed 1 --scip_seed 1 --instance_type petri_transfer",
+    "为什么这个配置会慢": [
+      "algorithm.evaluate_freq=1 表示每一轮训练都要额外评估一次模型。",
+      "online_test_kwargs.test_freq=2 表示每 2 轮还要额外做一次在线测试。",
+      "evaluate_kwargs.test_env_kwargs.scip_time_limit=3000 表示评估时每个实例最多跑 3000 秒。",
+      "online_test_kwargs.test_env_kwargs.scip_time_limit=3000 表示在线测试时每个实例也最多跑 3000 秒。",
+      "如果测试目录里有多个 LP 文件，评估和在线测试会对每个文件都跑 SCIP，所以很容易一轮就花几个小时。"
+    ],
+    "新手先看这几项": [
+      "experiment.base_log_dir：训练结果保存在哪里。里面会有 progress.csv、params.pkl、itr_*.pkl 等文件。",
+      "experiment.exp_prefix：实验名字前缀。改它可以让不同实验的文件夹名字更好区分。",
+      "env.instance_file_path：训练实例所在文件夹。你生成 LP 文件时的 --output_dir 是什么，这里通常就要写什么。",
+      "env.single_instance_file：默认读取哪个 LP 文件。命令行里的 --single_instance_file 会覆盖它，所以训练时一般直接在命令里填真实文件名。",
+      "env.scip_time_limit：每个训练样本最多让 SCIP 求解多少秒。它是训练采样阶段最重要的耗时开关。",
+      "algorithm.reward_type：奖励指标。solving_time 偏向求解速度；primaldualintegral 偏向求解过程质量和 gap 表现。",
+      "algorithm.num_epochs：训练总轮数。越大训练越久，模型更新次数也越多。",
+      "algorithm.evaluate_freq：训练中评估频率。1 表示每轮评估，0 表示关闭，5 表示每 5 轮评估一次。",
+      "trainer.samples_per_epoch：每轮收集多少个训练样本。越大数据越多，但每轮越慢。",
+      "trainer.n_jobs：同时开几个采样进程。开大可以并行，但会更吃 CPU 和内存。",
+      "evaluate_kwargs.test_instance_path：训练中评估用的实例文件夹，不一定和训练实例文件夹一样。",
+      "evaluate_kwargs.test_env_kwargs.scip_time_limit：评估时每个实例最多跑多少秒。这个值大时，训练会非常慢。",
+      "online_test_kwargs.test_freq：训练过程中额外测试的频率。0 表示关闭。",
+      "test_kwargs.test_model_path：测试时读取哪个模型。latest 表示自动找最新模型；写具体 params.pkl 路径表示固定使用那个模型。"
+    ],
+    "参数怎么改会有什么影响": [
+      "想明显加速训练：先把 algorithm.evaluate_freq 改成 0，再把 online_test_kwargs.test_freq 改成 0。",
+      "想保留少量观察：把 algorithm.evaluate_freq 改成 5 或 10，不要每轮都评估。",
+      "想让评估不要太慢：把 evaluate_kwargs.test_env_kwargs.scip_time_limit 从 3000 改成 300 或 600。",
+      "想让在线测试不要太慢：把 online_test_kwargs.test_env_kwargs.scip_time_limit 从 3000 改成 300 或 600。",
+      "想训练更久：把 algorithm.num_epochs 调大。",
+      "想每轮训练数据更多：把 trainer.samples_per_epoch 调大，但会明显增加每轮时间。",
+      "想单个训练样本求解更充分：把 env.scip_time_limit 调大，但训练采样会更慢。",
+      "想只测试模型不训练：运行命令时用 --train_type test，并确认 test_kwargs.test_instance_path 和 test_kwargs.test_model_path 正确。"
+    ],
+    "正式训练建议": [
+      "第一步先用 quick 配置跑通流程，确认实例能读取、模型能保存、测试能跑。",
+      "第二步再用这个 test 配置，把 env.instance_file_path 和 --single_instance_file 改成正式训练实例。",
+      "第三步根据机器性能决定是否打开评估。如果只是想先训练出模型，可以先关闭 evaluate_freq 和 online_test test_freq。",
+      "第四步训练结束后，再单独用 --train_type test 或 run_petri_a3c_beam.py 做正式测试。"
+    ],
+    "最容易踩坑的地方": [
+      "生成实例的 output_dir 必须和 env.instance_file_path 对上，否则训练找不到 LP 文件。",
+      "LP 文件名一般会自动加日期后缀，训练时 --single_instance_file 要填真实生成出来的完整文件名。",
+      "--time_limit 对训练不一定生效；训练单次 SCIP 时间主要看 env.scip_time_limit。",
+      "如果训练突然变得特别慢，优先检查 algorithm.evaluate_freq、online_test_kwargs.test_freq、evaluate_kwargs.test_env_kwargs.scip_time_limit 和 online_test_kwargs.test_env_kwargs.scip_time_limit。"
+    ]
+  }
 }

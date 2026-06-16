@@ -2,11 +2,12 @@
 import argparse
 import json
 import math
+import os
 import re
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-from path_utils import resolve_path
+from path_utils import is_latest_keyword, latest_matching_file, resolve_path
 
 
 ASSIGN_PROD_RE = re.compile(r"assign_prod_(\d+)_(\d+)_(\d+)$")
@@ -109,6 +110,10 @@ def _escape(text: str) -> str:
         .replace(">", "&gt;")
         .replace('"', "&quot;")
     )
+
+
+def _escape_attr(text: str) -> str:
+    return _escape(text).replace("\r", "").replace("\n", "&#10;")
 
 
 def _wrap_text(text: str, max_chars: int, max_lines: int = 3) -> List[str]:
@@ -1720,12 +1725,140 @@ def _render_floating_task_label(
     return f'<text class="{text_class}" x="{x:.2f}" y="{y:.2f}"{anchor_attr}>' + "".join(tspan) + "</text>"
 
 
+def _format_meta_value(value) -> str:
+    if value is None:
+        return "n/a"
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            return "n/a"
+        return f"{value:.3f}"
+    return str(value)
+
+
+def _format_time_value(value) -> str:
+    try:
+        numeric = float(value)
+    except Exception:
+        return "n/a"
+    if not math.isfinite(numeric):
+        return "n/a"
+    return f"{numeric:.3f}"
+
+
+def _task_tooltip_text(task: Dict[str, object], lane_name: str) -> str:
+    full_label = str(task.get("label", "")).strip()
+    short_label = str(task.get("short_label", "")).strip()
+    label = full_label or short_label or lane_name
+    start = _float(task.get("start", 0.0))
+    end = _float(task.get("end", 0.0))
+    lines = [line for line in label.splitlines() if line.strip()]
+    lines.extend(
+        [
+            f"lane: {lane_name}",
+            f"start: {_format_time_value(start)}",
+            f"end: {_format_time_value(end)}",
+            f"duration: {_format_time_value(end - start)}",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _svg_tooltip_markup() -> List[str]:
+    return [
+        '<g id="gantt-tooltip" visibility="hidden" pointer-events="none">',
+        '<rect id="gantt-tooltip-bg" x="0" y="0" width="180" height="42" rx="6" ry="6" fill="#ffffff" stroke="#25313C" stroke-width="1.2" opacity="0.96"/>',
+        '<text id="gantt-tooltip-text" class="tooltip-text" x="10" y="18"></text>',
+        "</g>",
+        '<script type="application/ecmascript"><![CDATA[',
+        "(function () {",
+        "  var svg = document.documentElement;",
+        "  var tooltip = document.getElementById('gantt-tooltip');",
+        "  var bg = document.getElementById('gantt-tooltip-bg');",
+        "  var text = document.getElementById('gantt-tooltip-text');",
+        "  if (!tooltip || !bg || !text || !svg.createSVGPoint) { return; }",
+        "  var maxChars = 58;",
+        "  function wrapLine(line) {",
+        "    line = String(line || '').trim();",
+        "    if (!line) { return ['']; }",
+        "    var words = line.split(/\\s+/);",
+        "    var lines = [];",
+        "    var current = '';",
+        "    for (var i = 0; i < words.length; i += 1) {",
+        "      var word = words[i];",
+        "      var next = current ? current + ' ' + word : word;",
+        "      if (next.length > maxChars && current) {",
+        "        lines.push(current);",
+        "        current = word;",
+        "      } else {",
+        "        current = next;",
+        "      }",
+        "    }",
+        "    if (current) { lines.push(current); }",
+        "    return lines.length ? lines : [line];",
+        "  }",
+        "  function setTooltip(label) {",
+        "    while (text.firstChild) { text.removeChild(text.firstChild); }",
+        "    var rawLines = String(label || '').split(/\\n/);",
+        "    var lines = [];",
+        "    for (var i = 0; i < rawLines.length; i += 1) {",
+        "      var wrapped = wrapLine(rawLines[i]);",
+        "      for (var j = 0; j < wrapped.length; j += 1) { lines.push(wrapped[j]); }",
+        "    }",
+        "    var widest = 0;",
+        "    for (var k = 0; k < lines.length; k += 1) {",
+        "      widest = Math.max(widest, lines[k].length);",
+        "      var tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');",
+        "      tspan.setAttribute('x', '10');",
+        "      tspan.setAttribute('dy', k === 0 ? '0' : '16');",
+        "      tspan.textContent = lines[k];",
+        "      text.appendChild(tspan);",
+        "    }",
+        "    bg.setAttribute('width', String(Math.max(170, widest * 7.2 + 22)));",
+        "    bg.setAttribute('height', String(Math.max(36, lines.length * 16 + 14)));",
+        "  }",
+        "  function eventPoint(evt) {",
+        "    var point = svg.createSVGPoint();",
+        "    point.x = evt.clientX;",
+        "    point.y = evt.clientY;",
+        "    return point.matrixTransform(svg.getScreenCTM().inverse());",
+        "  }",
+        "  function move(evt) {",
+        "    var p = eventPoint(evt);",
+        "    var width = parseFloat(bg.getAttribute('width')) || 180;",
+        "    var height = parseFloat(bg.getAttribute('height')) || 42;",
+        "    var vb = svg.viewBox.baseVal;",
+        "    var x = p.x + 14;",
+        "    var y = p.y + 14;",
+        "    if (x + width > vb.x + vb.width - 10) { x = p.x - width - 14; }",
+        "    if (y + height > vb.y + vb.height - 10) { y = p.y - height - 14; }",
+        "    tooltip.setAttribute('transform', 'translate(' + Math.max(8, x) + ',' + Math.max(8, y) + ')');",
+        "  }",
+        "  function show(evt) {",
+        "    var label = this.getAttribute('data-tooltip') || '';",
+        "    if (!label) { return; }",
+        "    setTooltip(label);",
+        "    tooltip.setAttribute('visibility', 'visible');",
+        "    move(evt);",
+        "  }",
+        "  function hide() { tooltip.setAttribute('visibility', 'hidden'); }",
+        "  var tasks = svg.querySelectorAll('.task[data-tooltip]');",
+        "  for (var i = 0; i < tasks.length; i += 1) {",
+        "    tasks[i].addEventListener('mouseenter', show);",
+        "    tasks[i].addEventListener('mousemove', move);",
+        "    tasks[i].addEventListener('mouseleave', hide);",
+        "  }",
+        "}());",
+        "]]></script>",
+    ]
+
+
 def _render_svg(record: Dict[str, object], schedule: Dict[str, object], output_file: Path) -> None:
     lanes = schedule["lanes"]
     horizon = float(schedule["horizon"])
     c_max = float(schedule["c_max"])
     title_suffix = str(schedule.get("title_suffix", "Scheduling Gantt"))
     wph_stats = schedule.get("wph_stats")
+    show_static_labels = bool(schedule.get("show_static_labels", False))
 
     label_rows: Dict[str, List[List[Tuple[float, float]]]] = {}
     label_bottom_by_lane: Dict[str, float] = {}
@@ -1798,15 +1931,16 @@ def _render_svg(record: Dict[str, object], schedule: Dict[str, object], output_f
         width = max(_time_to_x(float(task["end"]), horizon) - x, 2.0)
         draw = {"task": task, "lane": lane_name, "x": x, "width": width}
         task_draws.append(draw)
-        label_spec = _make_label(task, x, width)
-        if label_spec:
-            row_idx = _assign_label_row(lane_name, label_spec)
-            label_spec["row"] = row_idx
-            label_spec["lane"] = lane_name
-            label_spec["task_idx"] = task_idx
-            task_labels.append(label_spec)
-            label_bottom = 13.5 + row_idx * LABEL_ROW_HEIGHT + float(label_spec["height"]) + 6.0
-            label_bottom_by_lane[lane_name] = max(label_bottom_by_lane.get(lane_name, 0.0), label_bottom)
+        if show_static_labels:
+            label_spec = _make_label(task, x, width)
+            if label_spec:
+                row_idx = _assign_label_row(lane_name, label_spec)
+                label_spec["row"] = row_idx
+                label_spec["lane"] = lane_name
+                label_spec["task_idx"] = task_idx
+                task_labels.append(label_spec)
+                label_bottom = 13.5 + row_idx * LABEL_ROW_HEIGHT + float(label_spec["height"]) + 6.0
+                label_bottom_by_lane[lane_name] = max(label_bottom_by_lane.get(lane_name, 0.0), label_bottom)
 
     lane_heights: Dict[str, float] = {}
     for lane_name in lanes:
@@ -1830,14 +1964,17 @@ def _render_svg(record: Dict[str, object], schedule: Dict[str, object], output_f
         '.tick { font-size: 11px; fill: #666; }'
         '.bartext { font-size: 11px; fill: #fff; font-weight: 600; paint-order: stroke; stroke: #1f1f1f; stroke-width: 2px; stroke-linejoin: round; }'
         '.bartext-outside { font-size: 10px; fill: #222; font-weight: 600; paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }'
+        '.task rect { cursor: pointer; }'
+        '.task:hover rect { fill-opacity: 1; stroke: #111827; stroke-width: 2.4px; }'
         '.marker { font-size: 11px; fill: #333; }'
         '.wph { font-size: 14px; fill: #222; font-weight: 600; }'
         '.wph-detail { font-size: 13px; fill: #555; }'
+        '.tooltip-text { font-size: 12px; fill: #111827; font-weight: 600; }'
         '</style>',
         f'<rect x="0" y="0" width="{SVG_WIDTH}" height="{height}" fill="#ffffff"/>',
         f'<text class="title" x="{LEFT_MARGIN}" y="38">{_escape(Path(str(record.get("instance", "instance"))).stem)} {_escape(title_suffix)}</text>',
-        f'<text class="subtitle" x="{LEFT_MARGIN}" y="66">status={_escape(record.get("status", "unknown"))} | best_obj={_escape(record.get("best_obj", "None"))} | c_max={c_max:.3f}</text>',
-        f'<text class="subtitle" x="{LEFT_MARGIN}" y="88">Bar labels and hover titles include product W ids or PEC token ids; narrow bars are clipped to avoid overlap.</text>',
+        f'<text class="subtitle" x="{LEFT_MARGIN}" y="66">method={_escape(record.get("method", "single_result"))} | status={_escape(record.get("status", "unknown"))} | best_obj={_escape(_format_meta_value(record.get("best_obj")))}</text>',
+        f'<text class="subtitle" x="{LEFT_MARGIN}" y="88">c_max={c_max:.3f} | horizon={horizon:.3f} | view={_escape(schedule.get("layout", "full"))}</text>',
     ]
 
     tick_count = min(max(int(math.ceil(horizon / 20.0)), 5), 12)
@@ -1865,8 +2002,10 @@ def _render_svg(record: Dict[str, object], schedule: Dict[str, object], output_f
         full_label = str(task.get("label", "")).strip()
         short_label = str(task.get("short_label", "")).strip()
         hover_label = full_label or short_label or str(task["lane"])
+        tooltip_label = _task_tooltip_text(task, str(draw["lane"]))
+        fill_color = _escape_attr(str(task.get("color", "#999999")))
         parts.append(
-            f'<g><title>{_escape(hover_label)}</title><rect x="{x:.2f}" y="{y:.2f}" width="{width:.2f}" height="{BAR_HEIGHT}" rx="4" ry="4" fill="{task["color"]}" fill-opacity="0.9" stroke="#2f2f2f" stroke-width="0.7"/></g>'
+            f'<g class="task" data-tooltip="{_escape_attr(tooltip_label)}"><title>{_escape(hover_label)}</title><rect x="{x:.2f}" y="{y:.2f}" width="{width:.2f}" height="{BAR_HEIGHT}" rx="4" ry="4" fill="{fill_color}" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>'
         )
 
     for marker in schedule["markers"]:
@@ -1935,6 +2074,7 @@ def _render_svg(record: Dict[str, object], schedule: Dict[str, object], output_f
             "</text>"
         )
 
+    parts.extend(_svg_tooltip_markup())
     parts.append("</svg>")
     output_file.write_text("\n".join(parts), encoding="utf-8")
 
@@ -2004,7 +2144,14 @@ def _diagnose_solution_payload(payload, records: List[Dict[str, object]]) -> Lis
 
 
 def _load_solution_payload(solution_json: str):
-    solution_path = resolve_path(solution_json)
+    if is_latest_keyword(solution_json):
+        solution_path = latest_matching_file(
+            "petri_transfer_use_hrl_Trueheuristics_cutsel",
+            "*solutions*.json",
+            "solution JSON",
+        )
+    else:
+        solution_path = resolve_path(solution_json)
     with solution_path.open("r", encoding="utf-8") as f:
         payload = json.load(f)
     records = _normalize_records(payload)
@@ -2025,17 +2172,269 @@ def _gantt_output_name(file_stem: str, view: str) -> str:
     return f"{file_stem}_gantt.svg"
 
 
-def generate_gantt_charts_from_records(records: List[Dict[str, object]], output_dir: str, view: str = "full") -> List[str]:
+VIEW_DISPLAY_NAMES = {
+    "full": "Full process",
+    "chambers": "Chamber modules",
+    "resources": "Resources",
+}
+
+
+def _html_relpath(target_path: Path, base_dir: Path) -> str:
+    try:
+        return os.path.relpath(str(target_path), str(base_dir)).replace("\\", "/")
+    except Exception:
+        return str(target_path).replace("\\", "/")
+
+
+def _json_script_payload(payload) -> str:
+    return json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
+
+
+def _safe_file_part(text: str) -> str:
+    cleaned = re.sub(r"[^0-9A-Za-z_-]+", "_", str(text).strip()).strip("_")
+    return cleaned or "result"
+
+
+def _unique_file_stem(base_stem: str, seen_counts: Dict[str, int]) -> str:
+    count = seen_counts.get(base_stem, 0)
+    seen_counts[base_stem] = count + 1
+    if count == 0:
+        return base_stem
+    return f"{base_stem}_{count + 1}"
+
+
+def _chart_entry(
+    record: Dict[str, object],
+    schedule: Dict[str, object],
+    view_name: str,
+    output_file: Path,
+    out_dir: Path,
+) -> Dict[str, str]:
+    method_name = str(record.get("method", "") or "single_result")
+    instance_name = str(record.get("instance", "instance") or "instance")
+    wph_stats = schedule.get("wph_stats") if isinstance(schedule.get("wph_stats"), dict) else {}
+    wph = _format_meta_value(wph_stats.get("wph")) if isinstance(wph_stats, dict) else "n/a"
+    return {
+        "path": _html_relpath(output_file, out_dir),
+        "view": view_name,
+        "view_label": VIEW_DISPLAY_NAMES.get(view_name, view_name),
+        "method": method_name,
+        "instance": instance_name,
+        "status": str(record.get("status", "unknown") or "unknown"),
+        "best_obj": _format_meta_value(record.get("best_obj")),
+        "solving_time": _format_meta_value(record.get("solving_time")),
+        "c_max": _format_meta_value(schedule.get("c_max")),
+        "horizon": _format_meta_value(schedule.get("horizon")),
+        "wph": wph,
+        "title": f"{Path(instance_name).stem} / {method_name} / {VIEW_DISPLAY_NAMES.get(view_name, view_name)}",
+    }
+
+
+def _write_interactive_gantt_frontend(
+    out_dir: Path,
+    chart_entries: List[Dict[str, str]],
+    comparison_svg: str = "",
+) -> List[str]:
+    comparison_rel = ""
+    if comparison_svg:
+        comparison_path = resolve_path(comparison_svg)
+        comparison_rel = _html_relpath(comparison_path, out_dir)
+
+    manifest = {
+        "charts": chart_entries,
+        "comparison_svg": comparison_rel,
+    }
+    manifest_path = out_dir / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    chart_json = _json_script_payload(chart_entries)
+    view_label_json = _json_script_payload(VIEW_DISPLAY_NAMES)
+    comparison_json = _json_script_payload(comparison_rel)
+
+    index_html = out_dir / "index.html"
+    index_html.write_text(
+        "\n".join(
+            [
+                "<!doctype html>",
+                '<html lang="en">',
+                "<head>",
+                '<meta charset="utf-8">',
+                '<meta name="viewport" content="width=device-width, initial-scale=1">',
+                "<title>Petri Gantt Explorer</title>",
+                "<style>",
+                ":root { color-scheme: light; --ink: #17212b; --muted: #687385; --line: #d7dde5; --paper: #ffffff; --wash: #f5f7f4; --accent: #236b5c; --accent-2: #bf6f24; }",
+                "* { box-sizing: border-box; }",
+                "body { margin: 0; font-family: Segoe UI, Microsoft YaHei, Arial, sans-serif; color: var(--ink); background: var(--wash); }",
+                ".shell { min-height: 100vh; display: flex; flex-direction: column; }",
+                ".topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 24px; background: #ffffff; border-bottom: 1px solid var(--line); }",
+                ".topbar h1 { margin: 0; font-size: 22px; line-height: 1.2; letter-spacing: 0; }",
+                ".badge { color: #ffffff; background: var(--accent); border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }",
+                ".toolbar { display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)) auto; gap: 12px; align-items: end; padding: 14px 24px; background: #fbfcfd; border-bottom: 1px solid var(--line); }",
+                ".control { display: grid; gap: 6px; }",
+                ".control span { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0; }",
+                "select, .button { height: 38px; border: 1px solid #b9c2ce; border-radius: 8px; background: #ffffff; color: var(--ink); font: inherit; }",
+                "select { width: 100%; padding: 0 34px 0 10px; }",
+                ".button { display: inline-flex; align-items: center; justify-content: center; padding: 0 14px; text-decoration: none; font-weight: 700; color: #ffffff; background: var(--accent-2); border-color: var(--accent-2); white-space: nowrap; }",
+                "main { display: grid; gap: 18px; padding: 18px 24px 28px; }",
+                ".section { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }",
+                ".section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line); }",
+                ".section h2 { margin: 0; font-size: 16px; line-height: 1.3; letter-spacing: 0; }",
+                ".meta { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: #f8fafb; }",
+                ".meta-item { display: inline-flex; gap: 6px; align-items: baseline; border: 1px solid #dfe5ec; border-radius: 8px; padding: 6px 8px; background: #ffffff; font-size: 12px; }",
+                ".meta-item strong { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0; }",
+                ".viewport { background: #ffffff; }",
+                "object { display: block; width: 100%; border: 0; background: #ffffff; }",
+                ".chart-object { height: 74vh; min-height: 560px; }",
+                ".comparison-object { height: 520px; min-height: 420px; }",
+                ".empty { padding: 36px 16px; color: var(--muted); font-weight: 700; text-align: center; }",
+                "[hidden] { display: none !important; }",
+                "@media (max-width: 860px) { .toolbar { grid-template-columns: 1fr; } .topbar { align-items: flex-start; flex-direction: column; } .button { width: 100%; } .chart-object { height: 68vh; min-height: 420px; } }",
+                "</style>",
+                "</head>",
+                "<body>",
+                '<div class="shell">',
+                '<header class="topbar">',
+                "<h1>Petri Gantt Explorer</h1>",
+                '<div id="countBadge" class="badge">0 charts</div>',
+                "</header>",
+                '<div class="toolbar">',
+                '<label class="control"><span>View</span><select id="viewSelect"></select></label>',
+                '<label class="control"><span>Algorithm</span><select id="methodSelect"></select></label>',
+                '<label class="control"><span>Instance</span><select id="instanceSelect"></select></label>',
+                '<a id="openSvg" class="button" href="#" target="_blank" rel="noopener">Open SVG</a>',
+                "</div>",
+                "<main>",
+                '<section class="section">',
+                '<div class="section-head"><h2 id="chartTitle">Gantt Chart</h2></div>',
+                '<div id="chartMeta" class="meta"></div>',
+                '<div id="emptyState" class="empty" hidden>No Gantt chart is available.</div>',
+                '<div class="viewport"><object id="chartObject" class="chart-object" type="image/svg+xml"></object></div>',
+                "</section>",
+                '<section id="comparisonSection" class="section" hidden>',
+                '<div class="section-head"><h2>Ablation Comparison</h2><a id="comparisonLink" class="button" href="#" target="_blank" rel="noopener">Open SVG</a></div>',
+                '<div class="viewport"><object id="comparisonObject" class="comparison-object" type="image/svg+xml"></object></div>',
+                "</section>",
+                "</main>",
+                "</div>",
+                "<script>",
+                "var CHARTS = " + chart_json + ";",
+                "var VIEW_LABELS = " + view_label_json + ";",
+                "var COMPARISON_SVG = " + comparison_json + ";",
+                "(function () {",
+                "  var charts = CHARTS || [];",
+                "  var viewSelect = document.getElementById('viewSelect');",
+                "  var methodSelect = document.getElementById('methodSelect');",
+                "  var instanceSelect = document.getElementById('instanceSelect');",
+                "  var chartObject = document.getElementById('chartObject');",
+                "  var openSvg = document.getElementById('openSvg');",
+                "  var emptyState = document.getElementById('emptyState');",
+                "  var chartTitle = document.getElementById('chartTitle');",
+                "  var chartMeta = document.getElementById('chartMeta');",
+                "  var countBadge = document.getElementById('countBadge');",
+                "  function unique(key) {",
+                "    var seen = Object.create(null);",
+                "    var values = [];",
+                "    charts.forEach(function (chart) {",
+                "      var value = String(chart[key] || '');",
+                "      if (value && !seen[value]) { seen[value] = true; values.push(value); }",
+                "    });",
+                "    return values;",
+                "  }",
+                "  function setOptions(select, values, labels) {",
+                "    var previous = select.value;",
+                "    select.innerHTML = '';",
+                "    values.forEach(function (value) {",
+                "      var option = document.createElement('option');",
+                "      option.value = value;",
+                "      option.textContent = labels && labels[value] ? labels[value] : value;",
+                "      select.appendChild(option);",
+                "    });",
+                "    if (values.indexOf(previous) >= 0) { select.value = previous; }",
+                "  }",
+                "  function renderMeta(entry) {",
+                "    chartMeta.innerHTML = '';",
+                "    [['Status', entry.status], ['Best obj', entry.best_obj], ['Solve time', entry.solving_time], ['c_max', entry.c_max], ['WPH', entry.wph]].forEach(function (item) {",
+                "      var node = document.createElement('div');",
+                "      var key = document.createElement('strong');",
+                "      var value = document.createElement('span');",
+                "      node.className = 'meta-item';",
+                "      key.textContent = item[0];",
+                "      value.textContent = item[1] || 'n/a';",
+                "      node.appendChild(key);",
+                "      node.appendChild(value);",
+                "      chartMeta.appendChild(node);",
+                "    });",
+                "  }",
+                "  function findEntry() {",
+                "    var method = methodSelect.value;",
+                "    var view = viewSelect.value;",
+                "    var instance = instanceSelect.value;",
+                "    return charts.find(function (chart) { return chart.method === method && chart.view === view && chart.instance === instance; }) ||",
+                "      charts.find(function (chart) { return chart.method === method && chart.view === view; }) ||",
+                "      charts.find(function (chart) { return chart.view === view; }) || charts[0];",
+                "  }",
+                "  function render() {",
+                "    if (!charts.length) {",
+                "      [viewSelect, methodSelect, instanceSelect].forEach(function (select) { select.disabled = true; });",
+                "      chartObject.hidden = true;",
+                "      openSvg.removeAttribute('href');",
+                "      emptyState.hidden = false;",
+                "      chartTitle.textContent = 'Gantt Chart';",
+                "      countBadge.textContent = '0 charts';",
+                "      return;",
+                "    }",
+                "    var entry = findEntry();",
+                "    if (!entry) { return; }",
+                "    viewSelect.value = entry.view;",
+                "    methodSelect.value = entry.method;",
+                "    instanceSelect.value = entry.instance;",
+                "    chartObject.hidden = false;",
+                "    emptyState.hidden = true;",
+                "    chartObject.data = entry.path;",
+                "    openSvg.href = entry.path;",
+                "    chartTitle.textContent = entry.title;",
+                "    renderMeta(entry);",
+                "    countBadge.textContent = charts.length + ' charts';",
+                "  }",
+                "  setOptions(viewSelect, unique('view'), VIEW_LABELS);",
+                "  setOptions(methodSelect, unique('method'));",
+                "  setOptions(instanceSelect, unique('instance'));",
+                "  [viewSelect, methodSelect, instanceSelect].forEach(function (select) { select.addEventListener('change', render); });",
+                "  render();",
+                "  if (COMPARISON_SVG) {",
+                "    document.getElementById('comparisonSection').hidden = false;",
+                "    document.getElementById('comparisonObject').data = COMPARISON_SVG;",
+                "    document.getElementById('comparisonLink').href = COMPARISON_SVG;",
+                "  }",
+                "}());",
+                "</script>",
+                "</body>",
+                "</html>",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return [str(manifest_path), str(index_html)]
+
+
+def generate_gantt_charts_from_records(
+    records: List[Dict[str, object]],
+    output_dir: str,
+    view: str = "all",
+    comparison_svg: str = "",
+) -> List[str]:
     out_dir = resolve_path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     generated = []
-    html_items = []
+    chart_entries: List[Dict[str, str]] = []
+    seen_stems: Dict[str, int] = {}
 
     for record in records:
         solution = record.get("solution", {}) or {}
         instance_name = Path(str(record.get("instance", "instance"))).stem
-        method_name = re.sub(r"[^0-9A-Za-z_-]+", "_", str(record.get("method", "")).strip()).strip("_")
-        file_stem = instance_name if not method_name else f"{instance_name}_{method_name}"
+        method_name = _safe_file_part(str(record.get("method", "")).strip())
+        base_file_stem = instance_name if not method_name or method_name == "result" else f"{instance_name}_{method_name}"
+        file_stem = _unique_file_stem(base_file_stem, seen_stems)
         for view_name in _views_to_generate(view):
             schedule = _collect_schedule(solution, view_name)
             if not schedule.get("is_petri"):
@@ -2043,37 +2442,25 @@ def generate_gantt_charts_from_records(records: List[Dict[str, object]], output_
             output_file = out_dir / _gantt_output_name(file_stem, view_name)
             _render_svg(record, schedule, output_file)
             generated.append(str(output_file))
-            html_items.append(
-                f'<li><a href="{output_file.name}">{_escape(output_file.name)}</a> | view={_escape(view_name)} | status={_escape(record.get("status", "unknown"))} | best_obj={_escape(record.get("best_obj", "None"))}</li>'
-            )
+            chart_entries.append(_chart_entry(record, schedule, view_name, output_file, out_dir))
 
-    if generated:
-        index_html = out_dir / "index.html"
-        index_html.write_text(
-            "\n".join(
-                [
-                    "<!doctype html>",
-                    '<html><head><meta charset="utf-8"><title>Petri Gantt Charts</title></head><body>',
-                    "<h1>Petri Gantt Charts</h1>",
-                    "<ul>",
-                    *html_items,
-                    "</ul>",
-                    "</body></html>",
-                ]
-            ),
-            encoding="utf-8",
-        )
-        generated.append(str(index_html))
+    if chart_entries or comparison_svg:
+        generated.extend(_write_interactive_gantt_frontend(out_dir, chart_entries, comparison_svg=comparison_svg))
     return generated
 
 
-def generate_gantt_charts_from_solution_file(solution_json: str, output_dir: str = None, view: str = "full") -> List[str]:
+def generate_gantt_charts_from_solution_file(
+    solution_json: str,
+    output_dir: str = None,
+    view: str = "all",
+    comparison_svg: str = "",
+) -> List[str]:
     solution_path, _, records = _load_solution_payload(solution_json)
     if output_dir is None:
         output_dir = str(solution_path.with_name(solution_path.stem + "_gantt"))
     else:
         output_dir = str(resolve_path(output_dir))
-    return generate_gantt_charts_from_records(records, output_dir, view=view)
+    return generate_gantt_charts_from_records(records, output_dir, view=view, comparison_svg=comparison_svg)
 
 
 def _parse_args() -> argparse.Namespace:
@@ -2083,13 +2470,19 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--view",
         choices=["full", "chambers", "resources", "all"],
-        default="full",
+        default="all",
         help=(
             "full: product/PEC full-flow chart; "
             "chambers: only CH2/CH3 four-pocket module chart; "
             "resources: ATR/AL/LL/VTR/PM resource chart with wafer labels; "
             "all: generate every view."
         ),
+    )
+    parser.add_argument(
+        "--comparison_svg",
+        type=str,
+        default="",
+        help="Optional ablation comparison SVG to show in the generated frontend.",
     )
     return parser.parse_args()
 
@@ -2101,6 +2494,7 @@ def main() -> None:
         str(solution_path),
         args.output_dir or None,
         view=args.view,
+        comparison_svg=args.comparison_svg,
     )
     if not generated:
         print("No Petri gantt charts were generated from the provided solution file.")

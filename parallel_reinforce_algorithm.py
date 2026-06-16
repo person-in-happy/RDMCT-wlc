@@ -37,7 +37,7 @@ from petri_mip_generator import (
     generate_petri_mip_instance,
     get_petri_model_description_path,
 )
-from path_utils import append_date_to_filename, resolve_path
+from path_utils import append_date_to_filename, is_latest_keyword, latest_matching_file, resolve_path
 
 # for debug
 # from ipdb import set_trace
@@ -110,7 +110,7 @@ def _collect_instance_files(instance_dir):
     )
 
 
-def _resolve_runtime_paths(all_kwargs):
+def _resolve_runtime_paths(all_kwargs, resolve_latest_model=False):
     experiment_kwargs = all_kwargs.setdefault('experiment', {})
     experiment_kwargs['base_log_dir'] = str(
         resolve_path(experiment_kwargs.get('base_log_dir') or 'data')
@@ -127,7 +127,12 @@ def _resolve_runtime_paths(all_kwargs):
         if section.get('test_instance_path'):
             section['test_instance_path'] = str(resolve_path(section['test_instance_path']))
         if section.get('test_model_path'):
-            section['test_model_path'] = str(resolve_path(section['test_model_path']))
+            if is_latest_keyword(section['test_model_path']) and resolve_latest_model:
+                section['test_model_path'] = str(latest_matching_file('data', 'params.pkl', 'trained params.pkl'))
+            elif is_latest_keyword(section['test_model_path']):
+                section['test_model_path'] = section['test_model_path']
+            else:
+                section['test_model_path'] = str(resolve_path(section['test_model_path']))
 
 def generate_samples(return_queue,env,policy,value,epoch,samples_per_worker,sel_cuts_percent,device,train_decode_type,reward_type,seed,mean_std,policy_type,random_seed):
     runtime_device = _resolve_worker_device(device)
@@ -821,6 +826,9 @@ def main():
     parser.add_argument('--petri_mode_sequence', type=str, default='')
     parser.add_argument('--petri_wafer_mode_map', '--petri_wafer_modes', dest='petri_wafer_mode_map', type=str, default='')
     parser.add_argument('--petri_default_wafer_mode', type=str, default='')
+    parser.add_argument('--petri_chamber_idle_penalty', type=float, default=1e-4)
+    parser.add_argument('--petri_post_process_wait_penalty', type=float, default=0.05)
+    parser.add_argument('--petri_chamber_idle_square_penalty', type=float, default=1e-5)
 
     cli_args = sys.argv[1:]
     time_limit_arg_given = any(
@@ -832,7 +840,7 @@ def main():
     args.petri_instance_dir = str(resolve_path(args.petri_instance_dir))
     with open(args.config_file, 'r', encoding='utf-8') as f:
         all_kwargs = json.load(f)
-    _resolve_runtime_paths(all_kwargs)
+    _resolve_runtime_paths(all_kwargs, resolve_latest_model=args.train_type == 'test')
     if args.use_cutsel_percent_policy == 'True':
         all_kwargs['cutsel_percent_policy']['use_cutsel_percent_policy'] = True
     else:
@@ -857,6 +865,9 @@ def main():
             default_wafer_mode=args.petri_default_wafer_mode,
             full_mode_wafers=args.petri_4x1_wafers,
             mix_mode_wafers=args.petri_2x2_wafers,
+            chamber_idle_penalty=args.petri_chamber_idle_penalty,
+            post_process_wait_penalty=args.petri_post_process_wait_penalty,
+            chamber_idle_square_penalty=args.petri_chamber_idle_square_penalty,
         )
         generated_path = generate_petri_mip_instance(
             args.petri_instance_dir,
@@ -1096,7 +1107,11 @@ def main():
             # .to(device)
 
         # preload model for retraining
-        if experiment_kwargs['base_log_dir'] is not None and 'params.pkl' in os.listdir(experiment_kwargs['base_log_dir']):
+        if (
+            experiment_kwargs['base_log_dir'] is not None
+            and os.path.isdir(experiment_kwargs['base_log_dir'])
+            and 'params.pkl' in os.listdir(experiment_kwargs['base_log_dir'])
+        ):
             state_dict = torch.load(os.path.join(experiment_kwargs['base_log_dir'], 'params.pkl'), map_location=device)
             pointer_net.load_state_dict(state_dict['pointer_net'])
             if cutsel_percent_policy_kwargs['use_cutsel_percent_policy']:

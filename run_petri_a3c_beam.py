@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 from typing import List
 
-from path_utils import PROJECT_ROOT, resolve_path
+from path_utils import PROJECT_ROOT, is_latest_keyword, latest_matching_file, resolve_path
 from petri_mip_generator import (
     PetriMIPConfig,
     generate_petri_mip_instance,
@@ -38,6 +38,9 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--mode_sequence", type=str, default="")
     parser.add_argument("--wafer_mode_map", "--wafer_modes", dest="wafer_mode_map", type=str, default="")
     parser.add_argument("--default_wafer_mode", type=str, default="")
+    parser.add_argument("--chamber_idle_penalty", type=float, default=1e-4)
+    parser.add_argument("--post_process_wait_penalty", type=float, default=0.05)
+    parser.add_argument("--chamber_idle_square_penalty", type=float, default=1e-5)
     return parser.parse_args()
 
 
@@ -78,7 +81,10 @@ def _run(cmd: List[str]) -> None:
 def main() -> None:
     args = _parse_args()
     args.config_file = str(resolve_path(args.config_file))
-    args.test_model_path = str(resolve_path(args.test_model_path))
+    if is_latest_keyword(args.test_model_path):
+        args.test_model_path = str(latest_matching_file("data", "params.pkl", "trained params.pkl"))
+    else:
+        args.test_model_path = str(resolve_path(args.test_model_path))
     args.instance_dir = str(resolve_path(args.instance_dir))
     os.makedirs(args.instance_dir, exist_ok=True)
     if not os.path.isfile(args.test_model_path):
@@ -99,6 +105,9 @@ def main() -> None:
         default_wafer_mode=args.default_wafer_mode,
         full_mode_wafers=args.mode_4x1_wafers,
         mix_mode_wafers=args.mode_2x2_wafers,
+        chamber_idle_penalty=args.chamber_idle_penalty,
+        post_process_wait_penalty=args.post_process_wait_penalty,
+        chamber_idle_square_penalty=args.chamber_idle_square_penalty,
     )
     lp_path = generate_petri_mip_instance(args.instance_dir, args.instance_name, petri_cfg)
     generated_instance_name = os.path.basename(lp_path)
@@ -155,6 +164,12 @@ def main() -> None:
         args.wafer_mode_map,
         "--petri_default_wafer_mode",
         args.default_wafer_mode,
+        "--petri_chamber_idle_penalty",
+        str(args.chamber_idle_penalty),
+        "--petri_post_process_wait_penalty",
+        str(args.post_process_wait_penalty),
+        "--petri_chamber_idle_square_penalty",
+        str(args.chamber_idle_square_penalty),
         "--single_instance_file",
         generated_instance_name,
         "--test_decode_type",

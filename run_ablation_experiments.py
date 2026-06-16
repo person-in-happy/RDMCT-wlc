@@ -25,7 +25,7 @@ from petri_mip_generator import (
 )
 from pointer_net import CutsPercentPolicy, PointerNetwork
 from pointer_net_end_token import PointerNetworkEndToken
-from path_utils import resolve_path
+from path_utils import is_latest_keyword, latest_matching_file, resolve_path
 from utilss.mean_std import RunningMeanStd
 from utils import set_global_seed
 
@@ -88,6 +88,9 @@ def _parse_args():
     parser.add_argument("--mode_sequence", type=str, default="")
     parser.add_argument("--wafer_mode_map", "--wafer_modes", dest="wafer_mode_map", type=str, default="")
     parser.add_argument("--default_wafer_mode", type=str, default="")
+    parser.add_argument("--chamber_idle_penalty", type=float, default=1e-4)
+    parser.add_argument("--post_process_wait_penalty", type=float, default=0.05)
+    parser.add_argument("--chamber_idle_square_penalty", type=float, default=1e-5)
     return parser.parse_args()
 
 
@@ -96,7 +99,10 @@ def _resolve_runtime_args(args):
     args.instance_dir = str(resolve_path(args.instance_dir))
     args.output_dir = str(resolve_path(args.output_dir))
     if args.test_model_path:
-        args.test_model_path = str(resolve_path(args.test_model_path))
+        if is_latest_keyword(args.test_model_path):
+            args.test_model_path = str(latest_matching_file("data", "params.pkl", "trained params.pkl"))
+        else:
+            args.test_model_path = str(resolve_path(args.test_model_path))
     if args.single_instance_file:
         single_path = Path(args.single_instance_file)
         if single_path.is_absolute() or single_path.parent != Path("."):
@@ -129,6 +135,9 @@ def _ensure_instance(args):
             default_wafer_mode=args.default_wafer_mode,
             full_mode_wafers=args.mode_4x1_wafers,
             mix_mode_wafers=args.mode_2x2_wafers,
+            chamber_idle_penalty=args.chamber_idle_penalty,
+            post_process_wait_penalty=args.post_process_wait_penalty,
+            chamber_idle_square_penalty=args.chamber_idle_square_penalty,
         )
         lp_path = generate_petri_mip_instance(args.instance_dir, args.instance_name, cfg)
         generated_instance_name = Path(lp_path).name
@@ -236,6 +245,9 @@ def _build_method_hyperparams(method_name, cfg, args, policy_bundle=None):
         "heuristics": env_kwargs["heuristics"],
         "sel_cuts_percent": args.sel_cuts_percent,
         "policy_type": args.policy_type,
+        "post_process_wait_penalty": args.post_process_wait_penalty,
+        "chamber_idle_square_penalty": args.chamber_idle_square_penalty,
+        "chamber_idle_penalty": args.chamber_idle_penalty,
     }
     if method_name == "solver_only":
         base["solver"] = "SCIP default cut selection"
@@ -831,7 +843,12 @@ def main():
     try:
         from petri_gantt import generate_gantt_charts_from_records
 
-        generated_gantt = generate_gantt_charts_from_records(_flatten_results(experiment_results), gantt_dir)
+        generated_gantt = generate_gantt_charts_from_records(
+            _flatten_results(experiment_results),
+            gantt_dir,
+            view="all",
+            comparison_svg=comparison_svg,
+        )
     except Exception as exc:
         gantt_error = str(exc)
 
