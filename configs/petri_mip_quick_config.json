@@ -14,7 +14,9 @@
     "separating": true,
     "conflict": true,
     "heuristics": true,
-    "max_rounds_root": 1
+    "max_rounds_root": 1,
+    "lexicographic_stability_time_limit": 10,
+    "lexicographic_stability_node_limit": 5000
   },
   "algorithm": {
     "evaluate_freq": 0,
@@ -80,7 +82,9 @@
       "separating": true,
       "conflict": true,
       "heuristics": true,
-      "max_rounds_root": 1
+      "max_rounds_root": 1,
+      "lexicographic_stability_time_limit": 10,
+      "lexicographic_stability_node_limit": 5000
     }
   },
   "online_test_kwargs": {
@@ -94,7 +98,9 @@
       "separating": true,
       "conflict": true,
       "heuristics": true,
-      "max_rounds_root": 1
+      "max_rounds_root": 1,
+      "lexicographic_stability_time_limit": 10,
+      "lexicographic_stability_node_limit": 5000
     }
   },
   "start_epoch": 0,

@@ -770,7 +770,8 @@ class CutSelectAgent(CutselBase):
         return self.data
 
     def free_problem(self):
-        self.scip_model.freeProb()
+        # The SCIP model is owned and freed by SCIPCutSelEnv.step().
+        self.scip_model = None
     
 # test 
 if __name__ == "__main__":

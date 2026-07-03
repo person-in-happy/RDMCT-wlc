@@ -32,10 +32,15 @@ NEW_FULL_FILLER_SIDE_RE = re.compile(r"full_filler_side_(\d+)_(\d+)_(\d+)$")
 NEW_MIX_ASSIGN_RE = re.compile(r"assign_mix_(\d+)_(\d+)_(\d+)$")
 NEW_MIX_ACTIVE_RE = re.compile(r"mix_active_(\d+)$")
 NEW_MIX_CYCLE_USED_RE = re.compile(r"mix_cycle_used_(\d+)_(\d+)$")
+NEW_MIX_LAST_POS_RE = re.compile(r"mix_last_pos_(\d+)_(\d+)$")
 NEW_CLEAN_ACTIVE_RE = re.compile(r"clean_active_(\d+)_(\d+)$")
 LLUPPER_SLOT_ASSIGN_RE = re.compile(r"llupper_slot_assign_(\d+)_(\d+)$")
 LLLOWER_SLOT_ASSIGN_RE = re.compile(r"lllower_slot_assign_(\d+)_(\d+)$")
 PEC_TOKEN_ASSIGN_RE = re.compile(r"pec_token_assign_(\d+)_(\d+)$")
+PEC_JOB_CHAMBER_RE = re.compile(r"pec_job_chamber_(\d+)_(\d+)$")
+ATR_SLOT_ASSIGN_RE = re.compile(r"atr_slot_assign_(.+)_(\d+)$")
+VTR_SLOT_ASSIGN_RE = re.compile(r"vtr_slot_assign_(.+)_(\d+)$")
+FULL_PAIR_VTR_WINDOW_RE = re.compile(r"full_pair_vtr_(load|unload)_(start|end)_(\d+)$")
 CLEAN_START_RE = re.compile(r"clean_start_(\d+)_(\d+)$")
 CLEAN_END_RE = re.compile(r"clean_end_(\d+)_(\d+)$")
 
@@ -63,7 +68,10 @@ SECONDS_PER_HOUR = 3600.0
 
 NEW_PRODUCT_STAGE_ORDER = [
     "atr_lp_al",
+    "atr_hold_before_al",
+    "atr_al_exchange",
     "al",
+    "atr_hold_after_al",
     "atr_al_llupper",
     "llupper",
     "vtr_load",
@@ -74,7 +82,10 @@ NEW_PRODUCT_STAGE_ORDER = [
 ]
 NEW_PRODUCT_STAGE_META = {
     "atr_lp_al": ("LP->AL", "#4C78A8"),
+    "atr_hold_before_al": ("ATR hold before AL", "#B07AA1"),
+    "atr_al_exchange": ("ATR exchange at AL", "#D37295"),
     "al": ("AL", "#9C755F"),
+    "atr_hold_after_al": ("ATR hold after AL", "#B07AA1"),
     "atr_al_llupper": ("AL->LLupper", "#72B7B2"),
     "llupper": ("LLupper", "#54A24B"),
     "vtr_load": ("VTR Load", "#F58518"),
@@ -163,6 +174,10 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
     pec_stage_start: Dict[Tuple[int, str], float] = {}
     pec_stage_end: Dict[Tuple[int, str], float] = {}
     pec_token_by_job: Dict[int, int] = {}
+    full_pair_members: Dict[int, List[int]] = {}
+    mix_pair_members: Dict[int, List[int]] = {}
+    full_assignment: Dict[Tuple[int, int, int], int] = {}
+    mix_pair_by_pos: Dict[Tuple[int, int], int] = {}
     c_max = _float(solution.get("c_max", 0.0))
 
     for name, value in solution.items():
@@ -218,6 +233,22 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
         if m and _bool(value):
             pec_token_by_job[int(m.group(1))] = int(m.group(2))
             continue
+        m = NEW_FULL_PAIR_MEMBER_RE.match(name)
+        if m and _bool(value):
+            full_pair_members.setdefault(int(m.group(2)), []).append(int(m.group(1)))
+            continue
+        m = NEW_MIX_PAIR_MEMBER_RE.match(name)
+        if m and _bool(value):
+            mix_pair_members.setdefault(int(m.group(2)), []).append(int(m.group(1)))
+            continue
+        m = NEW_FULL_ASSIGN_RE.match(name)
+        if m and _bool(value):
+            full_assignment[(int(m.group(2)), int(m.group(3)), int(m.group(4)))] = int(m.group(1))
+            continue
+        m = NEW_MIX_ASSIGN_RE.match(name)
+        if m and _bool(value):
+            mix_pair_by_pos[(int(m.group(2)), int(m.group(3)))] = int(m.group(1))
+            continue
 
     if not (assign_prod_by_batch or prod_stage_start or batch_used):
         return {}
@@ -257,6 +288,133 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
         def product_end(wafer_id: int, stage_name: str) -> float:
             return prod_stage_end.get((wafer_id, stage_name), product_start(wafer_id, stage_name))
 
+        def atr_load_unload_time(wafer_id: int, stage_name: str) -> float:
+            vtr_time = product_end(wafer_id, "vtr_load") - product_start(wafer_id, "vtr_load")
+            if vtr_time <= 1e-9:
+                vtr_time = product_end(wafer_id, "vtr_unload") - product_start(wafer_id, "vtr_unload")
+            stage_time = product_end(wafer_id, stage_name) - product_start(wafer_id, stage_name)
+            return max(0.0, min(vtr_time, 0.5 * stage_time))
+
+        def add_atr_path_transfer(lane_name, wafer_id, stage_name, source, destination, entity):
+            start = product_start(wafer_id, stage_name)
+            end = product_end(wafer_id, stage_name)
+            handling_time = atr_load_unload_time(wafer_id, stage_name)
+            load_end = min(end, start + handling_time)
+            unload_start = max(load_end, end - handling_time)
+            is_double = is_synchronized_pair_stage(wafer_id, stage_name)
+            load_action = f"ATR double-pick at {source}" if is_double else f"ATR load at {source}"
+            move_action = f"ATR dual-carry {source}->{destination}" if is_double else f"ATR move {source}->{destination}"
+            unload_action = f"ATR double-place at {destination}" if is_double else f"ATR unload at {destination}"
+            if is_double and destination == "AL":
+                members = pair_members_for_wafer(wafer_id)
+                unload_action = (
+                    "ATR single-place at AL"
+                    if members and wafer_id == members[0]
+                    else "ATR retain companion at AL"
+                )
+            elif is_double and source == "AL":
+                members = pair_members_for_wafer(wafer_id)
+                load_action = (
+                    "ATR retain calibrated wafer"
+                    if members and wafer_id == members[0]
+                    else "ATR single-pick at AL"
+                )
+            add_path_task(lane_name, start, load_end, load_action, entity, "#4C78A8")
+            add_path_task(lane_name, load_end, unload_start, move_action, entity, "#72B7B2")
+            add_path_task(lane_name, unload_start, end, unload_action, entity, "#9C755F")
+
+        full_pair_by_wafer = {
+            wafer_id: pair_id
+            for pair_id, members in full_pair_members.items()
+            for wafer_id in members
+        }
+        mix_pair_by_wafer = {
+            wafer_id: pair_id
+            for pair_id, members in mix_pair_members.items()
+            for wafer_id in members
+        }
+
+        def pair_members_for_wafer(wafer_id: int) -> List[int]:
+            full_pair = full_pair_by_wafer.get(wafer_id)
+            if full_pair is not None:
+                return sorted(full_pair_members.get(full_pair, []))
+            mix_pair = mix_pair_by_wafer.get(wafer_id)
+            if mix_pair is not None:
+                return sorted(mix_pair_members.get(mix_pair, []))
+            return []
+
+        def is_synchronized_pair_stage(wafer_id: int, stage_name: str) -> bool:
+            members = pair_members_for_wafer(wafer_id)
+            if len(members) != 2:
+                return False
+            first, second = members
+            return (
+                abs(product_start(first, stage_name) - product_start(second, stage_name)) <= 1e-6
+                and abs(product_end(first, stage_name) - product_end(second, stage_name)) <= 1e-6
+            )
+        full_pair_location = {
+            pair_id: (pm_id, batch_id, side_id)
+            for (pm_id, batch_id, side_id), pair_id in full_assignment.items()
+        }
+        mix_pair_location = {
+            pair_id: (pm_id, pos_id)
+            for (pm_id, pos_id), pair_id in mix_pair_by_pos.items()
+        }
+
+        def product_lane_suffix(wafer_id: int) -> str:
+            full_pair = full_pair_by_wafer.get(wafer_id)
+            if full_pair is not None:
+                location = full_pair_location.get(full_pair)
+                if location is None:
+                    return " | 4x1"
+                pm_id, batch_id, side_id = location
+                return f" | 4x1 CH{pm_id}-B{batch_id}-S{side_id}"
+            mix_pair = mix_pair_by_wafer.get(wafer_id)
+            if mix_pair is not None:
+                location = mix_pair_location.get(mix_pair)
+                if location is None:
+                    return " | 2x2"
+                pm_id, pos_id = location
+                return f" | 2x2 CH{pm_id}-P{pos_id}"
+            return ""
+
+        def pm_process_label(wafer_id: int) -> str:
+            if wafer_id in full_pair_by_wafer:
+                return "4x1 PM process"
+            if wafer_id in mix_pair_by_wafer:
+                return "2x2 PM process"
+            return "PM process"
+
+        def add_pm_path_tasks(lane_name: str, wafer_id: int, entity: str) -> None:
+            mix_pair = mix_pair_by_wafer.get(wafer_id)
+            location = mix_pair_location.get(mix_pair) if mix_pair is not None else None
+            if location is not None:
+                pm_id, pos_id = location
+                first_start = _float(solution.get(f"mix_cycle_start_{pm_id}_{pos_id}", 0.0))
+                first_end = _float(solution.get(f"mix_cycle_end_{pm_id}_{pos_id}", 0.0))
+                second_start = _float(solution.get(f"mix_cycle_start_{pm_id}_{pos_id + 1}", 0.0))
+                second_end = _float(solution.get(f"mix_cycle_end_{pm_id}_{pos_id + 1}", 0.0))
+                if first_end > first_start + 1e-9 and second_end > second_start + 1e-9:
+                    add_path_task(lane_name, first_start, first_end, "2x2 PM process #1", entity, "#E45756")
+                    add_path_task(
+                        lane_name,
+                        first_end,
+                        second_start,
+                        "2x2 in-chamber bridge/wait",
+                        entity,
+                        "#BAB0AC",
+                    )
+                    add_path_task(lane_name, second_start, second_end, "2x2 PM process #2", entity, "#E45756")
+                    return
+            add_path_task(
+                lane_name,
+                product_start(wafer_id, "pm"),
+                product_end(wafer_id, "pm"),
+                pm_process_label(wafer_id),
+                entity,
+                "#E45756",
+            )
+
         product_ids = sorted(
             {wafer_id for wafer_id, _ in prod_stage_start.keys()} | {wafer_id for wafer_id, _ in prod_stage_end.keys()},
             key=lambda wafer_id: (
@@ -266,23 +424,34 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
         )
         for wafer_id in product_ids:
             assignment = assign_prod_by_wafer.get(wafer_id)
-            lane_name = f"Product W{wafer_id}"
+            lane_name = f"Product W{wafer_id}{product_lane_suffix(wafer_id)}"
             if assignment is not None:
                 lane_name += f" | PM{assignment[0]}-B{assignment[1]}"
             lanes.append(lane_name)
             entity = f"W{wafer_id}"
 
+            add_atr_path_transfer(lane_name, wafer_id, "atr_lp_al", "LP", "AL", entity)
+            lp_al_end = product_end(wafer_id, "atr_lp_al")
+            hold_before_al_end = product_end(wafer_id, "atr_hold_before_al")
             add_path_task(
                 lane_name,
-                product_start(wafer_id, "atr_lp_al"),
-                product_end(wafer_id, "atr_lp_al"),
-                "ATR LP->AL",
+                product_start(wafer_id, "atr_hold_before_al"),
+                hold_before_al_end,
+                "ATR holding for AL",
                 entity,
-                "#4C78A8",
+                "#B07AA1",
             )
             add_path_task(
                 lane_name,
-                product_end(wafer_id, "atr_lp_al"),
+                product_start(wafer_id, "atr_al_exchange"),
+                product_end(wafer_id, "atr_al_exchange"),
+                "ATR single-wafer exchange at AL",
+                entity,
+                "#D37295",
+            )
+            add_path_task(
+                lane_name,
+                max(lp_al_end, hold_before_al_end, product_end(wafer_id, "atr_al_exchange")),
                 product_start(wafer_id, "al"),
                 "AL wait",
                 entity,
@@ -296,22 +465,24 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                 entity,
                 "#9C755F",
             )
+            hold_after_al_end = product_end(wafer_id, "atr_hold_after_al")
             add_path_task(
                 lane_name,
-                product_end(wafer_id, "al"),
+                product_start(wafer_id, "atr_hold_after_al"),
+                hold_after_al_end,
+                "ATR holding calibrated wafer",
+                entity,
+                "#B07AA1",
+            )
+            add_path_task(
+                lane_name,
+                max(product_end(wafer_id, "al"), hold_after_al_end),
                 product_start(wafer_id, "atr_al_llupper"),
                 "AL wait",
                 entity,
                 "#C6A07A",
             )
-            add_path_task(
-                lane_name,
-                product_start(wafer_id, "atr_al_llupper"),
-                product_end(wafer_id, "atr_al_llupper"),
-                "ATR AL->LLupper",
-                entity,
-                "#72B7B2",
-            )
+            add_atr_path_transfer(lane_name, wafer_id, "atr_al_llupper", "AL", "LLupper", entity)
             add_path_task(
                 lane_name,
                 product_end(wafer_id, "atr_al_llupper"),
@@ -324,7 +495,7 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                 lane_name,
                 product_start(wafer_id, "llupper"),
                 product_end(wafer_id, "llupper"),
-                "LLupper state",
+                "LLupper pump: atmosphere->vacuum",
                 entity,
                 "#54A24B",
             )
@@ -332,7 +503,7 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                 lane_name,
                 product_end(wafer_id, "llupper"),
                 product_start(wafer_id, "vtr_load"),
-                "LLupper ready",
+                "LLupper vacuum ready/wait",
                 entity,
                 "#8CD17D",
             )
@@ -340,7 +511,7 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                 lane_name,
                 product_start(wafer_id, "vtr_load"),
                 product_end(wafer_id, "vtr_load"),
-                "VTR load",
+                "VTR double load" if is_synchronized_pair_stage(wafer_id, "vtr_load") else "VTR load",
                 entity,
                 "#F58518",
             )
@@ -352,14 +523,7 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                 entity,
                 "#F2A09A",
             )
-            add_path_task(
-                lane_name,
-                product_start(wafer_id, "pm"),
-                product_end(wafer_id, "pm"),
-                "PM process",
-                entity,
-                "#E45756",
-            )
+            add_pm_path_tasks(lane_name, wafer_id, entity)
             add_path_task(
                 lane_name,
                 product_end(wafer_id, "pm"),
@@ -372,7 +536,7 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                 lane_name,
                 product_start(wafer_id, "vtr_unload"),
                 product_end(wafer_id, "vtr_unload"),
-                "VTR unload",
+                "VTR double unload" if is_synchronized_pair_stage(wafer_id, "vtr_unload") else "VTR unload",
                 entity,
                 "#FF9DA6",
             )
@@ -388,7 +552,7 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                 lane_name,
                 product_start(wafer_id, "lllower"),
                 product_end(wafer_id, "lllower"),
-                "LLlower state",
+                "LLlower vent: vacuum->atmosphere",
                 entity,
                 "#B279A2",
             )
@@ -396,18 +560,11 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                 lane_name,
                 product_end(wafer_id, "lllower"),
                 product_start(wafer_id, "atr_lllower_lp"),
-                "LLlower wait",
+                "LLlower atmosphere ready/wait",
                 entity,
                 "#D4A6C8",
             )
-            add_path_task(
-                lane_name,
-                product_start(wafer_id, "atr_lllower_lp"),
-                product_end(wafer_id, "atr_lllower_lp"),
-                "ATR LLlower->LP",
-                entity,
-                "#79706E",
-            )
+            add_atr_path_transfer(lane_name, wafer_id, "atr_lllower_lp", "LLlower", "LP", entity)
 
         pec_ids = sorted(
             {pec_id for pec_id, _ in pec_stage_start.keys()} | {pec_id for pec_id, _ in pec_stage_end.keys()},
@@ -825,10 +982,12 @@ def _collect_chamber_schedule(solution: Dict[str, float]) -> Dict[str, object]:
     mix_pair_by_pos: Dict[Tuple[int, int], int] = {}
     mix_active: Dict[int, bool] = {}
     mix_cycle_used: Dict[Tuple[int, int], bool] = {}
+    mix_last_pos: Dict[int, int] = {}
     clean_active: Dict[Tuple[int, int], bool] = {}
     pec_stage_start: Dict[Tuple[int, str], float] = {}
     pec_stage_end: Dict[Tuple[int, str], float] = {}
     pec_token_by_job: Dict[int, int] = {}
+    explicit_pec_pm_by_job: Dict[int, int] = {}
     pm_ids = set()
 
     for name, value in solution.items():
@@ -843,6 +1002,12 @@ def _collect_chamber_schedule(solution: Dict[str, float]) -> Dict[str, object]:
         m = PEC_TOKEN_ASSIGN_RE.match(name)
         if m and _bool(value):
             pec_token_by_job[int(m.group(1))] = int(m.group(2))
+            continue
+        m = PEC_JOB_CHAMBER_RE.match(name)
+        if m and _bool(value):
+            chamber_id = int(m.group(2))
+            explicit_pec_pm_by_job[int(m.group(1))] = chamber_id
+            pm_ids.add(chamber_id)
             continue
         m = NEW_FULL_PAIR_MEMBER_RE.match(name)
         if m and _bool(value):
@@ -896,6 +1061,12 @@ def _collect_chamber_schedule(solution: Dict[str, float]) -> Dict[str, object]:
             mix_cycle_used[key] = _bool(value)
             if mix_cycle_used[key]:
                 pm_ids.add(key[0])
+            continue
+        m = NEW_MIX_LAST_POS_RE.match(name)
+        if m and _bool(value):
+            pm_id = int(m.group(1))
+            mix_last_pos[pm_id] = int(m.group(2))
+            pm_ids.add(pm_id)
             continue
         m = NEW_CLEAN_ACTIVE_RE.match(name)
         if m:
@@ -1029,10 +1200,25 @@ def _collect_chamber_schedule(solution: Dict[str, float]) -> Dict[str, object]:
             )
             time_candidates.extend([start, end])
 
-        active_mix = mix_active.get(pm_id, False) or any(key_pm == pm_id for key_pm, _ in mix_pair_by_pos)
+        has_mix_timing = (
+            time_var(f"mix_head_end_{pm_id}") > time_var(f"mix_head_start_{pm_id}") + 1e-9
+            or time_var(f"mix_tail_end_{pm_id}") > time_var(f"mix_tail_start_{pm_id}") + 1e-9
+            or any(
+                key_pm == pm_id
+                and used
+                and time_var(f"mix_cycle_end_{pm_id}_{cycle_id}")
+                > time_var(f"mix_cycle_start_{pm_id}_{cycle_id}") + 1e-9
+                for (key_pm, cycle_id), used in mix_cycle_used.items()
+            )
+        )
+        active_mix = (
+            mix_active.get(pm_id, False)
+            or any(key_pm == pm_id for key_pm, _ in mix_pair_by_pos)
+            or has_mix_timing
+        )
         if active_mix:
             pos_ids = sorted(pos for key_pm, pos in mix_pair_by_pos if key_pm == pm_id)
-            max_pos = max(pos_ids, default=0)
+            max_pos = mix_last_pos.get(pm_id, max(pos_ids, default=0))
             head_start = time_var(f"mix_head_start_{pm_id}")
             head_end = time_var(f"mix_head_end_{pm_id}")
             cycle1_start = time_var(f"mix_cycle_start_{pm_id}_1")
@@ -1054,6 +1240,22 @@ def _collect_chamber_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                 time_var(f"mix_tail_start_{pm_id}"),
                 time_var(f"mix_tail_end_{pm_id}"),
             )
+
+            def add_mix_wait(start: float, end: float, label: str) -> None:
+                if end <= start + 1e-9:
+                    return
+                tasks.append(
+                    {
+                        "lane": lane_name,
+                        "start": start,
+                        "end": end,
+                        "label": label,
+                        "short_label": "wait",
+                        "color": "#BAB0AC",
+                    }
+                )
+                time_candidates.extend([start, end])
+
             first_pair = mix_pair_by_pos.get((pm_id, 1))
             if head_end > head_start + 1e-9:
                 head_label = f"2x2 head\n{pec_text(head_pec)}"
@@ -1070,12 +1272,22 @@ def _collect_chamber_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                     }
                 )
                 time_candidates.extend([head_start, head_end])
+            add_mix_wait(head_end, cycle1_start, "2x2 wait before cycle 1")
 
             cycle_ids = sorted(cycle for key_pm, cycle in mix_cycle_used if key_pm == pm_id and mix_cycle_used[(key_pm, cycle)])
+            if not cycle_ids:
+                cycle_ids = [
+                    cycle_id
+                    for cycle_id in range(1, max(max_pos + 2, 2))
+                    if time_var(f"mix_cycle_end_{pm_id}_{cycle_id}")
+                    > time_var(f"mix_cycle_start_{pm_id}_{cycle_id}") + 1e-9
+                ]
             for cycle_id in cycle_ids:
                 if cycle_id >= 2:
                     bridge_start = time_var(f"mix_bridge_start_{pm_id}_{cycle_id}")
                     bridge_end = time_var(f"mix_bridge_end_{pm_id}_{cycle_id}")
+                    previous_cycle_end = time_var(f"mix_cycle_end_{pm_id}_{cycle_id - 1}")
+                    add_mix_wait(previous_cycle_end, bridge_start, "2x2 wait before bridge")
                     if bridge_end > bridge_start + 1e-9:
                         bridge_parts = []
                         if cycle_id == 2:
@@ -1107,6 +1319,8 @@ def _collect_chamber_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                 end = time_var(f"mix_cycle_end_{pm_id}_{cycle_id}")
                 if end <= start + 1e-9:
                     continue
+                if cycle_id >= 2:
+                    add_mix_wait(bridge_end, start, "2x2 wait after bridge")
                 if cycle_id == 1:
                     label = f"cycle 1\n{pec_text(head_pec)}"
                     if first_pair is not None:
@@ -1139,13 +1353,24 @@ def _collect_chamber_schedule(solution: Dict[str, float]) -> Dict[str, object]:
 
             tail_start = time_var(f"mix_tail_start_{pm_id}")
             tail_end = time_var(f"mix_tail_end_{pm_id}")
+            if cycle_ids:
+                add_mix_wait(
+                    time_var(f"mix_cycle_end_{pm_id}_{cycle_ids[-1]}"),
+                    tail_start,
+                    "2x2 wait before tail unload",
+                )
             if tail_end > tail_start + 1e-9:
+                last_pair = mix_pair_by_pos.get((pm_id, max_pos))
+                tail_label = "2x2 tail\n"
+                if last_pair is not None:
+                    tail_label += f"{mix_pair_label(last_pair)} 2nd out + "
+                tail_label += f"{pec_text(tail_pec)} return"
                 tasks.append(
                     {
                         "lane": lane_name,
                         "start": tail_start,
                         "end": tail_end,
-                        "label": f"2x2 tail\n{pec_text(tail_pec)} return",
+                        "label": tail_label,
                         "short_label": "2x2 T",
                         "color": "#B279A2",
                     }
@@ -1221,9 +1446,14 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
     mix_pair_members: Dict[int, List[int]] = {}
     full_assignment: Dict[Tuple[int, int, int], int] = {}
     mix_pair_by_pos: Dict[Tuple[int, int], int] = {}
+    mix_last_pos: Dict[int, int] = {}
     llupper_slot_by_wafer: Dict[int, int] = {}
     lllower_slot_by_wafer: Dict[int, int] = {}
+    atr_slots_by_task: Dict[str, List[int]] = {}
+    vtr_slots_by_task: Dict[str, List[int]] = {}
+    full_pair_vtr_windows: Dict[Tuple[int, str, str], float] = {}
     pec_token_by_job: Dict[int, int] = {}
+    explicit_pec_pm_by_job: Dict[int, int] = {}
     full_process_start: Dict[Tuple[int, int], float] = {}
     full_process_end: Dict[Tuple[int, int], float] = {}
     mix_cycle_start: Dict[Tuple[int, int], float] = {}
@@ -1269,6 +1499,12 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
             mix_pair_by_pos[(pm_id, int(m.group(3)))] = int(m.group(1))
             pm_ids.add(pm_id)
             continue
+        m = NEW_MIX_LAST_POS_RE.match(name)
+        if m and _bool(value):
+            pm_id = int(m.group(1))
+            mix_last_pos[pm_id] = int(m.group(2))
+            pm_ids.add(pm_id)
+            continue
         m = LLUPPER_SLOT_ASSIGN_RE.match(name)
         if m and _bool(value):
             llupper_slot_by_wafer[int(m.group(1))] = int(m.group(2))
@@ -1277,9 +1513,27 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
         if m and _bool(value):
             lllower_slot_by_wafer[int(m.group(1))] = int(m.group(2))
             continue
+        m = ATR_SLOT_ASSIGN_RE.match(name)
+        if m and _bool(value):
+            atr_slots_by_task.setdefault(m.group(1), []).append(int(m.group(2)))
+            continue
+        m = VTR_SLOT_ASSIGN_RE.match(name)
+        if m and _bool(value):
+            vtr_slots_by_task.setdefault(m.group(1), []).append(int(m.group(2)))
+            continue
+        m = FULL_PAIR_VTR_WINDOW_RE.match(name)
+        if m:
+            full_pair_vtr_windows[(int(m.group(3)), m.group(1), m.group(2))] = _float(value)
+            continue
         m = PEC_TOKEN_ASSIGN_RE.match(name)
         if m and _bool(value):
             pec_token_by_job[int(m.group(1))] = int(m.group(2))
+            continue
+        m = PEC_JOB_CHAMBER_RE.match(name)
+        if m and _bool(value):
+            chamber_id = int(m.group(2))
+            explicit_pec_pm_by_job[int(m.group(1))] = chamber_id
+            pm_ids.add(chamber_id)
             continue
         m = LEGACY_FULL_START_RE.match(name)
         if m:
@@ -1336,9 +1590,27 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
         add_pm_interval(key[0], clean_start.get(key, 0.0), clean_end.get(key, 0.0))
 
     def infer_pm_for_interval(start: float, end: float) -> int:
+        # First retain the old exact-match behavior for ordinary one-cycle
+        # product and PEC intervals.
         for pm_id, pm_start, pm_end in pm_process_intervals:
             if abs(pm_start - start) <= 1e-6 and abs(pm_end - end) <= 1e-6:
                 return pm_id
+        # A reusable PEC wafer may remain in a chamber across two adjacent
+        # 2x2 cycles, including the bridge gap. Its PM interval therefore does
+        # not equal either individual cycle. Attribute it to the chamber whose
+        # process intervals have the largest total overlap with this span.
+        overlap_by_pm: Dict[int, float] = {}
+        for pm_id, pm_start, pm_end in pm_process_intervals:
+            overlap = max(0.0, min(end, pm_end) - max(start, pm_start))
+            overlap_by_pm[pm_id] = overlap_by_pm.get(pm_id, 0.0) + overlap
+        if overlap_by_pm:
+            best_overlap = max(overlap_by_pm.values())
+            best_pm_ids = [
+                pm_id for pm_id, overlap in overlap_by_pm.items()
+                if overlap > 1e-6 and abs(overlap - best_overlap) <= 1e-6
+            ]
+            if len(best_pm_ids) == 1:
+                return best_pm_ids[0]
         return 0
 
     wafer_pm: Dict[int, int] = {}
@@ -1360,24 +1632,120 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
             wafer_pm[wafer_id] = pm_id
             pm_ids.add(pm_id)
 
-    pec_pm_by_job: Dict[int, int] = {}
+    pec_pm_by_job: Dict[int, int] = dict(explicit_pec_pm_by_job)
     pec_job_ids = sorted({job_id for job_id, _ in pec_stage_start} | {job_id for job_id, _ in pec_stage_end})
     for job_id in pec_job_ids:
+        if job_id in pec_pm_by_job:
+            continue
         start = pec_stage_start.get((job_id, "pm"), 0.0)
         end = pec_stage_end.get((job_id, "pm"), 0.0)
         pm_id = infer_pm_for_interval(start, end)
         if pm_id:
             pec_pm_by_job[job_id] = pm_id
-            pm_ids.add(pm_id)
+
+    # Reusable tokens are chamber-bound. If an old solution has one ambiguous
+    # zero-overlap job, reuse the chamber learned from another job assigned to
+    # the same PEC token before falling back to an unresolved lane.
+    token_pm_candidates: Dict[int, set] = {}
+    for job_id, pm_id in pec_pm_by_job.items():
+        token_id = pec_token_by_job.get(job_id)
+        if token_id is not None:
+            token_pm_candidates.setdefault(token_id, set()).add(pm_id)
+    for job_id in pec_job_ids:
+        if job_id in pec_pm_by_job:
+            continue
+        token_id = pec_token_by_job.get(job_id)
+        candidates = token_pm_candidates.get(token_id, set())
+        if len(candidates) == 1:
+            resolved_pm_id = next(iter(candidates))
+            pec_pm_by_job[job_id] = resolved_pm_id
+            pm_ids.add(resolved_pm_id)
+
+    full_pair_by_wafer = {
+        wafer_id: pair_id
+        for pair_id, members in full_pair_members.items()
+        for wafer_id in members
+    }
+    mix_pair_by_wafer = {
+        wafer_id: pair_id
+        for pair_id, members in mix_pair_members.items()
+        for wafer_id in members
+    }
+    full_pair_location = {
+        pair_id: (pm_id, batch_id, side_id)
+        for (pm_id, batch_id, side_id), pair_id in full_assignment.items()
+    }
+    mix_pair_location = {
+        pair_id: (pm_id, pos_id)
+        for (pm_id, pos_id), pair_id in mix_pair_by_pos.items()
+    }
+    max_mix_pos_by_pm = {
+        pm_id: mix_last_pos.get(
+            pm_id,
+            max((pos_id for key_pm, pos_id in mix_pair_by_pos if key_pm == pm_id), default=0),
+        )
+        for pm_id in set(mix_last_pos) | {key_pm for key_pm, _ in mix_pair_by_pos}
+    }
+
+    vtr_task_product_members: Dict[str, List[int]] = {}
+
+    def register_vtr_product_members(task_name: str, members: List[int]) -> None:
+        if not task_name or not members:
+            return
+        bucket = vtr_task_product_members.setdefault(task_name, [])
+        for wafer_id in members:
+            if wafer_id not in bucket:
+                bucket.append(wafer_id)
+
+    for pair_id, members in full_pair_members.items():
+        location = full_pair_location.get(pair_id)
+        if location is None:
+            continue
+        pm_id, batch_id, side_id = location
+        side_prefix = "front" if side_id == 1 else "back"
+        register_vtr_product_members(f"full_{side_prefix}_load_{pm_id}_{batch_id}", sorted(members))
+        register_vtr_product_members(f"full_{side_prefix}_unload_{pm_id}_{batch_id}", sorted(members))
+    for pair_id, members in mix_pair_members.items():
+        location = mix_pair_location.get(pair_id)
+        if location is None:
+            continue
+        pm_id, pos_id = location
+        max_pos = max_mix_pos_by_pm.get(pm_id, pos_id)
+        load_task = f"mix_head_{pm_id}" if pos_id == 1 else f"mix_bridge_{pm_id}_{pos_id}"
+        unload_task = f"mix_tail_{pm_id}" if pos_id == max_pos else f"mix_bridge_{pm_id}_{pos_id + 2}"
+        register_vtr_product_members(load_task, sorted(members))
+        register_vtr_product_members(unload_task, sorted(members))
+
+    # The pure-4x1 formulation writes LL slot chains directly, so it has no
+    # LL slot-assignment variables to parse. Reconstruct those two physical
+    # LL lanes for visualization. ATR and VTR remain single robot lanes: their
+    # capacity is payload capacity, not permission for different routes to run
+    # concurrently.
+    pure_full_capacity_chains = bool(full_pair_members) and not mix_pair_members
+    if pure_full_capacity_chains:
+        if not llupper_slot_by_wafer:
+            for members in full_pair_members.values():
+                for slot_id, wafer_id in enumerate(sorted(members), start=1):
+                    llupper_slot_by_wafer[wafer_id] = slot_id
+                    lllower_slot_by_wafer[wafer_id] = slot_id
 
     ordered_pm_ids = [2, 3] if pm_ids and pm_ids.issubset({2, 3}) else sorted(pm_ids)
     llupper_slots = sorted(set(llupper_slot_by_wafer.values()) | ({1, 2} if llupper_slot_by_wafer else set()))
     lllower_slots = sorted(set(lllower_slot_by_wafer.values()) | ({1, 2} if lllower_slot_by_wafer else set()))
-    lane_order: List[str] = ["ATR robot", "AL"]
+    atr_slots = sorted({slot for slots in atr_slots_by_task.values() for slot in slots})
+    vtr_slots = sorted({slot for slots in vtr_slots_by_task.values() for slot in slots})
+    if atr_slots_by_task:
+        atr_slots = sorted(set(atr_slots) | {1, 2})
+    if vtr_slots_by_task:
+        vtr_slots = sorted(set(vtr_slots) | {1, 2, 3, 4})
+    atr_lanes = [f"ATR slot {slot_id}" for slot_id in atr_slots] if atr_slots else ["ATR robot"]
+    vtr_lanes = [f"VTR slot {slot_id}" for slot_id in vtr_slots] if vtr_slots else ["VTR robot"]
+    mandatory_resource_lanes = set(atr_lanes + vtr_lanes) if (atr_slots_by_task or vtr_slots_by_task) else set()
+    lane_order: List[str] = list(atr_lanes) + ["AL"]
     lane_order.extend(f"LLupper slot {slot_id}" for slot_id in llupper_slots)
     if not llupper_slots:
         lane_order.append("LLupper")
-    lane_order.append("VTR robot")
+    lane_order.extend(vtr_lanes)
     lane_order.extend(f"CH{pm_id} PM" for pm_id in ordered_pm_ids)
     if not ordered_pm_ids:
         lane_order.append("PM")
@@ -1387,6 +1755,7 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
 
     aggregated: Dict[Tuple[str, float, float, str, str], Dict[str, object]] = {}
     time_candidates: List[float] = []
+    chamber_wait_intervals: List[Tuple[str, float, float, str, str, str]] = []
 
     def add_task(lane: str, start: float, end: float, action: str, entity: str, color: str) -> None:
         if end <= start + 1e-9:
@@ -1406,11 +1775,70 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
         item["entities"].append(entity)
         time_candidates.extend([start, end])
 
+    def add_chamber_wait(
+        lane: str,
+        start: float,
+        end: float,
+        action: str,
+        entity: str,
+        color: str,
+    ) -> None:
+        if end > start + 1e-9:
+            chamber_wait_intervals.append((lane, start, end, action, entity, color))
+
     def product_start(wafer_id: int, stage_name: str) -> float:
         return prod_stage_start.get((wafer_id, stage_name), 0.0)
 
     def product_end(wafer_id: int, stage_name: str) -> float:
         return prod_stage_end.get((wafer_id, stage_name), product_start(wafer_id, stage_name))
+
+    def atr_load_unload_time(wafer_id: int, stage_name: str) -> float:
+        vtr_time = product_end(wafer_id, "vtr_load") - product_start(wafer_id, "vtr_load")
+        if vtr_time <= 1e-9:
+            vtr_time = product_end(wafer_id, "vtr_unload") - product_start(wafer_id, "vtr_unload")
+        stage_time = product_end(wafer_id, stage_name) - product_start(wafer_id, stage_name)
+        return max(0.0, min(vtr_time, 0.5 * stage_time))
+
+    atr_motion_actions: Dict[Tuple[float, float, str, str], List[str]] = {}
+
+    def resource_pair_members(wafer_id: int) -> List[int]:
+        full_pair = full_pair_by_wafer.get(wafer_id)
+        if full_pair is not None:
+            return sorted(full_pair_members.get(full_pair, []))
+        mix_pair = mix_pair_by_wafer.get(wafer_id)
+        if mix_pair is not None:
+            return sorted(mix_pair_members.get(mix_pair, []))
+        return []
+
+    def resource_stage_is_synchronized(wafer_id: int, stage_name: str) -> bool:
+        members = resource_pair_members(wafer_id)
+        if len(members) != 2:
+            return False
+        first, second = members
+        return (
+            abs(product_start(first, stage_name) - product_start(second, stage_name)) <= 1e-6
+            and abs(product_end(first, stage_name) - product_end(second, stage_name)) <= 1e-6
+        )
+
+    def add_atr_resource_transfer(lane, wafer_id: int, stage_name: str, source: str, destination: str, entity: str) -> None:
+        start = product_start(wafer_id, stage_name)
+        end = product_end(wafer_id, stage_name)
+        handling_time = atr_load_unload_time(wafer_id, stage_name)
+        load_end = min(end, start + handling_time)
+        unload_start = max(load_end, end - handling_time)
+        synchronized = resource_stage_is_synchronized(wafer_id, stage_name)
+        members = resource_pair_members(wafer_id)
+        first_member = members[0] if members else wafer_id
+        second_member = members[-1] if members else wafer_id
+        if not (synchronized and source == "AL" and wafer_id == first_member):
+            load_action = "ATR single-pick at AL" if synchronized and source == "AL" else f"ATR load at {source}"
+            add_task(lane, start, load_end, load_action, entity, "#4C78A8")
+        add_task(lane, load_end, unload_start, f"ATR move {source}->{destination}", entity, "#72B7B2")
+        if not (synchronized and destination == "AL" and wafer_id == second_member):
+            unload_action = "ATR single-place at AL" if synchronized and destination == "AL" else f"ATR unload at {destination}"
+            add_task(lane, unload_start, end, unload_action, entity, "#9C755F")
+        key = (round(start, 6), round(end, 6), source, destination)
+        atr_motion_actions.setdefault(key, []).append(entity)
 
     def pm_lane(pm_id: int) -> str:
         return f"CH{pm_id} PM" if pm_id else "PM"
@@ -1426,93 +1854,309 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
         slot_id = lllower_slot_by_wafer.get(wafer_id)
         return f"LLlower slot {slot_id}" if slot_id is not None else "LLlower"
 
-    def add_single_product_pair_empty_slot(pair_label: str, members: List[int]) -> None:
-        if len(members) != 1:
-            return
-        wafer_id = members[0]
-        upper_slot = llupper_slot_by_wafer.get(wafer_id)
-        if upper_slot in (1, 2):
-            empty_slot = 2 if upper_slot == 1 else 1
-            add_task(
-                f"LLupper slot {empty_slot}",
-                product_start(wafer_id, "llupper"),
-                product_end(wafer_id, "llupper"),
-                "LLupper sync empty",
-                f"{pair_label} empty",
-                "#BAB0AC",
-            )
-        lower_slot = lllower_slot_by_wafer.get(wafer_id)
-        if lower_slot in (1, 2):
-            empty_slot = 2 if lower_slot == 1 else 1
-            add_task(
-                f"LLlower slot {empty_slot}",
-                product_start(wafer_id, "lllower"),
-                product_end(wafer_id, "lllower"),
-                "LLlower sync empty",
-                f"{pair_label} empty",
-                "#BAB0AC",
-            )
+    def atr_lane(task_name: str) -> str:
+        slots = sorted(atr_slots_by_task.get(task_name, []))
+        return f"ATR slot {slots[0]}" if slots else "ATR robot"
+
+    def vtr_lane(task_name: str, wafer_id: int) -> str:
+        slots = sorted(vtr_slots_by_task.get(task_name, []))
+        if not slots:
+            return "VTR robot"
+        members = sorted(vtr_task_product_members.get(task_name, []))
+        if wafer_id in members:
+            member_index = members.index(wafer_id)
+        else:
+            member_index = 0
+        return f"VTR slot {slots[min(member_index, len(slots) - 1)]}"
+
+    def product_mode_label(wafer_id: int) -> str:
+        if wafer_id in full_pair_by_wafer:
+            return "4x1"
+        if wafer_id in mix_pair_by_wafer:
+            return "2x2"
+        return ""
+
+    def product_vtr_task_name(wafer_id: int, stage_name: str) -> str:
+        full_pair = full_pair_by_wafer.get(wafer_id)
+        if full_pair is not None:
+            location = full_pair_location.get(full_pair)
+            if location is None:
+                return ""
+            pm_id, batch_id, side_id = location
+            side_prefix = "front" if side_id == 1 else "back"
+            transfer = "load" if stage_name == "vtr_load" else "unload"
+            return f"full_{side_prefix}_{transfer}_{pm_id}_{batch_id}"
+
+        mix_pair = mix_pair_by_wafer.get(wafer_id)
+        if mix_pair is not None:
+            location = mix_pair_location.get(mix_pair)
+            if location is None:
+                return ""
+            pm_id, pos_id = location
+            if stage_name == "vtr_load":
+                return f"mix_head_{pm_id}" if pos_id == 1 else f"mix_bridge_{pm_id}_{pos_id}"
+            max_pos = max_mix_pos_by_pm.get(pm_id, pos_id)
+            return f"mix_tail_{pm_id}" if pos_id == max_pos else f"mix_bridge_{pm_id}_{pos_id + 2}"
+
+        return ""
+
+    def add_product_vtr_transfer(
+        wafer_id: int,
+        stage_name: str,
+        pm_id: int,
+        task_name: str,
+        entity: str,
+    ) -> None:
+        stage_start = product_start(wafer_id, stage_name)
+        stage_end = product_end(wafer_id, stage_name)
+        lane = vtr_lane(task_name, wafer_id)
+        chamber_name = f"CH{pm_id}" if pm_id else "CH"
+        source = "LLupper" if stage_name == "vtr_load" else chamber_name
+        destination = chamber_name if stage_name == "vtr_load" else "LLlower"
+        operation = "load" if stage_name == "vtr_load" else "unload"
+        add_task(
+            lane,
+            stage_start,
+            stage_end,
+            f"VTR pickup at {source} + loaded move {source}->{destination} + place at {destination} ({operation})",
+            entity,
+            "#F58518" if stage_name == "vtr_load" else "#FF9DA6",
+        )
+
+    def add_pm_resource_tasks(wafer_id: int, pm_id: int, entity: str) -> None:
+        chamber_entry = product_end(wafer_id, "vtr_load")
+        chamber_exit = product_start(wafer_id, "vtr_unload")
+        mix_pair = mix_pair_by_wafer.get(wafer_id)
+        location = mix_pair_location.get(mix_pair) if mix_pair is not None else None
+        if location is not None:
+            mix_pm_id, pos_id = location
+            first_start = mix_cycle_start.get((mix_pm_id, pos_id), 0.0)
+            first_end = mix_cycle_end.get((mix_pm_id, pos_id), 0.0)
+            second_start = mix_cycle_start.get((mix_pm_id, pos_id + 1), 0.0)
+            second_end = mix_cycle_end.get((mix_pm_id, pos_id + 1), 0.0)
+            if first_end > first_start + 1e-9 and second_end > second_start + 1e-9:
+                lane = pm_lane(mix_pm_id)
+                add_chamber_wait(
+                    lane,
+                    chamber_entry,
+                    first_start,
+                    "CH wait before process",
+                    entity,
+                    "#F2A09A",
+                )
+                add_task(lane, first_start, first_end, "2x2 PM process", entity, "#E45756")
+                add_task(
+                    lane,
+                    first_end,
+                    second_start,
+                    "2x2 in-chamber bridge/wait",
+                    entity,
+                    "#BAB0AC",
+                )
+                add_task(lane, second_start, second_end, "2x2 PM process", entity, "#E45756")
+                add_chamber_wait(
+                    lane,
+                    second_end,
+                    chamber_exit,
+                    "CH wait for VTR unload",
+                    entity,
+                    "#F2A09A",
+                )
+                return
+        mode_label = product_mode_label(wafer_id)
+        action = f"{mode_label} PM process" if mode_label else "PM process"
+        lane = pm_lane(pm_id)
+        process_start = product_start(wafer_id, "pm")
+        process_end = product_end(wafer_id, "pm")
+        add_chamber_wait(
+            lane,
+            chamber_entry,
+            process_start,
+            "CH wait before process",
+            entity,
+            "#F2A09A",
+        )
+        add_task(lane, process_start, process_end, action, entity, "#E45756")
+        add_chamber_wait(
+            lane,
+            process_end,
+            chamber_exit,
+            "CH wait for VTR unload",
+            entity,
+            "#F2A09A",
+        )
 
     for wafer_id in product_ids:
         entity = f"W{wafer_id}"
         pm_id = wafer_pm.get(wafer_id, 0)
-        add_task("ATR robot", product_start(wafer_id, "atr_lp_al"), product_end(wafer_id, "atr_lp_al"), "LP->AL", entity, "#4C78A8")
+        add_atr_resource_transfer(atr_lane(f"lp_al_{wafer_id}"), wafer_id, "atr_lp_al", "LP", "AL", entity)
         add_task(
             "AL",
-            product_end(wafer_id, "atr_lp_al"),
-            product_end(wafer_id, "atr_al_llupper"),
-            "AL occupy",
+            product_start(wafer_id, "al"),
+            product_end(wafer_id, "al"),
+            "AL calibrate",
             entity,
             "#9C755F",
         )
-        add_task("ATR robot", product_start(wafer_id, "atr_al_llupper"), product_end(wafer_id, "atr_al_llupper"), "AL->LLupper", entity, "#72B7B2")
-        llupper_entry = product_end(wafer_id, "atr_al_llupper")
-        llupper_state_start = product_start(wafer_id, "llupper")
-        if llupper_state_start > llupper_entry + 1e-9:
+        exchange_start = product_start(wafer_id, "atr_al_exchange")
+        exchange_end = product_end(wafer_id, "atr_al_exchange")
+        if exchange_end > exchange_start + 1e-9:
+            pair_id = full_pair_by_wafer.get(wafer_id)
+            members = sorted(full_pair_members.get(pair_id, [])) if pair_id is not None else []
+            if not members:
+                pair_id = mix_pair_by_wafer.get(wafer_id)
+                members = sorted(mix_pair_members.get(pair_id, [])) if pair_id is not None else []
+            exchange_entity = " -> ".join(f"W{member}" for member in members) or entity
             add_task(
-                llupper_lane(wafer_id),
-                llupper_entry,
-                llupper_state_start,
-                "LLupper wait",
-                entity,
-                "#8CD17D",
+                "ATR robot",
+                exchange_start,
+                exchange_end,
+                "ATR single-wafer exchange at AL",
+                exchange_entity,
+                "#D37295",
             )
-        add_task(
-            llupper_lane(wafer_id),
-            llupper_state_start,
-            product_end(wafer_id, "llupper"),
-            "LLupper state",
-            entity,
-            "#54A24B",
+            add_task(
+                "AL",
+                exchange_start,
+                exchange_end,
+                "AL wafer exchange",
+                exchange_entity,
+                "#D37295",
         )
-        add_task("VTR robot", product_start(wafer_id, "vtr_load"), product_end(wafer_id, "vtr_load"), f"VTR load{ch_suffix(pm_id)}", entity, "#F58518")
-        add_task(pm_lane(pm_id), product_start(wafer_id, "pm"), product_end(wafer_id, "pm"), "PM process", entity, "#E45756")
-        add_task("VTR robot", product_start(wafer_id, "vtr_unload"), product_end(wafer_id, "vtr_unload"), f"VTR unload{ch_suffix(pm_id)}", entity, "#FF9DA6")
+        add_atr_resource_transfer(atr_lane(f"al_llupper_{wafer_id}"), wafer_id, "atr_al_llupper", "AL", "LLupper", entity)
+        upper_lane = llupper_lane(wafer_id)
+        llupper_entry = product_end(wafer_id, "atr_al_llupper")
+        upper_handling_time = atr_load_unload_time(wafer_id, "atr_al_llupper")
         add_task(
-            lllower_lane(wafer_id),
-            product_start(wafer_id, "lllower"),
-            product_end(wafer_id, "lllower"),
-            "LLlower state",
+            upper_lane,
+            max(product_start(wafer_id, "atr_al_llupper"), llupper_entry - upper_handling_time),
+            llupper_entry,
+            "LLupper atmosphere: ATR place",
+            entity,
+            "#4C78A8",
+        )
+        llupper_state_start = product_start(wafer_id, "llupper")
+        llupper_state_end = product_end(wafer_id, "llupper")
+        add_task(
+            upper_lane,
+            llupper_state_start,
+            llupper_state_end,
+            "LLupper pump: atmosphere->vacuum",
+            entity,
+            "#59A14F",
+        )
+        load_task_name = product_vtr_task_name(wafer_id, "vtr_load")
+        unload_task_name = product_vtr_task_name(wafer_id, "vtr_unload")
+        add_task(
+            upper_lane,
+            llupper_state_end,
+            product_start(wafer_id, "vtr_load"),
+            "LLupper vacuum ready/wait",
+            entity,
+            "#8CD17D",
+        )
+        add_task(
+            upper_lane,
+            product_start(wafer_id, "vtr_load"),
+            product_end(wafer_id, "vtr_load"),
+            "LLupper vacuum: VTR pickup",
+            entity,
+            "#F58518",
+        )
+        upper_transition_time = max(0.0, llupper_state_end - llupper_state_start)
+        add_task(
+            upper_lane,
+            product_end(wafer_id, "vtr_load"),
+            product_end(wafer_id, "vtr_load") + upper_transition_time,
+            "LLupper vent reset: vacuum->atmosphere",
+            "empty",
+            "#BAB0AC",
+        )
+        add_product_vtr_transfer(wafer_id, "vtr_load", pm_id, load_task_name, entity)
+        add_pm_resource_tasks(wafer_id, pm_id, entity)
+        add_product_vtr_transfer(wafer_id, "vtr_unload", pm_id, unload_task_name, entity)
+        lower_lane = lllower_lane(wafer_id)
+        add_task(
+            lower_lane,
+            product_start(wafer_id, "vtr_unload"),
+            product_end(wafer_id, "vtr_unload"),
+            "LLlower vacuum: VTR place",
+            entity,
+            "#F58518",
+        )
+        lllower_state_start = product_start(wafer_id, "lllower")
+        lllower_state_end = product_end(wafer_id, "lllower")
+        add_task(
+            lower_lane,
+            lllower_state_start,
+            lllower_state_end,
+            "LLlower vent: vacuum->atmosphere",
             entity,
             "#B279A2",
         )
         lllower_exit_start = product_start(wafer_id, "atr_lllower_lp")
-        lllower_state_end = product_end(wafer_id, "lllower")
         if lllower_exit_start > lllower_state_end + 1e-9:
             add_task(
-                lllower_lane(wafer_id),
+                lower_lane,
                 lllower_state_end,
                 lllower_exit_start,
-                "LLlower wait",
+                "LLlower atmosphere ready/wait",
                 entity,
                 "#D4A6C8",
             )
-        add_task("ATR robot", product_start(wafer_id, "atr_lllower_lp"), product_end(wafer_id, "atr_lllower_lp"), "LLlower->LP", entity, "#79706E")
+        lower_handling_time = atr_load_unload_time(wafer_id, "atr_lllower_lp")
+        lower_pickup_end = min(
+            product_end(wafer_id, "atr_lllower_lp"),
+            lllower_exit_start + lower_handling_time,
+        )
+        add_task(
+            lower_lane,
+            lllower_exit_start,
+            lower_pickup_end,
+            "LLlower atmosphere: ATR pickup",
+            entity,
+            "#4C78A8",
+        )
+        lower_transition_time = max(0.0, lllower_state_end - lllower_state_start)
+        add_task(
+            lower_lane,
+            lower_pickup_end,
+            lower_pickup_end + lower_transition_time,
+            "LLlower pump reset: atmosphere->vacuum",
+            "empty",
+            "#BAB0AC",
+        )
+        add_atr_resource_transfer(atr_lane(f"lllower_lp_{wafer_id}"), wafer_id, "atr_lllower_lp", "LLlower", "LP", entity)
 
-    for pair_id, members in sorted(full_pair_members.items()):
-        add_single_product_pair_empty_slot(f"F{pair_id}", sorted(members))
-    for pair_id, members in sorted(mix_pair_members.items()):
-        add_single_product_pair_empty_slot(f"M{pair_id}", sorted(members))
+    # A physical robot cannot teleport between the endpoint of one loaded move
+    # and the source of the next. Reconstruct the mandatory empty relocation
+    # from the solved action order so the resource Gantt exposes it explicitly.
+    ordered_atr_actions = sorted(atr_motion_actions, key=lambda item: (item[0], item[1], item[2], item[3]))
+    location_index = {"LP": 0, "AL": 1, "LLupper": 2, "LLlower": 2}
+    if ordered_atr_actions:
+        first_start, first_end, _first_source, _first_destination = ordered_atr_actions[0]
+        first_entities = atr_motion_actions[ordered_atr_actions[0]]
+        reference_wafer = int(first_entities[0][1:]) if first_entities and first_entities[0].startswith("W") else 0
+        base_move_time = max(
+            0.0,
+            product_end(reference_wafer, "atr_lp_al") - product_start(reference_wafer, "atr_lp_al")
+            - 2.0 * atr_load_unload_time(reference_wafer, "atr_lp_al"),
+        ) if reference_wafer else 0.0
+        for previous, following in zip(ordered_atr_actions, ordered_atr_actions[1:]):
+            _prev_start, previous_end, _prev_source, previous_destination = previous
+            following_start, _following_end, following_source, _following_destination = following
+            travel_time = abs(location_index[previous_destination] - location_index[following_source]) * base_move_time
+            if travel_time <= 1e-9:
+                continue
+            empty_end = min(following_start, previous_end + travel_time)
+            add_task(
+                "ATR robot",
+                previous_end,
+                empty_end,
+                f"ATR empty {previous_destination}->{following_source}",
+                "empty",
+                "#BAB0AC",
+            )
 
     def pec_entity(job_id: int) -> str:
         token_id = pec_token_by_job.get(job_id)
@@ -1521,11 +2165,14 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
     for job_id in pec_job_ids:
         entity = pec_entity(job_id)
         pm_id = pec_pm_by_job.get(job_id, 0)
+        chamber_name = f"CH{pm_id}" if pm_id else "CH"
+        pec_load_start = pec_stage_start.get((job_id, "vtr_load"), 0.0)
+        pec_load_end = pec_stage_end.get((job_id, "vtr_load"), 0.0)
         add_task(
             "VTR robot",
-            pec_stage_start.get((job_id, "vtr_load"), 0.0),
-            pec_stage_end.get((job_id, "vtr_load"), 0.0),
-            f"VTR load{ch_suffix(pm_id)}",
+            pec_load_start,
+            pec_load_end,
+            f"VTR pickup at PEC storage + loaded move PEC storage->{chamber_name} + place at {chamber_name} (load)",
             entity,
             "#F58518",
         )
@@ -1533,23 +2180,164 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
             pm_lane(pm_id),
             pec_stage_start.get((job_id, "pm"), 0.0),
             pec_stage_end.get((job_id, "pm"), 0.0),
-            "PM process",
+            "PEC chamber support",
             entity,
             "#E45756",
         )
+        pec_unload_start = pec_stage_start.get((job_id, "vtr_unload"), 0.0)
+        pec_unload_end = pec_stage_end.get((job_id, "vtr_unload"), 0.0)
         add_task(
             "VTR robot",
-            pec_stage_start.get((job_id, "vtr_unload"), 0.0),
-            pec_stage_end.get((job_id, "vtr_unload"), 0.0),
-            f"VTR unload{ch_suffix(pm_id)}",
+            pec_unload_start,
+            pec_unload_end,
+            f"VTR pickup at {chamber_name} + loaded move {chamber_name}->PEC storage + place at PEC storage (unload)",
             entity,
             "#FF9DA6",
         )
 
+    # Several wafers can wait concurrently in different pockets of one CH.
+    # Convert their overlapping residence intervals into non-overlapping
+    # segments with the active wafer set, so one chamber lane stays readable.
+    chamber_wait_groups: Dict[Tuple[str, str, str], List[Tuple[float, float, str]]] = {}
+    for lane, start, end, action, entity, color in chamber_wait_intervals:
+        chamber_wait_groups.setdefault((lane, action, color), []).append((start, end, entity))
+    for (lane, action, color), intervals in chamber_wait_groups.items():
+        boundaries = sorted({point for start, end, _entity in intervals for point in (start, end)})
+        merged_segments: List[Tuple[float, float, Tuple[str, ...]]] = []
+        for start, end in zip(boundaries, boundaries[1:]):
+            if end <= start + 1e-9:
+                continue
+            midpoint = 0.5 * (start + end)
+            entities = tuple(sorted(
+                {entity for left, right, entity in intervals if left <= midpoint < right},
+                key=_entity_sort_key,
+            ))
+            if not entities:
+                continue
+            if merged_segments and merged_segments[-1][2] == entities and abs(merged_segments[-1][1] - start) <= 1e-6:
+                previous_start, _previous_end, previous_entities = merged_segments[-1]
+                merged_segments[-1] = (previous_start, end, previous_entities)
+            else:
+                merged_segments.append((start, end, entities))
+        for start, end, entities in merged_segments:
+            for entity in entities:
+                add_task(lane, start, end, action, entity, color)
+
+    # A 2x2 bridge (and a product+PEC side) is one VTR motion that can unload
+    # and load different wafers in the same interval.  Collapse those exact
+    # overlaps into one bar instead of painting several bars over each other.
+    vtr_items_by_interval: Dict[Tuple[str, float, float], List[Tuple[Tuple[str, float, float, str, str], Dict[str, object]]]] = {}
+    for key, item in list(aggregated.items()):
+        lane = str(item["lane"])
+        if lane.startswith("VTR"):
+            interval_key = (lane, round(float(item["start"]), 6), round(float(item["end"]), 6))
+            vtr_items_by_interval.setdefault(interval_key, []).append((key, item))
+    for (lane, _rounded_start, _rounded_end), grouped_items in vtr_items_by_interval.items():
+        if len(grouped_items) <= 1:
+            continue
+        actions = sorted({str(item["action"]) for _key, item in grouped_items})
+        if any("wait" in action.lower() for action in actions):
+            continue
+        entities = sorted(
+            {entity for _key, item in grouped_items for entity in item["entities"]},
+            key=_entity_sort_key,
+        )
+        joined_actions = " / ".join(actions)
+        chambers = sorted(set(re.findall(r"CH\d+", joined_actions)))
+        has_load = any("(load)" in action or "+ load" in action for action in actions)
+        has_unload = any("(unload)" in action or "+ unload" in action for action in actions)
+        if len(chambers) == 1 and has_load and has_unload:
+            combined_action = (
+                f"VTR bridge LLupper->{chambers[0]}->LLlower "
+                "(place incoming + pick outgoing)"
+            )
+        elif len(chambers) == 1 and has_load:
+            combined_action = f"VTR pickup + loaded move LLupper->{chambers[0]} + place (load)"
+        elif len(chambers) == 1 and has_unload:
+            combined_action = f"VTR pickup + loaded move {chambers[0]}->LLlower + place (unload)"
+        else:
+            combined_action = "VTR combined transfer"
+        start = min(float(item["start"]) for _key, item in grouped_items)
+        end = max(float(item["end"]) for _key, item in grouped_items)
+        for key, _item in grouped_items:
+            aggregated.pop(key, None)
+        aggregated[(lane, round(start, 6), round(end, 6), combined_action, "#76B7B2")] = {
+            "lane": lane,
+            "start": start,
+            "end": end,
+            "action": combined_action,
+            "color": "#76B7B2",
+            "entities": entities,
+        }
+
+    # Show only mandatory empty relocation between loaded VTR actions. Any
+    # remaining gap is true robot idle time and intentionally stays blank.
+    def vtr_action_endpoints(action: str) -> Tuple[str, str] | None:
+        if action.startswith("VTR bridge LLupper->"):
+            return "LLupper", "LLlower"
+        route = re.search(
+            r"(LLupper|LLlower|PEC storage|CH\d+)->(LLupper|LLlower|PEC storage|CH\d+)",
+            action,
+        )
+        if route:
+            return route.group(1), route.group(2)
+        return None
+
+    loaded_vtr_items = sorted(
+        (
+            item
+            for item in list(aggregated.values())
+            if item["lane"] == "VTR robot"
+            and str(item["action"]).startswith("VTR")
+            and "empty move" not in str(item["action"])
+        ),
+        key=lambda item: (float(item["start"]), float(item["end"])),
+    )
+    loaded_durations = [
+        float(item["end"]) - float(item["start"])
+        for item in loaded_vtr_items
+        if float(item["end"]) > float(item["start"]) + 1e-9
+    ]
+    empty_move_time = min(loaded_durations) if loaded_durations else 0.0
+    for previous, following in zip(loaded_vtr_items, loaded_vtr_items[1:]):
+        previous_endpoints = vtr_action_endpoints(str(previous["action"]))
+        following_endpoints = vtr_action_endpoints(str(following["action"]))
+        if previous_endpoints is None or following_endpoints is None:
+            continue
+        previous_destination = previous_endpoints[1]
+        following_source = following_endpoints[0]
+        previous_end = float(previous["end"])
+        following_start = float(following["start"])
+        available_gap = following_start - previous_end
+        if previous_destination == following_source or available_gap <= 1e-9:
+            continue
+        relocation_end = previous_end + min(empty_move_time, available_gap)
+        add_task(
+            "VTR robot",
+            previous_end,
+            relocation_end,
+            f"VTR empty move {previous_destination}->{following_source}",
+            "empty",
+            "#BAB0AC",
+        )
+
     tasks: List[Dict[str, object]] = []
     for item in aggregated.values():
-        entities = _format_entity_list(item["entities"])
+        unique_entities = sorted(set(item["entities"]), key=_entity_sort_key)
+        entities = _format_entity_list(unique_entities)
         action = str(item["action"])
+        product_count = sum(1 for entity in unique_entities if str(entity).startswith("W"))
+        if product_count == 2:
+            if action.startswith("ATR load at "):
+                action = action.replace("ATR load at ", "ATR double-pick at ", 1)
+            elif action.startswith("ATR move "):
+                action = action.replace("ATR move ", "ATR dual-carry ", 1)
+            elif action.startswith("ATR unload at "):
+                action = action.replace("ATR unload at ", "ATR double-place at ", 1)
+            elif action.startswith("VTR load"):
+                action = action.replace("VTR load", "VTR double load", 1)
+            elif action.startswith("VTR unload"):
+                action = action.replace("VTR unload", "VTR double unload", 1)
         label = f"{action}\n{entities}" if entities else action
         tasks.append(
             {
@@ -1566,7 +2354,7 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
         return {}
 
     active_lanes = {str(task["lane"]) for task in tasks}
-    lanes = [lane for lane in lane_order if lane in active_lanes]
+    lanes = [lane for lane in lane_order if lane in active_lanes or lane in mandatory_resource_lanes]
     lanes.extend(sorted(active_lanes - set(lanes)))
     lane_rank = {lane: idx for idx, lane in enumerate(lanes)}
     horizon = max(time_candidates) if time_candidates else 0.0
@@ -2279,16 +3067,24 @@ def _write_interactive_gantt_frontend(
                 ".section { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }",
                 ".section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line); }",
                 ".section h2 { margin: 0; font-size: 16px; line-height: 1.3; letter-spacing: 0; }",
+                ".zoom-controls { display: inline-flex; align-items: center; gap: 6px; }",
+                ".zoom-button { min-width: 34px; height: 32px; border: 1px solid #b9c2ce; border-radius: 7px; background: #fff; color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; }",
+                ".zoom-button:hover { border-color: var(--accent); color: var(--accent); }",
+                ".zoom-value { min-width: 54px; text-align: center; color: var(--muted); font-size: 12px; font-weight: 700; }",
                 ".meta { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: #f8fafb; }",
                 ".meta-item { display: inline-flex; gap: 6px; align-items: baseline; border: 1px solid #dfe5ec; border-radius: 8px; padding: 6px 8px; background: #ffffff; font-size: 12px; }",
                 ".meta-item strong { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0; }",
-                ".viewport { background: #ffffff; }",
+                ".viewport { background: #ffffff; overflow: auto; }",
+                ".chart-viewport { height: 74vh; min-height: 560px; cursor: grab; overscroll-behavior: contain; }",
+                ".chart-viewport.dragging { cursor: grabbing; user-select: none; }",
+                ".zoom-stage { position: relative; width: 100%; height: 100%; min-width: 100%; min-height: 100%; }",
+                ".pan-surface { position: absolute; inset: 0; z-index: 2; background: transparent; cursor: inherit; touch-action: none; }",
                 "object { display: block; width: 100%; border: 0; background: #ffffff; }",
-                ".chart-object { height: 74vh; min-height: 560px; }",
+                ".chart-object { width: 100%; height: 100%; min-height: 100%; }",
                 ".comparison-object { height: 520px; min-height: 420px; }",
                 ".empty { padding: 36px 16px; color: var(--muted); font-weight: 700; text-align: center; }",
                 "[hidden] { display: none !important; }",
-                "@media (max-width: 860px) { .toolbar { grid-template-columns: 1fr; } .topbar { align-items: flex-start; flex-direction: column; } .button { width: 100%; } .chart-object { height: 68vh; min-height: 420px; } }",
+                "@media (max-width: 860px) { .toolbar { grid-template-columns: 1fr; } .topbar { align-items: flex-start; flex-direction: column; } .button { width: 100%; } .chart-viewport { height: 68vh; min-height: 420px; } .section-head { align-items: flex-start; flex-direction: column; } }",
                 "</style>",
                 "</head>",
                 "<body>",
@@ -2305,10 +3101,10 @@ def _write_interactive_gantt_frontend(
                 "</div>",
                 "<main>",
                 '<section class="section">',
-                '<div class="section-head"><h2 id="chartTitle">Gantt Chart</h2></div>',
+                '<div class="section-head"><h2 id="chartTitle">Gantt Chart</h2><div class="zoom-controls" aria-label="Gantt zoom controls"><button id="zoomOut" class="zoom-button" type="button" title="Zoom out">−</button><span id="zoomValue" class="zoom-value">100%</span><button id="zoomIn" class="zoom-button" type="button" title="Zoom in">+</button><button id="zoomReset" class="zoom-button" type="button" title="Reset zoom">Reset</button></div></div>',
                 '<div id="chartMeta" class="meta"></div>',
                 '<div id="emptyState" class="empty" hidden>No Gantt chart is available.</div>',
-                '<div class="viewport"><object id="chartObject" class="chart-object" type="image/svg+xml"></object></div>',
+                '<div id="chartViewport" class="viewport chart-viewport"><div id="chartStage" class="zoom-stage"><object id="chartObject" class="chart-object" type="image/svg+xml"></object><div id="panSurface" class="pan-surface" aria-hidden="true"></div></div></div>',
                 "</section>",
                 '<section id="comparisonSection" class="section" hidden>',
                 '<div class="section-head"><h2>Ablation Comparison</h2><a id="comparisonLink" class="button" href="#" target="_blank" rel="noopener">Open SVG</a></div>',
@@ -2331,6 +3127,37 @@ def _write_interactive_gantt_frontend(
                 "  var chartTitle = document.getElementById('chartTitle');",
                 "  var chartMeta = document.getElementById('chartMeta');",
                 "  var countBadge = document.getElementById('countBadge');",
+                "  var chartViewport = document.getElementById('chartViewport');",
+                "  var chartStage = document.getElementById('chartStage');",
+                "  var zoomValue = document.getElementById('zoomValue');",
+                "  var chartZoom = 1;",
+                "  var chartBaseHeight = 0;",
+                "  function applyZoom(nextZoom, anchorX, anchorY) {",
+                "    var oldWidth = Math.max(chartStage.scrollWidth, chartViewport.clientWidth);",
+                "    var oldHeight = Math.max(chartStage.scrollHeight, chartViewport.clientHeight);",
+                "    var focusX = anchorX == null ? chartViewport.clientWidth / 2 : anchorX;",
+                "    var focusY = anchorY == null ? chartViewport.clientHeight / 2 : anchorY;",
+                "    var ratioX = (chartViewport.scrollLeft + focusX) / oldWidth;",
+                "    var ratioY = (chartViewport.scrollTop + focusY) / oldHeight;",
+                "    chartZoom = Math.max(0.5, Math.min(4, nextZoom));",
+                "    if (!chartBaseHeight) { chartBaseHeight = Math.max(chartViewport.clientHeight, 560); }",
+                "    chartStage.style.width = (chartZoom * 100) + '%';",
+                "    chartStage.style.height = (chartBaseHeight * chartZoom) + 'px';",
+                "    zoomValue.textContent = Math.round(chartZoom * 100) + '%';",
+                "    requestAnimationFrame(function () {",
+                "      chartViewport.scrollLeft = ratioX * chartStage.scrollWidth - focusX;",
+                "      chartViewport.scrollTop = ratioY * chartStage.scrollHeight - focusY;",
+                "    });",
+                "  }",
+                "  function resetZoom() {",
+                "    chartBaseHeight = Math.max(chartViewport.clientHeight, 560);",
+                "    chartZoom = 1;",
+                "    chartStage.style.width = '100%';",
+                "    chartStage.style.height = chartBaseHeight + 'px';",
+                "    chartViewport.scrollLeft = 0;",
+                "    chartViewport.scrollTop = 0;",
+                "    zoomValue.textContent = '100%';",
+                "  }",
                 "  function unique(key) {",
                 "    var seen = Object.create(null);",
                 "    var values = [];",
@@ -2391,6 +3218,7 @@ def _write_interactive_gantt_frontend(
                 "    chartObject.hidden = false;",
                 "    emptyState.hidden = true;",
                 "    chartObject.data = entry.path;",
+                "    resetZoom();",
                 "    openSvg.href = entry.path;",
                 "    chartTitle.textContent = entry.title;",
                 "    renderMeta(entry);",
@@ -2400,6 +3228,35 @@ def _write_interactive_gantt_frontend(
                 "  setOptions(methodSelect, unique('method'));",
                 "  setOptions(instanceSelect, unique('instance'));",
                 "  [viewSelect, methodSelect, instanceSelect].forEach(function (select) { select.addEventListener('change', render); });",
+                "  document.getElementById('zoomOut').addEventListener('click', function () { applyZoom(chartZoom / 1.25); });",
+                "  document.getElementById('zoomIn').addEventListener('click', function () { applyZoom(chartZoom * 1.25); });",
+                "  document.getElementById('zoomReset').addEventListener('click', resetZoom);",
+                "  chartViewport.addEventListener('wheel', function (event) {",
+                "    event.preventDefault();",
+                "    var rect = chartViewport.getBoundingClientRect();",
+                "    applyZoom(chartZoom * (event.deltaY < 0 ? 1.12 : 1 / 1.12), event.clientX - rect.left, event.clientY - rect.top);",
+                "  }, { passive: false });",
+                "  var dragState = null;",
+                "  chartViewport.addEventListener('pointerdown', function (event) {",
+                "    if (event.button !== 0) { return; }",
+                "    dragState = { x: event.clientX, y: event.clientY, left: chartViewport.scrollLeft, top: chartViewport.scrollTop };",
+                "    chartViewport.classList.add('dragging');",
+                "    chartViewport.setPointerCapture(event.pointerId);",
+                "  });",
+                "  chartViewport.addEventListener('pointermove', function (event) {",
+                "    if (!dragState) { return; }",
+                "    chartViewport.scrollLeft = dragState.left - (event.clientX - dragState.x);",
+                "    chartViewport.scrollTop = dragState.top - (event.clientY - dragState.y);",
+                "  });",
+                "  function stopDrag(event) {",
+                "    if (!dragState) { return; }",
+                "    dragState = null;",
+                "    chartViewport.classList.remove('dragging');",
+                "    if (event && chartViewport.hasPointerCapture(event.pointerId)) { chartViewport.releasePointerCapture(event.pointerId); }",
+                "  }",
+                "  chartViewport.addEventListener('pointerup', stopDrag);",
+                "  chartViewport.addEventListener('pointercancel', stopDrag);",
+                "  chartViewport.addEventListener('dblclick', resetZoom);",
                 "  render();",
                 "  if (COMPARISON_SVG) {",
                 "    document.getElementById('comparisonSection').hidden = false;",

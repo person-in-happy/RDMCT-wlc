@@ -33,7 +33,9 @@ class CutSelectAgent(CutselBase):
         device,
         decode_type,
         mean_std,
-        policy_type
+        policy_type,
+        max_candidates=512,
+        max_selected_cuts=64,
     ):
         super().__init__()
         self.scip_model = scip_model
@@ -43,6 +45,13 @@ class CutSelectAgent(CutselBase):
         self.device = device
         self.decode_type = decode_type
         self.policy_type = policy_type
+        # Pointer decoding is sequential.  Letting it decode thousands of
+        # root-node cuts makes the callback dominate SCIP's solve time
+        # (especially for the dense 2x2 Petri model).  These caps only limit
+        # the learned-policy candidate pool; omitted cuts are still returned
+        # to SCIP after the selected prefix.
+        self.max_candidates = max_candidates
+        self.max_selected_cuts = max_selected_cuts
 
         self.data = {}
         # self.cuts_info ={}
@@ -51,6 +60,111 @@ class CutSelectAgent(CutselBase):
             "lp_solution_integer_var_value": []
         }
         self.mean_std = mean_std
+
+    @staticmethod
+    def _fallback_cutsel_result(cuts, maxnselectedcuts):
+        """Return a Cython-safe result when learned cut selection fails.
+
+        PySCIPOpt invokes ``cutselselect`` directly from a C callback.  An
+        exception escaping this method is converted to SCIP_ERROR at the C
+        boundary (and can terminate the Windows process without the original
+        Python traceback).  Preserve SCIP's supplied order and select its
+        allowed prefix instead of letting an optional learned policy turn one
+        bad callback into a solver crash.
+        """
+        try:
+            selection_limit = max(0, int(maxnselectedcuts))
+        except (TypeError, ValueError, OverflowError):
+            selection_limit = 0
+        return {
+            "cuts": list(cuts),
+            "nselectedcuts": min(len(cuts), selection_limit),
+            "result": SCIP_RESULT.SUCCESS,
+        }
+
+    @classmethod
+    def _validate_cutsel_result(cls, result, cuts, maxnselectedcuts):
+        """Normalize a learned response before PySCIPOpt hands it to SCIP."""
+        if not isinstance(result, dict):
+            raise TypeError(f"cut selector returned {type(result).__name__}, expected dict")
+
+        ordered_cuts = result.get("cuts", cuts)
+        if not isinstance(ordered_cuts, (list, tuple)):
+            raise TypeError("cut selector returned a non-sequence `cuts` value")
+        if len(ordered_cuts) != len(cuts):
+            raise ValueError(
+                "cut selector must return every candidate exactly once: "
+                f"got {len(ordered_cuts)} of {len(cuts)} cuts"
+            )
+        # The returned items must be the very Row wrappers supplied by SCIP,
+        # with no duplicated or foreign rows.  Cython casts them to SCIP_ROW*
+        # without further validation, so check identity before crossing back
+        # into native code.
+        if sorted(map(id, ordered_cuts)) != sorted(map(id, cuts)):
+            raise ValueError("cut selector returned duplicated or foreign cut rows")
+
+        try:
+            selection_limit = max(0, int(maxnselectedcuts))
+            selected_count = int(result.get("nselectedcuts", 0))
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError("cut selector returned an invalid selected-cut count") from exc
+        selected_count = min(max(0, selected_count), len(cuts), selection_limit)
+
+        return {
+            "cuts": list(ordered_cuts),
+            "nselectedcuts": selected_count,
+            "result": result.get("result", SCIP_RESULT.SUCCESS),
+        }
+
+    def _safe_learned_cutsel_call(self, selector, cuts, forcedcuts, root, maxnselectedcuts):
+        """Run a Python policy without allowing exceptions through SCIP's C API."""
+        try:
+            result = selector(cuts, forcedcuts, root, maxnselectedcuts)
+            return self._validate_cutsel_result(result, cuts, maxnselectedcuts)
+        except Exception as exc:
+            try:
+                logger.log(
+                    "warning: learned cut selector failed; falling back to SCIP candidate order: "
+                    f"{type(exc).__name__}: {exc}"
+                )
+            except Exception:
+                # Logging must not be allowed to reintroduce a C-callback
+                # failure while recovering from the original exception.
+                pass
+            return self._fallback_cutsel_result(cuts, maxnselectedcuts)
+
+    def _policy_candidate_indices(self, cuts):
+        """Keep a deterministic, inexpensive high-efficacy policy pool."""
+        num_cuts = len(cuts)
+        if self.max_candidates is None or int(self.max_candidates) <= 0:
+            return np.arange(num_cuts, dtype=np.int64)
+        limit = min(num_cuts, int(self.max_candidates))
+        if limit >= num_cuts:
+            return np.arange(num_cuts, dtype=np.int64)
+
+        # This SCIP accessor is substantially cheaper than calculating all
+        # 23 structural features (which traverses every row-column support).
+        # Tie-breaking by original index makes the candidate pool repeatable.
+        efficacy = np.fromiter(
+            (float(self.scip_model.getCutEfficacy(cut)) for cut in cuts),
+            dtype=np.float64,
+            count=num_cuts,
+        )
+        candidate = np.argpartition(-efficacy, limit - 1)[:limit]
+        return candidate[np.lexsort((candidate, -efficacy[candidate]))]
+
+    def _cap_selected_count(self, target_count, candidate_count):
+        target_count = min(int(target_count), int(candidate_count))
+        if self.max_selected_cuts is not None and int(self.max_selected_cuts) > 0:
+            target_count = min(target_count, int(self.max_selected_cuts))
+        return max(0, target_count)
+
+    @staticmethod
+    def _sort_all_cuts(cuts, selected_indices):
+        selected_set = set(selected_indices)
+        return [cuts[idx] for idx in selected_indices] + [
+            cut for idx, cut in enumerate(cuts) if idx not in selected_set
+        ]
 
     def _target_cut_count(self, num_cuts, maxnselectedcuts, desired_count, min_when_possible=2):
         limit = min(int(num_cuts), int(maxnselectedcuts))
@@ -274,12 +388,14 @@ class CutSelectAgent(CutselBase):
         }
     
     def cutselselect(self, cuts, forcedcuts, root, maxnselectedcuts):
-        if self.policy_type == 'with_token':
-            cuts_dict = self._cutselselect_with_token(cuts, forcedcuts, root, maxnselectedcuts)
-        else:
-            cuts_dict = self._cutselselect(cuts, forcedcuts, root, maxnselectedcuts)  
-
-        return cuts_dict 
+        selector = (
+            self._cutselselect_with_token
+            if self.policy_type == 'with_token'
+            else self._cutselselect
+        )
+        return self._safe_learned_cutsel_call(
+            selector, cuts, forcedcuts, root, maxnselectedcuts
+        )
     
     def _cutselselect(self, cuts, forcedcuts, root, maxnselectedcuts):
         '''first method called in each iteration in the main solving loop. '''
@@ -297,11 +413,14 @@ class CutSelectAgent(CutselBase):
                 'nselectedcuts': max(0, min(num_cuts, int(maxnselectedcuts))), # num of selected cuts
                 'result': SCIP_RESULT.SUCCESS
             }            
+        candidate_indices = self._policy_candidate_indices(cuts)
+        candidate_cuts = [cuts[int(idx)] for idx in candidate_indices]
         sel_cuts_num = self._target_cut_count(
             num_cuts,
             maxnselectedcuts,
             int(num_cuts * self.sel_cuts_percent),
         )
+        sel_cuts_num = self._cap_selected_count(sel_cuts_num, len(candidate_cuts))
         if sel_cuts_num <= 0:
             return {
                 'cuts': cuts,
@@ -311,7 +430,7 @@ class CutSelectAgent(CutselBase):
         st_before_input = time.time()
         cuts_features, structure_metadata = advanced_cut_feature_generator(
             self.scip_model,
-            cuts,
+            candidate_cuts,
             return_metadata=True,
         )
         et_feature_extractor = time.time()
@@ -326,7 +445,7 @@ class CutSelectAgent(CutselBase):
         st_end_input = time.time()
         # 只做选择动作的功能，不做计算梯度的功能
         with torch.no_grad():
-            decode_len = sel_cuts_num if self.policy_type != 'with_token' else (num_cuts + 1)
+            decode_len = sel_cuts_num if self.policy_type != 'with_token' else (len(candidate_cuts) + 1)
             _, input_idxs = self.policy(input_cuts.float(), decode_len, self.decode_type)
         st_end_inference = time.time()
         print(f"process input time: {st_end_input-st_before_input} s")
@@ -359,6 +478,7 @@ class CutSelectAgent(CutselBase):
                 "sel_cuts_num": len(idxes),
                 "selected_action": true_idxes,
                 "selected_cuts_num": len(true_idxes),
+                "candidate_indices": candidate_indices.tolist(),
                 "structure_info": structure_info,
             }
             # self.cuts_info = {
@@ -389,11 +509,13 @@ class CutSelectAgent(CutselBase):
                 'nselectedcuts': max(0, min(num_cuts, int(maxnselectedcuts))), # num of selected cuts
                 'result': SCIP_RESULT.SUCCESS
             }            
-        max_sel_cuts_num = len(cuts) + 1 
+        candidate_indices = self._policy_candidate_indices(cuts)
+        candidate_cuts = [cuts[int(idx)] for idx in candidate_indices]
+        max_sel_cuts_num = len(candidate_cuts) + 1
         st_before_input = time.time()
         cuts_features, structure_metadata = advanced_cut_feature_generator(
             self.scip_model,
-            cuts,
+            candidate_cuts,
             return_metadata=True,
         )
         et_feature_extractor = time.time()
@@ -422,6 +544,7 @@ class CutSelectAgent(CutselBase):
             maxnselectedcuts,
             raw_sel_cuts_num - 1,
         )
+        sel_cuts_num = self._cap_selected_count(sel_cuts_num, len(candidate_cuts))
         if sel_cuts_num <= 0:
             return {
                 'cuts': cuts,
@@ -429,19 +552,15 @@ class CutSelectAgent(CutselBase):
                 'result': SCIP_RESULT.SUCCESS
             }
         # select cuts 
-        true_idxes, structure_info = self._apply_structure_aware_selection(
-            [idx for idx in idxes if idx != num_cuts],
-            cuts,
+        selected_local_idxes, structure_info = self._apply_structure_aware_selection(
+            [idx for idx in idxes if idx != len(candidate_cuts)],
+            candidate_cuts,
             cuts_features,
             structure_metadata,
             sel_cuts_num,
         )
-        all_idxes = list(range(num_cuts))
-        selected_set = set(true_idxes)
-        not_sel_idxes = [idx for idx in all_idxes if idx not in selected_set]
-        sorted_cuts = [cuts[idx] for idx in true_idxes]
-        not_sel_cuts = [cuts[n_idx] for n_idx in not_sel_idxes]
-        sorted_cuts.extend(not_sel_cuts)
+        true_idxes = [int(candidate_indices[idx]) for idx in selected_local_idxes]
+        sorted_cuts = self._sort_all_cuts(cuts, true_idxes)
 
         if self.data and "structure_info" not in self.data:
             self.data["structure_info"] = structure_info
@@ -454,6 +573,7 @@ class CutSelectAgent(CutselBase):
                 "selected_action": true_idxes,
                 "selected_cuts_num": len(true_idxes),
                 "target_sel_cuts_num": sel_cuts_num,
+                "candidate_indices": candidate_indices.tolist(),
                 "structure_info": structure_info,
             }
 
@@ -482,7 +602,8 @@ class CutSelectAgent(CutselBase):
     #     return self.cuts_info
         
     def free_problem(self):
-        self.scip_model.freeProb()
+        # The SCIP model is owned and freed by SCIPCutSelEnv.step().
+        self.scip_model = None
 
 class HierarchyCutSelectAgent(CutSelectAgent):
     def __init__(
@@ -512,6 +633,15 @@ class HierarchyCutSelectAgent(CutSelectAgent):
         self.high_level_data = {}
 
     def cutselselect(self, cuts, forcedcuts, root, maxnselectedcuts):
+        return self._safe_learned_cutsel_call(
+            self._cutselselect_hierarchy,
+            cuts,
+            forcedcuts,
+            root,
+            maxnselectedcuts,
+        )
+
+    def _cutselselect_hierarchy(self, cuts, forcedcuts, root, maxnselectedcuts):
         '''first method called in each iteration in the main solving loop. '''
         # this method needs to be implemented by the user
         logger.log(f"forcedcuts length: {len(forcedcuts)}")
@@ -526,13 +656,15 @@ class HierarchyCutSelectAgent(CutSelectAgent):
                 'nselectedcuts': max(0, min(num_cuts, int(maxnselectedcuts))), # num of selected cuts
                 'result': SCIP_RESULT.SUCCESS
             }
-        
+        candidate_indices = self._policy_candidate_indices(cuts)
+        candidate_cuts = [cuts[int(idx)] for idx in candidate_indices]
+
         st_before_input = time.time()
 
         # compute states
         cuts_features, structure_metadata = advanced_cut_feature_generator(
             self.scip_model,
-            cuts,
+            candidate_cuts,
             return_metadata=True,
         )
         et_feature_extractor = time.time()
@@ -562,6 +694,7 @@ class HierarchyCutSelectAgent(CutSelectAgent):
             maxnselectedcuts,
             int(num_cuts * sel_cuts_percent),
         )
+        sel_cuts_num = self._cap_selected_count(sel_cuts_num, len(candidate_cuts))
         if sel_cuts_num <= 0:
             return {
                 'cuts': cuts,
@@ -581,19 +714,15 @@ class HierarchyCutSelectAgent(CutSelectAgent):
         print(f"pointer net inference time: {st_end_pointer_net_inference - st_end_highlevel_policy_inference} s")
 
         idxes = [input.cpu().detach().item() for input in input_idxs]
-        true_idxes, structure_info = self._apply_structure_aware_selection(
+        selected_local_idxes, structure_info = self._apply_structure_aware_selection(
             idxes,
-            cuts,
+            candidate_cuts,
             cuts_features,
             structure_metadata,
             sel_cuts_num,
         )
-        all_idxes = list(range(num_cuts))
-        selected_set = set(true_idxes)
-        not_sel_idxes = [idx for idx in all_idxes if idx not in selected_set]
-        sorted_cuts = [cuts[idx] for idx in true_idxes]
-        not_sel_cuts = [cuts[n_idx] for n_idx in not_sel_idxes]
-        sorted_cuts.extend(not_sel_cuts)
+        true_idxes = [int(candidate_indices[idx]) for idx in selected_local_idxes]
+        sorted_cuts = self._sort_all_cuts(cuts, true_idxes)
         # debug
         # sorted_cuts = cuts
         # 只log 第一次cut 处的state 和 action
@@ -606,6 +735,7 @@ class HierarchyCutSelectAgent(CutSelectAgent):
                 "selected_action": true_idxes,
                 "selected_cuts_num": len(true_idxes),
                 "target_sel_cuts_num": sel_cuts_num,
+                "candidate_indices": candidate_indices.tolist(),
                 "structure_info": structure_info,
             }
         if not self.high_level_data:
@@ -796,7 +926,8 @@ class HeuristicBeamCutSelectAgent(CutselBase):
         return {}
 
     def free_problem(self):
-        self.scip_model.freeProb()
+        # The SCIP model is owned and freed by SCIPCutSelEnv.step().
+        self.scip_model = None
 
 ## testing code
 # if __name__ == '__main__':

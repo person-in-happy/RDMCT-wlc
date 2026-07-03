@@ -26,12 +26,19 @@ def _set_unary_orders(vals, names, prefix, tasks):
 
 
 def _set_parallel_orders(vals, names, slot_prefix, order_prefix, tasks, slot_count, assignment_fn):
+    def normalize_slots(chosen):
+        if chosen is None:
+            return []
+        if isinstance(chosen, int):
+            return [chosen]
+        return list(chosen)
+
     for task_name, _, _, active in tasks:
-        chosen_slot = assignment_fn(task_name) if active else None
+        chosen_slots = normalize_slots(assignment_fn(task_name)) if active else []
         for slot in range(1, slot_count + 1):
             var_name = f"{slot_prefix}_{task_name}_{slot}"
             if var_name in names:
-                vals[var_name] = 1.0 if active and slot == chosen_slot else 0.0
+                vals[var_name] = 1.0 if active and slot in chosen_slots else 0.0
 
     for slot in range(1, slot_count + 1):
         for left_idx, (left_name, _, left_end, _) in enumerate(tasks):
@@ -118,8 +125,10 @@ def build_mip_clean_20260508_start(model):
                 _set(vals, f"assign_mix_{p}_{m}_{pos}", 1 if mix_map[p] == (m, pos) else 0)
 
     for m in cfg.pm_ids:
+        tail_batch = max(used_batches_by_pm[m])
         for b in range(1, cfg.num_full_batches_per_pm + 1):
             _set(vals, f"full_batch_used_{m}_{b}", 1 if b in used_batches_by_pm[m] else 0)
+            _set(vals, f"full_batch_tail_{m}_{b}", 1 if b == tail_batch else 0)
             for side in (1, 2):
                 _set(vals, f"full_filler_side_{m}_{b}_{side}", 1 if (m, b, side) == (2, 4, 2) else 0)
         _set(vals, f"mix_active_{m}", 1)
@@ -136,6 +145,14 @@ def build_mip_clean_20260508_start(model):
         for b in range(1, cfg.num_full_batches_per_pm + 1):
             for epoch in (1, 2):
                 _maybe(vals, names, f"full_batch_epoch_{m}_{b}_{epoch}", 1 if b in used_batches_by_pm[m] and epoch == 1 else 0)
+        for b in range(1, cfg.num_full_batches_per_pm):
+            for epoch in (1, 2):
+                active = b in used_batches_by_pm[m] and (b + 1) in used_batches_by_pm[m] and epoch == 1
+                _maybe(vals, names, f"full_adjacent_same_epoch_{m}_{b}_{epoch}", 1 if active else 0)
+        for b in range(1, cfg.num_full_batches_per_pm + 1):
+            for epoch in (1, 2):
+                active = b == tail_batch and epoch == 1
+                _maybe(vals, names, f"full_tail_mix_same_epoch_{m}_{b}_{epoch}", 1 if active else 0)
         for cycle in range(1, cfg.num_mix_cycles_per_pm + 1):
             for epoch in (1, 2):
                 _maybe(vals, names, f"mix_cycle_epoch_{m}_{cycle}_{epoch}", 1 if cycle in active_mix_cycles_by_pm[m] and epoch == 1 else 0)
@@ -302,15 +319,15 @@ def build_mip_clean_20260508_start(model):
     def _pre_stages(pair_sync, member_idx, member_count):
         upper_start = pair_sync["upper_start"]
         first_member_start = upper_start - (
-            member_count * (cfg.atr_transfer_time + cfg.aligner_time + cfg.atr_transfer_time)
+            member_count * (cfg.atr_lp_al_total_time + cfg.aligner_time + cfg.atr_al_llupper_total_time)
         )
-        offset = member_idx * (cfg.atr_transfer_time + cfg.aligner_time + cfg.atr_transfer_time)
+        offset = member_idx * (cfg.atr_lp_al_total_time + cfg.aligner_time + cfg.atr_al_llupper_total_time)
         lp_al_start = first_member_start + offset
-        lp_al_end = lp_al_start + cfg.atr_transfer_time
+        lp_al_end = lp_al_start + cfg.atr_lp_al_total_time
         al_start = lp_al_end
         al_end = al_start + cfg.aligner_time
         al_ll_start = al_end
-        al_ll_end = al_ll_start + cfg.atr_transfer_time
+        al_ll_end = al_ll_start + cfg.atr_al_llupper_total_time
         return {
             "atr_lp_al": (lp_al_start, lp_al_end),
             "al": (al_start, al_end),
@@ -320,10 +337,10 @@ def build_mip_clean_20260508_start(model):
 
     def _post_stages(pair_sync, member_idx):
         lower_end = pair_sync["lower_end"]
-        return_start = lower_end + 12.0 + cfg.atr_return_time * member_idx
+        return_start = lower_end + 12.0 + cfg.atr_lllower_lp_total_time * member_idx
         return {
             "lllower": (pair_sync["lower_start"], pair_sync["lower_end"]),
-            "atr_lllower_lp": (return_start, return_start + cfg.atr_return_time),
+            "atr_lllower_lp": (return_start, return_start + cfg.atr_lllower_lp_total_time),
         }
 
     completion = {}
@@ -388,6 +405,110 @@ def build_mip_clean_20260508_start(model):
         idle_total = full_idle + mix_idle
         _maybe(vals, names, f"chamber_idle_total_{m}", idle_total)
         _maybe(vals, names, f"chamber_idle_square_{m}", idle_total * idle_total)
+        for b in range(1, cfg.num_full_batches_per_pm):
+            if b in used_batches_by_pm[m] and (b + 1) in used_batches_by_pm[m]:
+                slack = vals[f"full_front_load_start_{m}_{b + 1}"] - vals[f"full_front_unload_end_{m}_{b}"]
+            else:
+                slack = 0.0
+            _maybe(vals, names, f"full_batch_idle_{m}_{b}_{b + 1}", slack)
+            for epoch in (1, 2):
+                _maybe(vals, names, f"full_batch_idle_{m}_{b}_{b + 1}_{epoch}", slack if epoch == 1 else 0.0)
+
+        tail_batch = max(used_batches_by_pm[m])
+        for b in range(1, cfg.num_full_batches_per_pm + 1):
+            slack = vals[f"mix_head_start_{m}"] - vals[f"full_front_unload_end_{m}_{b}"] if b == tail_batch else 0.0
+            _maybe(vals, names, f"full_to_mix_idle_{m}_{b}", slack)
+            for epoch in (1, 2):
+                _maybe(vals, names, f"full_to_mix_idle_{m}_{b}_{epoch}", slack if b == tail_batch and epoch == 1 else 0.0)
+
+        _maybe(vals, names, f"mix_head_idle_{m}", vals[f"mix_cycle_start_{m}_1"] - vals[f"mix_head_end_{m}"])
+        for cycle in range(2, cfg.num_mix_cycles_per_pm + 1):
+            if cycle in active_mix_cycles_by_pm[m]:
+                cycle_to_bridge = vals[f"mix_bridge_start_{m}_{cycle}"] - vals[f"mix_cycle_end_{m}_{cycle - 1}"]
+                bridge_to_cycle = vals[f"mix_cycle_start_{m}_{cycle}"] - vals[f"mix_bridge_end_{m}_{cycle}"]
+            else:
+                cycle_to_bridge = 0.0
+                bridge_to_cycle = 0.0
+            _maybe(vals, names, f"mix_cycle_to_bridge_idle_{m}_{cycle}", cycle_to_bridge)
+            _maybe(vals, names, f"mix_bridge_to_cycle_idle_{m}_{cycle}", bridge_to_cycle)
+        _maybe(vals, names, f"mix_tail_idle_{m}", vals[f"mix_tail_start_{m}"] - vals[f"mix_last_cycle_end_{m}"])
+
+    def _maybe_wait(name, later, earlier, offset=0.0):
+        wait = max(0.0, later - earlier - offset)
+        _maybe(vals, names, name, wait)
+        _maybe(vals, names, f"{name}_square", wait * wait)
+
+    for w in cfg.product_wafer_ids:
+        _maybe_wait(
+            f"prod_robot_wait_{w}_atr_lp_al",
+            vals[f"prod_stage_end_{w}_atr_lp_al"],
+            vals[f"prod_stage_start_{w}_atr_lp_al"],
+            cfg.atr_lp_al_total_time,
+        )
+        _maybe_wait(
+            f"prod_module_wait_{w}_al_pre",
+            vals[f"prod_stage_start_{w}_al"],
+            vals[f"prod_stage_end_{w}_atr_lp_al"],
+        )
+        _maybe_wait(
+            f"prod_module_wait_{w}_al_post",
+            vals[f"prod_stage_start_{w}_atr_al_llupper"],
+            vals[f"prod_stage_end_{w}_al"],
+        )
+        _maybe_wait(
+            f"prod_robot_wait_{w}_atr_al_llupper",
+            vals[f"prod_stage_end_{w}_atr_al_llupper"],
+            vals[f"prod_stage_start_{w}_atr_al_llupper"],
+            cfg.atr_al_llupper_total_time,
+        )
+        _maybe_wait(
+            f"prod_module_wait_{w}_llupper_pre",
+            vals[f"prod_stage_start_{w}_llupper"],
+            vals[f"prod_stage_end_{w}_atr_al_llupper"],
+        )
+        _maybe_wait(
+            f"prod_module_wait_{w}_llupper_post",
+            vals[f"prod_stage_start_{w}_vtr_load"],
+            vals[f"prod_stage_end_{w}_llupper"],
+        )
+        _maybe_wait(
+            f"prod_robot_wait_{w}_vtr_load",
+            vals[f"prod_stage_end_{w}_vtr_load"],
+            vals[f"prod_stage_start_{w}_vtr_load"],
+            cfg.pair_transfer_time,
+        )
+        _maybe_wait(
+            f"prod_pm_wait_{w}_pre",
+            vals[f"prod_stage_start_{w}_pm"],
+            vals[f"prod_stage_end_{w}_vtr_load"],
+        )
+        _maybe_wait(
+            f"prod_pm_wait_{w}_post",
+            vals[f"prod_stage_start_{w}_vtr_unload"],
+            vals[f"prod_stage_end_{w}_pm"],
+        )
+        _maybe_wait(
+            f"prod_robot_wait_{w}_vtr_unload",
+            vals[f"prod_stage_end_{w}_vtr_unload"],
+            vals[f"prod_stage_start_{w}_vtr_unload"],
+            cfg.pair_transfer_time,
+        )
+        _maybe_wait(
+            f"prod_module_wait_{w}_lllower_pre",
+            vals[f"prod_stage_start_{w}_lllower"],
+            vals[f"prod_stage_end_{w}_vtr_unload"],
+        )
+        _maybe_wait(
+            f"prod_module_wait_{w}_lllower_post",
+            vals[f"prod_stage_start_{w}_atr_lllower_lp"],
+            vals[f"prod_stage_end_{w}_lllower"],
+        )
+        _maybe_wait(
+            f"prod_robot_wait_{w}_atr_lllower_lp",
+            vals[f"prod_stage_end_{w}_atr_lllower_lp"],
+            vals[f"prod_stage_start_{w}_atr_lllower_lp"],
+            cfg.atr_lllower_lp_total_time,
+        )
 
     atr_tasks = []
     al_tasks = []
@@ -399,10 +520,26 @@ def build_mip_clean_20260508_start(model):
             (f"al_llupper_{w}", vals[f"prod_stage_start_{w}_atr_al_llupper"], vals[f"prod_stage_end_{w}_atr_al_llupper"], True),
             (f"lllower_lp_{w}", vals[f"prod_stage_start_{w}_atr_lllower_lp"], vals[f"prod_stage_end_{w}_atr_lllower_lp"], True),
         ])
-        al_tasks.append((str(w), vals[f"prod_stage_end_{w}_atr_lp_al"], vals[f"prod_stage_end_{w}_atr_al_llupper"], True))
-        llupper_tasks.append((str(w), vals[f"prod_stage_start_{w}_atr_al_llupper"], vals[f"prod_stage_end_{w}_vtr_load"], True))
-        lllower_tasks.append((str(w), vals[f"prod_stage_start_{w}_vtr_unload"], vals[f"prod_stage_end_{w}_atr_lllower_lp"], True))
-    _set_unary_orders(vals, names, "seq_atr", atr_tasks)
+        al_tasks.append((str(w), vals[f"prod_stage_start_{w}_al"], vals[f"prod_stage_end_{w}_al"], True))
+        llupper_tasks.append(
+            (
+                str(w),
+                vals[f"prod_stage_end_{w}_atr_al_llupper"] - cfg.atr_load_unload_time,
+                vals[f"prod_stage_end_{w}_vtr_load"] + cfg.llupper_time,
+                True,
+            )
+        )
+        lllower_tasks.append(
+            (
+                str(w),
+                vals[f"prod_stage_start_{w}_vtr_unload"],
+                vals[f"prod_stage_start_{w}_atr_lllower_lp"]
+                + cfg.atr_load_unload_time
+                + cfg.lllower_time,
+                True,
+            )
+        )
+    _set_parallel_orders(vals, names, "atr_slot_assign", "seq_atr", atr_tasks, cfg.atr_capacity, lambda task: 1)
     _set_unary_orders(vals, names, "seq_al", al_tasks)
     _set_parallel_orders(vals, names, "llupper_slot_assign", "seq_llupper", llupper_tasks, 2, lambda task: 1 if int(task) % 2 else 2)
     _set_parallel_orders(vals, names, "lllower_slot_assign", "seq_lllower", lllower_tasks, 2, lambda task: 1 if int(task) % 2 else 2)
@@ -426,7 +563,7 @@ def build_mip_clean_20260508_start(model):
         for cycle in range(2, cfg.num_mix_cycles_per_pm + 1):
             active = cycle in active_mix_cycles_by_pm[m]
             vtr_tasks.append((f"mix_bridge_{m}_{cycle}", vals.get(f"mix_bridge_start_{m}_{cycle}", 0), vals.get(f"mix_bridge_end_{m}_{cycle}", 0), active))
-    _set_unary_orders(vals, names, "seq_vtr", vtr_tasks)
+    _set_parallel_orders(vals, names, "vtr_slot_assign", "seq_vtr", vtr_tasks, cfg.vtr_capacity, lambda task: (1, 2))
 
     for m in cfg.pm_ids:
         tasks = []
@@ -596,7 +733,36 @@ def main():
         source_lp = str(lp_path)
 
     status = "feasible_start"
-    best_obj = vals["c_max"] + cfg.pm_balance_penalty * (vals["full_pm_imbalance"] + vals["mix_pm_imbalance"])
+    chamber_idle_slack = sum(
+        value
+        for name, value in vals.items()
+        if (
+            name.startswith("full_batch_idle_")
+            or name.startswith("full_to_mix_idle_")
+            or name.startswith("mix_head_idle_")
+            or name.startswith("mix_cycle_to_bridge_idle_")
+            or name.startswith("mix_bridge_to_cycle_idle_")
+            or name.startswith("mix_tail_idle_")
+        )
+    )
+    post_process_wait = sum(
+        value
+        for name, value in vals.items()
+        if name.startswith("full_pair_post_process_wait_") or name.startswith("mix_pair_post_process_wait_")
+    )
+    best_obj = (
+        vals["c_max"]
+        + cfg.pm_balance_penalty * (vals["full_pm_imbalance"] + vals["mix_pm_imbalance"])
+        + cfg.chamber_idle_penalty * chamber_idle_slack
+        + cfg.post_process_wait_penalty * post_process_wait
+        + cfg.chamber_idle_square_penalty * sum(vals[f"chamber_idle_square_{m}"] for m in cfg.pm_ids)
+        + cfg.pm_wait_square_penalty
+        * sum(value for name, value in vals.items() if name.startswith("prod_pm_wait_") and name.endswith("_square"))
+        + cfg.module_wait_square_penalty
+        * sum(value for name, value in vals.items() if name.startswith("prod_module_wait_") and name.endswith("_square"))
+        + cfg.robot_wait_square_penalty
+        * sum(value for name, value in vals.items() if name.startswith("prod_robot_wait_") and name.endswith("_square"))
+    )
     solution = _extract_solution_from_values(vals)
 
     if args.optimize_time_limit > 0:

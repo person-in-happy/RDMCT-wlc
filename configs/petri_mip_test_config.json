@@ -2,19 +2,27 @@
   "experiment": {
     "seed": 1,
     "exp_prefix": "",
-    "base_log_dir": "data/mip_20260614",
+    "base_log_dir": "data/mip_20260618",
     "snapshot_mode": "gap_and_last",
     "snapshot_gap": 1
   },
   "env": {
     "instance_file_path": "generated_instances/train",
     "scip_time_limit": 800,
-    "single_instance_file": "mip_fullflow_train_20260611.lp",
+    "single_instance_file": "mip_wafer33_20260618.lp",
     "presolving": true,
     "separating": true,
     "conflict": true,
     "heuristics": true,
-    "max_rounds_root": 1
+    "max_rounds_root": 1,
+    "lexicographic_schedule_stability": true,
+    "lexicographic_cmax_tolerance": 0.000001,
+    "lexicographic_stability_time_limit": 10,
+    "lexicographic_stability_node_limit": 5000,
+    "schedule_chamber_idle_square_penalty": 0.00001,
+    "schedule_pm_wait_square_penalty": 0.001,
+    "schedule_module_wait_square_penalty": 0.00001,
+    "schedule_robot_wait_square_penalty": 0.00001
   },
   "algorithm": {
     "evaluate_freq": 1,
@@ -67,8 +75,8 @@
   },
   "test_kwargs": {
     "test_instance_path": "generated_instances/test",
-    "test_model_path": "data/mip_20260614/params.pkl",
-    "n_jobs": 2
+    "test_model_path": "data/mip_20260618/params.pkl",
+    "n_jobs": 1
   },
   "evaluate_kwargs": {
     "test_instance_path": "generated_instances/train",
@@ -80,7 +88,9 @@
       "separating": true,
       "conflict": true,
       "heuristics": true,
-      "max_rounds_root": 1
+      "max_rounds_root": 1,
+      "lexicographic_stability_time_limit": 10,
+      "lexicographic_stability_node_limit": 5000
     }
   },
   "online_test_kwargs": {
@@ -94,7 +104,9 @@
       "separating": true,
       "conflict": true,
       "heuristics": true,
-      "max_rounds_root": 1
+      "max_rounds_root": 1,
+      "lexicographic_stability_time_limit": 10,
+      "lexicographic_stability_node_limit": 5000
     }
   },
   "start_epoch": 0,

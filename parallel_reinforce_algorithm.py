@@ -54,6 +54,12 @@ class _LocalQueue(object):
         return self._items.pop(0)
 
 
+def _as_bool(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _run_single_worker(target, args=(), kwargs=None):
     local_queue = _LocalQueue()
     if kwargs is None:
@@ -134,6 +140,11 @@ def _resolve_runtime_paths(all_kwargs, resolve_latest_model=False):
             else:
                 section['test_model_path'] = str(resolve_path(section['test_model_path']))
 
+
+def _a3c_reward_with_schedule_penalty(env_step_info, reward_type):
+    base_reward = env_step_info[reward_type]
+    return base_reward + env_step_info.get('schedule_wait_penalty', 0.0)
+
 def generate_samples(return_queue,env,policy,value,epoch,samples_per_worker,sel_cuts_percent,device,train_decode_type,reward_type,seed,mean_std,policy_type,random_seed):
     runtime_device = _resolve_worker_device(device)
     device = str(runtime_device)
@@ -146,7 +157,8 @@ def generate_samples(return_queue,env,policy,value,epoch,samples_per_worker,sel_
         "solving_time": [],
         "ntotal_nodes": [],
         "primal_dual_gap": [],
-        "primaldualintegral": []
+        "primaldualintegral": [],
+        "schedule_wait_penalty": []
     } # dict of list
     training_datasets = {
         "state": [],
@@ -186,7 +198,11 @@ def generate_samples(return_queue,env,policy,value,epoch,samples_per_worker,sel_
             if len(lp_info["lp_solution_value"]) < 2:
                 continue
             else:
-                neg_reward = lp_info["lp_solution_value"][0] - lp_info["lp_solution_value"][1]
+                neg_reward = (
+                    lp_info["lp_solution_value"][0]
+                    - lp_info["lp_solution_value"][1]
+                    + env_step_info.get('schedule_wait_penalty', 0.0)
+                )
         for key in env_step_infos.keys():
             if key in env_step_info:
                 env_step_infos[key].append(env_step_info[key])
@@ -198,7 +214,9 @@ def generate_samples(return_queue,env,policy,value,epoch,samples_per_worker,sel_
         if reward_type == 'lp_solution_value':
             training_datasets['neg_reward'].append(neg_reward)
         else:
-            training_datasets['neg_reward'].append(env_step_info[reward_type])
+            training_datasets['neg_reward'].append(
+                _a3c_reward_with_schedule_penalty(env_step_info, reward_type)
+            )
         cutsel_agent.free_problem()
 
     # list dict numpy cuda tensor 都可以传，cpu tensor 传不了，带梯度信息的cuda tensor 传不了
@@ -217,7 +235,8 @@ def generate_hierarchy_samples(return_queue,env,policy,cutsel_policy,value,epoch
         "solving_time": [],
         "ntotal_nodes": [],
         "primal_dual_gap": [],
-        "primaldualintegral": []
+        "primaldualintegral": [],
+        "schedule_wait_penalty": []
     } # dict of list
     training_datasets = {
         "state": [],
@@ -258,7 +277,11 @@ def generate_hierarchy_samples(return_queue,env,policy,cutsel_policy,value,epoch
             if len(lp_info["lp_solution_value"]) < 2:
                 continue
             else:
-                neg_reward = lp_info["lp_solution_value"][0] - lp_info["lp_solution_value"][1]
+                neg_reward = (
+                    lp_info["lp_solution_value"][0]
+                    - lp_info["lp_solution_value"][1]
+                    + env_step_info.get('schedule_wait_penalty', 0.0)
+                )
         for key in env_step_infos.keys():
             if key in env_step_info:
                 env_step_infos[key].append(env_step_info[key])
@@ -274,8 +297,9 @@ def generate_hierarchy_samples(return_queue,env,policy,cutsel_policy,value,epoch
             training_datasets['neg_reward'].append(neg_reward)
             training_high_level_datasets['neg_reward'].append(neg_reward)
         else:
-            training_datasets['neg_reward'].append(env_step_info[reward_type])
-            training_high_level_datasets['neg_reward'].append(env_step_info[reward_type])
+            reward = _a3c_reward_with_schedule_penalty(env_step_info, reward_type)
+            training_datasets['neg_reward'].append(reward)
+            training_high_level_datasets['neg_reward'].append(reward)
         cutsel_agent.free_problem()
 
     # list dict numpy cuda tensor 都可以传，cpu tensor 传不了，带梯度信息的cuda tensor 传不了
@@ -402,9 +426,11 @@ def test(
     scip_seed,
     **env_kwargs
 ):
+    use_learned_cutsel = _as_bool(env_kwargs.pop('use_learned_cutsel', True))
     runtime_device = _resolve_worker_device(device)
     device = str(runtime_device)
-    policy = policy.to(runtime_device)
+    if use_learned_cutsel:
+        policy = policy.to(runtime_device)
     _ = set_global_seed(seed)
     print(f"pid: {os.getpid()} debug log random seed {seed}")
     print(f"pid: {os.getpid()}, instance_files: {instance_file_list}")
@@ -427,18 +453,22 @@ def test(
             **env_kwargs
         )
         env.reset()
-        cutsel_agent = CutSelectAgent(
-            env.m,
-            policy,
-            None,
-            sel_cuts_percent,
-            device,
-            test_decode_type,
-            mean_std,
-            policy_type
-        )
-        env_step_info = env.step(cutsel_agent)
-        state_action_dict = cutsel_agent.get_data()
+        if use_learned_cutsel:
+            cutsel_agent = CutSelectAgent(
+                env.m,
+                policy,
+                None,
+                sel_cuts_percent,
+                device,
+                test_decode_type,
+                mean_std,
+                policy_type
+            )
+            env_step_info = env.step(cutsel_agent)
+            state_action_dict = cutsel_agent.get_data()
+        else:
+            env_step_info = env.solve_default()
+            state_action_dict = {}
 
         neg_solving_time[i,:] = env_step_info['solving_time']
         neg_total_nodes[i,:] = env_step_info['ntotal_nodes']
@@ -459,6 +489,10 @@ def test(
             "primal_dual_gap": env_step_info.get("primal_dual_gap"),
             "primaldualintegral": env_step_info.get("primaldualintegral"),
             "best_obj": env_step_info.get("best_obj"),
+            "primary_status": env_step_info.get("primary_status"),
+            "stability_status": env_step_info.get("stability_status"),
+            "primary_cmax": env_step_info.get("primary_cmax"),
+            "schedule_stability": env_step_info.get("schedule_stability"),
             "nonzero_solution_vars": len(env_step_info.get("solution", {})),
             "solution": env_step_info.get("solution", {})
         })
@@ -490,10 +524,12 @@ def test_hierarchy(
     scip_seed,
     **env_kwargs
 ):
+    use_learned_cutsel = _as_bool(env_kwargs.pop('use_learned_cutsel', True))
     runtime_device = _resolve_worker_device(device)
     device = str(runtime_device)
-    policy = policy.to(runtime_device)
-    cutsel_percent_policy = cutsel_percent_policy.to(device)
+    if use_learned_cutsel:
+        policy = policy.to(runtime_device)
+        cutsel_percent_policy = cutsel_percent_policy.to(device)
     _ = set_global_seed(seed)
     print(f"pid: {os.getpid()} debug log random seed {seed}")
     print(f"pid: {os.getpid()}, instance_files: {instance_file_list}")
@@ -516,19 +552,23 @@ def test_hierarchy(
             **env_kwargs
         )
         env.reset()
-        cutsel_agent = HierarchyCutSelectAgent(
-            env.m,
-            policy,
-            cutsel_percent_policy,
-            None,
-            sel_cuts_percent,
-            device,
-            test_decode_type,
-            mean_std,
-            policy_type
-        )
-        env_step_info = env.step(cutsel_agent)
-        state_action_dict = cutsel_agent.get_data()
+        if use_learned_cutsel:
+            cutsel_agent = HierarchyCutSelectAgent(
+                env.m,
+                policy,
+                cutsel_percent_policy,
+                None,
+                sel_cuts_percent,
+                device,
+                test_decode_type,
+                mean_std,
+                policy_type
+            )
+            env_step_info = env.step(cutsel_agent)
+            state_action_dict = cutsel_agent.get_data()
+        else:
+            env_step_info = env.solve_default()
+            state_action_dict = {}
 
         neg_solving_time[i,:] = env_step_info['solving_time']
         neg_total_nodes[i,:] = env_step_info['ntotal_nodes']
@@ -549,6 +589,10 @@ def test_hierarchy(
             "primal_dual_gap": env_step_info.get("primal_dual_gap"),
             "primaldualintegral": env_step_info.get("primaldualintegral"),
             "best_obj": env_step_info.get("best_obj"),
+            "primary_status": env_step_info.get("primary_status"),
+            "stability_status": env_step_info.get("stability_status"),
+            "primary_cmax": env_step_info.get("primary_cmax"),
+            "schedule_stability": env_step_info.get("schedule_stability"),
             "nonzero_solution_vars": len(env_step_info.get("solution", {})),
             "solution": env_step_info.get("solution", {})
         })
@@ -828,7 +872,10 @@ def main():
     parser.add_argument('--petri_default_wafer_mode', type=str, default='')
     parser.add_argument('--petri_chamber_idle_penalty', type=float, default=1e-4)
     parser.add_argument('--petri_post_process_wait_penalty', type=float, default=0.05)
-    parser.add_argument('--petri_chamber_idle_square_penalty', type=float, default=1e-5)
+    parser.add_argument('--petri_ll_wait_penalty', type=float, default=1e-4)
+    parser.add_argument('--petri_chamber_nonprocess_wait_square_penalty', type=float, default=1e-2)
+    parser.add_argument('--petri_atr_capacity', type=int, default=2)
+    parser.add_argument('--petri_vtr_capacity', type=int, default=4)
 
     cli_args = sys.argv[1:]
     time_limit_arg_given = any(
@@ -867,7 +914,10 @@ def main():
             mix_mode_wafers=args.petri_2x2_wafers,
             chamber_idle_penalty=args.petri_chamber_idle_penalty,
             post_process_wait_penalty=args.petri_post_process_wait_penalty,
-            chamber_idle_square_penalty=args.petri_chamber_idle_square_penalty,
+            ll_wait_penalty=args.petri_ll_wait_penalty,
+            chamber_nonprocess_wait_square_penalty=args.petri_chamber_nonprocess_wait_square_penalty,
+            atr_capacity=args.petri_atr_capacity,
+            vtr_capacity=args.petri_vtr_capacity,
         )
         generated_path = generate_petri_mip_instance(
             args.petri_instance_dir,
@@ -906,6 +956,7 @@ def main():
 
         env_kwargs = all_kwargs['env']
         env_kwargs.pop('instance_file_path')
+        effective_use_learned_cutsel = _as_bool(env_kwargs.get('use_learned_cutsel', True))
         test_time_limit = args.test_time_limit
         if test_time_limit <= 0 and time_limit_arg_given:
             test_time_limit = args.time_limit
@@ -1019,7 +1070,11 @@ def main():
         # for p in processes:
         #     p.close()     
         log_prefix = f"seed_{args.scip_seed}_model_{model_tag}"
-        process_and_log_results(raw_results, args.instance_type + '_use_hrl_' + str(cutsel_percent_policy_kwargs['use_cutsel_percent_policy']), "heuristics_cutsel", "RL", args.sel_cuts_percent,log_prefix)
+        effective_use_hrl = bool(
+            cutsel_percent_policy_kwargs['use_cutsel_percent_policy']
+            and effective_use_learned_cutsel
+        )
+        process_and_log_results(raw_results, args.instance_type + '_use_hrl_' + str(effective_use_hrl), "heuristics_cutsel", "RL", args.sel_cuts_percent,log_prefix)
 
         # get model
         # test

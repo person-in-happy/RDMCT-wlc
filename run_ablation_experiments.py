@@ -90,7 +90,14 @@ def _parse_args():
     parser.add_argument("--default_wafer_mode", type=str, default="")
     parser.add_argument("--chamber_idle_penalty", type=float, default=1e-4)
     parser.add_argument("--post_process_wait_penalty", type=float, default=0.05)
-    parser.add_argument("--chamber_idle_square_penalty", type=float, default=1e-5)
+    parser.add_argument("--ll_wait_penalty", type=float, default=1e-4)
+    parser.add_argument("--chamber_nonprocess_wait_square_penalty", type=float, default=1e-2)
+    parser.add_argument("--schedule_chamber_idle_square_penalty", "--chamber_idle_square_penalty", dest="schedule_chamber_idle_square_penalty", type=float, default=1e-5)
+    parser.add_argument("--atr_capacity", type=int, default=2)
+    parser.add_argument("--vtr_capacity", type=int, default=4)
+    parser.add_argument("--schedule_pm_wait_square_penalty", "--pm_wait_square_penalty", dest="schedule_pm_wait_square_penalty", type=float, default=1e-3)
+    parser.add_argument("--schedule_module_wait_square_penalty", "--module_wait_square_penalty", dest="schedule_module_wait_square_penalty", type=float, default=1e-5)
+    parser.add_argument("--schedule_robot_wait_square_penalty", "--robot_wait_square_penalty", dest="schedule_robot_wait_square_penalty", type=float, default=1e-5)
     return parser.parse_args()
 
 
@@ -137,7 +144,10 @@ def _ensure_instance(args):
             mix_mode_wafers=args.mode_2x2_wafers,
             chamber_idle_penalty=args.chamber_idle_penalty,
             post_process_wait_penalty=args.post_process_wait_penalty,
-            chamber_idle_square_penalty=args.chamber_idle_square_penalty,
+            ll_wait_penalty=args.ll_wait_penalty,
+            chamber_nonprocess_wait_square_penalty=args.chamber_nonprocess_wait_square_penalty,
+            atr_capacity=args.atr_capacity,
+            vtr_capacity=args.vtr_capacity,
         )
         lp_path = generate_petri_mip_instance(args.instance_dir, args.instance_name, cfg)
         generated_instance_name = Path(lp_path).name
@@ -229,6 +239,14 @@ def _build_env_kwargs(cfg, args):
     env_kwargs.pop("single_instance_file", None)
     if args.time_limit > 0:
         env_kwargs["scip_time_limit"] = args.time_limit
+    env_kwargs.update(
+        {
+            "schedule_chamber_idle_square_penalty": args.schedule_chamber_idle_square_penalty,
+            "schedule_pm_wait_square_penalty": args.schedule_pm_wait_square_penalty,
+            "schedule_module_wait_square_penalty": args.schedule_module_wait_square_penalty,
+            "schedule_robot_wait_square_penalty": args.schedule_robot_wait_square_penalty,
+        }
+    )
     return env_kwargs
 
 
@@ -246,8 +264,14 @@ def _build_method_hyperparams(method_name, cfg, args, policy_bundle=None):
         "sel_cuts_percent": args.sel_cuts_percent,
         "policy_type": args.policy_type,
         "post_process_wait_penalty": args.post_process_wait_penalty,
-        "chamber_idle_square_penalty": args.chamber_idle_square_penalty,
+        "chamber_nonprocess_wait_square_penalty": args.chamber_nonprocess_wait_square_penalty,
+        "schedule_chamber_idle_square_penalty": args.schedule_chamber_idle_square_penalty,
         "chamber_idle_penalty": args.chamber_idle_penalty,
+        "atr_capacity": args.atr_capacity,
+        "vtr_capacity": args.vtr_capacity,
+        "schedule_pm_wait_square_penalty": args.schedule_pm_wait_square_penalty,
+        "schedule_module_wait_square_penalty": args.schedule_module_wait_square_penalty,
+        "schedule_robot_wait_square_penalty": args.schedule_robot_wait_square_penalty,
     }
     if method_name == "solver_only":
         base["solver"] = "SCIP default cut selection"

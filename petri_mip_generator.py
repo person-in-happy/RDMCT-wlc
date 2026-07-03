@@ -180,10 +180,14 @@ class PetriMIPConfig:
     pair_transfer_time: float = 4.0
     atr_transfer_time: float = 3.0
     atr_return_time: float = 3.0
+    atr_capacity: int = 2
+    vtr_capacity: int = 4
     aligner_time: float = 20.0
     llupper_time: float = 30.0
     lllower_time: float = 25.0
     full_process_time: float = 80.0
+    # A 2x2 product PW pair is exposed twice in adjacent cycles. Both
+    # exposures use the same physical recipe duration.
     mix_boundary_process_time: float = 30.0
     mix_internal_process_time: float = 30.0
     cleaning_interval: int = 10
@@ -191,10 +195,22 @@ class PetriMIPConfig:
     max_module_residency_time: float = 10000.0
     max_robot_residency_time: float = 10000.0
     pm_balance_penalty: float = 0.01
-    flow_time_penalty: float = 1e-6
     chamber_idle_penalty: float = 1e-4
     post_process_wait_penalty: float = 0.05
-    chamber_idle_square_penalty: float = 1e-5
+    ll_wait_penalty: float = 1e-4
+    # High-priority penalty for wafers residing in a rotary chamber while no
+    # chamber process recipe is running. It is applied per non-process chamber
+    # window, so one long 2x2 bridge/tail wait is penalized directly instead
+    # of being diluted into a per-CH total.
+    chamber_nonprocess_wait_square_penalty: float = 1e-2
+    # A VTR has enough fingers to carry both product wafers of a PW pair in
+    # one same-route action.  This is the physical default for 4x1 work.
+    force_full_vtr_double: bool = True
+    # 2x2 product PW pairs should use the same two-product robot behavior as
+    # 4x1 pairs before and after chamber processing. A tail product+PEC pair
+    # still has only one product wafer and is fixed to single-product action.
+    force_mix_atr_double: bool = True
+    force_mix_vtr_double: bool = True
     process_mode: str = PROCESS_MODE_AUTO
     mode_sequence: str = ""
     wafer_mode_map: str = ""
@@ -365,8 +381,44 @@ class PetriMIPConfig:
         return 2.0 * self.full_process_time
 
     @property
+    def atr_load_unload_time(self) -> float:
+        """ATR load or unload duration; it matches one VTR transfer action."""
+        return self.pair_transfer_time
+
+    @property
+    def atr_lp_al_total_time(self) -> float:
+        return 2.0 * self.atr_load_unload_time + self.atr_transfer_time
+
+    @property
+    def atr_al_llupper_total_time(self) -> float:
+        return 2.0 * self.atr_load_unload_time + self.atr_transfer_time
+
+    @property
+    def atr_lllower_lp_total_time(self) -> float:
+        return 2.0 * self.atr_load_unload_time + self.atr_return_time
+
+    @property
+    def atr_empty_ll_to_lp_time(self) -> float:
+        """Empty return from LL to LP through AL: LL->AL plus AL->LP."""
+        return 2.0 * self.atr_transfer_time
+
+    @property
+    def al_exchange_time(self) -> float:
+        """Pick the calibrated wafer from AL, then place its companion into AL."""
+        return 2.0 * self.atr_load_unload_time
+
+    @property
+    def al_companion_place_time(self) -> float:
+        """Place a held companion into AL after the first wafer was sent to LL."""
+        return self.atr_load_unload_time
+
+    @property
     def max_product_capacity(self) -> int:
         return self.load_ports * self.load_port_slots
+
+    @property
+    def mix_process_time(self) -> float:
+        return self.mix_boundary_process_time
 
     def validate(self) -> None:
         _normalize_process_mode(self.process_mode)
@@ -403,6 +455,15 @@ class PetriMIPConfig:
             raise ValueError("cleaning_process_time must be non-negative.")
         if self.max_module_residency_time < 0 or self.max_robot_residency_time < 0:
             raise ValueError("Residency-time limits must be non-negative.")
+        if self.atr_capacity <= 0:
+            raise ValueError("atr_capacity must be positive.")
+        if self.vtr_capacity < 2:
+            raise ValueError("vtr_capacity must be at least 2 because VTR transfer tasks carry wafer pairs.")
+        if abs(self.mix_boundary_process_time - self.mix_internal_process_time) > 1e-9:
+            raise ValueError(
+                "2x2 first and second processing exposures must use the same duration; "
+                "set mix_boundary_process_time and mix_internal_process_time to the same value."
+            )
         if min(
             self.big_m,
             self.pm_transfer_gap,
@@ -420,10 +481,10 @@ class PetriMIPConfig:
             self.max_module_residency_time,
             self.max_robot_residency_time,
             self.pm_balance_penalty,
-            self.flow_time_penalty,
             self.chamber_idle_penalty,
             self.post_process_wait_penalty,
-            self.chamber_idle_square_penalty,
+            self.ll_wait_penalty,
+            self.chamber_nonprocess_wait_square_penalty,
         ) < 0:
             raise ValueError("All duration parameters must be non-negative.")
         full_capacity = 2 * self.num_pm * self.num_full_slots_per_pm
@@ -445,6 +506,22 @@ def _add_duration_cons(model, start_var, end_var, duration: float, name_prefix: 
     model.addCons(start_var <= 1000000.0 * active_var, name=f"{name_prefix}_start_cap")
     model.addCons(end_var <= 1000000.0 * active_var, name=f"{name_prefix}_end_cap")
     model.addCons(end_var == start_var + duration * active_var, name=f"{name_prefix}_duration")
+
+
+def _add_min_duration_cons(model, start_var, end_var, duration: float, name_prefix: str, active_var=None) -> None:
+    if active_var is None:
+        model.addCons(end_var >= start_var + duration, name=f"{name_prefix}_min_duration")
+        return
+    model.addCons(start_var <= 1000000.0 * active_var, name=f"{name_prefix}_start_cap")
+    model.addCons(end_var <= 1000000.0 * active_var, name=f"{name_prefix}_end_cap")
+    model.addCons(end_var >= start_var + duration * active_var, name=f"{name_prefix}_min_duration")
+
+
+def _add_residency_upper_bound(model, start_var, end_var, max_duration: float, name: str, active_var=None) -> None:
+    if active_var is None:
+        model.addCons(end_var <= start_var + max_duration, name=name)
+        return
+    model.addCons(end_var <= start_var + max_duration * active_var, name=name)
 
 
 def _add_optional_gap_slack(model, slack_terms, later_start, earlier_end, active_var, big_m: float, name: str):
@@ -474,6 +551,29 @@ def _link_stage_by_binary(model, start_var, end_var, ref_start, ref_end, selecto
     model.addCons(end_var <= ref_end + big_m * (1 - selector_var), name=f"{name_prefix}_end_ub")
 
 
+def _synchronize_stages_when(
+    model,
+    first_start,
+    first_end,
+    second_start,
+    second_end,
+    enabled_var,
+    big_m: float,
+    name_prefix: str,
+) -> None:
+    """Make two physical transfers simultaneous only when a double action is selected."""
+    model.addCons(first_start >= second_start - big_m * (1 - enabled_var), name=f"{name_prefix}_start_lb")
+    model.addCons(first_start <= second_start + big_m * (1 - enabled_var), name=f"{name_prefix}_start_ub")
+    model.addCons(first_end >= second_end - big_m * (1 - enabled_var), name=f"{name_prefix}_end_lb")
+    model.addCons(first_end <= second_end + big_m * (1 - enabled_var), name=f"{name_prefix}_end_ub")
+
+
+def _contain_stage_by_binary(model, start_var, end_var, window_start, window_end, selector_var, big_m: float, name_prefix: str) -> None:
+    """Keep an individual wafer transfer inside its assigned pair-transfer window."""
+    model.addCons(start_var >= window_start - big_m * (1 - selector_var), name=f"{name_prefix}_start_lb")
+    model.addCons(end_var <= window_end + big_m * (1 - selector_var), name=f"{name_prefix}_end_ub")
+
+
 def _add_precedence_lower_bound(
     model,
     next_start,
@@ -492,40 +592,53 @@ def _add_precedence_lower_bound(
     )
 
 
-def _add_unary_resource_no_overlap(model, task_specs, big_m: float, prefix: str) -> None:
+def _add_unary_resource_no_overlap(model, task_specs, big_m: float, prefix: str, transition_time=None) -> None:
     for left_idx in range(len(task_specs)):
         left_name, left_start, left_end, left_active = task_specs[left_idx]
         for right_idx in range(left_idx + 1, len(task_specs)):
             right_name, right_start, right_end, right_active = task_specs[right_idx]
             before = model.addVar(vtype="B", name=f"{prefix}_{left_name}_{right_name}")
             inactive_penalty = (1 - _maybe_one(left_active)) + (1 - _maybe_one(right_active))
+            left_to_right = transition_time(left_name, right_name) if transition_time else 0.0
+            right_to_left = transition_time(right_name, left_name) if transition_time else 0.0
             model.addCons(
-                right_start >= left_end - big_m * (1 - before + inactive_penalty),
+                right_start >= left_end + left_to_right - big_m * (1 - before + inactive_penalty),
                 name=f"{prefix}_lb_{left_name}_{right_name}",
             )
             model.addCons(
-                left_start >= right_end - big_m * (before + inactive_penalty),
+                left_start >= right_end + right_to_left - big_m * (before + inactive_penalty),
                 name=f"{prefix}_ub_{left_name}_{right_name}",
             )
 
 
 def _add_parallel_slot_resource(model, task_specs, slot_count: int, big_m: float, slot_prefix: str, order_prefix: str):
+    """Assign tasks to physical slots; overlap is forbidden only within one slot."""
     slot_assign = {}
     normalized_specs = []
     for spec in task_specs:
         if len(spec) == 4:
             task_name, task_start, task_end, active_var = spec
             allowed_slots = list(range(1, slot_count + 1))
+            demand = 1
         elif len(spec) == 5:
             task_name, task_start, task_end, active_var, allowed_slots = spec
             allowed_slots = list(allowed_slots)
+            demand = 1
+        elif len(spec) == 6:
+            task_name, task_start, task_end, active_var, allowed_slots, demand = spec
+            allowed_slots = list(allowed_slots)
         else:
-            raise ValueError("task_specs entries must have 4 or 5 items.")
+            raise ValueError("task_specs entries must have 4, 5, or 6 items.")
         if not allowed_slots:
             raise ValueError(f"Task `{task_name}` has no allowed slots.")
-        normalized_specs.append((task_name, task_start, task_end, active_var, allowed_slots))
+        if demand <= 0 or demand > len(allowed_slots):
+            raise ValueError(
+                f"Task `{task_name}` has invalid slot demand {demand}; "
+                f"allowed slot count is {len(allowed_slots)}."
+            )
+        normalized_specs.append((task_name, task_start, task_end, active_var, allowed_slots, demand))
 
-    for task_name, _, _, active_var, allowed_slots in normalized_specs:
+    for task_name, _, _, active_var, allowed_slots, demand in normalized_specs:
         for slot_id in allowed_slots:
             slot_assign[(task_name, slot_id)] = model.addVar(
                 vtype="B",
@@ -533,17 +646,17 @@ def _add_parallel_slot_resource(model, task_specs, slot_count: int, big_m: float
             )
         rhs = _maybe_one(active_var)
         model.addCons(
-            scip.quicksum(slot_assign[(task_name, slot_id)] for slot_id in allowed_slots) == rhs,
+            scip.quicksum(slot_assign[(task_name, slot_id)] for slot_id in allowed_slots) == demand * rhs,
             name=f"{slot_prefix}_select_{task_name}",
         )
 
     for slot_id in range(1, slot_count + 1):
         for left_idx in range(len(normalized_specs)):
-            left_name, left_start, left_end, _, _ = normalized_specs[left_idx]
+            left_name, left_start, left_end, _, _, _ = normalized_specs[left_idx]
             if (left_name, slot_id) not in slot_assign:
                 continue
             for right_idx in range(left_idx + 1, len(normalized_specs)):
-                right_name, right_start, right_end, _, _ = normalized_specs[right_idx]
+                right_name, right_start, right_end, _, _, _ = normalized_specs[right_idx]
                 if (right_name, slot_id) not in slot_assign:
                     continue
                 before = model.addVar(
@@ -581,7 +694,6 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
     mix_cycles = list(range(1, cfg.num_mix_cycles_per_pm + 1))
     clean_slots = list(range(1, cfg.num_clean_slots_per_pm + 1))
     chamber_epochs = list(range(1, len(clean_slots) + 2)) if clean_slots else []
-    load_ports = list(range(1, cfg.load_ports + 1))
     pec_tokens_per_pm = cfg.pec_pool_size // len(pm_ids)
     pec_slots_by_pm = {
         pm_id: list(range(idx * pec_tokens_per_pm + 1, (idx + 1) * pec_tokens_per_pm + 1))
@@ -595,13 +707,8 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
     mix_pair_ids = cfg.mix_pair_ids
     full_pair_loads = cfg.full_pair_product_loads
     mix_pair_loads = cfg.mix_pair_product_loads
+    pure_full_mode = bool(product_wafers) and set(cfg.product_wafer_modes) == {MODE_FULL}
     chamber_idle_slacks = []
-
-    product_lp_assign = {
-        (w, lp): model.addVar(vtype="B", name=f"product_lp_assign_{w}_{lp}")
-        for w in product_wafers
-        for lp in load_ports
-    }
 
     wafer_to_full_pair = {
         (w, p): model.addVar(vtype="B", name=f"wafer_to_full_pair_{w}_{p}")
@@ -626,6 +733,50 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
         for p in mix_pair_ids
         for m in pm_ids
         for r in mix_positions
+    }
+
+    # A two-product full-mode PW pair may use one double-gripper action or
+    # two single-gripper actions at each robot route. Tail pairs containing
+    # only one product wafer are fixed to single-gripper operation below.
+    full_atr_lp_al_double = {
+        p: model.addVar(vtype="B", name=f"full_atr_lp_al_double_{p}")
+        for p in full_pair_ids
+    }
+    full_atr_al_llupper_double = {
+        p: model.addVar(vtype="B", name=f"full_atr_al_llupper_double_{p}")
+        for p in full_pair_ids
+    }
+    full_atr_return_double = {
+        p: model.addVar(vtype="B", name=f"full_atr_return_double_{p}")
+        for p in full_pair_ids
+    }
+    full_vtr_load_double = {
+        p: model.addVar(vtype="B", name=f"full_vtr_load_double_{p}")
+        for p in full_pair_ids
+    }
+    full_vtr_unload_double = {
+        p: model.addVar(vtype="B", name=f"full_vtr_unload_double_{p}")
+        for p in full_pair_ids
+    }
+    mix_atr_lp_al_double = {
+        p: model.addVar(vtype="B", name=f"mix_atr_lp_al_double_{p}")
+        for p in mix_pair_ids
+    }
+    mix_atr_al_llupper_double = {
+        p: model.addVar(vtype="B", name=f"mix_atr_al_llupper_double_{p}")
+        for p in mix_pair_ids
+    }
+    mix_atr_return_double = {
+        p: model.addVar(vtype="B", name=f"mix_atr_return_double_{p}")
+        for p in mix_pair_ids
+    }
+    mix_vtr_load_double = {
+        p: model.addVar(vtype="B", name=f"mix_vtr_load_double_{p}")
+        for p in mix_pair_ids
+    }
+    mix_vtr_unload_double = {
+        p: model.addVar(vtype="B", name=f"mix_vtr_unload_double_{p}")
+        for p in mix_pair_ids
     }
 
     full_batch_used = {
@@ -940,6 +1091,30 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
         p: model.addVar(vtype="C", lb=0.0, name=f"full_pair_post_process_wait_{p}")
         for p in full_pair_ids
     }
+    # These are release-time envelopes, not synchronization variables. They
+    # record when the two LL slots occupied by one side of a 4x1 batch have
+    # both been released; member wafers may use the LLs and robots at distinct
+    # times, while only their PM processing remains synchronized.
+    full_side_llupper_release = {
+        (m, b, side): model.addVar(
+            vtype="C",
+            lb=0.0,
+            name=f"full_side_llupper_release_{m}_{b}_{side}",
+        )
+        for m in pm_ids
+        for b in full_batches
+        for side in (1, 2)
+    }
+    full_side_lllower_release = {
+        (m, b, side): model.addVar(
+            vtype="C",
+            lb=0.0,
+            name=f"full_side_lllower_release_{m}_{b}_{side}",
+        )
+        for m in pm_ids
+        for b in full_batches
+        for side in (1, 2)
+    }
     mix_pair_completion = {
         p: model.addVar(vtype="C", lb=0.0, name=f"mix_pair_completion_{p}")
         for p in mix_pair_ids
@@ -952,70 +1127,245 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
         m: model.addVar(vtype="C", lb=0.0, name=f"chamber_idle_total_{m}")
         for m in pm_ids
     }
-    chamber_idle_square = {
-        m: model.addVar(vtype="C", lb=0.0, name=f"chamber_idle_square_{m}")
+    chamber_nonprocess_wait_square = {
+        m: model.addVar(vtype="C", lb=0.0, name=f"chamber_nonprocess_wait_square_{m}")
         for m in pm_ids
     }
+    chamber_nonprocess_wait_square_terms = {m: [] for m in pm_ids}
 
-    for w in product_wafers:
+    def add_chamber_nonprocess_square_term(m, wait_expr, active_var, name: str) -> None:
+        wait = model.addVar(vtype="C", lb=0.0, name=f"chamber_nonprocess_wait_{name}")
+        square = model.addVar(vtype="C", lb=0.0, name=f"chamber_nonprocess_wait_square_{name}")
         model.addCons(
-            scip.quicksum(product_lp_assign[(w, lp)] for lp in load_ports) == 1,
-            name=f"product_lp_once_{w}",
+            wait >= wait_expr - big_m * (1 - active_var),
+            name=f"chamber_nonprocess_wait_lb_{name}",
         )
-    for lp in load_ports:
         model.addCons(
-            scip.quicksum(product_lp_assign[(w, lp)] for w in product_wafers) <= cfg.load_port_slots,
-            name=f"product_lp_capacity_{lp}",
+            wait <= wait_expr + big_m * (1 - active_var),
+            name=f"chamber_nonprocess_wait_ub_{name}",
         )
+        model.addCons(
+            wait <= big_m * active_var,
+            name=f"chamber_nonprocess_wait_active_{name}",
+        )
+        model.addCons(
+            square >= wait * wait,
+            name=f"chamber_nonprocess_wait_square_def_{name}",
+        )
+        chamber_nonprocess_wait_square_terms[m].append(square)
 
-    for w in full_wafers:
-        model.addCons(
-            scip.quicksum(wafer_to_full_pair[(w, p)] for p in full_pair_ids) == 1,
-            name=f"full_wafer_assign_once_{w}",
-        )
-    for p, load in full_pair_loads.items():
-        model.addCons(
-            scip.quicksum(wafer_to_full_pair[(w, p)] for w in full_wafers) == load,
-            name=f"full_pair_capacity_{p}",
-        )
-    for idx in range(len(full_wafers) - 1):
-        left = full_wafers[idx]
-        right = full_wafers[idx + 1]
-        model.addCons(
-            scip.quicksum(p * wafer_to_full_pair[(left, p)] for p in full_pair_ids)
-            <= scip.quicksum(p * wafer_to_full_pair[(right, p)] for p in full_pair_ids),
-            name=f"full_pairing_order_{left}_{right}",
-        )
-
-    for w in mix_wafers:
-        model.addCons(
-            scip.quicksum(wafer_to_mix_pair[(w, p)] for p in mix_pair_ids) == 1,
-            name=f"mix_wafer_assign_once_{w}",
-        )
-    for p, load in mix_pair_loads.items():
-        model.addCons(
-            scip.quicksum(wafer_to_mix_pair[(w, p)] for w in mix_wafers) == load,
-            name=f"mix_pair_capacity_{p}",
-        )
-    for idx in range(len(mix_wafers) - 1):
-        left = mix_wafers[idx]
-        right = mix_wafers[idx + 1]
-        model.addCons(
-            scip.quicksum(p * wafer_to_mix_pair[(left, p)] for p in mix_pair_ids)
-            <= scip.quicksum(p * wafer_to_mix_pair[(right, p)] for p in mix_pair_ids),
-            name=f"mix_pairing_order_{left}_{right}",
-        )
-
+    # Wafers of the same process mode have identical model data. Pairing them
+    # in wafer-id order removes label symmetry without changing any physical
+    # schedule; the final pair receives the lone tail wafer when needed.
+    full_pair_members = {}
+    member_offset = 0
     for p in full_pair_ids:
+        load = full_pair_loads[p]
+        full_pair_members[p] = set(full_wafers[member_offset : member_offset + load])
+        member_offset += load
+    for p in full_pair_ids:
+        for w in full_wafers:
+            model.addCons(
+                wafer_to_full_pair[(w, p)] == int(w in full_pair_members[p]),
+                name=f"full_pair_membership_fixed_{w}_{p}",
+            )
+        double_allowed = int(full_pair_loads[p] == 2)
+        for route_name, double_var in (
+            ("atr_lp_al", full_atr_lp_al_double[p]),
+            ("atr_al_llupper", full_atr_al_llupper_double[p]),
+            ("atr_return", full_atr_return_double[p]),
+            ("vtr_load", full_vtr_load_double[p]),
+            ("vtr_unload", full_vtr_unload_double[p]),
+        ):
+            model.addCons(
+                double_var <= double_allowed,
+                name=f"full_{route_name}_double_allowed_{p}",
+            )
+        if cfg.force_full_vtr_double and double_allowed:
+            # A VTR transfer of a two-product PW pair is one physical
+            # pickup/place action, not two serial single-wafer transfers.
+            model.addCons(
+                full_vtr_load_double[p] == 1,
+                name=f"full_vtr_load_double_required_{p}",
+            )
+            model.addCons(
+                full_vtr_unload_double[p] == 1,
+                name=f"full_vtr_unload_double_required_{p}",
+            )
+        # AL is single-slot, but ATR's two-gripper capability is available in
+        # both pure 4x1 and mixed 4x1+2x2 schedules. A complete two-wafer pair
+        # may choose a shared LP->AL pickup and shared AL->LLupper placement;
+        # a shared output move requires the shared input move. No process-mode
+        # condition is allowed to force these two decision variables to zero.
         model.addCons(
-            scip.quicksum(assign_full[(p, m, b, s)] for m in pm_ids for b in full_batches for s in full_sides) == 1,
-            name=f"full_pair_schedule_once_{p}",
+            full_atr_al_llupper_double[p] <= full_atr_lp_al_double[p],
+            name=f"full_atr_al_bundle_double_precondition_{p}",
         )
+
+    full_pair_by_wafer = {
+        w: p
+        for p, members in full_pair_members.items()
+        for w in members
+    }
+    full_pair_first_member = {
+        p: min(members)
+        for p, members in full_pair_members.items()
+    }
+    full_pair_second_member = {
+        p: max(members)
+        for p, members in full_pair_members.items()
+        if len(members) == 2
+    }
+    full_pair_first_by_wafer = {
+        w: p for p, w in full_pair_first_member.items()
+    }
+    full_pair_second_by_wafer = {
+        w: p for p, w in full_pair_second_member.items()
+    }
+
+    mix_pair_members = {}
+    member_offset = 0
+    for p in mix_pair_ids:
+        load = mix_pair_loads[p]
+        mix_pair_members[p] = set(mix_wafers[member_offset : member_offset + load])
+        member_offset += load
+    for p in mix_pair_ids:
+        for w in mix_wafers:
+            model.addCons(
+                wafer_to_mix_pair[(w, p)] == int(w in mix_pair_members[p]),
+                name=f"mix_pair_membership_fixed_{w}_{p}",
+            )
+        double_allowed = int(mix_pair_loads[p] == 2)
+        for route_name, double_var in (
+            ("atr_lp_al", mix_atr_lp_al_double[p]),
+            ("atr_al_llupper", mix_atr_al_llupper_double[p]),
+            ("atr_return", mix_atr_return_double[p]),
+            ("vtr_load", mix_vtr_load_double[p]),
+            ("vtr_unload", mix_vtr_unload_double[p]),
+        ):
+            model.addCons(
+                double_var <= double_allowed,
+                name=f"mix_{route_name}_double_allowed_{p}",
+            )
+        model.addCons(
+            mix_atr_al_llupper_double[p] <= mix_atr_lp_al_double[p],
+            name=f"mix_atr_al_bundle_double_precondition_{p}",
+        )
+        if double_allowed and cfg.force_mix_atr_double:
+            model.addCons(
+                mix_atr_lp_al_double[p] == 1,
+                name=f"mix_atr_lp_al_double_required_{p}",
+            )
+            model.addCons(
+                mix_atr_al_llupper_double[p] == 1,
+                name=f"mix_atr_al_llupper_double_required_{p}",
+            )
+            model.addCons(
+                mix_atr_return_double[p] == 1,
+                name=f"mix_atr_return_double_required_{p}",
+            )
+        if double_allowed and cfg.force_mix_vtr_double:
+            model.addCons(
+                mix_vtr_load_double[p] == 1,
+                name=f"mix_vtr_load_double_required_{p}",
+            )
+            model.addCons(
+                mix_vtr_unload_double[p] == 1,
+                name=f"mix_vtr_unload_double_required_{p}",
+            )
+
+    product_pair_members = {}
+    product_pair_atr_lp_al_double = {}
+    product_pair_atr_al_llupper_double = {}
+    product_pair_atr_return_double = {}
+    product_pair_vtr_load_double = {}
+    product_pair_vtr_unload_double = {}
+    for p in full_pair_ids:
+        key = (MODE_FULL, p)
+        product_pair_members[key] = full_pair_members[p]
+        product_pair_atr_lp_al_double[key] = full_atr_lp_al_double[p]
+        product_pair_atr_al_llupper_double[key] = full_atr_al_llupper_double[p]
+        product_pair_atr_return_double[key] = full_atr_return_double[p]
+        product_pair_vtr_load_double[key] = full_vtr_load_double[p]
+        product_pair_vtr_unload_double[key] = full_vtr_unload_double[p]
+    for p in mix_pair_ids:
+        key = (MODE_MIX, p)
+        product_pair_members[key] = mix_pair_members[p]
+        product_pair_atr_lp_al_double[key] = mix_atr_lp_al_double[p]
+        product_pair_atr_al_llupper_double[key] = mix_atr_al_llupper_double[p]
+        product_pair_atr_return_double[key] = mix_atr_return_double[p]
+        product_pair_vtr_load_double[key] = mix_vtr_load_double[p]
+        product_pair_vtr_unload_double[key] = mix_vtr_unload_double[p]
+    product_pair_first_member = {
+        key: min(members)
+        for key, members in product_pair_members.items()
+    }
+    product_pair_second_member = {
+        key: max(members)
+        for key, members in product_pair_members.items()
+        if len(members) == 2
+    }
+    product_pair_first_by_wafer = {
+        w: key for key, w in product_pair_first_member.items()
+    }
+    product_pair_second_by_wafer = {
+        w: key for key, w in product_pair_second_member.items()
+    }
+
+    # Full-mode PW pairs are also interchangeable. Fix a canonical ordering
+    # over the otherwise identical chamber/batch/side slots so SCIP does not
+    # enumerate factorially many relabelings of the same 4x1 schedule.
+    canonical_full_slots = [
+        (m, b, s)
+        for b in full_batches
+        for m in pm_ids
+        for s in full_sides
+    ]
+    canonical_full_slot_by_pair = {
+        p: canonical_full_slots[p_index]
+        for p_index, p in enumerate(full_pair_ids)
+    }
+    for p_index, p in enumerate(full_pair_ids):
+        canonical_slot = canonical_full_slot_by_pair[p]
+        for m in pm_ids:
+            for b in full_batches:
+                for s in full_sides:
+                    model.addCons(
+                        assign_full[(p, m, b, s)] == int((m, b, s) == canonical_slot),
+                        name=f"full_pair_slot_fixed_{p}_{m}_{b}_{s}",
+                    )
     for p in mix_pair_ids:
         model.addCons(
             scip.quicksum(assign_mix[(p, m, r)] for m in pm_ids for r in mix_positions) == 1,
             name=f"mix_pair_schedule_once_{p}",
         )
+
+    # 2x2 PW pairs have the same recipe and timing within one input instance;
+    # their pair IDs are labels rather than decisions.  Leaving every pair
+    # free to occupy every chain position creates a factorial number of
+    # identical solutions, and the generic resource model then fails to find
+    # even a first incumbent at the root node.  Assign the interchangeable
+    # pairs to a canonical interleaved CH/position order.  This keeps both CHs
+    # balanced (P1->CH2-pos1, P2->CH3-pos1, P3->CH2-pos2, ...) while retaining
+    # all physically meaningful timing decisions.  The odd product+PEC pair,
+    # if present, naturally becomes the final product position.
+    canonical_mix_slots = [
+        (m, r)
+        for r in mix_positions
+        for m in pm_ids
+    ]
+    canonical_mix_slot_by_pair = {
+        p: canonical_mix_slots[p_index]
+        for p_index, p in enumerate(mix_pair_ids)
+    }
+    for p in mix_pair_ids:
+        canonical_pm, canonical_pos = canonical_mix_slot_by_pair[p]
+        for m in pm_ids:
+            for r in mix_positions:
+                model.addCons(
+                    assign_mix[(p, m, r)] == int((m, r) == (canonical_pm, canonical_pos)),
+                    name=f"mix_pair_slot_fixed_{p}_{m}_{r}",
+                )
 
     full_pm_imbalance = None
     mix_pm_imbalance = None
@@ -1391,6 +1741,14 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 f"full_front_load_{m}_{b}",
                 used,
             )
+            _add_residency_upper_bound(
+                model,
+                full_front_load_start[(m, b)],
+                full_front_load_end[(m, b)],
+                cfg.max_robot_residency_time,
+                f"full_front_load_robot_residency_{m}_{b}",
+                used,
+            )
             _add_duration_cons(
                 model,
                 full_start[(m, b)],
@@ -1407,6 +1765,14 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 f"full_back_load_{m}_{b}",
                 used,
             )
+            _add_residency_upper_bound(
+                model,
+                full_back_load_start[(m, b)],
+                full_back_load_end[(m, b)],
+                cfg.max_robot_residency_time,
+                f"full_back_load_robot_residency_{m}_{b}",
+                used,
+            )
             _add_duration_cons(
                 model,
                 full_back_unload_start[(m, b)],
@@ -1415,12 +1781,28 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 f"full_back_unload_{m}_{b}",
                 used,
             )
+            _add_residency_upper_bound(
+                model,
+                full_back_unload_start[(m, b)],
+                full_back_unload_end[(m, b)],
+                cfg.max_robot_residency_time,
+                f"full_back_unload_robot_residency_{m}_{b}",
+                used,
+            )
             _add_duration_cons(
                 model,
                 full_front_unload_start[(m, b)],
                 full_front_unload_end[(m, b)],
                 cfg.pair_transfer_time,
                 f"full_front_unload_{m}_{b}",
+                used,
+            )
+            _add_residency_upper_bound(
+                model,
+                full_front_unload_start[(m, b)],
+                full_front_unload_end[(m, b)],
+                cfg.max_robot_residency_time,
+                f"full_front_unload_robot_residency_{m}_{b}",
                 used,
             )
             _add_precedence_lower_bound(
@@ -1464,12 +1846,28 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 f"clean_front_load_{m}_{clean_slot}",
                 used,
             )
+            _add_residency_upper_bound(
+                model,
+                clean_front_load_start[(m, clean_slot)],
+                clean_front_load_end[(m, clean_slot)],
+                cfg.max_robot_residency_time,
+                f"clean_front_load_robot_residency_{m}_{clean_slot}",
+                used,
+            )
             _add_duration_cons(
                 model,
                 clean_back_load_start[(m, clean_slot)],
                 clean_back_load_end[(m, clean_slot)],
                 cfg.pair_transfer_time,
                 f"clean_back_load_{m}_{clean_slot}",
+                used,
+            )
+            _add_residency_upper_bound(
+                model,
+                clean_back_load_start[(m, clean_slot)],
+                clean_back_load_end[(m, clean_slot)],
+                cfg.max_robot_residency_time,
+                f"clean_back_load_robot_residency_{m}_{clean_slot}",
                 used,
             )
             _add_duration_cons(
@@ -1488,12 +1886,28 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 f"clean_back_unload_{m}_{clean_slot}",
                 used,
             )
+            _add_residency_upper_bound(
+                model,
+                clean_back_unload_start[(m, clean_slot)],
+                clean_back_unload_end[(m, clean_slot)],
+                cfg.max_robot_residency_time,
+                f"clean_back_unload_robot_residency_{m}_{clean_slot}",
+                used,
+            )
             _add_duration_cons(
                 model,
                 clean_front_unload_start[(m, clean_slot)],
                 clean_front_unload_end[(m, clean_slot)],
                 cfg.pair_transfer_time,
                 f"clean_front_unload_{m}_{clean_slot}",
+                used,
+            )
+            _add_residency_upper_bound(
+                model,
+                clean_front_unload_start[(m, clean_slot)],
+                clean_front_unload_end[(m, clean_slot)],
+                cfg.max_robot_residency_time,
+                f"clean_front_unload_robot_residency_{m}_{clean_slot}",
                 used,
             )
             _add_precedence_lower_bound(
@@ -1582,12 +1996,28 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
             f"mix_head_{m}",
             mix_active[m],
         )
+        _add_residency_upper_bound(
+            model,
+            mix_head_start[m],
+            mix_head_end[m],
+            cfg.max_robot_residency_time,
+            f"mix_head_robot_residency_{m}",
+            mix_active[m],
+        )
         _add_duration_cons(
             model,
             mix_tail_start[m],
             mix_tail_end[m],
             cfg.pair_transfer_time,
             f"mix_tail_{m}",
+            mix_active[m],
+        )
+        _add_residency_upper_bound(
+            model,
+            mix_tail_start[m],
+            mix_tail_end[m],
+            cfg.max_robot_residency_time,
+            f"mix_tail_robot_residency_{m}",
             mix_active[m],
         )
         model.addCons(
@@ -1604,37 +2034,17 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 mix_cycle_end[(m, c)] <= big_m * used,
                 name=f"mix_cycle_end_cap_{m}_{c}",
             )
-            if c == 1 or c == mix_cycles[-1]:
-                model.addCons(
-                    mix_cycle_end[(m, c)] == mix_cycle_start[(m, c)] + cfg.mix_boundary_process_time * used,
-                    name=f"mix_cycle_duration_{m}_{c}",
-                )
-            else:
-                extra_internal = cfg.mix_internal_process_time - cfg.mix_boundary_process_time
-                model.addCons(
-                    mix_cycle_end[(m, c)]
-                    == mix_cycle_start[(m, c)]
-                    + cfg.mix_boundary_process_time * used
-                    + extra_internal * mix_pos_used[(m, c)],
-                    name=f"mix_cycle_duration_{m}_{c}",
-                )
+            model.addCons(
+                mix_cycle_end[(m, c)] == mix_cycle_start[(m, c)] + cfg.mix_process_time * used,
+                name=f"mix_cycle_duration_{m}_{c}",
+            )
 
-        _add_precedence_lower_bound(
-            model,
-            mix_cycle_start[(m, 1)],
-            mix_head_end[m],
-            big_m,
-            f"mix_head_to_cycle_lb_{m}",
-            mix_active[m],
-        )
-        _add_optional_gap_slack(
-            model,
-            chamber_idle_slacks,
-            mix_cycle_start[(m, 1)],
-            mix_head_end[m],
-            mix_active[m],
-            big_m,
-            f"mix_head_idle_{m}",
+        # Once the four pockets have been filled by the head transfer, the
+        # first 2x2 exposure must start immediately. Waiting here is not a
+        # physical resource delay; any upstream delay belongs before the head.
+        model.addCons(
+            mix_cycle_start[(m, 1)] == mix_head_end[m],
+            name=f"mix_head_to_cycle_tight_{m}",
         )
 
         for c in mix_cycles[1:]:
@@ -1645,6 +2055,14 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 mix_bridge_end[(m, c)],
                 cfg.pair_transfer_time,
                 f"mix_bridge_{m}_{c}",
+                used,
+            )
+            _add_residency_upper_bound(
+                model,
+                mix_bridge_start[(m, c)],
+                mix_bridge_end[(m, c)],
+                cfg.max_robot_residency_time,
+                f"mix_bridge_robot_residency_{m}_{c}",
                 used,
             )
             _add_precedence_lower_bound(
@@ -1664,22 +2082,13 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 big_m,
                 f"mix_cycle_to_bridge_idle_{m}_{c}",
             )
-            _add_precedence_lower_bound(
-                model,
-                mix_cycle_start[(m, c)],
-                mix_bridge_end[(m, c)],
-                big_m,
-                f"mix_bridge_to_cycle_lb_{m}_{c}",
-                used,
-            )
-            _add_optional_gap_slack(
-                model,
-                chamber_idle_slacks,
-                mix_cycle_start[(m, c)],
-                mix_bridge_end[(m, c)],
-                used,
-                big_m,
-                f"mix_bridge_to_cycle_idle_{m}_{c}",
+            # A bridge action unloads the departing pair and loads the next
+            # pair/tail PEC, so the chamber is full at bridge_end. Start the
+            # next exposure immediately instead of relying on a soft penalty
+            # to remove post-bridge gaps.
+            model.addCons(
+                mix_cycle_start[(m, c)] == mix_bridge_end[(m, c)],
+                name=f"mix_bridge_to_cycle_tight_{m}_{c}",
             )
 
         model.addCons(
@@ -1940,7 +2349,10 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
 
     product_stage_order = [
         "atr_lp_al",
+        "atr_hold_before_al",
+        "atr_al_exchange",
         "al",
+        "atr_hold_after_al",
         "atr_al_llupper",
         "llupper",
         "vtr_load",
@@ -1963,82 +2375,203 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
         w: model.addVar(vtype="C", lb=0.0, name=f"wafer_completion_{w}")
         for w in product_wafers
     }
-    full_pair_llupper_start = {
-        p: model.addVar(vtype="C", lb=0.0, name=f"full_pair_llupper_start_{p}")
-        for p in full_pair_ids
+    # Excess residence after the required LL dwell.  These variables are
+    # directly minimized as a secondary objective, so non-critical wafers are
+    # no longer left in an LL simply because their delay does not affect c_max.
+    llupper_wait = {
+        w: model.addVar(vtype="C", lb=0.0, name=f"llupper_wait_{w}")
+        for w in product_wafers
     }
-    full_pair_llupper_end = {
-        p: model.addVar(vtype="C", lb=0.0, name=f"full_pair_llupper_end_{p}")
-        for p in full_pair_ids
+    lllower_wait = {
+        w: model.addVar(vtype="C", lb=0.0, name=f"lllower_wait_{w}")
+        for w in product_wafers
     }
-    full_pair_lllower_start = {
-        p: model.addVar(vtype="C", lb=0.0, name=f"full_pair_lllower_start_{p}")
-        for p in full_pair_ids
-    }
-    full_pair_lllower_end = {
-        p: model.addVar(vtype="C", lb=0.0, name=f"full_pair_lllower_end_{p}")
-        for p in full_pair_ids
-    }
-    mix_pair_llupper_start = {
-        p: model.addVar(vtype="C", lb=0.0, name=f"mix_pair_llupper_start_{p}")
-        for p in mix_pair_ids
-    }
-    mix_pair_llupper_end = {
-        p: model.addVar(vtype="C", lb=0.0, name=f"mix_pair_llupper_end_{p}")
-        for p in mix_pair_ids
-    }
-    mix_pair_lllower_start = {
-        p: model.addVar(vtype="C", lb=0.0, name=f"mix_pair_lllower_start_{p}")
-        for p in mix_pair_ids
-    }
-    mix_pair_lllower_end = {
-        p: model.addVar(vtype="C", lb=0.0, name=f"mix_pair_lllower_end_{p}")
-        for p in mix_pair_ids
-    }
-
     for w in product_wafers:
         _add_duration_cons(
             model,
             prod_stage_start[(w, "atr_lp_al")],
             prod_stage_end[(w, "atr_lp_al")],
-            cfg.atr_transfer_time,
+            cfg.atr_lp_al_total_time,
             f"prod_atr_lp_al_{w}",
         )
+        pair_as_second = product_pair_second_by_wafer.get(w)
+        pair_as_first = product_pair_first_by_wafer.get(w)
+        if pair_as_second is None:
+            model.addCons(
+                prod_stage_start[(w, "al")] == prod_stage_end[(w, "atr_lp_al")],
+                name=f"prod_al_start_immediately_{w}",
+            )
+            model.addCons(
+                prod_stage_start[(w, "atr_hold_before_al")] == 0.0,
+                name=f"prod_atr_hold_before_al_start_zero_{w}",
+            )
+            model.addCons(
+                prod_stage_end[(w, "atr_hold_before_al")] == 0.0,
+                name=f"prod_atr_hold_before_al_end_zero_{w}",
+            )
+            model.addCons(
+                prod_stage_start[(w, "atr_al_exchange")] == 0.0,
+                name=f"prod_atr_al_exchange_start_zero_{w}",
+            )
+            model.addCons(
+                prod_stage_end[(w, "atr_al_exchange")] == 0.0,
+                name=f"prod_atr_al_exchange_end_zero_{w}",
+            )
+        else:
+            input_double = product_pair_atr_lp_al_double[pair_as_second]
+            output_double = product_pair_atr_al_llupper_double[pair_as_second]
+            first = product_pair_first_member[pair_as_second]
+            model.addCons(
+                prod_stage_start[(w, "al")]
+                >= prod_stage_end[(w, "atr_lp_al")] - big_m * input_double,
+                name=f"prod_al_start_single_lb_{w}",
+            )
+            model.addCons(
+                prod_stage_start[(w, "al")]
+                <= prod_stage_end[(w, "atr_lp_al")] + big_m * input_double,
+                name=f"prod_al_start_single_ub_{w}",
+            )
+            # With a double LP pickup but single LL placement, ATR first
+            # places wafer 1 into LLupper, then carries wafer 2 back to AL.
+            # The exchange starts after that physical detour. With a shared
+            # LL placement, the exchange instead picks wafer 1 from AL and
+            # places wafer 2 into the one-slot AL before its calibration.
+            model.addCons(
+                prod_stage_start[(w, "atr_al_exchange")]
+                >= prod_stage_end[(first, "al")]
+                - big_m * (1 - output_double),
+                name=f"prod_al_exchange_double_output_lb_{w}",
+            )
+            model.addCons(
+                prod_stage_start[(w, "atr_al_exchange")]
+                <= prod_stage_end[(first, "al")]
+                + big_m * (1 - output_double),
+                name=f"prod_al_exchange_double_output_ub_{w}",
+            )
+            model.addCons(
+                prod_stage_start[(w, "atr_al_exchange")]
+                >= prod_stage_end[(first, "atr_al_llupper")]
+                + cfg.atr_transfer_time
+                - big_m * (1 - input_double + output_double),
+                name=f"prod_al_exchange_double_input_single_output_lb_{w}",
+            )
+            model.addCons(
+                prod_stage_start[(w, "atr_al_exchange")]
+                <= prod_stage_end[(first, "atr_al_llupper")]
+                + cfg.atr_transfer_time
+                + big_m * (1 - input_double + output_double),
+                name=f"prod_al_exchange_double_input_single_output_ub_{w}",
+            )
+            model.addCons(
+                prod_stage_start[(w, "atr_al_exchange")] <= big_m * input_double,
+                name=f"prod_al_exchange_start_active_{w}",
+            )
+            model.addCons(
+                prod_stage_end[(w, "atr_al_exchange")]
+                == prod_stage_start[(w, "atr_al_exchange")]
+                + cfg.al_exchange_time * output_double
+                + cfg.al_companion_place_time * (input_double - output_double),
+                name=f"prod_al_exchange_duration_{w}",
+            )
+            model.addCons(
+                prod_stage_start[(w, "al")]
+                >= prod_stage_end[(w, "atr_al_exchange")] - big_m * (1 - input_double),
+                name=f"prod_al_start_after_exchange_lb_{w}",
+            )
+            model.addCons(
+                prod_stage_start[(w, "al")]
+                <= prod_stage_end[(w, "atr_al_exchange")] + big_m * (1 - input_double),
+                name=f"prod_al_start_after_exchange_ub_{w}",
+            )
+            _link_optional_stage(
+                model,
+                prod_stage_start[(w, "atr_hold_before_al")],
+                prod_stage_end[(w, "atr_hold_before_al")],
+                prod_stage_end[(w, "atr_lp_al")],
+                prod_stage_start[(w, "atr_al_exchange")],
+                input_double,
+                big_m,
+                f"prod_atr_hold_before_al_{w}",
+            )
         model.addCons(
-            prod_stage_start[(w, "al")] >= prod_stage_end[(w, "atr_lp_al")],
-            name=f"prod_al_start_{w}",
+            prod_stage_end[(w, "al")] == prod_stage_start[(w, "al")] + cfg.aligner_time,
+            name=f"prod_al_duration_{w}",
         )
-        model.addCons(
-            prod_stage_end[(w, "al")] >= prod_stage_start[(w, "al")] + cfg.aligner_time,
-            name=f"prod_al_min_duration_{w}",
-        )
-        model.addCons(
-            prod_stage_end[(w, "al")] <= prod_stage_start[(w, "al")] + cfg.max_module_residency_time,
-            name=f"prod_al_max_residency_{w}",
-        )
-        model.addCons(
-            prod_stage_start[(w, "atr_al_llupper")] >= prod_stage_end[(w, "al")],
-            name=f"prod_atr_al_llupper_start_{w}",
-        )
-        model.addCons(
-            prod_stage_start[(w, "atr_al_llupper")]
-            <= prod_stage_end[(w, "atr_lp_al")] + cfg.max_module_residency_time,
-            name=f"prod_al_physical_max_residency_{w}",
-        )
+        if pair_as_first is None or pair_as_first not in product_pair_second_member:
+            model.addCons(
+                prod_stage_start[(w, "atr_al_llupper")] == prod_stage_end[(w, "al")],
+                name=f"prod_al_pickup_immediately_{w}",
+            )
+            model.addCons(
+                prod_stage_start[(w, "atr_hold_after_al")] == 0.0,
+                name=f"prod_atr_hold_after_al_start_zero_{w}",
+            )
+            model.addCons(
+                prod_stage_end[(w, "atr_hold_after_al")] == 0.0,
+                name=f"prod_atr_hold_after_al_end_zero_{w}",
+            )
+        elif pair_as_second is not None:
+            model.addCons(
+                prod_stage_start[(w, "atr_al_llupper")] == prod_stage_end[(w, "al")],
+                name=f"prod_al_pickup_immediately_{w}",
+            )
+            model.addCons(
+                prod_stage_start[(w, "atr_hold_after_al")] == 0.0,
+                name=f"prod_atr_hold_after_al_start_zero_{w}",
+            )
+            model.addCons(
+                prod_stage_end[(w, "atr_hold_after_al")] == 0.0,
+                name=f"prod_atr_hold_after_al_end_zero_{w}",
+            )
+        else:
+            double_var = product_pair_atr_al_llupper_double[pair_as_first]
+            second = product_pair_second_member[pair_as_first]
+            model.addCons(
+                prod_stage_start[(w, "atr_al_llupper")]
+                >= prod_stage_end[(w, "al")] - big_m * double_var,
+                name=f"prod_al_pickup_single_lb_{w}",
+            )
+            model.addCons(
+                prod_stage_start[(w, "atr_al_llupper")]
+                <= prod_stage_end[(w, "al")] + big_m * double_var,
+                name=f"prod_al_pickup_single_ub_{w}",
+            )
+            model.addCons(
+                prod_stage_start[(w, "atr_al_llupper")]
+                >= prod_stage_end[(second, "al")] - big_m * (1 - double_var),
+                name=f"prod_al_pickup_double_lb_{w}",
+            )
+            model.addCons(
+                prod_stage_start[(w, "atr_al_llupper")]
+                <= prod_stage_end[(second, "al")] + big_m * (1 - double_var),
+                name=f"prod_al_pickup_double_ub_{w}",
+            )
+            _link_optional_stage(
+                model,
+                prod_stage_start[(w, "atr_hold_after_al")],
+                prod_stage_end[(w, "atr_hold_after_al")],
+                prod_stage_end[(second, "atr_al_exchange")],
+                prod_stage_start[(w, "atr_al_llupper")],
+                double_var,
+                big_m,
+                f"prod_atr_hold_after_al_{w}",
+            )
         _add_duration_cons(
             model,
             prod_stage_start[(w, "atr_al_llupper")],
             prod_stage_end[(w, "atr_al_llupper")],
-            cfg.atr_transfer_time,
+            cfg.atr_al_llupper_total_time,
             f"prod_atr_al_llupper_{w}",
         )
+        # Each LL slot has its own pressure state.  LLupper starts in atmosphere
+        # after ATR placement and pumps down before VTR may access this slot.
         model.addCons(
-            prod_stage_start[(w, "llupper")] >= prod_stage_end[(w, "atr_al_llupper")],
+            prod_stage_start[(w, "llupper")] == prod_stage_end[(w, "atr_al_llupper")],
             name=f"prod_llupper_start_{w}",
         )
         model.addCons(
-            prod_stage_end[(w, "llupper")] >= prod_stage_start[(w, "llupper")] + cfg.llupper_time,
-            name=f"prod_llupper_min_duration_{w}",
+            prod_stage_end[(w, "llupper")] == prod_stage_start[(w, "llupper")] + cfg.llupper_time,
+            name=f"prod_llupper_duration_{w}",
         )
         model.addCons(
             prod_stage_end[(w, "llupper")]
@@ -2050,21 +2583,50 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
             name=f"prod_llupper_to_vtr_{w}",
         )
         model.addCons(
+            llupper_wait[w]
+            == prod_stage_start[(w, "vtr_load")] - prod_stage_end[(w, "llupper")],
+            name=f"llupper_wait_def_{w}",
+        )
+        model.addCons(
             prod_stage_start[(w, "vtr_load")]
             <= prod_stage_end[(w, "atr_al_llupper")] + cfg.max_module_residency_time,
             name=f"prod_llupper_physical_max_residency_{w}",
+        )
+        _add_duration_cons(
+            model,
+            prod_stage_start[(w, "vtr_load")],
+            prod_stage_end[(w, "vtr_load")],
+            cfg.pair_transfer_time,
+            f"prod_vtr_load_{w}",
+        )
+        model.addCons(
+            prod_stage_start[(w, "pm")] >= prod_stage_end[(w, "vtr_load")],
+            name=f"prod_vtr_load_to_pm_{w}",
         )
         model.addCons(
             prod_stage_end[(w, "pm")] <= prod_stage_start[(w, "pm")] + cfg.max_module_residency_time,
             name=f"prod_pm_max_residency_{w}",
         )
         model.addCons(
-            prod_stage_start[(w, "lllower")] >= prod_stage_end[(w, "vtr_unload")],
+            prod_stage_start[(w, "vtr_unload")] >= prod_stage_end[(w, "pm")],
+            name=f"prod_pm_to_vtr_unload_{w}",
+        )
+        _add_duration_cons(
+            model,
+            prod_stage_start[(w, "vtr_unload")],
+            prod_stage_end[(w, "vtr_unload")],
+            cfg.pair_transfer_time,
+            f"prod_vtr_unload_{w}",
+        )
+        # LLlower is initially in vacuum for VTR placement.  It then vents to
+        # atmosphere before ATR may access this slot.
+        model.addCons(
+            prod_stage_start[(w, "lllower")] == prod_stage_end[(w, "vtr_unload")],
             name=f"prod_lllower_start_{w}",
         )
         model.addCons(
-            prod_stage_end[(w, "lllower")] >= prod_stage_start[(w, "lllower")] + cfg.lllower_time,
-            name=f"prod_lllower_min_duration_{w}",
+            prod_stage_end[(w, "lllower")] == prod_stage_start[(w, "lllower")] + cfg.lllower_time,
+            name=f"prod_lllower_duration_{w}",
         )
         model.addCons(
             prod_stage_end[(w, "lllower")]
@@ -2076,6 +2638,11 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
             name=f"prod_atr_lllower_lp_start_{w}",
         )
         model.addCons(
+            lllower_wait[w]
+            == prod_stage_start[(w, "atr_lllower_lp")] - prod_stage_end[(w, "lllower")],
+            name=f"lllower_wait_def_{w}",
+        )
+        model.addCons(
             prod_stage_start[(w, "atr_lllower_lp")]
             <= prod_stage_end[(w, "vtr_unload")] + cfg.max_module_residency_time,
             name=f"prod_lllower_physical_max_residency_{w}",
@@ -2084,7 +2651,7 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
             model,
             prod_stage_start[(w, "atr_lllower_lp")],
             prod_stage_end[(w, "atr_lllower_lp")],
-            cfg.atr_return_time,
+            cfg.atr_lllower_lp_total_time,
             f"prod_atr_lllower_lp_{w}",
         )
         model.addCons(
@@ -2100,7 +2667,10 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
     for w in full_wafers:
         for p in full_pair_ids:
             selector = wafer_to_full_pair[(w, p)]
-            _link_stage_by_binary(
+            # The pair transfer window can contain either one double-gripper
+            # VTR action or two single-gripper actions. Synchronization is
+            # selected separately by full_vtr_*_double below.
+            _contain_stage_by_binary(
                 model,
                 prod_stage_start[(w, "vtr_load")],
                 prod_stage_end[(w, "vtr_load")],
@@ -2108,7 +2678,7 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 full_pair_vtr_load_end[p],
                 selector,
                 big_m,
-                f"prod_full_vtr_load_link_{w}_{p}",
+                f"prod_full_vtr_load_window_{w}_{p}",
             )
             _link_stage_by_binary(
                 model,
@@ -2120,7 +2690,7 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 big_m,
                 f"prod_full_pm_link_{w}_{p}",
             )
-            _link_stage_by_binary(
+            _contain_stage_by_binary(
                 model,
                 prod_stage_start[(w, "vtr_unload")],
                 prod_stage_end[(w, "vtr_unload")],
@@ -2128,32 +2698,13 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 full_pair_vtr_unload_end[p],
                 selector,
                 big_m,
-                f"prod_full_vtr_unload_link_{w}_{p}",
-            )
-            _link_stage_by_binary(
-                model,
-                prod_stage_start[(w, "llupper")],
-                prod_stage_end[(w, "llupper")],
-                full_pair_llupper_start[p],
-                full_pair_llupper_end[p],
-                selector,
-                big_m,
-                f"prod_full_llupper_sync_{w}_{p}",
-            )
-            _link_stage_by_binary(
-                model,
-                prod_stage_start[(w, "lllower")],
-                prod_stage_end[(w, "lllower")],
-                full_pair_lllower_start[p],
-                full_pair_lllower_end[p],
-                selector,
-                big_m,
-                f"prod_full_lllower_sync_{w}_{p}",
+                f"prod_full_vtr_unload_window_{w}_{p}",
             )
 
     for w in mix_wafers:
         for p in mix_pair_ids:
             selector = wafer_to_mix_pair[(w, p)]
+            # The same atomic-transfer rule applies to a 2x2 PW pair.
             _link_stage_by_binary(
                 model,
                 prod_stage_start[(w, "vtr_load")],
@@ -2162,7 +2713,7 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 mix_pair_vtr_load_end[p],
                 selector,
                 big_m,
-                f"prod_mix_vtr_load_link_{w}_{p}",
+                f"prod_mix_vtr_load_sync_{w}_{p}",
             )
             _link_stage_by_binary(
                 model,
@@ -2182,142 +2733,96 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 mix_pair_vtr_unload_end[p],
                 selector,
                 big_m,
-                f"prod_mix_vtr_unload_link_{w}_{p}",
-            )
-            _link_stage_by_binary(
-                model,
-                prod_stage_start[(w, "llupper")],
-                prod_stage_end[(w, "llupper")],
-                mix_pair_llupper_start[p],
-                mix_pair_llupper_end[p],
-                selector,
-                big_m,
-                f"prod_mix_llupper_sync_{w}_{p}",
-            )
-            _link_stage_by_binary(
-                model,
-                prod_stage_start[(w, "lllower")],
-                prod_stage_end[(w, "lllower")],
-                mix_pair_lllower_start[p],
-                mix_pair_lllower_end[p],
-                selector,
-                big_m,
-                f"prod_mix_lllower_sync_{w}_{p}",
+                f"prod_mix_vtr_unload_sync_{w}_{p}",
             )
 
+    # A double-gripper decision synchronizes only that robot route. Without
+    # the decision, the two LL slots and their associated robot stages remain
+    # fully independent.
     for p in full_pair_ids:
-        model.addCons(
-            full_pair_llupper_end[p] >= full_pair_llupper_start[p] + cfg.llupper_time,
-            name=f"full_pair_llupper_min_duration_{p}",
-        )
-        model.addCons(
-            full_pair_vtr_load_start[p] >= full_pair_llupper_end[p],
-            name=f"full_pair_llupper_to_vtr_{p}",
-        )
-        model.addCons(
-            full_pair_lllower_start[p] >= full_pair_vtr_unload_end[p],
-            name=f"full_pair_vtr_to_lllower_{p}",
-        )
-        model.addCons(
-            full_pair_lllower_end[p] >= full_pair_lllower_start[p] + cfg.lllower_time,
-            name=f"full_pair_lllower_min_duration_{p}",
-        )
-    for p in mix_pair_ids:
-        model.addCons(
-            mix_pair_llupper_end[p] >= mix_pair_llupper_start[p] + cfg.llupper_time,
-            name=f"mix_pair_llupper_min_duration_{p}",
-        )
-        model.addCons(
-            mix_pair_vtr_load_start[p] >= mix_pair_llupper_end[p],
-            name=f"mix_pair_llupper_to_vtr_{p}",
-        )
-        model.addCons(
-            mix_pair_lllower_start[p] >= mix_pair_vtr_unload_end[p],
-            name=f"mix_pair_vtr_to_lllower_{p}",
-        )
-        model.addCons(
-            mix_pair_lllower_end[p] >= mix_pair_lllower_start[p] + cfg.lllower_time,
-            name=f"mix_pair_lllower_min_duration_{p}",
-        )
-
-    def fixed_pair_members(wafer_ids, pair_loads, selector_lookup):
-        groups = {}
-        cursor = 0
-        for pair_id in sorted(pair_loads):
-            load = pair_loads[pair_id]
-            members = wafer_ids[cursor:cursor + load]
-            groups[pair_id] = [(w, selector_lookup[(w, pair_id)]) for w in members]
-            cursor += load
-        return groups
-
-    full_pair_member_selectors = fixed_pair_members(full_wafers, full_pair_loads, wafer_to_full_pair)
-    mix_pair_member_selectors = fixed_pair_members(mix_wafers, mix_pair_loads, wafer_to_mix_pair)
-
-    product_pair_groups = []
-    for p in full_pair_ids:
-        product_pair_groups.append(
-            {
-                "name": f"F{p}",
-                "members": full_pair_member_selectors[p],
-                "vtr_load_end": full_pair_vtr_load_end[p],
-                "vtr_unload_start": full_pair_vtr_unload_start[p],
-            }
-        )
-    for p in mix_pair_ids:
-        product_pair_groups.append(
-            {
-                "name": f"M{p}",
-                "members": mix_pair_member_selectors[p],
-                "vtr_load_end": mix_pair_vtr_load_end[p],
-                "vtr_unload_start": mix_pair_vtr_unload_start[p],
-            }
-        )
-
-    for left_idx in range(len(product_pair_groups)):
-        left = product_pair_groups[left_idx]
-        for right_idx in range(left_idx + 1, len(product_pair_groups)):
-            right = product_pair_groups[right_idx]
-            upper_before = model.addVar(
-                vtype="B",
-                name=f"llupper_pair_order_{left['name']}_{right['name']}",
+        members = sorted(full_pair_members[p])
+        if len(members) != 2:
+            continue
+        first, second = members
+        for route_name, first_stage, second_stage, double_var in (
+            ("atr_lp_al", "atr_lp_al", "atr_lp_al", full_atr_lp_al_double[p]),
+            ("atr_al_llupper", "atr_al_llupper", "atr_al_llupper", full_atr_al_llupper_double[p]),
+            ("atr_return", "atr_lllower_lp", "atr_lllower_lp", full_atr_return_double[p]),
+            ("vtr_load", "vtr_load", "vtr_load", full_vtr_load_double[p]),
+            ("vtr_unload", "vtr_unload", "vtr_unload", full_vtr_unload_double[p]),
+        ):
+            _synchronize_stages_when(
+                model,
+                prod_stage_start[(first, first_stage)],
+                prod_stage_end[(first, first_stage)],
+                prod_stage_start[(second, second_stage)],
+                prod_stage_end[(second, second_stage)],
+                double_var,
+                big_m,
+                f"full_{route_name}_double_sync_{p}",
             )
-            for wafer_id, selector in right["members"]:
-                model.addCons(
-                    prod_stage_start[(wafer_id, "atr_al_llupper")]
-                    >= left["vtr_load_end"]
-                    - big_m * (1 - upper_before)
-                    - big_m * (1 - selector),
-                    name=f"llupper_pair_order_lb_{left['name']}_{right['name']}_{wafer_id}",
-                )
-            for wafer_id, selector in left["members"]:
-                model.addCons(
-                    prod_stage_start[(wafer_id, "atr_al_llupper")]
-                    >= right["vtr_load_end"]
-                    - big_m * upper_before
-                    - big_m * (1 - selector),
-                    name=f"llupper_pair_order_ub_{left['name']}_{right['name']}_{wafer_id}",
-                )
-
-            lower_before = model.addVar(
-                vtype="B",
-                name=f"lllower_pair_order_{left['name']}_{right['name']}",
+    for p in mix_pair_ids:
+        members = sorted(mix_pair_members[p])
+        if len(members) != 2:
+            continue
+        first, second = members
+        for route_name, first_stage, second_stage, double_var in (
+            ("atr_lp_al", "atr_lp_al", "atr_lp_al", mix_atr_lp_al_double[p]),
+            ("atr_al_llupper", "atr_al_llupper", "atr_al_llupper", mix_atr_al_llupper_double[p]),
+            ("atr_return", "atr_lllower_lp", "atr_lllower_lp", mix_atr_return_double[p]),
+            ("vtr_load", "vtr_load", "vtr_load", mix_vtr_load_double[p]),
+            ("vtr_unload", "vtr_unload", "vtr_unload", mix_vtr_unload_double[p]),
+        ):
+            _synchronize_stages_when(
+                model,
+                prod_stage_start[(first, first_stage)],
+                prod_stage_end[(first, first_stage)],
+                prod_stage_start[(second, second_stage)],
+                prod_stage_end[(second, second_stage)],
+                double_var,
+                big_m,
+                f"mix_{route_name}_double_sync_{p}",
             )
-            for wafer_id, selector in left["members"]:
-                model.addCons(
-                    right["vtr_unload_start"]
-                    >= prod_stage_end[(wafer_id, "atr_lllower_lp")]
-                    - big_m * (1 - lower_before)
-                    - big_m * (1 - selector),
-                    name=f"lllower_pair_order_lb_{left['name']}_{right['name']}_{wafer_id}",
-                )
-            for wafer_id, selector in right["members"]:
-                model.addCons(
-                    left["vtr_unload_start"]
-                    >= prod_stage_end[(wafer_id, "atr_lllower_lp")]
-                    - big_m * lower_before
-                    - big_m * (1 - selector),
-                    name=f"lllower_pair_order_ub_{left['name']}_{right['name']}_{wafer_id}",
-                )
+
+    # A 4x1 batch uses both physical LL slots.  Its front side must therefore
+    # clear LLupper before the back side enters, and its back side must clear
+    # LLlower before the front side returns.  The release variables are max
+    # envelopes over their members, so these constraints order physical slot
+    # use without equating any two product-wafer schedules outside the PM.
+    for m in pm_ids:
+        for b in full_batches:
+            for side in (1, 2):
+                for p in full_pair_ids:
+                    pair_side = assign_full[(p, m, b, side)]
+                    for w in full_wafers:
+                        member = wafer_to_full_pair[(w, p)]
+                        inactive = 2 - pair_side - member
+                        model.addCons(
+                            full_side_llupper_release[(m, b, side)]
+                            >= prod_stage_end[(w, "vtr_load")] - big_m * inactive,
+                            name=f"full_llupper_release_{m}_{b}_{side}_{p}_{w}",
+                        )
+                        model.addCons(
+                            full_side_lllower_release[(m, b, side)]
+                            >= prod_stage_end[(w, "atr_lllower_lp")] - big_m * inactive,
+                            name=f"full_lllower_release_{m}_{b}_{side}_{p}_{w}",
+                        )
+
+            for p in full_pair_ids:
+                for w in full_wafers:
+                    member = wafer_to_full_pair[(w, p)]
+                    model.addCons(
+                        prod_stage_start[(w, "atr_al_llupper")]
+                        >= full_side_llupper_release[(m, b, 1)]
+                        - big_m * (2 - assign_full[(p, m, b, 2)] - member),
+                        name=f"full_llupper_side_handoff_{m}_{b}_{p}_{w}",
+                    )
+                    model.addCons(
+                        prod_stage_start[(w, "lllower")]
+                        >= full_side_lllower_release[(m, b, 2)]
+                        - big_m * (2 - assign_full[(p, m, b, 1)] - member),
+                        name=f"full_lllower_side_handoff_{m}_{b}_{p}_{w}",
+                    )
 
     pec_job_specs = {}
     pec_job_counter = 0
@@ -2337,6 +2842,7 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
 
     for p, load in full_pair_loads.items():
         if load == 1:
+            product_wafer = next(iter(full_pair_members[p]))
             for m in pm_ids:
                 for b in full_batches:
                     for lane in full_sides:
@@ -2344,21 +2850,22 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                             f"embedded_full_{p}_{m}_{b}_{lane}",
                             m,
                             assign_full[(p, m, b, lane)],
-                            (full_pair_vtr_load_start[p], full_pair_vtr_load_end[p]),
-                            (full_pair_pm_start[p], full_pair_pm_end[p]),
-                            (full_pair_vtr_unload_start[p], full_pair_vtr_unload_end[p]),
+                            (prod_stage_start[(product_wafer, "vtr_load")], prod_stage_end[(product_wafer, "vtr_load")]),
+                            (prod_stage_start[(product_wafer, "pm")], prod_stage_end[(product_wafer, "pm")]),
+                            (prod_stage_start[(product_wafer, "vtr_unload")], prod_stage_end[(product_wafer, "vtr_unload")]),
                         )
     for p, load in mix_pair_loads.items():
         if load == 1:
+            product_wafer = next(iter(mix_pair_members[p]))
             for m in pm_ids:
                 for r in mix_positions:
                     add_pec_job(
                         f"embedded_mix_{p}_{m}_{r}",
                         m,
                         assign_mix[(p, m, r)],
-                        (mix_pair_vtr_load_start[p], mix_pair_vtr_load_end[p]),
-                        (mix_pair_pm_start[p], mix_pair_pm_end[p]),
-                        (mix_pair_vtr_unload_start[p], mix_pair_vtr_unload_end[p]),
+                        (prod_stage_start[(product_wafer, "vtr_load")], prod_stage_end[(product_wafer, "vtr_load")]),
+                        (prod_stage_start[(product_wafer, "pm")], prod_stage_end[(product_wafer, "pm")]),
+                        (prod_stage_start[(product_wafer, "vtr_unload")], prod_stage_end[(product_wafer, "vtr_unload")]),
                     )
     for m in pm_ids:
         for b in full_batches:
@@ -2420,9 +2927,20 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
         for job_id in pec_job_ids
         for stage in pec_stage_order
     }
+    pec_job_chamber = {
+        job_id: model.addVar(
+            vtype="B",
+            name=f"pec_job_chamber_{job_id}_{pec_job_specs[job_id]['chamber_id']}",
+        )
+        for job_id in pec_job_ids
+    }
 
     for job_id, spec in pec_job_specs.items():
         active = spec["active"]
+        model.addCons(
+            pec_job_chamber[job_id] == active,
+            name=f"pec_job_chamber_link_{job_id}_{spec['chamber_id']}",
+        )
         _link_optional_stage(
             model,
             pec_stage_start[(job_id, "vtr_load")],
@@ -2488,128 +3006,574 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
             "pec_token_order",
         )
 
-    atr_tasks = []
     al_tasks = []
     llupper_tasks = []
     lllower_tasks = []
     for w in product_wafers:
-        atr_tasks.append(
-            (f"lp_al_{w}", prod_stage_start[(w, "atr_lp_al")], prod_stage_end[(w, "atr_lp_al")], None)
-        )
-        atr_tasks.append(
-            (
-                f"al_llupper_{w}",
-                prod_stage_start[(w, "atr_al_llupper")],
-                prod_stage_end[(w, "atr_al_llupper")],
-                None,
-            )
-        )
-        atr_tasks.append(
-            (
-                f"lllower_lp_{w}",
-                prod_stage_start[(w, "atr_lllower_lp")],
-                prod_stage_end[(w, "atr_lllower_lp")],
-                None,
-            )
-        )
-        # Capacity must cover the physical residency interval, not only the
-        # processing interval. A wafer occupies AL after ATR drops it off until
-        # ATR picks it up for LLupper, and similarly for both LL modules.
+        # AL is a single-slot calibrator. Its interval is exactly the
+        # calibration process because arrival and pickup are both immediate.
         al_tasks.append(
-            (str(w), prod_stage_end[(w, "atr_lp_al")], prod_stage_end[(w, "atr_al_llupper")], None)
+            (str(w), prod_stage_start[(w, "al")], prod_stage_end[(w, "al")], None)
         )
+        # Slot assignment covers the complete independent pressure cycle, not
+        # only the wafer dwell.  This prevents the next robot from entering the
+        # same slot before it has returned to its initial pressure state.
         llupper_tasks.append(
-            (str(w), prod_stage_start[(w, "atr_al_llupper")], prod_stage_end[(w, "vtr_load")], None)
+            (
+                str(w),
+                prod_stage_end[(w, "atr_al_llupper")] - cfg.atr_load_unload_time,
+                prod_stage_end[(w, "vtr_load")] + cfg.llupper_time,
+                None,
+            )
         )
         lllower_tasks.append(
-            (str(w), prod_stage_start[(w, "vtr_unload")], prod_stage_end[(w, "atr_lllower_lp")], None)
+            (
+                str(w),
+                prod_stage_start[(w, "vtr_unload")],
+                prod_stage_start[(w, "atr_lllower_lp")]
+                + cfg.atr_load_unload_time
+                + cfg.lllower_time,
+                None,
+            )
         )
 
     vtr_tasks = []
+    vtr_task_locations = {}
+
+    def append_vtr_task(task_name, task_start, task_end, task_active, source, destination):
+        vtr_tasks.append((task_name, task_start, task_end, task_active))
+        vtr_task_locations[task_name] = (source, destination)
+
     for m in pm_ids:
-        vtr_tasks.append((f"mix_head_{m}", mix_head_start[m], mix_head_end[m], mix_active[m]))
-        vtr_tasks.append((f"mix_tail_{m}", mix_tail_start[m], mix_tail_end[m], mix_active[m]))
+        append_vtr_task(
+            f"mix_head_{m}", mix_head_start[m], mix_head_end[m], mix_active[m], "LLupper", f"CH{m}"
+        )
+        append_vtr_task(
+            f"mix_tail_{m}", mix_tail_start[m], mix_tail_end[m], mix_active[m], f"CH{m}", "LLlower"
+        )
         for b in full_batches:
-            vtr_tasks.append(
-                (
-                    f"full_front_load_{m}_{b}",
-                    full_front_load_start[(m, b)],
-                    full_front_load_end[(m, b)],
-                    full_batch_used[(m, b)],
-                )
+            append_vtr_task(
+                f"full_front_load_{m}_{b}",
+                full_front_load_start[(m, b)],
+                full_front_load_end[(m, b)],
+                full_batch_used[(m, b)],
+                "LLupper",
+                f"CH{m}",
             )
-            vtr_tasks.append(
-                (
-                    f"full_back_load_{m}_{b}",
-                    full_back_load_start[(m, b)],
-                    full_back_load_end[(m, b)],
-                    full_batch_used[(m, b)],
-                )
+            append_vtr_task(
+                f"full_back_load_{m}_{b}",
+                full_back_load_start[(m, b)],
+                full_back_load_end[(m, b)],
+                full_batch_used[(m, b)],
+                "LLupper",
+                f"CH{m}",
             )
-            vtr_tasks.append(
-                (
-                    f"full_back_unload_{m}_{b}",
-                    full_back_unload_start[(m, b)],
-                    full_back_unload_end[(m, b)],
-                    full_batch_used[(m, b)],
-                )
+            append_vtr_task(
+                f"full_back_unload_{m}_{b}",
+                full_back_unload_start[(m, b)],
+                full_back_unload_end[(m, b)],
+                full_batch_used[(m, b)],
+                f"CH{m}",
+                "LLlower",
             )
-            vtr_tasks.append(
-                (
-                    f"full_front_unload_{m}_{b}",
-                    full_front_unload_start[(m, b)],
-                    full_front_unload_end[(m, b)],
-                    full_batch_used[(m, b)],
-                )
+            append_vtr_task(
+                f"full_front_unload_{m}_{b}",
+                full_front_unload_start[(m, b)],
+                full_front_unload_end[(m, b)],
+                full_batch_used[(m, b)],
+                f"CH{m}",
+                "LLlower",
             )
         for clean_slot in clean_slots:
-            vtr_tasks.append(
-                (
-                    f"clean_front_load_{m}_{clean_slot}",
-                    clean_front_load_start[(m, clean_slot)],
-                    clean_front_load_end[(m, clean_slot)],
-                    clean_active[(m, clean_slot)],
-                )
+            append_vtr_task(
+                f"clean_front_load_{m}_{clean_slot}",
+                clean_front_load_start[(m, clean_slot)],
+                clean_front_load_end[(m, clean_slot)],
+                clean_active[(m, clean_slot)],
+                "PEC storage",
+                f"CH{m}",
             )
-            vtr_tasks.append(
-                (
-                    f"clean_back_load_{m}_{clean_slot}",
-                    clean_back_load_start[(m, clean_slot)],
-                    clean_back_load_end[(m, clean_slot)],
-                    clean_active[(m, clean_slot)],
-                )
+            append_vtr_task(
+                f"clean_back_load_{m}_{clean_slot}",
+                clean_back_load_start[(m, clean_slot)],
+                clean_back_load_end[(m, clean_slot)],
+                clean_active[(m, clean_slot)],
+                "PEC storage",
+                f"CH{m}",
             )
-            vtr_tasks.append(
-                (
-                    f"clean_back_unload_{m}_{clean_slot}",
-                    clean_back_unload_start[(m, clean_slot)],
-                    clean_back_unload_end[(m, clean_slot)],
-                    clean_active[(m, clean_slot)],
-                )
+            append_vtr_task(
+                f"clean_back_unload_{m}_{clean_slot}",
+                clean_back_unload_start[(m, clean_slot)],
+                clean_back_unload_end[(m, clean_slot)],
+                clean_active[(m, clean_slot)],
+                f"CH{m}",
+                "PEC storage",
             )
-            vtr_tasks.append(
-                (
-                    f"clean_front_unload_{m}_{clean_slot}",
-                    clean_front_unload_start[(m, clean_slot)],
-                    clean_front_unload_end[(m, clean_slot)],
-                    clean_active[(m, clean_slot)],
-                )
+            append_vtr_task(
+                f"clean_front_unload_{m}_{clean_slot}",
+                clean_front_unload_start[(m, clean_slot)],
+                clean_front_unload_end[(m, clean_slot)],
+                clean_active[(m, clean_slot)],
+                f"CH{m}",
+                "PEC storage",
             )
         for c in mix_cycles[1:]:
-            vtr_tasks.append(
-                (
-                    f"mix_bridge_{m}_{c}",
-                    mix_bridge_start[(m, c)],
-                    mix_bridge_end[(m, c)],
-                    mix_cycle_used[(m, c)],
-                )
+            append_vtr_task(
+                f"mix_bridge_{m}_{c}",
+                mix_bridge_start[(m, c)],
+                mix_bridge_end[(m, c)],
+                mix_cycle_used[(m, c)],
+                "LLupper",
+                "LLlower",
             )
 
-    _add_unary_resource_no_overlap(model, atr_tasks, big_m, "seq_atr")
-    _add_unary_resource_no_overlap(model, al_tasks, big_m, "seq_al")
-    _add_parallel_slot_resource(model, llupper_tasks, 2, big_m, "llupper_slot_assign", "seq_llupper")
-    _add_parallel_slot_resource(model, lllower_tasks, 2, big_m, "lllower_slot_assign", "seq_lllower")
-    _add_unary_resource_no_overlap(model, vtr_tasks, big_m, "seq_vtr")
+    def vtr_empty_transition(left_name, right_name):
+        left_destination = vtr_task_locations[left_name][1]
+        right_source = vtr_task_locations[right_name][0]
+        return 0.0 if left_destination == right_source else cfg.pair_transfer_time
+
+    atr_task_locations = {}
+    for w in product_wafers:
+        atr_task_locations[f"lp_al_{w}"] = ("LP", "AL")
+        atr_task_locations[f"al_llupper_{w}"] = ("AL", "LL")
+        atr_task_locations[f"lllower_lp_{w}"] = ("LL", "LP")
+
+    def atr_empty_transition(left_name, right_name):
+        left_destination = atr_task_locations[left_name][1]
+        right_source = atr_task_locations[right_name][0]
+        location_index = {"LP": 0, "AL": 1, "LL": 2}
+        return abs(location_index[left_destination] - location_index[right_source]) * cfg.atr_transfer_time
+
+    def pair_robot_actions(robot_name, pair_ids, pair_members, route_specs, route_windows=None, action_prefix="pair"):
+        """Create one non-preemptive robot action for each PW pair and route.
+
+        A selected double action uses one shared transfer window.  Otherwise the
+        canonical first and second wafers execute two consecutive single
+        transfers, so no unrelated robot action can be inserted between them.
+        """
+        actions = {}
+        route_windows = route_windows or {}
+        for route_name, stage_name, double_by_pair in route_specs:
+            for p in pair_ids:
+                members = sorted(pair_members[p])
+                first = members[0]
+                action_start = model.addVar(
+                    vtype="C",
+                    lb=0.0,
+                    name=f"{robot_name}_{action_prefix}_action_start_{route_name}_{p}",
+                )
+                action_end = model.addVar(
+                    vtype="C",
+                    lb=0.0,
+                    name=f"{robot_name}_{action_prefix}_action_end_{route_name}_{p}",
+                )
+                first_start = prod_stage_start[(first, stage_name)]
+                first_end = prod_stage_end[(first, stage_name)]
+                model.addCons(
+                    action_start == first_start,
+                    name=f"{robot_name}_{action_prefix}_action_start_link_{route_name}_{p}",
+                )
+
+                if len(members) == 1:
+                    model.addCons(
+                        action_end == first_end,
+                        name=f"{robot_name}_{action_prefix}_action_end_single_{route_name}_{p}",
+                    )
+                else:
+                    second = members[1]
+                    second_start = prod_stage_start[(second, stage_name)]
+                    second_end = prod_stage_end[(second, stage_name)]
+                    double_var = double_by_pair[p]
+                    # With two single moves, keep the same-route operations
+                    # consecutive.  With a double move, synchronization above
+                    # makes them one shared physical action.
+                    model.addCons(
+                        second_start >= first_end - big_m * double_var,
+                        name=f"{robot_name}_{action_prefix}_single_order_lb_{route_name}_{p}",
+                    )
+                    model.addCons(
+                        second_start <= first_end + big_m * double_var,
+                        name=f"{robot_name}_{action_prefix}_single_order_ub_{route_name}_{p}",
+                    )
+                    model.addCons(
+                        action_end >= first_end - big_m * (1 - double_var),
+                        name=f"{robot_name}_{action_prefix}_action_end_double_lb_{route_name}_{p}",
+                    )
+                    model.addCons(
+                        action_end <= first_end + big_m * (1 - double_var),
+                        name=f"{robot_name}_{action_prefix}_action_end_double_ub_{route_name}_{p}",
+                    )
+                    model.addCons(
+                        action_end >= second_end - big_m * double_var,
+                        name=f"{robot_name}_{action_prefix}_action_end_single_lb_{route_name}_{p}",
+                    )
+                    model.addCons(
+                        action_end <= second_end + big_m * double_var,
+                        name=f"{robot_name}_{action_prefix}_action_end_single_ub_{route_name}_{p}",
+                    )
+                if route_name in route_windows:
+                    window_start, window_end = route_windows[route_name][p]
+                    model.addCons(
+                        action_start == window_start,
+                        name=f"{robot_name}_{action_prefix}_action_window_start_{route_name}_{p}",
+                    )
+                    model.addCons(
+                        action_end == window_end,
+                        name=f"{robot_name}_{action_prefix}_action_window_end_{route_name}_{p}",
+                    )
+                actions[(route_name, p)] = (f"{action_prefix}_{route_name}_{p}", action_start, action_end)
+        return actions
+
+    def full_pair_robot_actions(robot_name, route_specs, route_windows=None):
+        return pair_robot_actions(
+            robot_name,
+            full_pair_ids,
+            full_pair_members,
+            route_specs,
+            route_windows=route_windows,
+            action_prefix="pair",
+        )
+
+    def mix_pair_robot_actions(robot_name, route_specs, route_windows=None):
+        return pair_robot_actions(
+            robot_name,
+            mix_pair_ids,
+            mix_pair_members,
+            route_specs,
+            route_windows=route_windows,
+            action_prefix="mix_pair",
+        )
+
+    def add_robot_action_chain(robot_name, actions, transition_time=0.0):
+        """Apply a known physical action order, including required empty repositioning."""
+        for order_index, (left, right) in enumerate(zip(actions, actions[1:]), start=1):
+            _left_name, _left_start, left_end = left
+            _right_name, right_start, _right_end = right
+            reposition_time = transition_time(left, right) if callable(transition_time) else transition_time
+            model.addCons(
+                right_start >= left_end + reposition_time,
+                name=f"{robot_name}_physical_action_order_{order_index}",
+            )
+
+    full_pair_by_slot = {
+        slot: p for p, slot in canonical_full_slot_by_pair.items()
+    }
+
+    def pair_at_slot(m, b, side):
+        return full_pair_by_slot.get((m, b, side))
+
+    # ATR has two grippers but only one physical motion path at a time. With a
+    # selected bundled double action, it carries a PW pair from LP to AL,
+    # serially calibrates the two wafers in the one-slot AL while retaining the
+    # companion wafer, then carries the pair from AL to LLupper. Otherwise it
+    # uses the original one-wafer-at-a-time action sequence.
+    if pure_full_mode:
+        atr_return_actions = full_pair_robot_actions(
+            "atr",
+            (("lllower_lp", "atr_lllower_lp", full_atr_return_double),),
+        )
+        al_service_wafers = [
+            w
+            for p in full_pair_ids
+            for w in sorted(full_pair_members[p])
+        ]
+        al_service_actions = []
+        for p in full_pair_ids:
+            members = sorted(full_pair_members[p])
+            first = members[0]
+            last = members[-1]
+            al_service_actions.append(
+                (
+                    f"al_service_{p}",
+                    prod_stage_start[(first, "atr_lp_al")],
+                    prod_stage_end[(last, "atr_al_llupper")],
+                )
+            )
+            if len(members) == 2:
+                second = members[1]
+                model.addCons(
+                    prod_stage_start[(second, "atr_lp_al")]
+                    >= prod_stage_end[(first, "atr_al_llupper")]
+                    - big_m * full_atr_lp_al_double[p],
+                    name=f"atr_al_service_single_pair_order_{p}",
+                )
+        add_robot_action_chain(
+            "atr_al_service",
+            al_service_actions,
+            transition_time=cfg.atr_empty_ll_to_lp_time,
+        )
+
+        # Back-side unloading precedes front-side unloading in every PM batch,
+        # so this is also the only physically valid global return order.
+        atr_return_order = sorted(
+            full_pair_ids,
+            key=lambda p: (
+                canonical_full_slot_by_pair[p][1],
+                canonical_full_slot_by_pair[p][0],
+                -canonical_full_slot_by_pair[p][2],
+            ),
+        )
+        add_robot_action_chain(
+            "atr_return",
+            [atr_return_actions[("lllower_lp", p)] for p in atr_return_order],
+            transition_time=cfg.atr_empty_ll_to_lp_time,
+        )
+
+        last_al_service_end = prod_stage_end[(al_service_wafers[-1], "atr_al_llupper")]
+        for p in full_pair_ids:
+            _return_name, return_start, return_end = atr_return_actions[("lllower_lp", p)]
+            return_after_all_al = model.addVar(
+                vtype="B",
+                name=f"atr_return_after_all_al_{p}",
+            )
+            return_windows = []
+            for w in al_service_wafers:
+                selector = model.addVar(
+                    vtype="B",
+                    name=f"atr_return_during_al_{p}_{w}",
+                )
+                return_windows.append(selector)
+                service_pair = full_pair_by_wafer[w]
+                holding_selector = (
+                    full_atr_lp_al_double[service_pair]
+                    if w == full_pair_first_member[service_pair]
+                    else full_atr_al_llupper_double[service_pair]
+                )
+                model.addCons(
+                    selector <= 1 - holding_selector,
+                    name=f"atr_return_not_while_holding_pair_{p}_{w}",
+                )
+                # ATR is at AL after the LP drop-off. To recover a wafer from
+                # LLlower during this calibration window it must first move
+                # empty AL->LL, perform the loaded LL->LP return, and then
+                # move empty LP->AL before the calibrated wafer is picked up.
+                model.addCons(
+                    return_start
+                    >= prod_stage_end[(w, "atr_lp_al")]
+                    + cfg.atr_transfer_time
+                    - big_m * (1 - selector),
+                    name=f"atr_return_al_window_start_{p}_{w}",
+                )
+                model.addCons(
+                    return_end
+                    <= prod_stage_start[(w, "atr_al_llupper")]
+                    - cfg.atr_transfer_time
+                    + big_m * (1 - selector),
+                    name=f"atr_return_al_window_end_{p}_{w}",
+                )
+            model.addCons(
+                scip.quicksum(return_windows) + return_after_all_al == 1,
+                name=f"atr_return_window_once_{p}",
+            )
+            model.addCons(
+                return_start
+                >= last_al_service_end - big_m * (1 - return_after_all_al),
+                name=f"atr_return_after_all_al_lb_{p}",
+            )
+    else:
+        # In mixed production, both 4x1 and 2x2 product pairs use the same
+        # physical two-gripper ATR behavior. Represent a complete pair's
+        # LP->AL, serial AL service, and AL->LL handoff as one non-preemptive
+        # robot action so a synchronized double move is not mistaken for two
+        # overlapping single-wafer tasks by the unary ATR resource.
+        atr_resource_tasks = []
+
+        def append_pair_al_services(mode_prefix, pair_ids, pair_members, input_double_by_pair):
+            for p in pair_ids:
+                members = sorted(pair_members[p])
+                if not members:
+                    continue
+                first = members[0]
+                last = members[-1]
+                service_name = f"{mode_prefix}_al_service_{p}"
+                atr_task_locations[service_name] = ("LP", "LL")
+                atr_resource_tasks.append(
+                    (
+                        service_name,
+                        prod_stage_start[(first, "atr_lp_al")],
+                        prod_stage_end[(last, "atr_al_llupper")],
+                        None,
+                    )
+                )
+                if len(members) == 2:
+                    second = members[1]
+                    model.addCons(
+                        prod_stage_start[(second, "atr_lp_al")]
+                        >= prod_stage_end[(first, "atr_al_llupper")]
+                        - big_m * input_double_by_pair[p],
+                        name=f"{mode_prefix}_atr_al_service_single_pair_order_{p}",
+                    )
+
+        append_pair_al_services("full", full_pair_ids, full_pair_members, full_atr_lp_al_double)
+        append_pair_al_services("mix", mix_pair_ids, mix_pair_members, mix_atr_lp_al_double)
+
+        full_atr_return_actions = full_pair_robot_actions(
+            "atr",
+            (("lllower_lp", "atr_lllower_lp", full_atr_return_double),),
+        )
+        for p in full_pair_ids:
+            action_name, action_start, action_end = full_atr_return_actions[("lllower_lp", p)]
+            atr_task_locations[action_name] = ("LL", "LP")
+            atr_resource_tasks.append((action_name, action_start, action_end, None))
+
+        mix_atr_return_actions = mix_pair_robot_actions(
+            "atr",
+            (("lllower_lp", "atr_lllower_lp", mix_atr_return_double),),
+        )
+        for p in mix_pair_ids:
+            action_name, action_start, action_end = mix_atr_return_actions[("lllower_lp", p)]
+            atr_task_locations[action_name] = ("LL", "LP")
+            atr_resource_tasks.append((action_name, action_start, action_end, None))
+        _add_unary_resource_no_overlap(
+            model,
+            atr_resource_tasks,
+            big_m,
+            "seq_atr_action",
+            transition_time=atr_empty_transition,
+        )
+    # AL is one physical calibration slot in every operating mode.
+    if pure_full_mode:
+        al_wafers = [
+            w
+            for p in full_pair_ids
+            for w in sorted(full_pair_members[p])
+        ]
+        for left, right in zip(al_wafers, al_wafers[1:]):
+            model.addCons(
+                prod_stage_start[(right, "al")] >= prod_stage_end[(left, "al")],
+                name=f"al_single_slot_{left}_{right}",
+            )
+    else:
+        _add_parallel_slot_resource(model, al_tasks, 1, big_m, "al_slot_assign", "seq_al")
+    # For a pure 4x1 workload, each PW pair uses the two LL slots in a known
+    # front/back handoff pattern.  Make that physical pattern explicit as two
+    # canonical slot chains instead of enumerating interchangeable LL-slot
+    # colors and pairwise order binaries.
+    if pure_full_mode:
+        full_member_slot = {}
+        for p in full_pair_ids:
+            for slot_index, w in enumerate(sorted(full_pair_members[p])):
+                full_member_slot[w] = slot_index
+
+        upper_pair_order = list(full_pair_ids)
+        lower_pair_order = sorted(
+            full_pair_ids,
+            key=lambda p: (
+                canonical_full_slot_by_pair[p][1],
+                canonical_full_slot_by_pair[p][0],
+                -canonical_full_slot_by_pair[p][2],
+            ),
+        )
+        for slot_index in range(2):
+            upper_wafers = [
+                w
+                for p in upper_pair_order
+                for w in sorted(full_pair_members[p])
+                if full_member_slot[w] == slot_index
+            ]
+            lower_wafers = [
+                w
+                for p in lower_pair_order
+                for w in sorted(full_pair_members[p])
+                if full_member_slot[w] == slot_index
+            ]
+            for left, right in zip(upper_wafers, upper_wafers[1:]):
+                model.addCons(
+                    prod_stage_end[(right, "atr_al_llupper")] - cfg.atr_load_unload_time
+                    >= prod_stage_end[(left, "vtr_load")] + cfg.llupper_time,
+                    name=f"llupper_canonical_slot_{slot_index + 1}_{left}_{right}",
+                )
+            for left, right in zip(lower_wafers, lower_wafers[1:]):
+                model.addCons(
+                    prod_stage_start[(right, "vtr_unload")]
+                    >= prod_stage_start[(left, "atr_lllower_lp")]
+                    + cfg.atr_load_unload_time
+                    + cfg.lllower_time,
+                    name=f"lllower_canonical_slot_{slot_index + 1}_{left}_{right}",
+                )
+    else:
+        _add_parallel_slot_resource(model, llupper_tasks, 2, big_m, "llupper_slot_assign", "seq_llupper")
+        _add_parallel_slot_resource(model, lllower_tasks, 2, big_m, "lllower_slot_assign", "seq_lllower")
+    # VTR follows the same steady cycle.  After both PMs receive their first
+    # batch, each chamber releases its completed back/front pair and is loaded
+    # with its own next batch before the robot proceeds to the other chamber.
+    # This preserves one physical VTR path while keeping both PMs productive.
+    if pure_full_mode and len(full_batches) <= cfg.cleaning_interval:
+        vtr_actions = full_pair_robot_actions(
+            "vtr",
+            (
+                ("load", "vtr_load", full_vtr_load_double),
+                ("unload", "vtr_unload", full_vtr_unload_double),
+            ),
+            {
+                "load": {
+                    p: (full_pair_vtr_load_start[p], full_pair_vtr_load_end[p])
+                    for p in full_pair_ids
+                },
+                "unload": {
+                    p: (full_pair_vtr_unload_start[p], full_pair_vtr_unload_end[p])
+                    for p in full_pair_ids
+                },
+            },
+        )
+        vtr_action_chain = []
+        first_batch = full_batches[0]
+        final_batch = full_batches[-1]
+
+        def append_vtr_side(route_name, m, b, side):
+            pair_id = pair_at_slot(m, b, side)
+            if pair_id is not None:
+                action = vtr_actions[(route_name, pair_id)]
+                vtr_action_chain.append(action)
+                vtr_task_locations[action[0]] = (
+                    ("LLupper", f"CH{m}")
+                    if route_name == "load"
+                    else (f"CH{m}", "LLlower")
+                )
+                return
+            if not any(pair_at_slot(m, b, s) is not None for s in full_sides):
+                return
+            side_name = "front" if side == 1 else "back"
+            if route_name == "load":
+                vtr_action_chain.append(
+                    (
+                        f"full_{side_name}_load_{m}_{b}",
+                        full_front_load_start[(m, b)] if side == 1 else full_back_load_start[(m, b)],
+                        full_front_load_end[(m, b)] if side == 1 else full_back_load_end[(m, b)],
+                    )
+                )
+            else:
+                vtr_action_chain.append(
+                    (
+                        f"full_{side_name}_unload_{m}_{b}",
+                        full_front_unload_start[(m, b)] if side == 1 else full_back_unload_start[(m, b)],
+                        full_front_unload_end[(m, b)] if side == 1 else full_back_unload_end[(m, b)],
+                    )
+                )
+
+        for b in full_batches:
+            for m in pm_ids:
+                if b != first_batch:
+                    append_vtr_side("unload", m, b - 1, 2)
+                    append_vtr_side("unload", m, b - 1, 1)
+                append_vtr_side("load", m, b, 1)
+                append_vtr_side("load", m, b, 2)
+        for m in pm_ids:
+            append_vtr_side("unload", m, final_batch, 2)
+            append_vtr_side("unload", m, final_batch, 1)
+        add_robot_action_chain(
+            "vtr",
+            vtr_action_chain,
+            transition_time=lambda left, right: vtr_empty_transition(left[0], right[0]),
+        )
+    else:
+        _add_unary_resource_no_overlap(
+            model,
+            vtr_tasks,
+            big_m,
+            "seq_vtr_action",
+            transition_time=vtr_empty_transition,
+        )
 
     for m in pm_ids:
         full_idle_expr = scip.quicksum(
@@ -2633,37 +3597,84 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
             chamber_idle_total[m] == full_idle_expr + mix_idle_expr + clean_idle_expr,
             name=f"chamber_idle_total_def_{m}",
         )
+        for b in full_batches:
+            add_chamber_nonprocess_square_term(
+                m,
+                full_front_unload_end[(m, b)]
+                - full_front_load_start[(m, b)]
+                - cfg.full_process_time * full_batch_used[(m, b)],
+                full_batch_used[(m, b)],
+                f"full_{m}_{b}",
+            )
+        add_chamber_nonprocess_square_term(
+            m,
+            mix_cycle_start[(m, 1)] - mix_head_start[m],
+            mix_cycle_used[(m, 1)],
+            f"mix_head_{m}",
+        )
+        for c in mix_cycles[1:]:
+            add_chamber_nonprocess_square_term(
+                m,
+                mix_cycle_start[(m, c)] - mix_cycle_end[(m, c - 1)],
+                mix_cycle_used[(m, c)],
+                f"mix_bridge_{m}_{c}",
+            )
+        add_chamber_nonprocess_square_term(
+            m,
+            mix_tail_end[m] - mix_last_cycle_end[m],
+            mix_active[m],
+            f"mix_tail_{m}",
+        )
+        for clean_slot in clean_slots:
+            add_chamber_nonprocess_square_term(
+                m,
+                clean_front_unload_end[(m, clean_slot)]
+                - clean_front_load_start[(m, clean_slot)]
+                - (clean_end[(m, clean_slot)] - clean_start[(m, clean_slot)]),
+                clean_active[(m, clean_slot)],
+                f"clean_{m}_{clean_slot}",
+            )
         model.addCons(
-            chamber_idle_square[m] >= chamber_idle_total[m] * chamber_idle_total[m],
-            name=f"chamber_idle_square_def_{m}",
+            chamber_nonprocess_wait_square[m] == scip.quicksum(chamber_nonprocess_wait_square_terms[m]),
+            name=f"chamber_nonprocess_wait_square_def_{m}",
         )
 
     c_max = model.addVar(vtype="C", lb=0.0, name="c_max")
     for w in product_wafers:
         model.addCons(c_max >= wafer_completion[w], name=f"makespan_lb_{w}")
 
-    objective = c_max
-    if (
-        full_pm_imbalance is not None
-        and mix_pm_imbalance is not None
-        and cfg.pm_balance_penalty > 0
-    ):
-        objective = objective + cfg.pm_balance_penalty * (full_pm_imbalance + mix_pm_imbalance)
-    if cfg.chamber_idle_penalty > 0 and chamber_idle_slacks:
-        objective = objective + cfg.chamber_idle_penalty * scip.quicksum(chamber_idle_slacks)
+    # The generated LP has a pure makespan objective: minimizing c_max is
+    # exactly maximizing WPH for a fixed wafer count. The runner may then fix
+    # c_max to either the proven optimum or the current incumbent and compact
+    # that schedule in a bounded second phase. Keeping this score explicit in
+    # the LP makes both objectives auditable in a saved solution.
     post_process_wait_terms = list(full_pair_post_process_wait.values()) + list(mix_pair_post_process_wait.values())
-    if cfg.post_process_wait_penalty > 0 and post_process_wait_terms:
-        objective = objective + cfg.post_process_wait_penalty * scip.quicksum(post_process_wait_terms)
-    if cfg.flow_time_penalty > 0:
-        objective = objective + cfg.flow_time_penalty * scip.quicksum(
-            wafer_completion[w] for w in product_wafers
-        )
-    if cfg.chamber_idle_square_penalty > 0:
-        objective = objective + cfg.chamber_idle_square_penalty * scip.quicksum(
-            chamber_idle_square[m] for m in pm_ids
-        )
-
-    model.setObjective(objective, "minimize")
+    ll_wait_terms = list(llupper_wait.values()) + list(lllower_wait.values())
+    # Keep the established command-line knobs meaningful, but normalize them
+    # by their historical defaults.  At default settings all stability gaps
+    # have equal time-unit weight; changing a knob adjusts only its relative
+    # importance inside the WPH-preserving second phase.
+    balance_weight = cfg.pm_balance_penalty / 0.01
+    chamber_gap_weight = cfg.chamber_idle_penalty / 1e-4
+    post_process_weight = cfg.post_process_wait_penalty / 0.05
+    ll_wait_weight = cfg.ll_wait_penalty / 1e-4
+    chamber_nonprocess_square_weight = cfg.chamber_nonprocess_wait_square_penalty / 1e-2
+    stability_expr = chamber_gap_weight * scip.quicksum(chamber_idle_slacks)
+    stability_expr += chamber_nonprocess_square_weight * scip.quicksum(
+        chamber_nonprocess_wait_square[m] for m in pm_ids
+    )
+    stability_expr += post_process_weight * scip.quicksum(post_process_wait_terms)
+    stability_expr += ll_wait_weight * scip.quicksum(ll_wait_terms)
+    if full_pm_imbalance is not None:
+        stability_expr += balance_weight * full_pm_imbalance
+    if mix_pm_imbalance is not None:
+        stability_expr += balance_weight * mix_pm_imbalance
+    schedule_stability = model.addVar(vtype="C", lb=0.0, name="schedule_stability")
+    model.addCons(
+        schedule_stability == stability_expr,
+        name="schedule_stability_def",
+    )
+    model.setObjective(c_max, "minimize")
     return model
 
 
@@ -2721,7 +3732,8 @@ Compared with the previous chamber-level MIP, this version explicitly schedules:
 7. the final return time of every product wafer back to `LP`
 
 The objective keeps the true end-to-end makespan and adds secondary penalties for balance,
-chamber compactness, post-process unload waiting, flow time, and squared chamber idle time.
+chamber compactness, post-process unload waiting, and squared CH non-process residence.
+Schedule-wait penalties are computed in the A3C reward after a feasible solution is obtained.
 
 ## Product Input Semantics
 
@@ -2744,27 +3756,34 @@ Embedded PEC wafers forced by odd product counts: `{embedded_pec}`.
 - an active `4x1` batch fills both side slots. If only one product-carrying PW pair is assigned, the other side is forced to a pure `PEC+PEC` filler pair.
 - per chamber, `4x1` batches form one serial block by batch index; batch `b+1` can start only after batch `b` has fully unloaded.
 - a pure `PEC+PEC` filler side is allowed only on the tail `4x1` batch of a chamber sequence. Earlier active `4x1` batches must carry two product PW pairs.
-- `2x2`: product PW pairs form one contiguous prefix block on a chamber, with one pure PEC pair at the head and one pure PEC pair at the tail.
+- `2x2`: product PW pairs form one contiguous prefix block on a chamber, with one pure PEC pair at the head and one pure PEC pair at the tail. Each product PW pair is processed in two adjacent cycles: first with the preceding PW pair (or head PEC), then with the following PW pair (or tail PEC).
 - per chamber, every active `4x1` batch must finish before that chamber's `2x2` block begins, matching the disclosure rule that `4x1` is completed before `2x2`.
 - for every `4x1` batch, PM processing starts exactly when the second side finishes loading, so a full chamber cannot wait before processing (`full_start == full_back_load_end`).
-- downstream stages may wait, but they cannot start before the required transfer or process has finished. For `AL`, `LLupper`, and `LLlower`, that waiting time still occupies the physical module until the outbound transfer starts.
-- chamber compactness slack measures avoidable gaps between adjacent `4x1` batches, between the tail `4x1` batch and the `2x2` block, and inside the `2x2` head/bridge/tail chain. A small objective penalty pulls those gaps toward zero without making the model infeasible when upstream resources are genuinely unavailable.
+- downstream stages may wait, but they cannot start before the required transfer or process has finished. For every complete two-product PW pair, the ATR double-gripper decisions are available in pure and mixed production alike; they are never disabled merely because both process families coexist. A selected double action synchronizes that transfer route, while the two AL calibrations remain serial because AL has one physical slot. Between them, ATR explicitly picks the calibrated wafer and places the held companion into AL; this exchange is not a zero-time or double-place operation. An odd one-product tail pair remains a single-gripper action.
+- `ATR` and `VTR` each represent one physical robot. Their capacities describe how many wafers an atomic transfer can carry; they do not permit independent moves on different routes at the same time. Every ATR loaded transfer consists of load, route movement, and unload. Between consecutive ATR actions, the model inserts the empty movement required from the previous destination to the next source; in particular, `LL->LP` empty return takes two `LP->AL` route movements.
+- ATR has a two-gripper payload, while AL has one physical slot. For every complete two-product PW pair in `4x1`, `2x2`, or mixed production, the model permits one shared `LP->AL` move, a single-wafer AL placement, serial calibration with an explicit AL wafer exchange while ATR retains the companion, one shared `AL->LLupper` move, and a shared `LLlower->LP` return. A shared output move requires the corresponding shared input move. All ATR routes remain globally non-overlapping.
+- VTR `front/back load/unload` and `2x2` head/bridge/tail actions carry a two-product PW pair as one double-gripper action when both members are product wafers. Every loaded VTR action has exact duration `{cfg.pair_transfer_time:.1f}`. If one action's destination differs from the next action's source, an explicit `{cfg.pair_transfer_time:.1f}` empty reposition is required; for example, consecutive `LLupper->CH2` loads contain a `CH2->LLupper` return between them. Robot idle time carries no wafer and is not a VTR wait.
+- For a pure `4x1` input, product wafers and PW pairs are indistinguishable apart from their identifiers. The model uses one canonical pairing and batch placement, then writes the implied ATR action chain, VTR action chain, and two LL slot chains directly. This removes label symmetry while retaining synchronized pair-transfer stages and serial AL calibration.
+- chamber compactness slack measures avoidable gaps between adjacent `4x1` batches, between the tail `4x1` batch and the `2x2` block, and before `2x2` bridge/tail transfer actions. After a `2x2` head or bridge transfer has filled the chamber, the following exposure starts immediately by hard equality. In addition, every CH window that contains wafers but is not running a process recipe contributes a separate squared term to `chamber_nonprocess_wait_square_*`.
 - product wafers inherit chamber transfer/process timing from the PW pair to which they belong.
-- `AL` has one physical slot and remains occupied until the outbound `ATR` move to `LLupper` finishes, so two adjacent
-  `AL` calibrations must include the required `ATR` unload/load operations between them.
-- `LLupper` and `LLlower` are synchronized two-slot modules at the PW-pair level: the wafers of one PW pair share the
-  same state-conversion interval, and another PW pair cannot enter that LL module until the current pair has left it.
+- `AL` has one physical calibration slot. Calibration starts exactly after each wafer's physical AL placement. For a shared pair route, ATR single-places wafer 1, calibrates it, performs `pick wafer 1 + place wafer 2`, calibrates wafer 2, and single-picks wafer 2 before carrying the pair to LLupper. The companion and calibrated-wafer waits are ATR holding intervals rather than AL queueing.
+- `LLupper` and `LLlower` are independent two-slot physical modules, and each slot has an independent pressure state.
+  An `LLupper` slot executes ATR placement in atmosphere, pump-down, VTR pickup in vacuum, and vent-back to atmosphere.
+  An `LLlower` slot executes VTR placement in vacuum, venting, ATR pickup in atmosphere, and pump-back to vacuum.
+  Slot reuse is forbidden until that slot has completed its reset transition; the other slot and the other LL remain independent.
+  Excess ready-state waiting before outbound pickup is included in the secondary objective. When a pair route selects its
+  double-gripper variable, the two wafers enter or leave synchronously on two independent slots.
 - PEC wafers are modeled as reusable, chamber-bound tokens. Each active PEC job occupies exactly one token from its assigned chamber's PEC subset, from `vtr_load` start until `vtr_unload` end.
 - chamber cleaning is modeled as a pure `PEC+PEC` / `PEC+PEC` rotary batch. It uses the same VTR load/unload and chamber rotation semantics as `4x1`, occupies four PEC tokens, and adds a cleaning process interval.
 - per chamber, process epochs are separated by cleaning batches so that each epoch contains at most `{cfg.cleaning_interval}` full-chamber process cycles. `2x2` chains are kept inside one epoch, so the model will split such work across chambers or report infeasibility rather than silently violating the cleaning requirement.
 
 ## Resource Constraints Added Explicitly
 
-- `ATR`: unary move resource for `LP->AL`, `AL->LLupper`, and `LLlower->LP`
-- `AL`: unary physical occupancy resource from `LP->AL` drop-off until `AL->LLupper` pickup
-- `LLupper`: 2-slot physical occupancy resource from `AL->LLupper` drop-off until `VTR` pickup
-- `LLlower`: 2-slot physical occupancy resource from `VTR` drop-off until `LLlower->LP` pickup
-- `VTR`: unary transfer resource across `4x1` load/unload and `2x2` head/bridge/tail transfers
+- `ATR`: one physical two-gripper robot for `LP->AL`, `AL->LLupper`, and `LLlower->LP`; each loaded action is `load ({cfg.atr_load_unload_time:.1f}) + move + unload ({cfg.atr_load_unload_time:.1f})`, and empty repositioning is explicitly sequenced
+- `AL`: one physical calibration slot; pair service uses single-wafer placement/pickup and an explicit `{cfg.al_exchange_time:.1f}`-time wafer exchange between serial calibrations
+- `LLupper`: 2 independent stateful slots; atmosphere ATR access -> pump-down -> vacuum VTR access -> vent reset
+- `LLlower`: 2 independent stateful slots; vacuum VTR access -> vent -> atmosphere ATR access -> pump reset
+- `VTR`: one physical four-gripper robot with payload capacity `{cfg.vtr_capacity}`; loaded actions include pickup, route movement, and placement, while endpoint-aware empty repositioning is sequenced separately
 - `CH2`, `CH3`: chamber-internal sequence constraints for `4x1` slots, one contiguous `2x2` block, and pure-PEC cleaning windows
 
 ## Timing Parameters
@@ -2772,28 +3791,32 @@ Embedded PEC wafers forced by odd product counts: `{embedded_pec}`.
 - Big-M: `{cfg.big_m:.1f}`
 - chamber transfer gap: `{cfg.pm_transfer_gap:.1f}`
 - chamber `180°` rotation time: `{cfg.pm_rotation_time_180:.1f}`
-- VTR transfer time: `{cfg.pair_transfer_time:.1f}`
-- ATR transfer time: `{cfg.atr_transfer_time:.1f}`
-- ATR return time: `{cfg.atr_return_time:.1f}`
+- VTR load/unload time: `{cfg.pair_transfer_time:.1f}`
+- VTR empty reposition time between different endpoints: `{cfg.pair_transfer_time:.1f}`
+- ATR load/unload time: `{cfg.atr_load_unload_time:.1f}` (equal to VTR load/unload time)
+- ATR LP->AL / AL->LLupper route movement time: `{cfg.atr_transfer_time:.1f}`
+- ATR loaded LP->AL total time: `{cfg.atr_lp_al_total_time:.1f}`
+- ATR loaded AL->LLupper total time: `{cfg.atr_al_llupper_total_time:.1f}`
+- ATR loaded LLlower->LP movement time: `{cfg.atr_return_time:.1f}`; total time: `{cfg.atr_lllower_lp_total_time:.1f}`
+- ATR empty LL->LP return time: `{cfg.atr_empty_ll_to_lp_time:.1f}`
+- ATR AL pair exchange time: `{cfg.al_exchange_time:.1f}` (`pick calibrated + place companion`)
+- ATR wafer capacity: `{cfg.atr_capacity}`
+- VTR wafer capacity: `{cfg.vtr_capacity}`
 - aligner minimum occupancy: `{cfg.aligner_time:.1f}`
-- LLupper minimum occupancy: `{cfg.llupper_time:.1f}`
-- LLlower minimum occupancy: `{cfg.lllower_time:.1f}`
+- LLupper per-slot pump/reset transition: `{cfg.llupper_time:.1f}`
+- LLlower per-slot vent/reset transition: `{cfg.lllower_time:.1f}`
 - `4x1` process time: `{cfg.full_process_time:.1f}`
-- `2x2` boundary process time: `{cfg.mix_boundary_process_time:.1f}`
-- `2x2` internal process time: `{cfg.mix_internal_process_time:.1f}`
+- `2x2` process time for each first/second exposure: `{cfg.mix_process_time:.1f}`
 - cleaning interval: `{cfg.cleaning_interval}` full-chamber process cycles
 - cleaning process time: `{cfg.effective_cleaning_process_time:.1f}`
 - max module residency time: `{cfg.max_module_residency_time:.1f}`
 - max robot residency time: `{cfg.max_robot_residency_time:.1f}`
-- PM balance penalty: `{cfg.pm_balance_penalty:.4f}`
-- flow-time continuity penalty: `{cfg.flow_time_penalty:.8f}`
-- chamber idle compactness penalty: `{cfg.chamber_idle_penalty:.8f}`
-- post-process unload wait penalty: `{cfg.post_process_wait_penalty:.8f}`
-- chamber idle square penalty: `{cfg.chamber_idle_square_penalty:.8f}`
+- secondary stability score: normalized weighted sum of PM imbalance, avoidable chamber gaps,
+  squared CH non-process wafer residence, post-process wait, and excess LL wait
+  (evaluated after fixing either the optimal or incumbent WPH)
 
 ## Main Variable Families
 
-- `product_lp_assign_*`: product wafer to LP assignment
 - `wafer_to_full_pair_*`, `wafer_to_mix_pair_*`: product wafer to PW-pair assignment
 - `assign_full_*`, `assign_mix_*`: PW-pair to `4x1` batch-side / `2x2` chain-position assignment
 - `full_batch_used_*`, `full_filler_side_*`, `full_batch_tail_*`
@@ -2802,23 +3825,36 @@ Embedded PEC wafers forced by odd product counts: `{embedded_pec}`.
 - `clean_active_*`, `clean_front_load_*`, `clean_back_load_*`, `clean_*`, `clean_back_unload_*`, `clean_front_unload_*`
 - `full_batch_idle_*`, `full_to_mix_idle_*`, `mix_*_idle_*`: soft compactness slacks for avoidable chamber gaps
 - `full_pair_post_process_wait_*`, `mix_pair_post_process_wait_*`: product PW-pair wait from PM process end to unload start
-- `chamber_idle_total_*`, `chamber_idle_square_*`: total per-CH time that is neither processing nor cleaning, plus its squared epigraph variable
+- `llupper_wait_*`, `lllower_wait_*`: excess product-wafer waiting after the mandatory LL dwell and before outbound robot pickup
+- `full_atr_*_double_*`, `full_vtr_*_double_*`, `mix_atr_*_double_*`, `mix_vtr_*_double_*`: per-PW-pair selection of single- or double-gripper action on the named robot route; `*_atr_al_llupper_double_*` can be `1` only when the corresponding `*_atr_lp_al_double_*` is `1`
+- `chamber_idle_total_*`: total per-CH time that is neither processing nor cleaning
+- `chamber_nonprocess_wait_*`, `chamber_nonprocess_wait_square_*`: per-window non-process CH residence and its squared sum, used as a high-priority stability penalty
 - `process_epoch_used_*`, `full_batch_epoch_*`, `mix_block_epoch_*`, `mix_cycle_epoch_*`: cleaning-separated chamber process epochs
-- `prod_stage_start_*`, `prod_stage_end_*`: full product-wafer path stages
+- `prod_stage_start_*`, `prod_stage_end_*`: full product-wafer path stages, including `atr_hold_before_al`, `atr_al_exchange`, and `atr_hold_after_al` across serial single-slot AL calibration
+- `full_side_llupper_release_*`, `full_side_lllower_release_*`: 4x1 front/back LL release-time envelopes, used only to
+  enforce physical two-slot handoff order
 - `pec_stage_start_*`, `pec_stage_end_*`: PEC circulation stages
 - `pec_token_assign_*`: reusable PEC token assignment
+- `atr_pair_action_start/end_*`, `atr_mix_pair_action_start/end_*`, `vtr_pair_action_start/end_*`: one PW pair's non-preemptive ATR/VTR action envelope; a double action has one shared transfer window, while two single actions are consecutive within this envelope
+- `atr_al_service_physical_action_order_*`: pure-4x1 AL service order; a PW pair may share LP pickup, but its two wafers always enter the one-slot AL and calibrate one after the other
+- `atr_return_during_al_*`, `atr_return_after_all_al_*`: selects either an AL calibration window or the post-input tail for each LLlower-to-LP ATR return; return actions remain in physical PM unload order
+- `vtr_physical_action_order_*`: pure-4x1 continuous VTR cycle, which loads the next PM batch without waiting for an entire four-wafer batch to return to LP
+- `seq_atr_action_*`, `seq_vtr_action_*`: generic mixed-mode ATR/VTR non-overlap ordering with endpoint-aware empty reposition times, used when the pure-4x1 continuous cycle is not applicable
 - `llupper_slot_assign_*`, `lllower_slot_assign_*`: LL slot occupancy assignment
-- `wafer_completion_*`, `c_max`
+- `wafer_completion_*`: auxiliary terminal timestamp linking each product wafer's LP return to the makespan; it is
+  not separately summed in the objective
+- `c_max`: end-to-end makespan
+- `schedule_stability`: squared CH non-process residence, avoidable chamber gap, post-process wait, excess LL wait, and PM load imbalance;
+  it is optimized only after the optimal `c_max` is fixed
 
 ## Objective
 
-`min c_max
-+ lambda * (full_pm_imbalance + mix_pm_imbalance)
-+ gamma * sum(chamber_idle_slack)
-+ eta * sum(pair_post_process_wait)
-+ epsilon * sum(wafer_completion)
-+ rho * sum_m chamber_idle_square_m`,
-where `chamber_idle_square_m >= chamber_idle_total_m^2`.
+The primary LP objective is `min c_max`; for a fixed wafer count, this is exactly
+`max WPH`. The runner then fixes `c_max` to the primary optimum when proven, or to
+the current feasible incumbent when a resource limit interrupts phase one, and
+minimizes `schedule_stability` only within the configured secondary time/node
+budget. Thus a visually smoother Gantt chart can never be bought by reducing the
+reported WPH. `wafer_completion_*` only defines lower bounds of `c_max`.
 
 ## Output Files
 
@@ -2865,23 +3901,29 @@ def main() -> None:
     parser.add_argument("--pair_transfer_time", type=float, default=4.0)
     parser.add_argument("--atr_transfer_time", type=float, default=3.0)
     parser.add_argument("--atr_return_time", type=float, default=3.0)
+    parser.add_argument("--atr_capacity", type=int, default=2)
+    parser.add_argument("--vtr_capacity", type=int, default=4)
     parser.add_argument("--aligner_time", type=float, default=20.0)
     parser.add_argument("--llupper_time", type=float, default=30.0)
     parser.add_argument("--lllower_time", type=float, default=25.0)
     parser.add_argument("--full_process_time", type=float, default=80.0)
-    parser.add_argument("--mix_boundary_process_time", type=float, default=30.0)
-    parser.add_argument("--mix_internal_process_time", type=float, default=30.0)
+    parser.add_argument(
+        "--mix_boundary_process_time",
+        type=float,
+        default=30.0,
+        help="2x2 process duration; must equal --mix_internal_process_time.",
+    )
+    parser.add_argument(
+        "--mix_internal_process_time",
+        type=float,
+        default=30.0,
+        help="Legacy 2x2 duration alias; must equal --mix_boundary_process_time.",
+    )
     parser.add_argument("--cleaning_interval", type=int, default=10)
     parser.add_argument("--cleaning_process_time", type=float, default=0.0)
     parser.add_argument("--max_module_residency_time", type=float, default=10000.0)
     parser.add_argument("--max_robot_residency_time", type=float, default=10000.0)
     parser.add_argument("--pm_balance_penalty", type=float, default=0.01)
-    parser.add_argument(
-        "--flow_time_penalty",
-        type=float,
-        default=1e-6,
-        help="Small secondary objective weight that pulls wafer completions earlier for smoother continuous flow.",
-    )
     parser.add_argument(
         "--chamber_idle_penalty",
         type=float,
@@ -2895,10 +3937,16 @@ def main() -> None:
         help="Secondary objective weight for product PW-pair waiting from PM process end to VTR unload start.",
     )
     parser.add_argument(
-        "--chamber_idle_square_penalty",
+        "--ll_wait_penalty",
         type=float,
-        default=1e-5,
-        help="Secondary objective weight for sum of squared chamber non-process/non-clean idle time.",
+        default=1e-4,
+        help="Small secondary objective weight for excess waiting after the mandatory LL dwell time.",
+    )
+    parser.add_argument(
+        "--chamber_nonprocess_wait_square_penalty",
+        type=float,
+        default=1e-2,
+        help="High-priority secondary objective weight for per-window squared non-process wafer residence in CH modules.",
     )
     parser.add_argument(
         "--process_mode",
@@ -2937,6 +3985,8 @@ def main() -> None:
         pair_transfer_time=args.pair_transfer_time,
         atr_transfer_time=args.atr_transfer_time,
         atr_return_time=args.atr_return_time,
+        atr_capacity=args.atr_capacity,
+        vtr_capacity=args.vtr_capacity,
         aligner_time=args.aligner_time,
         llupper_time=args.llupper_time,
         lllower_time=args.lllower_time,
@@ -2948,10 +3998,10 @@ def main() -> None:
         max_module_residency_time=args.max_module_residency_time,
         max_robot_residency_time=args.max_robot_residency_time,
         pm_balance_penalty=args.pm_balance_penalty,
-        flow_time_penalty=args.flow_time_penalty,
         chamber_idle_penalty=args.chamber_idle_penalty,
         post_process_wait_penalty=args.post_process_wait_penalty,
-        chamber_idle_square_penalty=args.chamber_idle_square_penalty,
+        ll_wait_penalty=args.ll_wait_penalty,
+        chamber_nonprocess_wait_square_penalty=args.chamber_nonprocess_wait_square_penalty,
         process_mode=args.process_mode,
         mode_sequence=args.mode_sequence,
         wafer_mode_map=args.wafer_mode_map,

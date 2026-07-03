@@ -148,6 +148,7 @@ Start-Process "gantt_manual\index.html"
 | `--mode_2x2_wafers` | 走 `2x2` 工艺的产品晶圆数量。 |
 | `--pec_pool_size` | 可循环复用的 PEC wafer 数，当前常用 `8` 或 `10`。 |
 | `--chamber_idle_penalty` / `--petri_chamber_idle_penalty` | CH 组间空闲软惩罚权重，默认 `0.0001`，用于压缩相邻 `4x1` 批次、`4x1 -> 2x2` 切换和 `2x2` 链内部的可避免等待。 |
+| `--chamber_nonprocess_wait_square_penalty` / `--petri_chamber_nonprocess_wait_square_penalty` | 高优先级 CH 非加工占腔平方惩罚权重，默认 `0.01`，用于压缩有晶圆在 CH 内但未加工的等待窗口。 |
 | `--pm_rotation_time_180` | 旋转腔 180 度转动时间。 |
 | `--pair_transfer_time` | VTR 搬运一个 PW 对的时间。 |
 | `--atr_transfer_time` / `--atr_return_time` | ATR 送片和回片动作时间。 |
@@ -200,8 +201,9 @@ Start-Process "gantt_manual\index.html"
 - 主目标仍是最小化 `c_max`，即最后一片产品 wafer 回到 `LP` 的时间
 - `full_batch_idle_*` 衡量同一 CH 上相邻 `4x1` 批次之间的可避免空闲
 - `full_to_mix_idle_*` 衡量尾部 `4x1` 批次到后续 `2x2` 链之间的切换空闲
-- `mix_head_idle_*`、`mix_cycle_to_bridge_idle_*`、`mix_bridge_to_cycle_idle_*`、`mix_tail_idle_*` 衡量 `2x2` 链内部可避免等待
+- `mix_cycle_to_bridge_idle_*`、`mix_tail_idle_*` 衡量 `2x2` 链内部允许保留的资源等待；head 完成后立即进入第一个 cycle，bridge 完成后立即进入下一个 cycle
 - `--chamber_idle_penalty` / `--petri_chamber_idle_penalty` 把这些 slack 加入二级目标；它鼓励加工更连续，但不会在上游资源未就绪或 cleaning 必须插入时强行要求零间隔
+- `--chamber_nonprocess_wait_square_penalty` / `--petri_chamber_nonprocess_wait_square_penalty` 会把每个 CH 占腔但非加工窗口按时长平方后求和，包括 `4x1` 装入/旋转/卸出、`2x2` head/bridge/tail 和 cleaning 装卸窗口
 
 ### 2.6 训练耗时为什么长
 

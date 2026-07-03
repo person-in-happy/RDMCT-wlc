@@ -1,5 +1,9 @@
 """Shared PySCIPOpt imports with a clearer installation error."""
 
+from runtime_compat import configure_openmp_runtime
+
+configure_openmp_runtime()
+
 try:
     import pyscipopt as scip
     import pyscipopt.scip as scip_core

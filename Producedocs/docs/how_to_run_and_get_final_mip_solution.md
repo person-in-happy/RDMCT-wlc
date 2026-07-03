@@ -291,20 +291,24 @@ python petri_mip_generator.py
 min c_max
   + pm_balance_penalty * chamber_load_imbalance
   + chamber_idle_penalty * sum(chamber_idle_slack)
-  + flow_time_penalty * sum(wafer_completion)
+  + chamber_nonprocess_wait_square_penalty * sum(chamber_nonprocess_wait_square)
+  + post_process_wait_penalty * sum(pair_post_process_wait)
 ```
 
 相关参数：
 
 - `--pm_balance_penalty`：鼓励 4x1/2x2 工作在两个 chamber 间更均衡
 - `--chamber_idle_penalty`：鼓励同一 CH 上相邻加工组更连续，压缩可避免的组间等待
-- `--flow_time_penalty`：鼓励产品晶圆更早连续完成，改善流动性
+- `--chamber_nonprocess_wait_square_penalty`：按窗口惩罚 CH 内“有晶圆但未加工”的驻留时间平方，优先压缩 2x2 bridge/tail 前后的长等待
+- `--post_process_wait_penalty`：惩罚产品晶圆在 PM 加工完成后等待 VTR 卸载的时间
 
 `chamber_idle_slack` 不是硬约束，而是二级目标中的软惩罚，主要覆盖：
 
 - `full_batch_idle_*`：同一 CH 上相邻 `4x1` 批次之间的空闲
 - `full_to_mix_idle_*`：尾部 `4x1` 批次到该 CH 后续 `2x2` 链之间的切换空闲
-- `mix_head_idle_*`、`mix_cycle_to_bridge_idle_*`、`mix_bridge_to_cycle_idle_*`、`mix_tail_idle_*`：`2x2` 链内部 head、bridge、cycle、tail 之间的可避免等待
+- `mix_cycle_to_bridge_idle_*`、`mix_tail_idle_*`：`2x2` 链内部允许保留的资源等待；head 完成后立即进入第一个 cycle，bridge 完成后立即进入下一个 cycle
+
+`chamber_nonprocess_wait_square_*` 覆盖所有 CH 占腔但非加工窗口：`4x1` 的装入/旋转/卸出窗口，`2x2` 的 head、每次 bridge、tail，以及 cleaning 的装卸窗口；这些窗口按各自时长分别平方后求和。
 
 如果上游资源尚未就绪，例如 `VTR`、`LLupper`、`AL`、PEC token 或 cleaning 约束阻塞，模型仍允许等待；该惩罚只是在可行且不显著影响主目标的情况下，把甘特图上的空白往前压缩。
 
@@ -431,8 +435,7 @@ python petri_mip_generator.py
   --max_module_residency_time 120 
   --max_robot_residency_time 120 
   --pm_balance_penalty 0.01 
-  --chamber_idle_penalty 0.0001 
-  --flow_time_penalty 0.000001
+  --chamber_idle_penalty 0.0001
 ```
 
 训练配置建议：
@@ -486,9 +489,9 @@ python petri_mip_generator.py
 | `--big_m` | `10000.0` | 大 M 线性化常数，用于条件约束和时间关系绑定。过小会误伤可行解，过大可能带来数值不稳定。 |
 | `--pm_transfer_gap` | `1.0` | 腔体换片间隔兼容参数；当前主要时序由 VTR、旋转、加工和资源互斥约束控制。 |
 | `--pm_rotation_time_180` | `2.0` | 旋转腔 180 度转动时间，用于 4x1 前后侧位和 cleaning 装卸衔接。 |
-| `--pair_transfer_time` | `4.0` | VTR 搬运一个 PW 对的时间，用于 4x1 装卸、2x2 head/bridge/tail 和 cleaning 装卸。 |
-| `--atr_transfer_time` | `3.0` | ATR 送片动作时间，例如 `LP -> AL`、`AL -> LLupper`。 |
-| `--atr_return_time` | `3.0` | ATR 回片动作时间，即 `LLlower -> LP`。 |
+| `--pair_transfer_time` | `4.0` | VTR 单次搬运时间；同时作为 ATR 在源模块取片和目标模块放片的单次时长。 |
+| `--atr_transfer_time` | `3.0` | ATR 单段路径移动时间，即 `LP -> AL` 或 `AL -> LL` 的移动时长。ATR 载片 `LP -> AL`、`AL -> LLupper` 总时长均为 `2 * pair_transfer_time + atr_transfer_time`。 |
+| `--atr_return_time` | `3.0` | ATR 载片 `LLlower -> LP` 的路径移动时间；该载片动作总时长为 `2 * pair_transfer_time + atr_return_time`。相邻 ATR 动作若需从 `LL` 空载回到 `LP`，还会额外插入 `2 * atr_transfer_time` 的回位时间。 |
 | `--aligner_time` | `20.0` | 产品晶圆占用 AL 校准器的最短时间。 |
 | `--llupper_time` | `30.0` | 产品晶圆在 `LLupper` 中的最短停留时间。 |
 | `--lllower_time` | `25.0` | 产品晶圆在 `LLlower` 中的最短停留时间。 |
@@ -501,7 +504,8 @@ python petri_mip_generator.py
 | `--max_robot_residency_time` | `10000.0` | 晶圆在 ATR/VTR 搬运动作相关阶段的最大驻留时间。 |
 | `--pm_balance_penalty` | `0.01` | 目标函数中的腔体负载均衡惩罚权重。主目标仍是最小化 `c_max`。 |
 | `--chamber_idle_penalty` | `1e-4` | 目标函数中的 CH 组间空闲软惩罚权重，用于压缩相邻 `4x1` 批次、`4x1 -> 2x2` 切换和 `2x2` 链内部可避免等待。 |
-| `--flow_time_penalty` | `1e-6` | 目标函数中的产品完工时间软惩罚，鼓励晶圆更早、更连续地完成。 |
+| `--chamber_nonprocess_wait_square_penalty` | `1e-2` | 高优先级二级目标权重，按窗口惩罚 CH 内有晶圆但未加工的驻留时间平方。 |
+| `--post_process_wait_penalty` | `0.05` | 目标函数中的 PM 加工完成至 VTR 卸载开始之间的等待惩罚权重。 |
 
 ### 11.3 `parallel_reinforce_algorithm.py` 参数
 
@@ -538,6 +542,7 @@ python petri_mip_generator.py
 | `--petri_wafer_mode_map` / `--petri_wafer_modes` | 空字符串 | 自动生成实例时按晶圆编号覆盖模式。 |
 | `--petri_default_wafer_mode` | 空字符串 | 自动生成实例时未覆盖晶圆的默认模式。 |
 | `--petri_chamber_idle_penalty` | `1e-4` | 自动生成实例时透传给 `PetriMIPConfig.chamber_idle_penalty`，用于压缩 CH 可避免组间空闲。 |
+| `--petri_chamber_nonprocess_wait_square_penalty` | `1e-2` | 自动生成实例时透传给 `PetriMIPConfig.chamber_nonprocess_wait_square_penalty`，用于高权重压缩 CH 非加工占腔等待。 |
 
 ### 11.4 `run_petri_a3c_beam.py` 参数
 
@@ -559,7 +564,7 @@ python petri_mip_generator.py
 | `--instance_type` | `petri_transfer` | 结果目录命名标识。 |
 | `--num_batches`、`--num_pm`、`--num_steps` | 同生成器 | 透传给 `petri_mip_generator.py` 的结构参数。 |
 | `--total_wafers`、`--process_mode`、`--mode_4x1_wafers`、`--mode_2x2_wafers`、`--pec_pool_size` | 同生成器 | 透传给生成器的产品/工艺/PEC 参数。 |
-| `--mode_sequence`、`--wafer_mode_map`、`--default_wafer_mode`、`--chamber_idle_penalty` | 同生成器 | 透传给生成器的 wafer 级模式配置和 CH 组间空闲软惩罚权重。 |
+| `--mode_sequence`、`--wafer_mode_map`、`--default_wafer_mode`、`--chamber_idle_penalty`、`--chamber_nonprocess_wait_square_penalty` | 同生成器 | 透传给生成器的 wafer 级模式配置、CH 组间空闲软惩罚和 CH 非加工占腔平方惩罚权重。 |
 
 ### 11.5 `run_ablation_experiments.py` 参数
 
@@ -589,7 +594,7 @@ python petri_mip_generator.py
 | `--heuristic_max_selected_cuts` | `256` | 启发式方法最多选择并交给求解器的 cut 数。 |
 | `--num_batches`、`--num_pm`、`--num_steps` | 同生成器 | 生成消融实例时透传给 `petri_mip_generator.py`。 |
 | `--total_wafers`、`--process_mode`、`--mode_4x1_wafers`、`--mode_2x2_wafers`、`--pec_pool_size` | 同生成器 | 生成消融实例时透传给生成器。注意该脚本 `--pec_pool_size` 默认是旧值 `40`，当前设备应显式传 `8` 或 `10`。 |
-| `--mode_sequence`、`--wafer_mode_map`、`--default_wafer_mode`、`--chamber_idle_penalty` | 同生成器 | 生成消融实例时的 wafer 级模式配置和 CH 组间空闲软惩罚权重。 |
+| `--mode_sequence`、`--wafer_mode_map`、`--default_wafer_mode`、`--chamber_idle_penalty`、`--chamber_nonprocess_wait_square_penalty` | 同生成器 | 生成消融实例时的 wafer 级模式配置、CH 组间空闲软惩罚和 CH 非加工占腔平方惩罚权重。 |
 
 ### 11.6 可视化和训练曲线脚本参数
 
