@@ -17,6 +17,7 @@ from logger import logger
 
 from utils import setup_logger, create_stats_ordered_dict, set_global_seed
 from utilss.mean_std import RunningMeanStd
+from global_const import cut_feature_schema_for_dim, cut_postprocessor_schema_for_dim
 
 
 def _log_cuda_memory(log_prefix):
@@ -153,15 +154,43 @@ class ReinforceBaselineAlg():
         logger.record_tabular('evaluating/Neg Solving time', np.mean(neg_solving_time))
         logger.record_tabular('evaluating/Neg Total Nodes', np.mean(neg_total_nodes))
 
-    def save_checkpoint(self, epoch):
+    def _checkpoint_state_dict(self, epoch=None):
         state_dict = {}
         state_dict['pointer_net'] = self.pointer_net.state_dict()
+        state_dict['cut_feature_schema'] = cut_feature_schema_for_dim(
+            self.pointer_net.embedding_dim
+        )
+        state_dict['cut_postprocessor_schema'] = cut_postprocessor_schema_for_dim(
+            self.pointer_net.embedding_dim,
+            getattr(self.env, 'cutsel_use_structure_rerank', None),
+        )
         if self.normalize:
             state_dict['mean'] = self.mean_std.mean
             state_dict['std'] = self.mean_std.std
             state_dict['epsilon'] = self.mean_std.epsilon
+        if epoch is not None:
+            state_dict['epoch'] = int(epoch)
+        return state_dict
+
+    def save_checkpoint(self, epoch):
+        state_dict = self._checkpoint_state_dict(epoch)
 
         logger.save_itr_params(epoch, state_dict)
+
+    def save_best_validation_checkpoint(self, epoch, validation_pdi):
+        """Persist the checkpoint chosen on held-out mean PDI."""
+        state_dict = self._checkpoint_state_dict(epoch)
+        state_dict['selection_metric'] = 'validation_mean_primaldualintegral'
+        state_dict['selection_metric_value'] = float(validation_pdi)
+        checkpoint_path = osp.join(
+            logger.get_snapshot_dir(), 'best_validation_params.pkl'
+        )
+        torch.save(state_dict, checkpoint_path)
+        logger.log(
+            f"saved best validation checkpoint: epoch={epoch}, "
+            f"mean PDI={validation_pdi:.6f}, path={checkpoint_path}"
+        )
+        return checkpoint_path
 
     def _process_env_info(self, env_step_infos):
         env_info = {}
@@ -192,8 +221,20 @@ class ReinforceBaselineAlg():
             actions.extend(dict_data['action']) # list of list
             sel_cuts_nums.extend(dict_data['sel_cuts_num'])
             neg_rewards.extend(dict_data['neg_reward'])
-        print(f"debug log neg_rewards: {neg_rewards}")
-        print(f"debug log states len: {len(states)}")
+        if not logger.is_compact_text_log():
+            print(f"debug log neg_rewards: {neg_rewards}")
+            print(f"debug log states len: {len(states)}")
+        new_step_infos = {}
+        for step_info in env_step_infos:
+            for k in step_info.keys():
+                new_step_infos.setdefault(k, [])
+                new_step_infos[k].extend(step_info[k])
+        if not states or not neg_rewards:
+            logger.log(
+                "warning: no valid cut-selection samples were collected; "
+                "skipping policy update for this epoch"
+            )
+            return None, states, actions, sel_cuts_nums, new_step_infos
         neg_rewards = np.vstack(neg_rewards)
         neg_rewards = self.reward_scale * neg_rewards
         if self.normalize_reward:
@@ -203,11 +244,6 @@ class ReinforceBaselineAlg():
             neg_rewards_std = np.std(neg_rewards)
             neg_rewards = (neg_rewards - neg_rewards_mean) / (neg_rewards_std + 1e-3)
 
-        for k in env_step_infos[0].keys():
-            new_step_infos[k] = []
-        for step_info in env_step_infos:
-            for k in step_info.keys():
-                new_step_infos[k].extend(step_info[k])
         if self.normalize:
             # update mean_std
             logger.log("normalizing data .....")
@@ -232,6 +268,20 @@ class ReinforceBaselineAlg():
 
     def train(self, raw_results, epoch):
         neg_rewards, states, actions, sel_cuts_nums, env_step_infos = self._process_data(raw_results)
+        if neg_rewards is None:
+            self.save_checkpoint(epoch)
+            logger.record_tabular('Epoch', epoch)
+            logger.record_tabular('training/skipped_no_valid_samples', 1)
+            stats = {}
+            for k, values in env_step_infos.items():
+                if values:
+                    stats.update(create_stats_ordered_dict(
+                        'training/' + k,
+                        values
+                    ))
+            if stats:
+                logger.record_dict(stats)
+            return
         # states to torch
         ### compute policy gradient 
         # compute baseline function 
@@ -478,23 +528,48 @@ class HRLReinforceAlg(ReinforceBaselineAlg):
             self.training_highlevel_dataset['actions'].extend(dict_data['action']) # list of int 
             self.training_highlevel_dataset['neg_rewards'].extend(dict_data['neg_reward']) # list of int
 
-    def save_checkpoint(self, epoch):
+    def _checkpoint_state_dict(self, epoch=None):
         model_state_dict = self.pointer_net.state_dict()
         cutsel_percent_state_dict = self.cutsel_percent_policy.state_dict()
         state_dict = {
             "pointer_net": model_state_dict,
-            "cutsel_percent_net": cutsel_percent_state_dict
+            "cutsel_percent_net": cutsel_percent_state_dict,
+            "cut_feature_schema": cut_feature_schema_for_dim(
+                self.pointer_net.embedding_dim
+            ),
+            "cut_postprocessor_schema": cut_postprocessor_schema_for_dim(
+                self.pointer_net.embedding_dim,
+                getattr(self.env, 'cutsel_use_structure_rerank', None),
+            ),
         }
         if self.normalize:
             state_dict['mean'] = self.mean_std.mean
             state_dict['std'] = self.mean_std.std
             state_dict['epsilon'] = self.mean_std.epsilon
+        if epoch is not None:
+            state_dict['epoch'] = int(epoch)
+        return state_dict
+
+    def save_checkpoint(self, epoch):
+        state_dict = self._checkpoint_state_dict(epoch)
         logger.save_itr_params(epoch, state_dict)
 
     def _train_highlevel(self):
         # get data
         states = self.training_highlevel_dataset['states']
         actions = self.training_highlevel_dataset['actions']
+        if (
+            not states
+            or not actions
+            or not self.training_highlevel_dataset['neg_rewards']
+        ):
+            logger.log(
+                "warning: no valid high-level cut-percent samples were collected; "
+                "skipping high-level policy update"
+            )
+            return {
+                'training_highlevel_policy/skipped_no_valid_samples': 1,
+            }
         neg_rewards = np.vstack(self.training_highlevel_dataset['neg_rewards'])
         neg_rewards = neg_rewards * self.reward_scale
         if self.normalize:

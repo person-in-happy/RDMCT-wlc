@@ -1,0 +1,45 @@
+{
+  "description": "Tiny smoke-test suites. Never use these results in the paper.",
+  "suites": [
+    {
+      "name": "quick_petri",
+      "family": "dual_source_cluster_tool",
+      "scale": "smoke",
+      "split": "test",
+      "root": "../data/quick_demo/submodular_petri/test",
+      "glob": "*.lp"
+    },
+    {
+      "name": "quick_setcover",
+      "family": "setcover",
+      "scale": "smoke",
+      "split": "test",
+      "root": "../data/quick_demo/milp/setcover",
+      "glob": "**/test/*.mps"
+    },
+    {
+      "name": "quick_knapsack",
+      "family": "knapsack",
+      "scale": "smoke",
+      "split": "test",
+      "root": "../data/quick_demo/milp/knapsack",
+      "glob": "**/test/*.mps"
+    },
+    {
+      "name": "quick_facility",
+      "family": "facility_location",
+      "scale": "smoke",
+      "split": "test",
+      "root": "../data/quick_demo/milp/facility_location",
+      "glob": "**/test/*.mps"
+    },
+    {
+      "name": "quick_independent_set",
+      "family": "independent_set",
+      "scale": "smoke",
+      "split": "test",
+      "root": "../data/quick_demo/milp/independent_set",
+      "glob": "**/test/*.mps"
+    }
+  ]
+}

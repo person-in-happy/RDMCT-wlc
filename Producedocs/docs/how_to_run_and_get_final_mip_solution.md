@@ -19,12 +19,17 @@ cd G:\git\RDMCT-A3C
 
 ## 1. 快速流程
 
+
 这一节给出小规模可跑通流程。先生成带日期后缀的 Petri/MIP 训练实例，再读取该实例训练 cut selection 模型，并把模型保存到 `data`。
 
 ### 2.1 生成训练集
-
+使用warm——start初始解策略：
 ```powershell
-python petri_mip_generator.py  --output_dir generated_instances\test  --instance_name mip_fullflow_train.lp  --num_batches 10  --num_pm 2  --process_mode mixed  --mode_4x1_wafers 7  --mode_2x2_wafers 11  --pec_pool_size 8  --chamber_idle_penalty 0.0001
+python petri_mip_generator.py  --output_dir generated_instances\test  --instance_name wafer17_mix.lp  --num_batches 10  --num_pm 2  --process_mode mixed  --mode_4x1_wafers 17  --mode_2x2_wafers 17  --pec_pool_size 8  --chamber_idle_penalty 0 --full_process_time 180  --mix_boundary_process_time 130  --mix_internal_process_time 130  --cleaning_process_time 500  --warm_start_time_limit 7200
+```
+不使用初始解策略：
+```powershell
+python petri_mip_generator.py  --output_dir generated_instances\test  --instance_name wafer17_mix.lp  --num_batches 10  --num_pm 2  --process_mode mixed  --mode_4x1_wafers 17  --mode_2x2_wafers 17  --pec_pool_size 8  --chamber_idle_penalty 0 --full_process_time 180  --mix_boundary_process_time 130  --mix_internal_process_time 130  --cleaning_process_time 500  --allow_missing_warm_start
 ```
 
 说明：
@@ -33,6 +38,8 @@ python petri_mip_generator.py  --output_dir generated_instances\test  --instance
 - 下一步训练时，把终端输出的真实 `.lp` 文件名填到 `--single_instance_file`。
 
 ### 2.2 训练模型
+
+python parallel_reinforce_algorithm.py  --config_file configs/petri_mip_formal_wafer18_config.json   --train_type train  --generate_petri_instance False  --single_instance_file mix_wafer18_20260710.lp  --sel_cuts_percent 0.2  --reward_type primaldualintegral  --baseline_type simple  --policy_type with_token  --use_cutsel_percent_policy True  --seed 1  --scip_seed 1  --instance_type petri_transfer --start_epoch 0
 
 ```powershell
 python parallel_reinforce_algorithm.py  --config_file configs\petri_mip_test_config.json  --train_type train  --generate_petri_instance False  --single_instance_file mip_wafer11_41_train_20260611.lp --sel_cuts_percent 0.2  --reward_type primaldualintegral  --baseline_type simple  --policy_type with_token  --use_cutsel_percent_policy True  --seed 1  --scip_seed 1  --time_limit 1800  --instance_type petri_transfer
@@ -67,6 +74,8 @@ python plot_progress_curves.py  --data_dir data  --output data\latest_convergenc
 ## 3. 生成测试集并验证模型
 
 ### 3.1 单实例封装求解
+
+python parallel_reinforce_algorithm.py  --config_file configs/petri_mip_formal_wafer18_config.json  --train_type test  --single_instance_file wafer17_mix_20260711.lp  --sel_cuts_percent 0.2  --policy_type with_token  --use_cutsel_percent_policy True  --seed 1  --scip_seed 1  --instance_type 1.1_wafer17_mix
 
 如果只想快速生成一个实例并立刻用训练好的模型测试，可使用封装脚本：
 
@@ -109,7 +118,7 @@ python parallel_reinforce_algorithm.py  --config_file configs\petri_mip_quick_co
 ### 4.1 带训练模型的消融实验
 
 ```powershell
-python run_ablation_experiments.py  --config_file configs\petri_mip_quick_config.json  --test_model_path latest  --instance_dir generated_instances\MIP_pipeline_demo_ablation  --instance_name mip_ablation_demo.lp  --generate_petri_instance True   --num_batches 10   --num_pm 2   --num_steps 13   --process_mode mixed  --mode_4x1_wafers 17   --mode_2x2_wafers 0   --pec_pool_size 8   --chamber_idle_penalty 0.0001   --time_limit 1800  --sel_cuts_percent 0.2   --policy_type with_token  --use_cutsel_percent_policy True   --a3c_decode_type greedy   --a3c_beam_decode_type beam_search   --heuristic_beam_size 3   --heuristic_redundancy_weight 0.15   --heuristic_max_candidates 256   --heuristic_max_selected_cuts 256   --seed 1   --scip_seed 1   --instance_type petri_transfer   --output_dir ablation_results
+python run_ablation_experiments.py --config_file configs\petri_mip_test_config.json --test_model_path latest --instance_dir generated_instances\test --single_instance_file wafer47_41_20260713.lp --generate_petri_instance False --num_batches 10 --num_pm 2 --num_steps 13 --process_mode mixed --mode_4x1_wafers 47 --mode_2x2_wafers 0 --pec_pool_size 8 --chamber_idle_penalty 0.0001 --time_limit 8800 --sel_cuts_percent 0.2 --policy_type with_token --use_cutsel_percent_policy True --a3c_decode_type greedy --a3c_beam_decode_type greedy --a3c_max_candidates 128 --a3c_max_selected_cuts 30 --proposed_max_candidates 128 --proposed_max_selected_cuts 30 --heuristic_max_candidates 128 --heuristic_max_selected_cuts 30 --heuristic_beam_size 3 --heuristic_redundancy_weight 0.15 --evaluation_node_limit -1 --evaluation_stall_node_limit -1 --enforce_fair_ablation True --seed 1 --scip_seed 1 --instance_type 1.1_wafer47_41 --output_dir ablation_results
 ```
 
 说明：`--test_model_path latest` 会自动使用最新训练模型；结果写入 `ablation_results`，并自动生成 `<结果文件名>_gantt\index.html`。

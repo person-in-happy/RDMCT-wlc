@@ -1,0 +1,161 @@
+{
+  "experiment": {
+    "seed": 1,
+    "exp_prefix": "formal_warmstart_wafer18",
+    "base_log_dir": "data/petri_formal_wafer18",
+    "snapshot_mode": "gap_and_last",
+    "snapshot_gap": 5
+  },
+  "env": {
+    "instance_file_path": "generated_instances/train",
+    "single_instance_file": "mix_wafer18_20260710.lp",
+    "warm_start_solution_file": "auto",
+    "scip_time_limit": 45,
+    "scip_memory_limit_mb": 4096,
+    "scip_node_limit": 12000,
+    "scip_stall_node_limit": 8000,
+    "scip_emphasis": "feasibility",
+    "scip_heuristics_profile": "aggressive",
+    "scip_disable_expensive_heuristics": true,
+    "cutsel_max_candidates": 128,
+    "cutsel_max_selected_cuts": 30,
+    "presolving": true,
+    "separating": true,
+    "conflict": true,
+    "heuristics": true,
+    "max_rounds_root": 2,
+    "lexicographic_schedule_stability": false,
+    "lexicographic_stability_time_limit": 0,
+    "lexicographic_stability_node_limit": 5000,
+    "schedule_chamber_idle_square_penalty": 0.00001,
+    "schedule_pm_wait_square_penalty": 0.001,
+    "schedule_module_wait_square_penalty": 0.00001,
+    "schedule_robot_wait_square_penalty": 0.00001
+  },
+  "algorithm": {
+    "evaluate_freq": 5,
+    "evaluate_samples": 2,
+    "optimizer_class": "Adam",
+    "actor_net_lr": 0.0001,
+    "critic_net_lr": 0.0001,
+    "reward_scale": 1,
+    "num_epochs": 80,
+    "max_grad_norm": 2.0,
+    "batch_size": 8,
+    "train_decode_type": "stochastic",
+    "evaluate_decode_type": "greedy",
+    "reward_type": "primaldualintegral",
+    "baseline_type": "simple",
+    "critic_beta": 0.9,
+    "train_steps_per_epoch": 1,
+    "lr_decay": true,
+    "lr_decay_step": 20,
+    "lr_decay_rate": 0.9,
+    "normalize": true,
+    "normalize_reward": true
+  },
+  "trainer": {
+    "samples_per_epoch": 8,
+    "n_jobs": 1,
+    "worker_stall_timeout_seconds": 120,
+    "worker_stall_grace_seconds": 30,
+    "worker_restart_limit": 1
+  },
+  "net_share": {
+    "embedding_dim": 23,
+    "hidden_dim": 128,
+    "tanh_exploration": 5,
+    "use_tanh": true
+  },
+  "policy": {
+    "n_glimpses": 1,
+    "beam_size": 3
+  },
+  "value": {
+    "n_process_block_iters": 3
+  },
+  "cutsel_percent_policy": {
+    "use_cutsel_percent_policy": true,
+    "train_freq": 1,
+    "train_highlevel_batch_size": 8,
+    "highlevel_actor_lr": 0.0001
+  },
+  "devices": {
+    "global_device": "cuda:0",
+    "multi_devices": ["0"]
+  },
+  "test_kwargs": {
+    "test_instance_path": "generated_instances/test",
+    "test_model_path": "latest",
+    "latest_model_root": "data/petri_formal_wafer18",
+    "n_jobs": 1,
+    "test_env_kwargs": {
+      "scip_time_limit": 3600,
+      "scip_memory_limit_mb": 8192,
+      "scip_node_limit": -1,
+      "scip_stall_node_limit": -1,
+      "scip_solution_limit": -1,
+      "scip_relative_gap_limit": 0.01,
+      "scip_absolute_gap_limit": 0.0,
+      "scip_emphasis": "optimality",
+      "scip_heuristics_profile": "default",
+      "scip_disable_expensive_heuristics": true,
+      "scip_lp_iteration_limit": 300000,
+      "scip_root_lp_iteration_limit": 1000000,
+      "warm_start_solution_file": "auto",
+      "cutsel_max_candidates": 128,
+      "cutsel_max_selected_cuts": 30,
+      "presolving": true,
+      "separating": true,
+      "conflict": true,
+      "heuristics": true,
+      "max_rounds_root": 2,
+      "lexicographic_schedule_stability": false,
+      "schedule_stability_mode": "linear",
+      "lexicographic_fix_discrete_decisions": true,
+      "lexicographic_free_double_decisions": false,
+      "lexicographic_stability_time_limit": 0,
+      "lexicographic_stability_node_limit": 5000,
+      "schedule_linear_wait_weight": 1.0,
+      "schedule_linear_max_wait_weight": 10.0,
+      "schedule_cadence_deviation_weight": 100.0,
+      "schedule_max_wait_time": 200.0,
+      "schedule_wait_cap_mode": "soft",
+      "schedule_wait_cap_excess_weight": 10000.0
+    }
+  },
+  "evaluate_kwargs": {
+    "test_instance_path": "generated_instances/structure_benchmark/holdout",
+    "test_n_jobs": 1,
+    "test_env_kwargs": {
+      "scip_time_limit": 45,
+      "scip_memory_limit_mb": 4096,
+      "scip_node_limit": -1,
+      "scip_stall_node_limit": -1,
+      "scip_emphasis": "feasibility",
+      "scip_heuristics_profile": "aggressive",
+      "scip_disable_expensive_heuristics": true,
+      "warm_start_solution_file": "auto",
+      "cutsel_max_candidates": 128,
+      "cutsel_max_selected_cuts": 30,
+      "single_instance_file": "mix_wafer18_20260710.lp",
+      "presolving": true,
+      "separating": true,
+      "conflict": true,
+      "heuristics": true,
+      "max_rounds_root": 2,
+      "lexicographic_schedule_stability": false,
+      "lexicographic_stability_time_limit": 0
+    }
+  },
+  "online_test_kwargs": {
+    "test_freq": 0,
+    "test_instance_path": "generated_instances/test",
+    "test_n_jobs": 1,
+    "test_env_kwargs": {
+      "scip_time_limit": 45,
+      "single_instance_file": "mix_wafer18_20260710.lp",
+      "lexicographic_stability_time_limit": 0
+    }
+  }
+}

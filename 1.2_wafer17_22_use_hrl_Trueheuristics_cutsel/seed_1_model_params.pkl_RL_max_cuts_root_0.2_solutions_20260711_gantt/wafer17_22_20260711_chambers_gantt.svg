@@ -1,0 +1,168 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2160" height="362" viewBox="0 0 2160 362">
+<style>text { font-family: "Segoe UI", "Microsoft YaHei", sans-serif; fill: #222; }.title { font-size: 24px; font-weight: 700; }.subtitle { font-size: 14px; fill: #555; }.lane { font-size: 13px; font-weight: 600; }.tick { font-size: 11px; fill: #666; }.bartext { font-size: 11px; fill: #fff; font-weight: 600; paint-order: stroke; stroke: #1f1f1f; stroke-width: 2px; stroke-linejoin: round; }.bartext-outside { font-size: 10px; fill: #222; font-weight: 600; paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }.task rect { cursor: pointer; }.task:hover rect { fill-opacity: 1; stroke: #111827; stroke-width: 2.4px; }.marker { font-size: 11px; fill: #333; }.wph { font-size: 14px; fill: #222; font-weight: 600; }.wph-detail { font-size: 13px; fill: #555; }.tooltip-text { font-size: 12px; fill: #111827; font-weight: 600; }</style>
+<rect x="0" y="0" width="2160" height="362" fill="#ffffff"/>
+<text class="title" x="360" y="38">wafer17_22_20260711 Chamber Modules Gantt</text>
+<text class="subtitle" x="360" y="66">method=single_result | status=optimal | best_obj=1244.000</text>
+<text class="subtitle" x="360" y="88">c_max=1244.000 | horizon=1204.000 | view=chambers</text>
+<line x1="360.00" y1="110" x2="360.00" y2="274.0" stroke="#efefef" stroke-width="1"/>
+<text class="tick" x="348.00" y="300.0">0.0</text>
+<line x1="500.00" y1="110" x2="500.00" y2="274.0" stroke="#efefef" stroke-width="1"/>
+<text class="tick" x="488.00" y="300.0">100.3</text>
+<line x1="640.00" y1="110" x2="640.00" y2="274.0" stroke="#efefef" stroke-width="1"/>
+<text class="tick" x="628.00" y="300.0">200.7</text>
+<line x1="780.00" y1="110" x2="780.00" y2="274.0" stroke="#efefef" stroke-width="1"/>
+<text class="tick" x="768.00" y="300.0">301.0</text>
+<line x1="920.00" y1="110" x2="920.00" y2="274.0" stroke="#efefef" stroke-width="1"/>
+<text class="tick" x="908.00" y="300.0">401.3</text>
+<line x1="1060.00" y1="110" x2="1060.00" y2="274.0" stroke="#efefef" stroke-width="1"/>
+<text class="tick" x="1048.00" y="300.0">501.7</text>
+<line x1="1200.00" y1="110" x2="1200.00" y2="274.0" stroke="#efefef" stroke-width="1"/>
+<text class="tick" x="1188.00" y="300.0">602.0</text>
+<line x1="1340.00" y1="110" x2="1340.00" y2="274.0" stroke="#efefef" stroke-width="1"/>
+<text class="tick" x="1328.00" y="300.0">702.3</text>
+<line x1="1480.00" y1="110" x2="1480.00" y2="274.0" stroke="#efefef" stroke-width="1"/>
+<text class="tick" x="1468.00" y="300.0">802.7</text>
+<line x1="1620.00" y1="110" x2="1620.00" y2="274.0" stroke="#efefef" stroke-width="1"/>
+<text class="tick" x="1608.00" y="300.0">903.0</text>
+<line x1="1760.00" y1="110" x2="1760.00" y2="274.0" stroke="#efefef" stroke-width="1"/>
+<text class="tick" x="1748.00" y="300.0">1003.3</text>
+<line x1="1900.00" y1="110" x2="1900.00" y2="274.0" stroke="#efefef" stroke-width="1"/>
+<text class="tick" x="1888.00" y="300.0">1103.7</text>
+<line x1="2040.00" y1="110" x2="2040.00" y2="274.0" stroke="#efefef" stroke-width="1"/>
+<text class="tick" x="2028.00" y="300.0">1204.0</text>
+<line x1="360" y1="182.00" x2="2040" y2="182.00" stroke="#dddddd" stroke-width="1"/>
+<text class="lane" x="18.00" y="134.00"><tspan x="18.00" dy="0">CH2 four-pocket module</tspan></text>
+<line x1="360" y1="256.00" x2="2040" y2="256.00" stroke="#dddddd" stroke-width="1"/>
+<text class="lane" x="18.00" y="208.00"><tspan x="18.00" dy="0">CH3 four-pocket module</tspan></text>
+<g class="task" data-tooltip="2x2 wait before cycle 1&#10;lane: CH2 four-pocket module&#10;start: 0.000&#10;end: 104.000&#10;duration: 104.000"><title>2x2 wait before cycle 1</title><rect x="360.00" y="118.00" width="145.12" height="42" rx="4" ry="4" fill="#BAB0AC" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="cycle 1&#10;PEC + M1(W1,W2) 1st&#10;lane: CH2 four-pocket module&#10;start: 104.000&#10;end: 284.000&#10;duration: 180.000"><title>cycle 1
+PEC + M1(W1,W2) 1st</title><rect x="505.12" y="118.00" width="251.16" height="42" rx="4" ry="4" fill="#F58518" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="2x2 bridge 2&#10;PEC out + M3(W5,W6) 1st in&#10;lane: CH2 four-pocket module&#10;start: 284.000&#10;end: 288.000&#10;duration: 4.000"><title>2x2 bridge 2
+PEC out + M3(W5,W6) 1st in</title><rect x="756.28" y="118.00" width="5.58" height="42" rx="4" ry="4" fill="#9C755F" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="cycle 2&#10;M1(W1,W2) 2nd + M3(W5,W6) 1st&#10;lane: CH2 four-pocket module&#10;start: 288.000&#10;end: 468.000&#10;duration: 180.000"><title>cycle 2
+M1(W1,W2) 2nd + M3(W5,W6) 1st</title><rect x="761.86" y="118.00" width="251.16" height="42" rx="4" ry="4" fill="#54A24B" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="2x2 bridge 3&#10;M1(W1,W2) 2nd out + M5(W9,W10) 1st in&#10;lane: CH2 four-pocket module&#10;start: 468.000&#10;end: 472.000&#10;duration: 4.000"><title>2x2 bridge 3
+M1(W1,W2) 2nd out + M5(W9,W10) 1st in</title><rect x="1013.02" y="118.00" width="5.58" height="42" rx="4" ry="4" fill="#9C755F" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="cycle 3&#10;M3(W5,W6) 2nd + M5(W9,W10) 1st&#10;lane: CH2 four-pocket module&#10;start: 472.000&#10;end: 652.000&#10;duration: 180.000"><title>cycle 3
+M3(W5,W6) 2nd + M5(W9,W10) 1st</title><rect x="1018.60" y="118.00" width="251.16" height="42" rx="4" ry="4" fill="#54A24B" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="2x2 bridge 4&#10;M3(W5,W6) 2nd out + M7(W13,W14) 1st in&#10;lane: CH2 four-pocket module&#10;start: 652.000&#10;end: 656.000&#10;duration: 4.000"><title>2x2 bridge 4
+M3(W5,W6) 2nd out + M7(W13,W14) 1st in</title><rect x="1269.77" y="118.00" width="5.58" height="42" rx="4" ry="4" fill="#9C755F" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="cycle 4&#10;M5(W9,W10) 2nd + M7(W13,W14) 1st&#10;lane: CH2 four-pocket module&#10;start: 656.000&#10;end: 836.000&#10;duration: 180.000"><title>cycle 4
+M5(W9,W10) 2nd + M7(W13,W14) 1st</title><rect x="1275.35" y="118.00" width="251.16" height="42" rx="4" ry="4" fill="#54A24B" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="2x2 bridge 5&#10;M5(W9,W10) 2nd out + M9(W17+PEC) 1st in&#10;lane: CH2 four-pocket module&#10;start: 836.000&#10;end: 840.000&#10;duration: 4.000"><title>2x2 bridge 5
+M5(W9,W10) 2nd out + M9(W17+PEC) 1st in</title><rect x="1526.51" y="118.00" width="5.58" height="42" rx="4" ry="4" fill="#9C755F" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="cycle 5&#10;M7(W13,W14) 2nd + M9(W17+PEC) 1st&#10;lane: CH2 four-pocket module&#10;start: 840.000&#10;end: 1020.000&#10;duration: 180.000"><title>cycle 5
+M7(W13,W14) 2nd + M9(W17+PEC) 1st</title><rect x="1532.09" y="118.00" width="251.16" height="42" rx="4" ry="4" fill="#54A24B" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="2x2 bridge 6&#10;M7(W13,W14) 2nd out + PEC in&#10;lane: CH2 four-pocket module&#10;start: 1020.000&#10;end: 1024.000&#10;duration: 4.000"><title>2x2 bridge 6
+M7(W13,W14) 2nd out + PEC in</title><rect x="1783.26" y="118.00" width="5.58" height="42" rx="4" ry="4" fill="#9C755F" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="cycle 6&#10;M9(W17+PEC) 2nd + PEC&#10;lane: CH2 four-pocket module&#10;start: 1024.000&#10;end: 1204.000&#10;duration: 180.000"><title>cycle 6
+M9(W17+PEC) 2nd + PEC</title><rect x="1788.84" y="118.00" width="251.16" height="42" rx="4" ry="4" fill="#F58518" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="2x2 wait before cycle 1&#10;lane: CH3 four-pocket module&#10;start: 0.000&#10;end: 183.478&#10;duration: 183.478"><title>2x2 wait before cycle 1</title><rect x="360.00" y="192.00" width="256.02" height="42" rx="4" ry="4" fill="#BAB0AC" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="cycle 1&#10;PEC + M2(W3,W4) 1st&#10;lane: CH3 four-pocket module&#10;start: 183.478&#10;end: 363.478&#10;duration: 180.000"><title>cycle 1
+PEC + M2(W3,W4) 1st</title><rect x="616.02" y="192.00" width="251.16" height="42" rx="4" ry="4" fill="#F58518" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="2x2 wait before bridge&#10;lane: CH3 four-pocket module&#10;start: 363.478&#10;end: 363.924&#10;duration: 0.446"><title>2x2 wait before bridge</title><rect x="867.18" y="192.00" width="2.00" height="42" rx="4" ry="4" fill="#BAB0AC" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="2x2 bridge 2&#10;PEC out + M4(W7,W8) 1st in&#10;lane: CH3 four-pocket module&#10;start: 363.924&#10;end: 367.924&#10;duration: 4.000"><title>2x2 bridge 2
+PEC out + M4(W7,W8) 1st in</title><rect x="867.80" y="192.00" width="5.58" height="42" rx="4" ry="4" fill="#9C755F" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="cycle 2&#10;M2(W3,W4) 2nd + M4(W7,W8) 1st&#10;lane: CH3 four-pocket module&#10;start: 367.924&#10;end: 547.924&#10;duration: 180.000"><title>cycle 2
+M2(W3,W4) 2nd + M4(W7,W8) 1st</title><rect x="873.38" y="192.00" width="251.16" height="42" rx="4" ry="4" fill="#54A24B" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="2x2 bridge 3&#10;M2(W3,W4) 2nd out + M6(W11,W12) 1st in&#10;lane: CH3 four-pocket module&#10;start: 547.924&#10;end: 551.924&#10;duration: 4.000"><title>2x2 bridge 3
+M2(W3,W4) 2nd out + M6(W11,W12) 1st in</title><rect x="1124.54" y="192.00" width="5.58" height="42" rx="4" ry="4" fill="#9C755F" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="cycle 3&#10;M4(W7,W8) 2nd + M6(W11,W12) 1st&#10;lane: CH3 four-pocket module&#10;start: 551.924&#10;end: 731.924&#10;duration: 180.000"><title>cycle 3
+M4(W7,W8) 2nd + M6(W11,W12) 1st</title><rect x="1130.13" y="192.00" width="251.16" height="42" rx="4" ry="4" fill="#54A24B" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="2x2 wait before bridge&#10;lane: CH3 four-pocket module&#10;start: 731.924&#10;end: 733.583&#10;duration: 1.659"><title>2x2 wait before bridge</title><rect x="1381.29" y="192.00" width="2.32" height="42" rx="4" ry="4" fill="#BAB0AC" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="2x2 bridge 4&#10;M4(W7,W8) 2nd out + M8(W15,W16) 1st in&#10;lane: CH3 four-pocket module&#10;start: 733.583&#10;end: 737.583&#10;duration: 4.000"><title>2x2 bridge 4
+M4(W7,W8) 2nd out + M8(W15,W16) 1st in</title><rect x="1383.60" y="192.00" width="5.58" height="42" rx="4" ry="4" fill="#9C755F" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="cycle 4&#10;M6(W11,W12) 2nd + M8(W15,W16) 1st&#10;lane: CH3 four-pocket module&#10;start: 737.583&#10;end: 917.583&#10;duration: 180.000"><title>cycle 4
+M6(W11,W12) 2nd + M8(W15,W16) 1st</title><rect x="1389.19" y="192.00" width="251.16" height="42" rx="4" ry="4" fill="#54A24B" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="2x2 bridge 5&#10;M6(W11,W12) 2nd out + PEC in&#10;lane: CH3 four-pocket module&#10;start: 917.583&#10;end: 921.583&#10;duration: 4.000"><title>2x2 bridge 5
+M6(W11,W12) 2nd out + PEC in</title><rect x="1640.35" y="192.00" width="5.58" height="42" rx="4" ry="4" fill="#9C755F" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<g class="task" data-tooltip="cycle 5&#10;M8(W15,W16) 2nd + PEC&#10;lane: CH3 four-pocket module&#10;start: 921.583&#10;end: 1101.583&#10;duration: 180.000"><title>cycle 5
+M8(W15,W16) 2nd + PEC</title><rect x="1645.93" y="192.00" width="251.16" height="42" rx="4" ry="4" fill="#F58518" fill-opacity="0.88" stroke="#2f2f2f" stroke-width="0.7"/></g>
+<line x1="360" y1="316.0" x2="2040" y2="316.0" stroke="#dddddd" stroke-width="1"/>
+<text class="wph" x="18" y="334.00">WPH</text>
+<text class="wph-detail" x="360" y="334.00">WPH=49.196 wafers/hour | completed=17 | processing_time=1244.0s (0.346h)</text>
+<g id="gantt-tooltip" visibility="hidden" pointer-events="none">
+<rect id="gantt-tooltip-bg" x="0" y="0" width="180" height="42" rx="6" ry="6" fill="#ffffff" stroke="#25313C" stroke-width="1.2" opacity="0.96"/>
+<text id="gantt-tooltip-text" class="tooltip-text" x="10" y="18"></text>
+</g>
+<script type="application/ecmascript"><![CDATA[
+(function () {
+  var svg = document.documentElement;
+  var tooltip = document.getElementById('gantt-tooltip');
+  var bg = document.getElementById('gantt-tooltip-bg');
+  var text = document.getElementById('gantt-tooltip-text');
+  if (!tooltip || !bg || !text || !svg.createSVGPoint) { return; }
+  var maxChars = 58;
+  function wrapLine(line) {
+    line = String(line || '').trim();
+    if (!line) { return ['']; }
+    var words = line.split(/\s+/);
+    var lines = [];
+    var current = '';
+    for (var i = 0; i < words.length; i += 1) {
+      var word = words[i];
+      var next = current ? current + ' ' + word : word;
+      if (next.length > maxChars && current) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = next;
+      }
+    }
+    if (current) { lines.push(current); }
+    return lines.length ? lines : [line];
+  }
+  function setTooltip(label) {
+    while (text.firstChild) { text.removeChild(text.firstChild); }
+    var rawLines = String(label || '').split(/\n/);
+    var lines = [];
+    for (var i = 0; i < rawLines.length; i += 1) {
+      var wrapped = wrapLine(rawLines[i]);
+      for (var j = 0; j < wrapped.length; j += 1) { lines.push(wrapped[j]); }
+    }
+    var widest = 0;
+    for (var k = 0; k < lines.length; k += 1) {
+      widest = Math.max(widest, lines[k].length);
+      var tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+      tspan.setAttribute('x', '10');
+      tspan.setAttribute('dy', k === 0 ? '0' : '16');
+      tspan.textContent = lines[k];
+      text.appendChild(tspan);
+    }
+    bg.setAttribute('width', String(Math.max(170, widest * 7.2 + 22)));
+    bg.setAttribute('height', String(Math.max(36, lines.length * 16 + 14)));
+  }
+  function eventPoint(evt) {
+    var point = svg.createSVGPoint();
+    point.x = evt.clientX;
+    point.y = evt.clientY;
+    return point.matrixTransform(svg.getScreenCTM().inverse());
+  }
+  function move(evt) {
+    var p = eventPoint(evt);
+    var width = parseFloat(bg.getAttribute('width')) || 180;
+    var height = parseFloat(bg.getAttribute('height')) || 42;
+    var vb = svg.viewBox.baseVal;
+    var x = p.x + 14;
+    var y = p.y + 14;
+    if (x + width > vb.x + vb.width - 10) { x = p.x - width - 14; }
+    if (y + height > vb.y + vb.height - 10) { y = p.y - height - 14; }
+    tooltip.setAttribute('transform', 'translate(' + Math.max(8, x) + ',' + Math.max(8, y) + ')');
+  }
+  function show(evt) {
+    var label = this.getAttribute('data-tooltip') || '';
+    if (!label) { return; }
+    setTooltip(label);
+    tooltip.setAttribute('visibility', 'visible');
+    move(evt);
+  }
+  function hide() { tooltip.setAttribute('visibility', 'hidden'); }
+  var tasks = svg.querySelectorAll('.task[data-tooltip]');
+  for (var i = 0; i < tasks.length; i += 1) {
+    tasks[i].addEventListener('mouseenter', show);
+    tasks[i].addEventListener('mousemove', move);
+    tasks[i].addEventListener('mouseleave', hide);
+  }
+}());
+]]></script>
+</svg>

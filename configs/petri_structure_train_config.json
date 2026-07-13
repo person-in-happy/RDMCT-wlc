@@ -1,0 +1,120 @@
+{
+  "experiment": {
+    "seed": 1,
+    "exp_prefix": "petri_structure23_current",
+    "base_log_dir": "data/structure23_current",
+    "snapshot_mode": "gap_and_last",
+    "snapshot_gap": 5
+  },
+  "env": {
+    "instance_file_path": "generated_instances/structure_benchmark/train",
+    "scip_time_limit": 120,
+    "single_instance_file": "all",
+    "presolving": true,
+    "separating": true,
+    "conflict": true,
+    "heuristics": true,
+    "max_rounds_root": 1,
+    "cutsel_max_candidates": 128,
+    "cutsel_max_selected_cuts": 16,
+    "warm_start_solution_file": "auto",
+    "lexicographic_schedule_stability": false,
+    "lexicographic_stability_time_limit": 0,
+    "schedule_chamber_idle_square_penalty": 0.00001,
+    "schedule_pm_wait_square_penalty": 0.001,
+    "schedule_module_wait_square_penalty": 0.00001,
+    "schedule_robot_wait_square_penalty": 0.00001
+  },
+  "algorithm": {
+    "evaluate_freq": 5,
+    "evaluate_samples": 3,
+    "optimizer_class": "Adam",
+    "actor_net_lr": 0.0001,
+    "critic_net_lr": 0.0001,
+    "reward_scale": 1,
+    "num_epochs": 30,
+    "max_grad_norm": 2.0,
+    "batch_size": 8,
+    "train_decode_type": "stochastic",
+    "evaluate_decode_type": "greedy",
+    "reward_type": "primaldualintegral",
+    "baseline_type": "simple",
+    "critic_beta": 0.9,
+    "train_steps_per_epoch": 2,
+    "lr_decay": true,
+    "lr_decay_step": 5,
+    "lr_decay_rate": 0.96,
+    "normalize": true,
+    "normalize_reward": true
+  },
+  "trainer": {
+    "samples_per_epoch": 8,
+    "n_jobs": 2,
+    "worker_restart_limit": 1,
+    "worker_stall_grace_seconds": 30
+  },
+  "net_share": {
+    "embedding_dim": 23,
+    "hidden_dim": 128,
+    "tanh_exploration": 5,
+    "use_tanh": true
+  },
+  "policy": {
+    "n_glimpses": 1,
+    "beam_size": 3
+  },
+  "value": {
+    "n_process_block_iters": 3
+  },
+  "cutsel_percent_policy": {
+    "use_cutsel_percent_policy": true,
+    "train_freq": 2,
+    "train_highlevel_batch_size": 8,
+    "highlevel_actor_lr": 0.0005
+  },
+  "devices": {
+    "global_device": "cuda:0",
+    "multi_devices": ["0"]
+  },
+  "test_kwargs": {
+    "test_instance_path": "generated_instances/structure_benchmark/holdout",
+    "test_model_path": "latest",
+    "n_jobs": 1
+  },
+  "evaluate_kwargs": {
+    "test_instance_path": "generated_instances/structure_benchmark/holdout",
+    "test_n_jobs": 1,
+    "test_env_kwargs": {
+      "scip_time_limit": 120,
+      "single_instance_file": "all",
+      "presolving": true,
+      "separating": true,
+      "conflict": true,
+      "heuristics": true,
+      "max_rounds_root": 1,
+      "cutsel_max_candidates": 128,
+      "cutsel_max_selected_cuts": 16,
+      "warm_start_solution_file": "auto",
+      "lexicographic_schedule_stability": false
+    }
+  },
+  "online_test_kwargs": {
+    "test_freq": 0,
+    "test_instance_path": "generated_instances/structure_benchmark/holdout",
+    "test_n_jobs": 1,
+    "test_env_kwargs": {
+      "scip_time_limit": 120,
+      "single_instance_file": "all",
+      "presolving": true,
+      "separating": true,
+      "conflict": true,
+      "heuristics": true,
+      "max_rounds_root": 1,
+      "cutsel_max_candidates": 128,
+      "cutsel_max_selected_cuts": 16,
+      "warm_start_solution_file": "auto",
+      "lexicographic_schedule_stability": false
+    }
+  },
+  "start_epoch": 0
+}

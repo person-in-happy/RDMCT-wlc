@@ -7,6 +7,7 @@ from scip_imports import scip
 
 from logger import logger
 from path_utils import resolve_path
+from petri_warm_start import find_compatible_mixed_warm_start
 
 class SCIPCutSelEnv():
     def __init__(
@@ -21,19 +22,32 @@ class SCIPCutSelEnv():
         scip_node_limit=-1,
         scip_stall_node_limit=-1,
         scip_solution_limit=-1,
+        scip_relative_gap_limit=0.0,
+        scip_absolute_gap_limit=0.0,
         scip_emphasis="default",
         scip_heuristics_profile="default",
+        scip_disable_expensive_heuristics=False,
         cutsel_max_candidates=128,
         cutsel_max_selected_cuts=16,
+        cutsel_use_structure_rerank=None,
         scip_rare_clock_check=True,
         scip_lp_iteration_limit=100000,
         scip_root_lp_iteration_limit=500000,
         scip_interrupt_grace_seconds=30.0,
         warm_start_solution_file=None,
         lexicographic_schedule_stability=True,
+        schedule_stability_mode="quadratic",
+        lexicographic_fix_discrete_decisions=True,
+        lexicographic_free_double_decisions=True,
         lexicographic_cmax_tolerance=1e-6,
         lexicographic_stability_time_limit=10.0,
         lexicographic_stability_node_limit=5000,
+        schedule_linear_wait_weight=1.0,
+        schedule_linear_max_wait_weight=10.0,
+        schedule_cadence_deviation_weight=25.0,
+        schedule_max_wait_time=0.0,
+        schedule_wait_cap_mode="hard",
+        schedule_wait_cap_excess_weight=1000.0,
         schedule_chamber_idle_square_penalty=1e-5,
         schedule_pm_wait_square_penalty=1e-3,
         schedule_module_wait_square_penalty=1e-5,
@@ -60,19 +74,32 @@ class SCIPCutSelEnv():
         self.scip_node_limit = scip_node_limit
         self.scip_stall_node_limit = scip_stall_node_limit
         self.scip_solution_limit = scip_solution_limit
+        self.scip_relative_gap_limit = scip_relative_gap_limit
+        self.scip_absolute_gap_limit = scip_absolute_gap_limit
         self.scip_emphasis = scip_emphasis
         self.scip_heuristics_profile = scip_heuristics_profile
+        self.scip_disable_expensive_heuristics = scip_disable_expensive_heuristics
         self.cutsel_max_candidates = cutsel_max_candidates
         self.cutsel_max_selected_cuts = cutsel_max_selected_cuts
+        self.cutsel_use_structure_rerank = cutsel_use_structure_rerank
         self.scip_rare_clock_check = scip_rare_clock_check
         self.scip_lp_iteration_limit = scip_lp_iteration_limit
         self.scip_root_lp_iteration_limit = scip_root_lp_iteration_limit
         self.scip_interrupt_grace_seconds = scip_interrupt_grace_seconds
         self.warm_start_solution_file = warm_start_solution_file
         self.lexicographic_schedule_stability = lexicographic_schedule_stability
+        self.schedule_stability_mode = str(schedule_stability_mode or "quadratic").strip().lower()
+        self.lexicographic_fix_discrete_decisions = lexicographic_fix_discrete_decisions
+        self.lexicographic_free_double_decisions = lexicographic_free_double_decisions
         self.lexicographic_cmax_tolerance = lexicographic_cmax_tolerance
         self.lexicographic_stability_time_limit = lexicographic_stability_time_limit
         self.lexicographic_stability_node_limit = lexicographic_stability_node_limit
+        self.schedule_linear_wait_weight = schedule_linear_wait_weight
+        self.schedule_linear_max_wait_weight = schedule_linear_max_wait_weight
+        self.schedule_cadence_deviation_weight = schedule_cadence_deviation_weight
+        self.schedule_max_wait_time = schedule_max_wait_time
+        self.schedule_wait_cap_mode = str(schedule_wait_cap_mode or "hard").strip().lower()
+        self.schedule_wait_cap_excess_weight = schedule_wait_cap_excess_weight
         self.schedule_chamber_idle_square_penalty = schedule_chamber_idle_square_penalty
         self.schedule_pm_wait_square_penalty = schedule_pm_wait_square_penalty
         self.schedule_module_wait_square_penalty = schedule_module_wait_square_penalty
@@ -296,6 +323,199 @@ class SCIPCutSelEnv():
             self.rng = np.random.RandomState(seed)
         else:
             self.rng = np.random.RandomState(self.seed)
+
+    def _strip_inactive_schedule_stability_constraints(self):
+        """Remove secondary-only auxiliaries when phase two is disabled."""
+        if (
+            self.lexicographic_schedule_stability
+            and self.schedule_stability_mode != "linear"
+        ):
+            return
+        secondary_prefixes = [
+            "schedule_wait_square_def_",
+            "chamber_nonprocess_wait_",
+        ]
+        if (
+            float(self.schedule_max_wait_time or 0.0) <= 0
+            or self.schedule_wait_cap_mode != "hard"
+        ):
+            secondary_prefixes.append("schedule_wait_def_")
+        secondary_prefixes = tuple(secondary_prefixes)
+        removable = [
+            constraint
+            for constraint in self.m.getConss()
+            if constraint.name == "schedule_stability_def"
+            or constraint.name.startswith(secondary_prefixes)
+        ]
+        for constraint in removable:
+            self.m.delCons(constraint)
+        if removable:
+            logger.log(
+                "removed inactive schedule-stability constraints before primary solve: "
+                f"{len(removable)}"
+            )
+
+    def _apply_schedule_wait_cap(self):
+        """Apply the per-interval cap to generated and legacy Petri LPs."""
+        cap = float(self.schedule_max_wait_time or 0.0)
+        if cap <= 0:
+            return
+        if self.schedule_wait_cap_mode != "hard":
+            logger.log(
+                f"effective soft schedule wait target: {cap:.1f}s "
+                f"(excess_weight={float(self.schedule_wait_cap_excess_weight):g})"
+            )
+            return
+        exact_prefixes = (
+            "llupper_wait_",
+            "lllower_wait_",
+            "full_pair_post_process_wait_",
+            "mix_pair_post_process_wait_",
+            "full_batch_idle_",
+            "full_to_mix_idle_",
+            "mix_cycle_to_bridge_idle_",
+            "mix_tail_idle_",
+        )
+        existing = {constraint.name for constraint in self.m.getConss()}
+        capped = 0
+        for variable in self.m.getVars():
+            is_chamber_wait = (
+                variable.name.startswith("chamber_nonprocess_wait_")
+                and not variable.name.startswith("chamber_nonprocess_wait_square_")
+            )
+            is_generic_wait = (
+                variable.name.startswith("schedule_wait_")
+                and not variable.name.startswith("schedule_wait_square_")
+            )
+            if (
+                not variable.name.startswith(exact_prefixes)
+                and not is_chamber_wait
+                and not is_generic_wait
+            ):
+                continue
+            constraint_name = f"schedule_wait_cap_{variable.name}"
+            if constraint_name in existing:
+                continue
+            self.m.addCons(variable <= cap, name=constraint_name)
+            capped += 1
+        logger.log(f"effective hard schedule wait cap: {cap:.1f}s ({capped} runtime constraints added)")
+
+    def _configure_linear_stability_objective(self, discrete_values):
+        variables = {variable.name: variable for variable in self.m.getVars()}
+        stability_var = variables.get("schedule_stability")
+        if stability_var is None:
+            return None
+
+        wait_prefixes = (
+            "llupper_wait_",
+            "lllower_wait_",
+            "full_pair_post_process_wait_",
+            "mix_pair_post_process_wait_",
+            "full_batch_idle_",
+            "full_to_mix_idle_",
+            "mix_cycle_to_bridge_idle_",
+            "mix_tail_idle_",
+            "chamber_idle_total_",
+        )
+        wait_variables = [
+            variable
+            for variable in self.m.getVars()
+            if variable.name.startswith(wait_prefixes)
+            or (
+                self.schedule_wait_cap_mode == "hard"
+                and variable.name.startswith("schedule_wait_")
+                and not variable.name.startswith("schedule_wait_square_")
+            )
+        ]
+        individual_wait_variables = [
+            variable
+            for variable in wait_variables
+            if not variable.name.startswith("chamber_idle_total_")
+        ]
+        max_wait = self.m.addVar(vtype="C", lb=0.0, name="schedule_linear_max_wait")
+        for index, variable in enumerate(individual_wait_variables):
+            self.m.addCons(
+                max_wait >= variable,
+                name=f"schedule_linear_max_wait_lb_{index}",
+            )
+
+        cap_excesses = []
+        wait_target = float(self.schedule_max_wait_time or 0.0)
+        if self.schedule_wait_cap_mode == "soft" and wait_target > 0:
+            for index, variable in enumerate(individual_wait_variables):
+                excess = self.m.addVar(
+                    vtype="C",
+                    lb=0.0,
+                    name=f"schedule_wait_cap_excess_{index}",
+                )
+                self.m.addCons(
+                    excess >= variable - wait_target,
+                    name=f"schedule_wait_cap_excess_lb_{index}",
+                )
+                cap_excesses.append(excess)
+
+        grouped_starts = {}
+        for mode, start_pattern, used_template, epoch_prefix in (
+            ("full", re.compile(r"^full_start_(\d+)_(\d+)$"), "full_batch_used", "full_batch_epoch"),
+            ("mix", re.compile(r"^mix_cycle_start_(\d+)_(\d+)$"), "mix_cycle_used", "mix_cycle_epoch"),
+        ):
+            for variable in self.m.getVars():
+                match = start_pattern.match(variable.name)
+                if not match:
+                    continue
+                chamber, position = (int(item) for item in match.groups())
+                used_name = f"{used_template}_{chamber}_{position}"
+                if discrete_values.get(used_name, 0) < 0.5:
+                    continue
+                epoch = 0
+                epoch_marker = f"{epoch_prefix}_{chamber}_{position}_"
+                for name, value in discrete_values.items():
+                    if value >= 0.5 and name.startswith(epoch_marker):
+                        epoch = int(name.rsplit("_", 1)[-1])
+                        break
+                grouped_starts.setdefault((mode, chamber, epoch), []).append(
+                    (position, variable)
+                )
+
+        cadence_deviations = []
+        for (mode, chamber, epoch), items in sorted(grouped_starts.items()):
+            ordered = [variable for _, variable in sorted(items)]
+            for index in range(2, len(ordered)):
+                previous_gap = ordered[index - 1] - ordered[index - 2]
+                current_gap = ordered[index] - ordered[index - 1]
+                deviation = self.m.addVar(
+                    vtype="C",
+                    lb=0.0,
+                    name=f"schedule_cadence_deviation_{mode}_{chamber}_{epoch}_{index}",
+                )
+                self.m.addCons(
+                    deviation >= current_gap - previous_gap,
+                    name=f"schedule_cadence_deviation_pos_{mode}_{chamber}_{epoch}_{index}",
+                )
+                self.m.addCons(
+                    deviation >= previous_gap - current_gap,
+                    name=f"schedule_cadence_deviation_neg_{mode}_{chamber}_{epoch}_{index}",
+                )
+                cadence_deviations.append(deviation)
+
+        stability_expr = (
+            float(self.schedule_linear_wait_weight) * scip.quicksum(wait_variables)
+            + float(self.schedule_linear_max_wait_weight) * max_wait
+            + float(self.schedule_cadence_deviation_weight)
+            * scip.quicksum(cadence_deviations)
+            + float(self.schedule_wait_cap_excess_weight)
+            * scip.quicksum(cap_excesses)
+        )
+        self.m.addCons(
+            stability_var == stability_expr,
+            name="schedule_linear_stability_def",
+        )
+        logger.log(
+            "configured linear schedule stability: "
+            f"wait_vars={len(wait_variables)}, cadence_terms={len(cadence_deviations)}, "
+            f"cap_excess_terms={len(cap_excesses)}"
+        )
+        return stability_var
         
     def reset(self):
         # create scip model
@@ -309,12 +529,21 @@ class SCIPCutSelEnv():
             instance_file = self.single_instance_file
         # instance_file = 'instance_9575.lp'
         logger.log(f"instance_file: {instance_file}")
+        selected_instance_name = Path(str(instance_file)).name
         instance_file = self._resolve_instance_file(instance_file)
         logger.log(f"resolved_instance_file: {instance_file}")
         self.m.setIntParam('display/verblevel', self.scip_verbosity)
         self.m.readProblem(instance_file)
-        if self.warm_start_solution_file:
-            warm_start_path = resolve_path(self.warm_start_solution_file)
+        self._strip_inactive_schedule_stability_constraints()
+        self._apply_schedule_wait_cap()
+        warm_start_file = self.warm_start_solution_file
+        if str(warm_start_file).strip().lower() == "auto":
+            warm_start_file = find_compatible_mixed_warm_start(
+                self.instance_file_path,
+                selected_instance_name,
+            )
+        if warm_start_file:
+            warm_start_path = resolve_path(warm_start_file)
             if warm_start_path.is_file():
                 try:
                     warm_start = self.m.readSolFile(str(warm_start_path))
@@ -341,6 +570,8 @@ class SCIPCutSelEnv():
             self.m.setLongintParam('limits/stallnodes', int(self.scip_stall_node_limit))
         if self.scip_solution_limit is not None and int(self.scip_solution_limit) > 0:
             self.m.setIntParam('limits/solutions', int(self.scip_solution_limit))
+        self.m.setRealParam('limits/gap', max(0.0, float(self.scip_relative_gap_limit)))
+        self.m.setRealParam('limits/absgap', max(0.0, float(self.scip_absolute_gap_limit)))
         self.m.setIntParam('timing/clocktype', 2)
         # Apply the broad preset first.  The explicit separator and heuristic
         # controls below must win; otherwise FEASIBILITY silently re-enables
@@ -361,6 +592,8 @@ class SCIPCutSelEnv():
             self.m.setLongintParam('limits/stallnodes', int(self.scip_stall_node_limit))
         if self.scip_solution_limit is not None and int(self.scip_solution_limit) > 0:
             self.m.setIntParam('limits/solutions', int(self.scip_solution_limit))
+        self.m.setRealParam('limits/gap', max(0.0, float(self.scip_relative_gap_limit)))
+        self.m.setRealParam('limits/absgap', max(0.0, float(self.scip_absolute_gap_limit)))
         self.m.setBoolParam('timing/rareclockcheck', bool(self.scip_rare_clock_check))
         if self.scip_lp_iteration_limit is not None and int(self.scip_lp_iteration_limit) >= 0:
             self.m.setLongintParam('lp/iterlim', int(self.scip_lp_iteration_limit))
@@ -373,6 +606,7 @@ class SCIPCutSelEnv():
             f"nodes={self.scip_node_limit}, "
             f"stall_nodes={self.scip_stall_node_limit}, "
             f"solutions={self.scip_solution_limit}, emphasis={self.scip_emphasis}, "
+            f"gap={self.scip_relative_gap_limit}, absgap={self.scip_absolute_gap_limit}, "
             f"heuristics_profile={self.scip_heuristics_profile}, "
             f"rare_clock_check={self.scip_rare_clock_check}, "
             f"lp_iter={self.scip_lp_iteration_limit}, "
@@ -426,16 +660,52 @@ class SCIPCutSelEnv():
             ) from exc
         if profile_name != "default":
             self.m.setHeuristics(profile)
+        if self.scip_disable_expensive_heuristics:
+            disabled = []
+            available_params = self.m.getParams()
+            for heuristic in ("alns", "rins", "subnlp", "multistart", "mpec"):
+                param = f"heuristics/{heuristic}/freq"
+                if param in available_params:
+                    self.m.setIntParam(param, -1)
+                    disabled.append(heuristic)
+            logger.log(
+                "disabled memory-intensive SCIP heuristics: "
+                + ", ".join(disabled)
+            )
         logger.log(f"applied SCIP heuristics profile: {profile_name}")
 
     def step(self, CutSel):
         if CutSel is not None:
             # Keep this safeguard in the environment configuration so test,
             # evaluation, and training use the same bounded callback path.
+            # Method-level settings may be stricter; never silently replace
+            # them because that makes the reported ablation budget false.
             if hasattr(CutSel, "max_candidates"):
-                CutSel.max_candidates = self.cutsel_max_candidates
+                env_cap = int(self.cutsel_max_candidates)
+                agent_cap = CutSel.max_candidates
+                if env_cap > 0:
+                    CutSel.max_candidates = (
+                        env_cap
+                        if agent_cap is None or int(agent_cap) <= 0
+                        else min(int(agent_cap), env_cap)
+                    )
             if hasattr(CutSel, "max_selected_cuts"):
-                CutSel.max_selected_cuts = self.cutsel_max_selected_cuts
+                env_cap = int(self.cutsel_max_selected_cuts)
+                agent_cap = CutSel.max_selected_cuts
+                if env_cap > 0:
+                    CutSel.max_selected_cuts = (
+                        env_cap
+                        if agent_cap is None or int(agent_cap) <= 0
+                        else min(int(agent_cap), env_cap)
+                    )
+            structure_rerank = getattr(
+                self, "cutsel_use_structure_rerank", None
+            )
+            if (
+                hasattr(CutSel, "use_structure_rerank")
+                and structure_rerank is not None
+            ):
+                CutSel.use_structure_rerank = bool(structure_rerank)
             self.m.includeCutsel(
                 cutsel=CutSel,
                 name="RL trained cutsel",
@@ -445,7 +715,19 @@ class SCIPCutSelEnv():
 
         try:
             self._optimize_with_lexicographic_stability()
-            return self._collect_stats()
+            stats = self._collect_stats()
+            if CutSel is not None:
+                stats["cutsel_effective_max_candidates"] = getattr(
+                    CutSel, "max_candidates", None
+                )
+                stats["cutsel_effective_max_selected_cuts"] = getattr(
+                    CutSel, "max_selected_cuts", None
+                )
+                get_telemetry = getattr(CutSel, "get_telemetry", None)
+                stats["cutsel_telemetry"] = (
+                    get_telemetry() if callable(get_telemetry) else {}
+                )
+            return stats
         finally:
             self.m.freeProb()
 
@@ -464,6 +746,17 @@ class SCIPCutSelEnv():
 
     def _optimize_with_lexicographic_stability(self):
         """Maximize WPH first, then stabilize only an equally fast schedule."""
+        stability_time_limit = float(self.lexicographic_stability_time_limit)
+        if self.lexicographic_schedule_stability and stability_time_limit > 0:
+            primary_time_limit = max(
+                1.0,
+                float(self.scip_time_limit) - stability_time_limit,
+            )
+            self.m.setRealParam("limits/time", primary_time_limit)
+            logger.log(
+                "reserved lexicographic stability budget: "
+                f"primary={primary_time_limit:.1f}s, stability={stability_time_limit:.1f}s"
+            )
         self._optimize_with_watchdog("primary")
         primary_status = str(self.m.getStatus())
         primary_solution = self.m.getBestSol()
@@ -492,12 +785,25 @@ class SCIPCutSelEnv():
             self._lexicographic_info["stability_status"] = "skipped_non_petri_model"
             return
 
+        fixed_discrete_values = {}
+        if self.lexicographic_fix_discrete_decisions:
+            for var in self.m.getVars():
+                if var.vtype() in {"BINARY", "INTEGER", "IMPLINT"}:
+                    # Robot batching is part of schedule-quality optimization,
+                    # not a routing identity. Keep these choices free so phase
+                    # 2 can select double-gripper operation when it reduces
+                    # the global squared-wait objective.
+                    if self.lexicographic_free_double_decisions and "_double_" in var.name:
+                        continue
+                    fixed_discrete_values[var.name] = round(
+                        float(self.m.getSolVal(primary_solution, var))
+                    )
+
         primary_solving_time = float(self.m.getSolvingTime())
         remaining_time = max(0.0, float(self.scip_time_limit) - primary_solving_time)
         if remaining_time <= 1e-6:
             self._lexicographic_info["stability_status"] = "skipped_no_time_budget"
             return
-        stability_time_limit = float(self.lexicographic_stability_time_limit)
         if stability_time_limit <= 1e-6:
             self._lexicographic_info["stability_status"] = "skipped_stability_time_disabled"
             return
@@ -506,12 +812,37 @@ class SCIPCutSelEnv():
         self.m.freeTransform()
         cmax_var = self._var_by_name("c_max")
         stability_var = self._var_by_name("schedule_stability")
+        if fixed_discrete_values:
+            fixed_count = 0
+            for var in self.m.getVars():
+                value = fixed_discrete_values.get(var.name)
+                if value is None:
+                    continue
+                self.m.chgVarLb(var, value)
+                self.m.chgVarUb(var, value)
+                fixed_count += 1
+            logger.log(
+                "lexicographic phase 2: fixed "
+                f"{fixed_count} discrete routing/order decisions from the primary incumbent"
+            )
+        if self.schedule_stability_mode == "linear":
+            stability_var = self._configure_linear_stability_objective(
+                fixed_discrete_values
+            )
+            if stability_var is None:
+                self._lexicographic_info["stability_status"] = "skipped_non_petri_model"
+                return
         self.m.addCons(
             cmax_var <= primary_cmax + float(self.lexicographic_cmax_tolerance),
             name="lexicographic_primary_cmax_fix",
         )
         self.m.setObjective(stability_var, "minimize")
         self.m.setRealParam("limits/time", phase2_time_limit)
+        # Primary smoke-test/stagnation limits must not immediately terminate
+        # the continuous schedule-compaction phase.  Users can disable phase 2
+        # explicitly with lexicographic_stability_time_limit=0.
+        self.m.setIntParam("limits/solutions", -1)
+        self.m.setLongintParam("limits/stallnodes", -1)
         stability_node_limit = int(self.lexicographic_stability_node_limit)
         if stability_node_limit >= 0:
             self.m.setLongintParam("limits/nodes", stability_node_limit)
@@ -597,18 +928,26 @@ class SCIPCutSelEnv():
             'schedule_robot_wait_square': 0.0,
             'schedule_chamber_idle_square': 0.0,
             'schedule_wait_penalty': 0.0,
+            'schedule_total_wait': 0.0,
+            'schedule_max_wait': 0.0,
+            'schedule_cadence_gap_mean': 0.0,
+            'schedule_cadence_gap_std': 0.0,
+            'schedule_cadence_cv': 0.0,
+            'schedule_cadence_deviation_sum': 0.0,
         }
         if best_sol is None:
             return empty_metrics
 
         stage_values = {}
         chamber_idle_totals = []
+        named_values = {}
         stage_pattern = re.compile(r'^prod_stage_(start|end)_(\d+)_(.+)$')
         for var in self.m.getVars():
             try:
                 value = float(self.m.getSolVal(best_sol, var))
             except Exception:
                 continue
+            named_values[var.name] = value
             match = stage_pattern.match(var.name)
             if match:
                 edge, wafer_id, stage = match.groups()
@@ -661,12 +1000,81 @@ class SCIPCutSelEnv():
             + self.schedule_robot_wait_square_penalty * robot_wait_square
             + self.schedule_chamber_idle_square_penalty * chamber_idle_square
         )
+        linear_wait_prefixes = (
+            'llupper_wait_',
+            'lllower_wait_',
+            'full_pair_post_process_wait_',
+            'mix_pair_post_process_wait_',
+            'full_batch_idle_',
+            'full_to_mix_idle_',
+            'mix_cycle_to_bridge_idle_',
+            'mix_tail_idle_',
+            'chamber_idle_total_',
+        )
+        linear_waits = [
+            max(0.0, value)
+            for name, value in named_values.items()
+            if name.startswith(linear_wait_prefixes)
+            or (
+                name.startswith('schedule_wait_')
+                and not name.startswith('schedule_wait_square_')
+            )
+        ]
+        individual_waits = [
+            max(0.0, value)
+            for name, value in named_values.items()
+            if (
+                name.startswith(linear_wait_prefixes)
+                or (
+                    name.startswith('schedule_wait_')
+                    and not name.startswith('schedule_wait_square_')
+                )
+            )
+            and not name.startswith('chamber_idle_total_')
+        ]
+
+        cadence_gaps = []
+        cadence_deviations = []
+        for mode, start_pattern, used_template, epoch_prefix in (
+            ('full', re.compile(r'^full_start_(\d+)_(\d+)$'), 'full_batch_used', 'full_batch_epoch'),
+            ('mix', re.compile(r'^mix_cycle_start_(\d+)_(\d+)$'), 'mix_cycle_used', 'mix_cycle_epoch'),
+        ):
+            grouped = {}
+            for name, value in named_values.items():
+                match = start_pattern.match(name)
+                if not match:
+                    continue
+                chamber, position = (int(item) for item in match.groups())
+                if named_values.get(f'{used_template}_{chamber}_{position}', 0.0) < 0.5:
+                    continue
+                epoch = 0
+                marker = f'{epoch_prefix}_{chamber}_{position}_'
+                for candidate, candidate_value in named_values.items():
+                    if candidate_value >= 0.5 and candidate.startswith(marker):
+                        epoch = int(candidate.rsplit('_', 1)[-1])
+                        break
+                grouped.setdefault((mode, chamber, epoch), []).append((position, value))
+            for items in grouped.values():
+                starts = [value for _, value in sorted(items)]
+                gaps = [right - left for left, right in zip(starts, starts[1:])]
+                cadence_gaps.extend(gaps)
+                cadence_deviations.extend(
+                    abs(right - left) for left, right in zip(gaps, gaps[1:])
+                )
+        cadence_mean = float(np.mean(cadence_gaps)) if cadence_gaps else 0.0
+        cadence_std = float(np.std(cadence_gaps)) if cadence_gaps else 0.0
         return {
             'schedule_pm_wait_square': pm_wait_square,
             'schedule_module_wait_square': module_wait_square,
             'schedule_robot_wait_square': robot_wait_square,
             'schedule_chamber_idle_square': chamber_idle_square,
             'schedule_wait_penalty': wait_penalty,
+            'schedule_total_wait': float(sum(linear_waits)),
+            'schedule_max_wait': float(max(individual_waits, default=0.0)),
+            'schedule_cadence_gap_mean': cadence_mean,
+            'schedule_cadence_gap_std': cadence_std,
+            'schedule_cadence_cv': 0.0 if cadence_mean <= 1e-12 else cadence_std / cadence_mean,
+            'schedule_cadence_deviation_sum': float(sum(cadence_deviations)),
         }
 
     def _safe_get_best_obj(self):

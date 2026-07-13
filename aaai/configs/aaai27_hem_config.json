@@ -1,0 +1,21 @@
+{
+  "net_share": {
+    "embedding_dim": 13,
+    "hidden_dim": 128,
+    "tanh_exploration": 5,
+    "use_tanh": true
+  },
+  "policy": {
+    "n_glimpses": 1,
+    "beam_size": 3
+  },
+  "value": {
+    "n_process_block_iters": 3
+  },
+  "cutsel_percent_policy": {
+    "use_cutsel_percent_policy": true
+  },
+  "devices": {
+    "global_device": "cuda:0"
+  }
+}

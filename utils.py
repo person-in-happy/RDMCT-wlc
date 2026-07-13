@@ -20,145 +20,9 @@ from path_utils import project_path
 _LOCAL_LOG_DIR = str(project_path('data'))
 
 ################
-# cut feature constructor utils
-PETRI_VAR_FAMILY_PATTERNS = OrderedDict(
-    [
-        (
-            "route",
-            (
-                "route_full_",
-                "route_mix_",
-                "product_lp_assign_",
-                "assign_prod_",
-                "assign_pec_",
-                "prod_on_pm_",
-                "pec_on_pm_",
-                "pec_used_",
-            ),
-        ),
-        (
-            "full_assign",
-            (
-                "wafer_to_full_pair_",
-                "pec_to_full_pair_",
-                "assign_full_",
-                "full_batch_used_",
-                "full_filler_side_",
-                "full_batch_after_mix_",
-                "full_slot_used_",
-                "full_pec_pairs_",
-                "full_after_mix_",
-                "full_prod_link_",
-                "full_pec_link_",
-                "full_front_load_start_",
-                "full_front_load_end_",
-                "full_back_load_start_",
-                "full_back_load_end_",
-                "full_front_unload_start_",
-                "full_front_unload_end_",
-                "full_back_unload_start_",
-                "full_back_unload_end_",
-                "full_load_start_",
-                "full_load_end_",
-                "full_unload_start_",
-                "full_unload_end_",
-                "batch_used_",
-                "batch_mode_full_",
-                "batch_mode_mix_",
-                "batch_has_pec_",
-                "batch_prod_count_",
-                "batch_pec_count_",
-            ),
-        ),
-        (
-            "mix_assign",
-            (
-                "wafer_to_mix_pair_",
-                "pec_to_mix_pair_",
-                "assign_mix_",
-                "mix_prod_link_",
-                "mix_pec_link_",
-                "mix_pos_used_",
-                "mix_cycle_used_",
-                "mix_active",
-                "mix_active_",
-                "mix_last_cycle_",
-                "mix_last_pos_",
-                "mix_pair_mid_link_",
-                "mix_pair_tail_link_",
-                "seq_atr_",
-                "atr_slot_assign_",
-                "seq_al_",
-                "seq_llupper_",
-                "seq_lllower_",
-                "seq_vtr_",
-                "vtr_slot_assign_",
-            ),
-        ),
-        (
-            "timing",
-            (
-                "full_start_",
-                "full_end_",
-                "mix_head_start_",
-                "mix_head_end_",
-                "mix_cycle_start_",
-                "mix_cycle_end_",
-                "mix_bridge_start_",
-                "mix_bridge_end_",
-                "mix_tail_load_start_",
-                "mix_tail_load_end_",
-                "mix_last_cycle_start_",
-                "mix_last_cycle_end_",
-                "mix_tail_start_",
-                "mix_tail_end_",
-                "mix_block_end_",
-                "batch_start_",
-                "batch_end_",
-                "batch_release_",
-                "full_pair_vtr_load_start_",
-                "full_pair_vtr_load_end_",
-                "full_pair_pm_start_",
-                "full_pair_pm_end_",
-                "full_pair_post_process_wait_",
-                "full_pair_vtr_unload_start_",
-                "full_pair_vtr_unload_end_",
-                "mix_pair_vtr_load_start_",
-                "mix_pair_vtr_load_end_",
-                "mix_pair_pm_start_",
-                "mix_pair_pm_end_",
-                "mix_pair_post_process_wait_",
-                "mix_pair_vtr_unload_start_",
-                "mix_pair_vtr_unload_end_",
-                "chamber_idle_total_",
-                "chamber_idle_square_",
-                "llupper_wait_",
-                "lllower_wait_",
-                "prod_pm_wait_",
-                "prod_module_wait_",
-                "prod_robot_wait_",
-                "prod_stage_start_",
-                "prod_stage_end_",
-                "pec_stage_start_",
-                "pec_stage_end_",
-                "pec_token_assign_",
-                "llupper_slot_assign_",
-                "lllower_slot_assign_",
-            ),
-        ),
-        (
-            "completion",
-            (
-                "pair_completion_",
-                "product_pair_completion_",
-                "full_pair_completion_",
-                "mix_pair_completion_",
-                "wafer_completion_",
-                "c_max",
-            ),
-        ),
-    ]
-)
+# Cut feature constructor utilities.  Structural features deliberately use
+# SCIP variable metadata, not application-specific variable names, so the same
+# extractor applies to Petri scheduling, MIPLIB, and arbitrary user MILPs.
 
 def _get_integral_support(cut, model):
     nonz_coeff_cut = cut.getNNonz()
@@ -200,26 +64,77 @@ def compute_normalized_violation_scores(cut):
     violation = max(0, violation)
     return violation
 
-def _extract_var_name_from_col(col):
-    if hasattr(col, "getVar"):
-        var = col.getVar()
-        if hasattr(var, "name"):
-            return var.name
-        if hasattr(var, "getName"):
-            return var.getName()
-    if hasattr(col, "name"):
-        return col.name
-    if hasattr(col, "getName"):
-        return col.getName()
-    return str(col)
+def _get_var_from_col(col):
+    try:
+        return col.getVar() if hasattr(col, "getVar") else None
+    except Exception:
+        return None
 
-def _classify_petri_var_family(var_name):
-    if not var_name:
-        return "other"
-    for family_name, prefixes in PETRI_VAR_FAMILY_PATTERNS.items():
-        if any(var_name.startswith(prefix) for prefix in prefixes):
-            return family_name
-    return "other"
+
+def _normalise_var_type(col, var):
+    """Return a stable SCIP variable-type label across PySCIPOpt versions."""
+    if var is not None:
+        for attr_name in ("vtype", "getType"):
+            attr = getattr(var, attr_name, None)
+            if attr is None:
+                continue
+            try:
+                value = attr() if callable(attr) else attr
+                label = str(value).upper().replace("SCIP_VARTYPE.", "")
+                if "BINARY" in label:
+                    return "BINARY"
+                if "IMPL" in label:
+                    return "IMPLINT"
+                if "INTEGER" in label:
+                    return "INTEGER"
+                if "CONTINUOUS" in label:
+                    return "CONTINUOUS"
+            except Exception:
+                pass
+    try:
+        if hasattr(col, "isIntegral") and col.isIntegral():
+            return "INTEGER"
+    except Exception:
+        pass
+    return "UNKNOWN"
+
+
+def _safe_var_obj(var):
+    try:
+        return float(var.getObj()) if var is not None else 0.0
+    except Exception:
+        return 0.0
+
+
+def _safe_var_bounds(var):
+    if var is None:
+        return None, None
+    try:
+        return float(var.getLbGlobal()), float(var.getUbGlobal())
+    except Exception:
+        try:
+            return float(var.getLbLocal()), float(var.getUbLocal())
+        except Exception:
+            return None, None
+
+
+def _is_finite_scip_value(value):
+    # SCIP commonly represents infinity by a finite sentinel near 1e20.
+    return value is not None and np.isfinite(value) and abs(value) < 1e19
+
+
+def _classify_mip_var_family(col):
+    var = _get_var_from_col(col)
+    var_type = _normalise_var_type(col, var)
+    if var_type == "BINARY":
+        return "binary_decision", var
+    if var_type in {"INTEGER", "IMPLINT"}:
+        return "general_integer", var
+    if var_type == "CONTINUOUS":
+        if abs(_safe_var_obj(var)) > 1e-12:
+            return "continuous_objective", var
+        return "continuous_auxiliary", var
+    return "other", var
 
 def _compute_family_entropy(probabilities):
     probs = np.asarray(probabilities, dtype=np.float64)
@@ -227,35 +142,30 @@ def _compute_family_entropy(probabilities):
     if probs.size <= 1:
         return 0.0
     entropy = -(probs * np.log(probs)).sum()
-    return float(entropy / np.log(len(PETRI_VAR_FAMILY_NAMES)))
+    return float(entropy / np.log(len(MIP_VAR_FAMILY_NAMES)))
 
 def _extract_structure_profile(cut):
     cols = cut.getCols()
-    coeffs = cut.getVals()
-    abs_coeffs = np.abs(coeffs).astype(np.float64)
+    coeffs = np.asarray(cut.getVals(), dtype=np.float64)
+    abs_coeffs = np.abs(coeffs)
     total_abs_coeff = float(abs_coeffs.sum()) + 1e-12
 
-    family_mass = OrderedDict((name, 0.0) for name in PETRI_VAR_FAMILY_NAMES)
-    binary_mass = 0.0
-    continuous_mass = 0.0
+    family_mass = OrderedDict((name, 0.0) for name in MIP_VAR_FAMILY_NAMES)
+    bounded_mass = 0.0
+    positive_mass = 0.0
 
-    for col, coeff in zip(cols, abs_coeffs):
-        var_name = _extract_var_name_from_col(col)
-        family_name = _classify_petri_var_family(var_name)
-        family_mass[family_name] += float(coeff)
-
-        if family_name in ("route", "full_assign", "mix_assign"):
-            binary_mass += float(coeff)
-        elif family_name in ("timing", "completion"):
-            continuous_mass += float(coeff)
-        else:
-            if hasattr(col, "isIntegral") and col.isIntegral():
-                binary_mass += float(coeff)
-            else:
-                continuous_mass += float(coeff)
+    for col, raw_coeff, abs_coeff in zip(cols, coeffs, abs_coeffs):
+        family_name, var = _classify_mip_var_family(col)
+        mass = float(abs_coeff)
+        family_mass[family_name] += mass
+        lb, ub = _safe_var_bounds(var)
+        if _is_finite_scip_value(lb) and _is_finite_scip_value(ub):
+            bounded_mass += mass
+        if raw_coeff > 0:
+            positive_mass += mass
 
     family_fractions = np.array(
-        [family_mass[name] / total_abs_coeff for name in PETRI_VAR_FAMILY_NAMES],
+        [family_mass[name] / total_abs_coeff for name in MIP_VAR_FAMILY_NAMES],
         dtype=np.float64,
     )
     structural_fractions = family_fractions[:-1]
@@ -263,15 +173,22 @@ def _extract_structure_profile(cut):
         dominant_family_index = int(np.argmax(structural_fractions))
         dominant_family_ratio = float(structural_fractions[dominant_family_index])
     else:
-        dominant_family_index = len(PETRI_VAR_FAMILY_NAMES) - 1
+        dominant_family_index = len(MIP_VAR_FAMILY_NAMES) - 1
         dominant_family_ratio = float(family_fractions[-1])
+    discrete_mass = float(family_fractions[0] + family_fractions[1])
+    continuous_mass = float(family_fractions[2] + family_fractions[3])
+    # Four times the product maps a balanced 50/50 discrete--continuous cut
+    # to one and a single-role cut to zero.  Unlike two complementary sign
+    # fractions, this adds non-redundant interaction information.
+    discrete_continuous_coupling = float(4.0 * discrete_mass * continuous_mass)
 
     return {
         "family_fractions": family_fractions,
-        "dominant_family": PETRI_VAR_FAMILY_NAMES[dominant_family_index],
+        "dominant_family": MIP_VAR_FAMILY_NAMES[dominant_family_index],
         "dominant_family_index": dominant_family_index,
-        "binary_ratio": float(binary_mass / total_abs_coeff),
-        "continuous_ratio": float(continuous_mass / total_abs_coeff),
+        "bounded_ratio": float(bounded_mass / total_abs_coeff),
+        "positive_ratio": float(positive_mass / total_abs_coeff),
+        "discrete_continuous_coupling": discrete_continuous_coupling,
         "dominant_family_ratio": dominant_family_ratio,
         "family_entropy": _compute_family_entropy(family_fractions),
         "structured_ratio": float(1.0 - family_fractions[-1]),
@@ -285,15 +202,47 @@ def _build_structure_feature_tail(profile):
         float(family_fractions[2]),
         float(family_fractions[3]),
         float(family_fractions[4]),
-        float(family_fractions[5]),
-        float(profile["binary_ratio"]),
-        float(profile["continuous_ratio"]),
+        float(profile["bounded_ratio"]),
+        float(profile["positive_ratio"]),
+        float(profile["discrete_continuous_coupling"]),
         float(profile["dominant_family_ratio"]),
         float(profile["family_entropy"]),
     ]
 
 def get_structure_family_names():
-    return list(PETRI_VAR_FAMILY_NAMES)
+    return list(MIP_VAR_FAMILY_NAMES)
+
+def generic_advanced_cut_feature_generator(scip_cutsel_env, cuts):
+    """Return the 13 generic cut features used by the HEM baseline.
+
+    This intentionally excludes all variable-role structure features.
+    Keeping this extractor separate from ``advanced_cut_feature_generator``
+    makes the HEM comparison auditable: a 13-dimensional checkpoint cannot
+    silently consume the proposed 10-dimensional structural feature tail.
+    """
+    cut_features = np.zeros((len(cuts), GENERIC_ADVANCED_CUT_FEATURE_DIM))
+    mean_coeff_obj, max_coeff_obj, min_coeff_obj, std_coeff_obj = _get_obj_coeff_stats(
+        scip_cutsel_env
+    )
+    for i, cut in enumerate(cuts):
+        nonz_coeff_cut = cut.getNNonz()
+        num_vars = scip_cutsel_env.getNVars()
+        cut_features[i, :] = np.asarray(
+            [
+                scip_cutsel_env.getRowObjParallelism(cut),
+                scip_cutsel_env.getCutEfficacy(cut),
+                float(nonz_coeff_cut / (num_vars + 1e-3)),
+                _get_integral_support(cut, scip_cutsel_env),
+                compute_normalized_violation_scores(cut),
+                *_get_cut_coeff_stats(cut),
+                mean_coeff_obj,
+                max_coeff_obj,
+                min_coeff_obj,
+                std_coeff_obj,
+            ],
+            dtype=np.float64,
+        )
+    return cut_features
 
 def advanced_cut_feature_generator(scip_cutsel_env, cuts, return_metadata=False):
     # add normalized violation feature and structure-aware features
@@ -442,6 +391,10 @@ def setup_logger(
         snapshot_mode="last",
         snapshot_gap=1,
         log_tabular_only=False,
+        compact_text_log=False,
+        text_log_max_mb=0,
+        text_log_backup_count=2,
+        compact_log_patterns=None,
         log_dir=None,
         script_name=None,
         **create_log_dir_kwargs
@@ -471,6 +424,13 @@ def setup_logger(
     first_time = log_dir is None
     if first_time:
         log_dir = create_log_dir(exp_prefix, **create_log_dir_kwargs)
+
+    logger.configure_text_logging(
+        compact=compact_text_log,
+        max_mb=text_log_max_mb,
+        backup_count=text_log_backup_count,
+        keep_patterns=compact_log_patterns,
+    )
 
     if variant is not None:
         logger.log("Variant:")

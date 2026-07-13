@@ -104,8 +104,100 @@ class Logger(object):
         self._header_printed = False
         self.table_printer = TerminalTablePrinter()
 
+        # Text logs are intentionally independent from progress.csv.  The
+        # latter remains the complete machine-readable training record, while
+        # compact text mode keeps only operationally useful messages.
+        self._compact_text_log = os.environ.get(
+            "RDMCT_COMPACT_TEXT_LOG", "0"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        self._text_log_max_bytes = int(
+            float(os.environ.get("RDMCT_TEXT_LOG_MAX_MB", "0") or 0)
+            * 1024 * 1024
+        )
+        self._text_log_backup_count = max(
+            0, int(os.environ.get("RDMCT_TEXT_LOG_BACKUP_COUNT", "2") or 0)
+        )
+        self._compact_log_patterns = (
+            "sampling worker",
+            "forcedcuts length:",
+            "len cuts:",
+            "epoch:",
+            "training...",
+            "evaluating...",
+            "effective scip limits",
+            "resuming model",
+            "saved ",
+            "warning",
+            "error",
+            "exception",
+            "failed",
+            "stalled",
+            "exited unexpectedly",
+            "restarting",
+            "logdir:",
+        )
+
     def reset(self):
         self.__init__()
+
+    def configure_text_logging(
+            self,
+            compact=False,
+            max_mb=0,
+            backup_count=2,
+            keep_patterns=None,
+    ):
+        """Configure bounded human-readable logs without changing CSV data."""
+        self._compact_text_log = bool(compact)
+        self._text_log_max_bytes = max(0, int(float(max_mb or 0) * 1024 * 1024))
+        self._text_log_backup_count = max(0, int(backup_count or 0))
+        if keep_patterns:
+            self._compact_log_patterns = tuple(
+                str(pattern).lower() for pattern in keep_patterns if str(pattern).strip()
+            )
+
+        # Sampling workers are spawned on Windows and create their own Logger
+        # singleton.  Environment propagation gives them the same quiet mode.
+        os.environ["RDMCT_COMPACT_TEXT_LOG"] = "1" if compact else "0"
+        os.environ["RDMCT_TEXT_LOG_MAX_MB"] = str(float(max_mb or 0))
+        os.environ["RDMCT_TEXT_LOG_BACKUP_COUNT"] = str(self._text_log_backup_count)
+
+    def is_compact_text_log(self):
+        return self._compact_text_log
+
+    def _should_emit_text(self, message):
+        if not self._compact_text_log:
+            return True
+        lowered = str(message).lower()
+        return any(pattern in lowered for pattern in self._compact_log_patterns)
+
+    def _rotate_text_output_if_needed(self, file_name, pending_text):
+        if self._text_log_max_bytes <= 0:
+            return
+        fd = self._text_fds[file_name]
+        fd.flush()
+        try:
+            current_size = os.path.getsize(file_name)
+        except OSError:
+            current_size = 0
+        pending_size = len(pending_text.encode(fd.encoding or "utf-8", errors="replace"))
+        if current_size + pending_size <= self._text_log_max_bytes:
+            return
+
+        fd.close()
+        if self._text_log_backup_count > 0:
+            oldest = "{}.{}".format(file_name, self._text_log_backup_count)
+            if os.path.exists(oldest):
+                os.remove(oldest)
+            for index in range(self._text_log_backup_count - 1, 0, -1):
+                source = "{}.{}".format(file_name, index)
+                if os.path.exists(source):
+                    os.replace(source, "{}.{}".format(file_name, index + 1))
+            if os.path.exists(file_name):
+                os.replace(file_name, file_name + ".1")
+        elif os.path.exists(file_name):
+            os.remove(file_name)
+        self._text_fds[file_name] = open(file_name, "w", encoding="utf-8")
 
     def _add_output(self, file_name, arr, fds, mode='a'):
         if file_name not in arr:
@@ -174,6 +266,8 @@ class Logger(object):
         return self._log_tabular_only
 
     def log(self, s, with_prefix=True, with_timestamp=True):
+        if not self._should_emit_text(s):
+            return
         out = s
         if with_prefix:
             out = self._prefix_str + out
@@ -184,8 +278,11 @@ class Logger(object):
         if not self._log_tabular_only:
             # Also log to stdout
             print(out)
-            for fd in list(self._text_fds.values()):
-                fd.write(out + '\n')
+            pending_text = out + '\n'
+            for file_name in list(self._text_fds):
+                self._rotate_text_output_if_needed(file_name, pending_text)
+                fd = self._text_fds[file_name]
+                fd.write(pending_text)
                 fd.flush()
             sys.stdout.flush()
 

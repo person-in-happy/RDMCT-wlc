@@ -13,6 +13,7 @@ from scip_imports import SCIP_RESULT, scip, scip_core
 from utils import (
     cut_feature_generator,
     advanced_cut_feature_generator,
+    generic_advanced_cut_feature_generator,
     get_structure_family_names,
 )
 # from utils_fix_isp_bug import cut_feature_generator
@@ -36,6 +37,13 @@ class CutSelectAgent(CutselBase):
         policy_type,
         max_candidates=512,
         max_selected_cuts=64,
+        use_structure_rerank=None,
+        structure_pool_factor=2.0,
+        structure_anchor_ratio=0.25,
+        structure_quality_weight=0.35,
+        structure_policy_weight=0.20,
+        structure_coverage_weight=0.25,
+        structure_representation_weight=0.20,
     ):
         super().__init__()
         self.scip_model = scip_model
@@ -54,12 +62,57 @@ class CutSelectAgent(CutselBase):
         self.max_selected_cuts = max_selected_cuts
 
         self.data = {}
+        self._callback_calls = 0
+        self._callback_time_seconds = 0.0
+        self._callback_input_cuts = 0
+        self._callback_max_input_cuts = 0
+        self._callback_forced_cuts = 0
+        self._phase_time_seconds = {
+            "feature_extraction": 0.0,
+            "device_transfer": 0.0,
+            "policy_inference": 0.0,
+            "structure_rerank": 0.0,
+        }
         # self.cuts_info ={}
         self.lp_info = {
             "lp_solution_value": [],
             "lp_solution_integer_var_value": []
         }
         self.mean_std = mean_std
+        self.feature_dim = int(getattr(pointer_net, "embedding_dim", 0) or 0)
+        if self.feature_dim not in {_GENERIC_FEATURE_DIM, 23}:
+            raise ValueError(
+                "Unsupported cut-policy input dimension "
+                f"{self.feature_dim}; expected 13 (HEM) or 23 (structure-aware)."
+            )
+        self.use_structure_features = self.feature_dim > _GENERIC_FEATURE_DIM
+        self.use_structure_rerank = (
+            self.use_structure_features
+            if use_structure_rerank is None
+            else bool(use_structure_rerank)
+        )
+        self.structure_pool_factor = max(1.0, float(structure_pool_factor))
+        self.structure_anchor_ratio = min(
+            1.0, max(0.0, float(structure_anchor_ratio))
+        )
+        structure_weights = np.asarray(
+            [
+                structure_quality_weight,
+                structure_policy_weight,
+                structure_coverage_weight,
+                structure_representation_weight,
+            ],
+            dtype=np.float64,
+        )
+        if np.any(structure_weights < 0) or structure_weights.sum() <= 0:
+            raise ValueError("structure submodular weights must be nonnegative with positive sum")
+        structure_weights /= structure_weights.sum()
+        (
+            self.structure_quality_weight,
+            self.structure_policy_weight,
+            self.structure_coverage_weight,
+            self.structure_representation_weight,
+        ) = structure_weights.tolist()
 
     @staticmethod
     def _fallback_cutsel_result(cuts, maxnselectedcuts):
@@ -118,6 +171,7 @@ class CutSelectAgent(CutselBase):
 
     def _safe_learned_cutsel_call(self, selector, cuts, forcedcuts, root, maxnselectedcuts):
         """Run a Python policy without allowing exceptions through SCIP's C API."""
+        callback_start = time.perf_counter()
         try:
             result = selector(cuts, forcedcuts, root, maxnselectedcuts)
             return self._validate_cutsel_result(result, cuts, maxnselectedcuts)
@@ -132,6 +186,68 @@ class CutSelectAgent(CutselBase):
                 # failure while recovering from the original exception.
                 pass
             return self._fallback_cutsel_result(cuts, maxnselectedcuts)
+        finally:
+            self._callback_calls += 1
+            self._callback_time_seconds += time.perf_counter() - callback_start
+            self._callback_input_cuts += len(cuts)
+            self._callback_max_input_cuts = max(
+                self._callback_max_input_cuts, len(cuts)
+            )
+            self._callback_forced_cuts += len(forcedcuts)
+
+    def _record_phase_times(
+        self,
+        feature_extraction=0.0,
+        device_transfer=0.0,
+        policy_inference=0.0,
+        structure_rerank=0.0,
+    ):
+        self._phase_time_seconds["feature_extraction"] += float(feature_extraction)
+        self._phase_time_seconds["device_transfer"] += float(device_transfer)
+        self._phase_time_seconds["policy_inference"] += float(policy_inference)
+        self._phase_time_seconds["structure_rerank"] += float(structure_rerank)
+
+    def get_telemetry(self):
+        calls = int(self._callback_calls)
+        total_time = float(self._callback_time_seconds)
+        feature_summary = {}
+        state = self.data.get("state") if isinstance(self.data, dict) else None
+        if isinstance(state, np.ndarray) and state.ndim == 2 and len(state):
+            candidate_indices = self.data.get("candidate_indices", list(range(len(state))))
+            candidate_position = {
+                int(global_idx): local_idx
+                for local_idx, global_idx in enumerate(candidate_indices)
+            }
+            selected_positions = [
+                candidate_position[int(global_idx)]
+                for global_idx in self.data.get("selected_action", [])
+                if int(global_idx) in candidate_position
+            ]
+            if selected_positions:
+                selected_features = state[selected_positions]
+                feature_summary = {
+                    "selected_count": len(selected_positions),
+                    "mean_obj_parallelism": float(np.mean(selected_features[:, 0])),
+                    "mean_efficacy": float(np.mean(selected_features[:, 1])),
+                    "mean_support": float(np.mean(selected_features[:, 2])),
+                    "max_support": float(np.max(selected_features[:, 2])),
+                    "mean_integral_support": float(np.mean(selected_features[:, 3])),
+                    "mean_violation": float(np.mean(selected_features[:, 4])),
+                }
+        return {
+            "callback_calls": calls,
+            "callback_time_seconds": total_time,
+            "mean_callback_time_seconds": total_time / calls if calls else 0.0,
+            "mean_input_cuts": self._callback_input_cuts / calls if calls else 0.0,
+            "max_input_cuts": int(self._callback_max_input_cuts),
+            "total_forced_cuts": int(self._callback_forced_cuts),
+            "phase_time_seconds": dict(self._phase_time_seconds),
+            "effective_max_candidates": self.max_candidates,
+            "effective_max_selected_cuts": self.max_selected_cuts,
+            "decode_type": self.decode_type,
+            "use_structure_rerank": bool(self.use_structure_rerank),
+            "selected_feature_summary": feature_summary,
+        }
 
     def _policy_candidate_indices(self, cuts):
         """Keep a deterministic, inexpensive high-efficacy policy pool."""
@@ -193,6 +309,63 @@ class CutSelectAgent(CutselBase):
     def _normalize(self, cuts_features):
         # print(f"debug log mean: {self.mean_std.mean}, std: {self.mean_std.std}")
         return (cuts_features-self.mean_std.mean) / (self.mean_std.std + self.mean_std.epsilon)
+
+    def _extract_policy_features(self, candidate_cuts):
+        if self.use_structure_features:
+            return advanced_cut_feature_generator(
+                self.scip_model,
+                candidate_cuts,
+                return_metadata=True,
+            )
+        if self.use_structure_rerank:
+            # A generic 13D A3C checkpoint can still be combined with the
+            # proposed structure-aware post-processor.  The neural policy
+            # sees exactly its original 13 features; only the deterministic
+            # reranker consumes the structural metadata.
+            features, metadata = advanced_cut_feature_generator(
+                self.scip_model,
+                candidate_cuts,
+                return_metadata=True,
+            )
+            return features[:, :_GENERIC_FEATURE_DIM], metadata
+        features = generic_advanced_cut_feature_generator(
+            self.scip_model,
+            candidate_cuts,
+        )
+        return features, None
+
+    def _select_policy_indices(
+        self,
+        policy_indices,
+        candidate_cuts,
+        cut_features,
+        structure_metadata,
+        target_count,
+    ):
+        if self.use_structure_rerank:
+            if structure_metadata is None:
+                raise ValueError("structure-aware reranking requires structure metadata")
+            return self._apply_structure_aware_selection(
+                policy_indices,
+                candidate_cuts,
+                cut_features,
+                structure_metadata,
+                target_count,
+            )
+        selected = self._dedupe_preserve_order(policy_indices, len(candidate_cuts))
+        if len(selected) < target_count:
+            selected_set = set(selected)
+            selected.extend(
+                idx
+                for idx in range(len(candidate_cuts))
+                if idx not in selected_set
+            )
+        selected = selected[:target_count]
+        return selected, {
+            "enabled": False,
+            "feature_mode": "structure23_no_rerank" if self.use_structure_features else "hem_generic13",
+            "selected_count": len(selected),
+        }
 
     def _dedupe_preserve_order(self, idxes, num_cuts):
         seen = set()
@@ -302,88 +475,142 @@ class CutSelectAgent(CutselBase):
         target_count,
     ):
         num_cuts = len(cuts)
-        family_names = get_structure_family_names()
         proposed_idxes = self._dedupe_preserve_order(proposed_idxes, num_cuts)
         if len(proposed_idxes) == 0:
             proposed_idxes = [0]
 
         base_scores = self._compute_structure_scores(cut_features, structure_metadata)
+        if len(base_scores):
+            score_min = float(np.min(base_scores))
+            score_max = float(np.max(base_scores))
+            if score_max - score_min > 1e-12:
+                quality = (base_scores - score_min) / (score_max - score_min)
+            else:
+                quality = np.zeros_like(base_scores)
+        else:
+            quality = base_scores
         heuristic_tail = list(np.argsort(-base_scores))
         candidate_rank = self._dedupe_preserve_order(proposed_idxes + heuristic_tail, num_cuts)
-        quota, active_families = self._compute_family_quota(candidate_rank, structure_metadata, target_count)
+        pool_size = min(
+            len(candidate_rank),
+            max(target_count, int(math.ceil(target_count * self.structure_pool_factor))),
+        )
+        expansion_pool = candidate_rank[:pool_size]
+        policy_set = candidate_rank[:target_count]
 
-        if not quota:
-            selected = candidate_rank[:target_count]
-            if len(selected) == 0:
-                selected = [0]
-            return selected, {
-                "family_quota": {},
-                "family_counts": {},
-                "base_scores": base_scores.tolist(),
-            }
+        # F(S) is a nonnegative modular quality/prior term plus two monotone
+        # submodular terms: concave-over-modular role coverage and facility
+        # location over the expansion pool.  Greedy completion after fixed
+        # policy anchors therefore retains the standard (1-1/e) guarantee for
+        # the residual cardinality-constrained problem.
+        family_matrix = np.asarray(
+            [structure_metadata[idx]["family_fractions"] for idx in expansion_pool],
+            dtype=np.float64,
+        )
+        demand = family_matrix.sum(axis=0)
+        if demand.sum() > 1e-12:
+            demand = demand / demand.sum()
+        else:
+            demand = np.full(family_matrix.shape[1], 1.0 / family_matrix.shape[1])
 
-        selected = []
-        selected_set = set()
-        family_counts = {family_name: 0 for family_name in active_families}
+        # Compute all cosine similarities in one matrix multiplication.  The
+        # old nested loop rebuilt two descriptors per pair and needlessly
+        # extended every SCIP cut-selection callback.
+        expansion_index = np.asarray(expansion_pool, dtype=np.int64)
+        similarity_features = np.concatenate(
+            [
+                cut_features[expansion_index, :5].astype(np.float64),
+                family_matrix[:, :-1],
+            ],
+            axis=1,
+        )
+        similarity_norms = np.linalg.norm(similarity_features, axis=1)
+        similarity = (similarity_features @ similarity_features.T) / (
+            np.outer(similarity_norms, similarity_norms) + 1e-12
+        )
+        similarity = np.clip(similarity, 0.0, 1.0)
+        np.fill_diagonal(similarity, 1.0)
 
-        for family_name in sorted(active_families, key=lambda name: quota.get(name, 0), reverse=True):
-            need = quota.get(family_name, 0)
-            if need <= 0:
-                continue
-            family_candidates = [
-                idx for idx in candidate_rank
-                if idx not in selected_set and structure_metadata[idx]["dominant_family"] == family_name
-            ]
-            if len(family_candidates) < need:
-                family_index = family_names.index(family_name)
-                family_candidates.extend(
-                    idx for idx in candidate_rank
-                    if idx not in selected_set
-                    and idx not in family_candidates
-                    and structure_metadata[idx]["family_fractions"][family_index] >= 0.25
-                )
-            for idx in family_candidates[:need]:
-                selected.append(idx)
-                selected_set.add(idx)
-                family_counts[family_name] += 1
-                if len(selected) >= target_count:
-                    break
-            if len(selected) >= target_count:
-                break
+        pool_position = {idx: pos for pos, idx in enumerate(expansion_pool)}
+        policy_rank = {idx: rank for rank, idx in enumerate(candidate_rank)}
+        anchor_count = min(
+            len(proposed_idxes),
+            len(policy_set),
+            max(1, int(math.ceil(target_count * self.structure_anchor_ratio))),
+        )
+        selected = list(policy_set[:anchor_count])
+        selected_set = set(selected)
+        coverage = np.zeros(family_matrix.shape[1], dtype=np.float64)
+        represented = np.zeros(pool_size, dtype=np.float64)
+        for idx in selected:
+            pos = pool_position[idx]
+            coverage += family_matrix[pos]
+            represented = np.maximum(represented, similarity[:, pos])
 
+        marginal_trace = []
         while len(selected) < target_count:
             best_idx = None
             best_score = -1e18
-            for idx in candidate_rank:
+            best_components = None
+            for idx in expansion_pool:
                 if idx in selected_set:
                     continue
-                family_name = structure_metadata[idx]["dominant_family"]
-                diversity_penalty = 0.0
-                if selected:
-                    diversity_penalty = max(
-                        self._structure_similarity(idx, prev_idx, cut_features, structure_metadata)
-                        for prev_idx in selected
+                pos = pool_position[idx]
+                policy_prior = 1.0 - policy_rank[idx] / max(1, len(candidate_rank) - 1)
+                modular_gain = (
+                    self.structure_quality_weight * float(quality[idx])
+                    + self.structure_policy_weight * policy_prior
+                )
+                coverage_gain = self.structure_coverage_weight * float(
+                    np.dot(
+                        demand,
+                        np.sqrt(coverage + family_matrix[pos]) - np.sqrt(coverage),
                     )
-                quota_penalty = 0.0
-                if family_name in family_counts and family_counts[family_name] >= quota.get(family_name, 0):
-                    quota_penalty = 0.08 * (family_counts[family_name] - quota.get(family_name, 0) + 1)
-                score = float(base_scores[idx]) - 0.12 * diversity_penalty - quota_penalty
-                if score > best_score:
-                    best_score = score
+                )
+                representation_gain = self.structure_representation_weight * float(
+                    np.mean(np.maximum(represented, similarity[:, pos]) - represented)
+                )
+                total_gain = modular_gain + coverage_gain + representation_gain
+                if total_gain > best_score:
+                    best_score = total_gain
                     best_idx = idx
+                    best_components = {
+                        "modular": modular_gain,
+                        "role_coverage": coverage_gain,
+                        "representativeness": representation_gain,
+                    }
             if best_idx is None:
                 break
             selected.append(best_idx)
             selected_set.add(best_idx)
-            dominant_family = structure_metadata[best_idx]["dominant_family"]
-            if dominant_family in family_counts:
-                family_counts[dominant_family] += 1
+            best_pos = pool_position[best_idx]
+            coverage += family_matrix[best_pos]
+            represented = np.maximum(represented, similarity[:, best_pos])
+            marginal_trace.append(
+                {
+                    "candidate": int(best_idx),
+                    "gain": float(best_score),
+                    **best_components,
+                }
+            )
 
         if len(selected) == 0:
             selected = [0]
-        return selected[:target_count], {
-            "family_quota": quota,
-            "family_counts": family_counts,
+        selected = [int(idx) for idx in selected]
+        return selected, {
+            "enabled": True,
+            "feature_mode": "role_submodular_rerank_v1",
+            "policy_anchor_count": anchor_count,
+            "candidate_pool_size": pool_size,
+            "objective_weights": {
+                "quality": self.structure_quality_weight,
+                "policy": self.structure_policy_weight,
+                "role_coverage": self.structure_coverage_weight,
+                "representativeness": self.structure_representation_weight,
+            },
+            "policy_set_retained": len(set(selected).intersection(policy_set)),
+            "role_coverage": coverage.tolist(),
+            "marginal_trace": marginal_trace,
             "base_scores": base_scores.tolist(),
         }
     
@@ -428,11 +655,7 @@ class CutSelectAgent(CutselBase):
                 'result': SCIP_RESULT.SUCCESS
             }
         st_before_input = time.time()
-        cuts_features, structure_metadata = advanced_cut_feature_generator(
-            self.scip_model,
-            candidate_cuts,
-            return_metadata=True,
-        )
+        cuts_features, structure_metadata = self._extract_policy_features(candidate_cuts)
         et_feature_extractor = time.time()
         if self.mean_std is not None:
             # normalize cut features
@@ -448,18 +671,28 @@ class CutSelectAgent(CutselBase):
             decode_len = sel_cuts_num if self.policy_type != 'with_token' else (len(candidate_cuts) + 1)
             _, input_idxs = self.policy(input_cuts.float(), decode_len, self.decode_type)
         st_end_inference = time.time()
-        print(f"process input time: {st_end_input-st_before_input} s")
-        print(f"input feature extractor time: {et_feature_extractor-st_before_input} s")
-        print(f"input cpu data to gpu time: {st_end_input-et_feature_extractor} s")
-        print(f"pointer net inference time: {st_end_inference - st_end_input} s")
+        if not logger.is_compact_text_log():
+            print(f"process input time: {st_end_input-st_before_input} s")
+            print(f"input feature extractor time: {et_feature_extractor-st_before_input} s")
+            print(f"input cpu data to gpu time: {st_end_input-et_feature_extractor} s")
+            print(f"pointer net inference time: {st_end_inference - st_end_input} s")
         idxes = [input.cpu().detach().item() for input in input_idxs]
-        true_idxes, structure_info = self._apply_structure_aware_selection(
+        rerank_start = time.time()
+        true_idxes, structure_info = self._select_policy_indices(
             idxes,
-            cuts,
+            candidate_cuts,
             cuts_features,
             structure_metadata,
             sel_cuts_num,
         )
+        rerank_end = time.time()
+        self._record_phase_times(
+            feature_extraction=et_feature_extractor - st_before_input,
+            device_transfer=st_end_input - et_feature_extractor,
+            policy_inference=st_end_inference - st_end_input,
+            structure_rerank=rerank_end - rerank_start,
+        )
+        true_idxes = [int(candidate_indices[idx]) for idx in true_idxes]
         all_idxes = list(range(num_cuts))
         selected_set = set(true_idxes)
         not_sel_idxes = [idx for idx in all_idxes if idx not in selected_set]
@@ -512,12 +745,15 @@ class CutSelectAgent(CutselBase):
         candidate_indices = self._policy_candidate_indices(cuts)
         candidate_cuts = [cuts[int(idx)] for idx in candidate_indices]
         max_sel_cuts_num = len(candidate_cuts) + 1
+        if self.max_selected_cuts is not None and int(self.max_selected_cuts) > 0:
+            # Only the capped prefix can be returned to SCIP.  Preserve one
+            # additional step for the learned end token and skip the rest.
+            max_sel_cuts_num = min(
+                max_sel_cuts_num,
+                int(self.max_selected_cuts) + 1,
+            )
         st_before_input = time.time()
-        cuts_features, structure_metadata = advanced_cut_feature_generator(
-            self.scip_model,
-            candidate_cuts,
-            return_metadata=True,
-        )
+        cuts_features, structure_metadata = self._extract_policy_features(candidate_cuts)
         et_feature_extractor = time.time()
         if self.mean_std is not None:
             # normalize cut features
@@ -532,10 +768,11 @@ class CutSelectAgent(CutselBase):
         with torch.no_grad():
             _, input_idxs =  self.policy(input_cuts.float(), max_sel_cuts_num, self.decode_type) # (list of tensor, list of tensor)
         st_end_inference = time.time()
-        print(f"process input time: {st_end_input-st_before_input} s")
-        print(f"input feature extractor time: {et_feature_extractor-st_before_input} s")
-        print(f"input cpu data to gpu time: {st_end_input-et_feature_extractor} s")
-        print(f"pointer net inference time: {st_end_inference - st_end_input} s")
+        if not logger.is_compact_text_log():
+            print(f"process input time: {st_end_input-st_before_input} s")
+            print(f"input feature extractor time: {et_feature_extractor-st_before_input} s")
+            print(f"input cpu data to gpu time: {st_end_input-et_feature_extractor} s")
+            print(f"pointer net inference time: {st_end_inference - st_end_input} s")
 
         idxes = [input.cpu().detach().item() for input in input_idxs]
         raw_sel_cuts_num = len(idxes)
@@ -552,12 +789,20 @@ class CutSelectAgent(CutselBase):
                 'result': SCIP_RESULT.SUCCESS
             }
         # select cuts 
-        selected_local_idxes, structure_info = self._apply_structure_aware_selection(
+        rerank_start = time.time()
+        selected_local_idxes, structure_info = self._select_policy_indices(
             [idx for idx in idxes if idx != len(candidate_cuts)],
             candidate_cuts,
             cuts_features,
             structure_metadata,
             sel_cuts_num,
+        )
+        rerank_end = time.time()
+        self._record_phase_times(
+            feature_extraction=et_feature_extractor - st_before_input,
+            device_transfer=st_end_input - et_feature_extractor,
+            policy_inference=st_end_inference - st_end_input,
+            structure_rerank=rerank_end - rerank_start,
         )
         true_idxes = [int(candidate_indices[idx]) for idx in selected_local_idxes]
         sorted_cuts = self._sort_all_cuts(cuts, true_idxes)
@@ -616,7 +861,16 @@ class HierarchyCutSelectAgent(CutSelectAgent):
         device,
         decode_type,
         mean_std,
-        policy_type
+        policy_type,
+        max_candidates=512,
+        max_selected_cuts=64,
+        use_structure_rerank=None,
+        structure_pool_factor=2.0,
+        structure_anchor_ratio=0.25,
+        structure_quality_weight=0.35,
+        structure_policy_weight=0.20,
+        structure_coverage_weight=0.25,
+        structure_representation_weight=0.20,
     ):
         CutSelectAgent.__init__(
             self,
@@ -627,7 +881,16 @@ class HierarchyCutSelectAgent(CutSelectAgent):
             device,
             decode_type,
             mean_std,
-            policy_type
+            policy_type,
+            max_candidates=max_candidates,
+            max_selected_cuts=max_selected_cuts,
+            use_structure_rerank=use_structure_rerank,
+            structure_pool_factor=structure_pool_factor,
+            structure_anchor_ratio=structure_anchor_ratio,
+            structure_quality_weight=structure_quality_weight,
+            structure_policy_weight=structure_policy_weight,
+            structure_coverage_weight=structure_coverage_weight,
+            structure_representation_weight=structure_representation_weight,
         )
         self.cutsel_percent_policy = cutsel_percent_policy
         self.high_level_data = {}
@@ -662,11 +925,7 @@ class HierarchyCutSelectAgent(CutSelectAgent):
         st_before_input = time.time()
 
         # compute states
-        cuts_features, structure_metadata = advanced_cut_feature_generator(
-            self.scip_model,
-            candidate_cuts,
-            return_metadata=True,
-        )
+        cuts_features, structure_metadata = self._extract_policy_features(candidate_cuts)
         et_feature_extractor = time.time()
         # normalize states
         if self.mean_std is not None:
@@ -707,19 +966,28 @@ class HierarchyCutSelectAgent(CutSelectAgent):
             _, input_idxs = self.policy(input_cuts.float(), decode_len, self.decode_type)
         st_end_pointer_net_inference = time.time()
 
-        print(f"process input time: {st_end_input-st_before_input} s")
-        print(f"input feature extractor time: {et_feature_extractor-st_before_input} s")
-        print(f"input cpu data to gpu time: {st_end_input-et_feature_extractor} s")
-        print(f"high level policy time: {st_end_highlevel_policy_inference-st_end_input} s")
-        print(f"pointer net inference time: {st_end_pointer_net_inference - st_end_highlevel_policy_inference} s")
+        if not logger.is_compact_text_log():
+            print(f"process input time: {st_end_input-st_before_input} s")
+            print(f"input feature extractor time: {et_feature_extractor-st_before_input} s")
+            print(f"input cpu data to gpu time: {st_end_input-et_feature_extractor} s")
+            print(f"high level policy time: {st_end_highlevel_policy_inference-st_end_input} s")
+            print(f"pointer net inference time: {st_end_pointer_net_inference - st_end_highlevel_policy_inference} s")
 
         idxes = [input.cpu().detach().item() for input in input_idxs]
-        selected_local_idxes, structure_info = self._apply_structure_aware_selection(
+        rerank_start = time.time()
+        selected_local_idxes, structure_info = self._select_policy_indices(
             idxes,
             candidate_cuts,
             cuts_features,
             structure_metadata,
             sel_cuts_num,
+        )
+        rerank_end = time.time()
+        self._record_phase_times(
+            feature_extraction=et_feature_extractor - st_before_input,
+            device_transfer=st_end_input - et_feature_extractor,
+            policy_inference=st_end_pointer_net_inference - st_end_input,
+            structure_rerank=rerank_end - rerank_start,
         )
         true_idxes = [int(candidate_indices[idx]) for idx in selected_local_idxes]
         sorted_cuts = self._sort_all_cuts(cuts, true_idxes)
@@ -782,6 +1050,10 @@ class HeuristicBeamCutSelectAgent(CutselBase):
             "violation": 0.25,
         }
         self.data = {}
+        self._callback_calls = 0
+        self._callback_time_seconds = 0.0
+        self._callback_input_cuts = 0
+        self._callback_max_input_cuts = 0
 
     def _minmax(self, values):
         values = np.asarray(values, dtype=np.float64)
@@ -864,6 +1136,20 @@ class HeuristicBeamCutSelectAgent(CutselBase):
         return list(beam[0].selected) if beam[0].selected else [0]
 
     def cutselselect(self, cuts, forcedcuts, root, maxnselectedcuts):
+        callback_start = time.perf_counter()
+        try:
+            return self._cutselselect_impl(
+                cuts, forcedcuts, root, maxnselectedcuts
+            )
+        finally:
+            self._callback_calls += 1
+            self._callback_time_seconds += time.perf_counter() - callback_start
+            self._callback_input_cuts += len(cuts)
+            self._callback_max_input_cuts = max(
+                self._callback_max_input_cuts, len(cuts)
+            )
+
+    def _cutselselect_impl(self, cuts, forcedcuts, root, maxnselectedcuts):
         logger.log("heuristic beam cut selection policy")
         logger.log(f"forcedcuts length: {len(forcedcuts)}")
         logger.log(f"len cuts: {len(cuts)}")
@@ -921,6 +1207,41 @@ class HeuristicBeamCutSelectAgent(CutselBase):
 
     def get_data(self):
         return self.data
+
+    def get_telemetry(self):
+        calls = int(self._callback_calls)
+        total_time = float(self._callback_time_seconds)
+        feature_summary = {}
+        state = self.data.get("state") if isinstance(self.data, dict) else None
+        selected_indices = self.data.get("action", []) if isinstance(self.data, dict) else []
+        if (
+            isinstance(state, np.ndarray)
+            and state.ndim == 2
+            and len(state)
+            and selected_indices
+        ):
+            selected_features = state[np.asarray(selected_indices, dtype=np.int64)]
+            feature_summary = {
+                "selected_count": len(selected_indices),
+                "mean_obj_parallelism": float(np.mean(selected_features[:, 0])),
+                "mean_efficacy": float(np.mean(selected_features[:, 1])),
+                "mean_support": float(np.mean(selected_features[:, 2])),
+                "max_support": float(np.max(selected_features[:, 2])),
+                "mean_integral_support": float(np.mean(selected_features[:, 3])),
+                "mean_violation": float(np.mean(selected_features[:, 4])),
+            }
+        return {
+            "callback_calls": calls,
+            "callback_time_seconds": total_time,
+            "mean_callback_time_seconds": total_time / calls if calls else 0.0,
+            "mean_input_cuts": self._callback_input_cuts / calls if calls else 0.0,
+            "max_input_cuts": int(self._callback_max_input_cuts),
+            "effective_max_candidates": self.max_candidates,
+            "effective_max_selected_cuts": self.max_selected_cuts,
+            "decode_type": "heuristic_beam",
+            "use_structure_rerank": True,
+            "selected_feature_summary": feature_summary,
+        }
 
     def get_lp_info(self):
         return {}

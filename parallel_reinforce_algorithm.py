@@ -17,6 +17,8 @@ import json
 import copy 
 import os.path as osp
 import math
+import queue
+import time
 import gtimer as gt
 from collections import OrderedDict
 
@@ -38,6 +40,11 @@ from petri_mip_generator import (
     get_petri_model_description_path,
 )
 from path_utils import append_date_to_filename, is_latest_keyword, latest_matching_file, resolve_path
+from global_const import (
+    cut_postprocessor_schema_for_dim,
+    validate_checkpoint_feature_schema,
+    validate_checkpoint_postprocessor_schema,
+)
 
 # for debug
 # from ipdb import set_trace
@@ -68,23 +75,243 @@ def _run_single_worker(target, args=(), kwargs=None):
     return [local_queue.get()]
 
 
+def _emit_sampling_progress(progress_queue, worker_id, event, step, **details):
+    if progress_queue is None or worker_id is None:
+        return
+    progress_queue.put({
+        "worker_id": worker_id,
+        "pid": os.getpid(),
+        "event": event,
+        "step": step,
+        "details": details,
+    })
+
+
+def _put_sampling_result(return_queue, worker_id, result):
+    if worker_id is None:
+        return_queue.put(result)
+    else:
+        return_queue.put((worker_id, os.getpid(), result))
+
+
+def _stop_process(process):
+    if process is None:
+        return
+    if process.is_alive():
+        process.terminate()
+    process.join(timeout=10)
+    if process.is_alive() and hasattr(process, "kill"):
+        process.kill()
+        process.join(timeout=10)
+
+
+def _run_supervised_sampling(target, worker_specs, env, trainer_kwargs):
+    stall_timeout = trainer_kwargs.get("worker_stall_timeout_seconds")
+    if stall_timeout is None:
+        solve_limit = max(0.0, float(getattr(env, "scip_time_limit", 0.0)))
+        interrupt_grace = max(
+            0.0,
+            float(getattr(env, "scip_interrupt_grace_seconds", 0.0)),
+        )
+        supervisor_grace = max(
+            1.0,
+            float(trainer_kwargs.get("worker_stall_grace_seconds", 60.0)),
+        )
+        stall_timeout = solve_limit + interrupt_grace + supervisor_grace
+    stall_timeout = max(1.0, float(stall_timeout))
+    restart_limit = max(0, int(trainer_kwargs.get("worker_restart_limit", 1)))
+    poll_seconds = min(1.0, max(0.1, stall_timeout / 20.0))
+
+    return_queue = mp.Queue()
+    progress_queue = mp.Queue()
+    records = {}
+    results = {}
+
+    def start_worker(worker_id, attempt):
+        spec = worker_specs[worker_id]
+        worker_args = list(spec["args"])
+        if attempt > 0:
+            seed_index = int(spec["seed_index"])
+            worker_args[seed_index] = (
+                int(worker_args[seed_index]) + attempt * 104729
+            ) % (2 ** 30)
+        process = mp.Process(
+            target=target,
+            args=(
+                return_queue,
+                *worker_args,
+                progress_queue,
+                worker_id,
+            ),
+        )
+        process.start()
+        records[worker_id] = {
+            "process": process,
+            "attempt": attempt,
+            "last_progress": time.monotonic(),
+            "dead_since": None,
+            "last_event": {
+                "event": "spawned",
+                "step": 0,
+                "details": {
+                    "seed": worker_args[int(spec["seed_index"])],
+                },
+            },
+        }
+        logger.log(
+            f"sampling worker {worker_id} started: pid={process.pid}, "
+            f"attempt={attempt + 1}, seed={worker_args[int(spec['seed_index'])]}"
+        )
+
+    for worker_id in range(len(worker_specs)):
+        start_worker(worker_id, 0)
+
+    try:
+        while len(results) < len(worker_specs):
+            while True:
+                try:
+                    message = progress_queue.get_nowait()
+                except queue.Empty:
+                    break
+                worker_id = message["worker_id"]
+                record = records.get(worker_id)
+                if record is None:
+                    continue
+                if message.get("pid") != record["process"].pid:
+                    continue
+                record["last_progress"] = time.monotonic()
+                record["last_event"] = message
+                details = message.get("details", {})
+                logger.log(
+                    f"sampling worker {worker_id} pid={message.get('pid')} "
+                    f"{message.get('event')} step={message.get('step')} "
+                    f"instance={details.get('instance_file', '')} "
+                    f"status={details.get('status', '')} "
+                    f"solving_time={details.get('solving_time', '')}"
+                )
+
+            result_messages = []
+            try:
+                result_messages.append(return_queue.get(timeout=poll_seconds))
+            except queue.Empty:
+                pass
+            while True:
+                try:
+                    result_messages.append(return_queue.get_nowait())
+                except queue.Empty:
+                    break
+            for worker_id, worker_pid, result in result_messages:
+                record = records[worker_id]
+                if worker_pid != record["process"].pid:
+                    continue
+                results[worker_id] = result
+                record["process"].join(timeout=10)
+                if record["process"].is_alive():
+                    _stop_process(record["process"])
+
+            now = time.monotonic()
+            for worker_id, record in list(records.items()):
+                if worker_id in results:
+                    continue
+                process = record["process"]
+                if not process.is_alive():
+                    process.join(timeout=1)
+                    if record["dead_since"] is None:
+                        record["dead_since"] = now
+                        continue
+                    if now - record["dead_since"] < max(2.0, poll_seconds * 3):
+                        continue
+                    exit_code = process.exitcode
+                    last_event = record["last_event"]
+                    next_attempt = record["attempt"] + 1
+                    if next_attempt > restart_limit:
+                        raise RuntimeError(
+                            f"Sampling worker {worker_id} exited before returning data "
+                            f"after {next_attempt} attempts (pid={process.pid}, "
+                            f"exit_code={exit_code}, last_event={last_event})."
+                        )
+                    logger.log(
+                        f"sampling worker {worker_id} exited unexpectedly "
+                        f"(pid={process.pid}, exit_code={exit_code}, "
+                        f"last_event={last_event}); restarting"
+                    )
+                    try:
+                        process.close()
+                    except (AttributeError, ValueError):
+                        pass
+                    start_worker(worker_id, next_attempt)
+                    continue
+                stalled_for = now - record["last_progress"]
+                if stalled_for <= stall_timeout:
+                    continue
+
+                last_event = record["last_event"]
+                logger.log(
+                    f"sampling worker {worker_id} stalled for {stalled_for:.1f}s "
+                    f"(pid={process.pid}, last_event={last_event}); terminating"
+                )
+                _stop_process(process)
+                next_attempt = record["attempt"] + 1
+                if next_attempt > restart_limit:
+                    raise RuntimeError(
+                        f"Sampling worker {worker_id} exceeded the {stall_timeout:.1f}s "
+                        f"stall timeout after {next_attempt} attempts. "
+                        f"Last progress: {last_event}"
+                    )
+                try:
+                    process.close()
+                except (AttributeError, ValueError):
+                    pass
+                start_worker(worker_id, next_attempt)
+    finally:
+        for record in records.values():
+            process = record["process"]
+            try:
+                if process.is_alive():
+                    _stop_process(process)
+                else:
+                    process.join(timeout=1)
+                process.close()
+            except (AttributeError, ValueError):
+                pass
+        return_queue.close()
+        progress_queue.close()
+
+    return [results[worker_id] for worker_id in range(len(worker_specs))]
+
+
 def _resolve_main_device(device_hint):
     if torch.cuda.is_available():
         try:
             return torch.device(device_hint)
         except Exception:
             return torch.device('cuda:0')
+    if str(device_hint).lower().startswith('cuda'):
+        raise RuntimeError(
+            f'Configured GPU device {device_hint!r} is unavailable. '
+            'Install a CUDA-enabled PyTorch build or explicitly configure CPU.'
+        )
     return torch.device('cpu')
 
 
 def _resolve_worker_devices(device_hints):
     if torch.cuda.is_available():
         return device_hints
+    if any(str(device_hint).lower() != 'cpu' for device_hint in device_hints):
+        raise RuntimeError(
+            'Configured GPU worker devices are unavailable. '
+            'Install a CUDA-enabled PyTorch build or explicitly configure CPU workers.'
+        )
     return ['cpu']
 
 
 def _resolve_worker_device(device_hint):
     if not torch.cuda.is_available():
+        if str(device_hint).lower() != 'cpu':
+            raise RuntimeError(
+                f'Configured GPU worker device {device_hint!r} is unavailable. '
+                'Install a CUDA-enabled PyTorch build or explicitly configure CPU.'
+            )
         return torch.device('cpu')
     if isinstance(device_hint, torch.device):
         return device_hint
@@ -134,7 +361,14 @@ def _resolve_runtime_paths(all_kwargs, resolve_latest_model=False):
             section['test_instance_path'] = str(resolve_path(section['test_instance_path']))
         if section.get('test_model_path'):
             if is_latest_keyword(section['test_model_path']) and resolve_latest_model:
-                section['test_model_path'] = str(latest_matching_file('data', 'params.pkl', 'trained params.pkl'))
+                latest_model_root = section.get('latest_model_root') or 'data'
+                section['test_model_path'] = str(
+                    latest_matching_file(
+                        latest_model_root,
+                        'params.pkl',
+                        'trained params.pkl',
+                    )
+                )
             elif is_latest_keyword(section['test_model_path']):
                 section['test_model_path'] = section['test_model_path']
             else:
@@ -142,10 +376,13 @@ def _resolve_runtime_paths(all_kwargs, resolve_latest_model=False):
 
 
 def _a3c_reward_with_schedule_penalty(env_step_info, reward_type):
-    base_reward = env_step_info[reward_type]
-    return base_reward + env_step_info.get('schedule_wait_penalty', 0.0)
+    # The chamber/robot waiting terms already belong to the MIP's
+    # lexicographic secondary objective.  Adding them again here changes the
+    # learning target and weakens PDI optimization.  Keep the cut policy's
+    # reward identical to the metric used by the formal ablation.
+    return env_step_info[reward_type]
 
-def generate_samples(return_queue,env,policy,value,epoch,samples_per_worker,sel_cuts_percent,device,train_decode_type,reward_type,seed,mean_std,policy_type,random_seed):
+def generate_samples(return_queue,env,policy,value,epoch,samples_per_worker,sel_cuts_percent,device,train_decode_type,reward_type,seed,mean_std,policy_type,random_seed,progress_queue=None,worker_id=None):
     runtime_device = _resolve_worker_device(device)
     device = str(runtime_device)
     policy = policy.to(runtime_device)
@@ -175,7 +412,14 @@ def generate_samples(return_queue,env,policy,value,epoch,samples_per_worker,sel_
     for step in range(samples_per_worker):
         logger.log(f"{log_prefix}: training...  epoch: {epoch}...  steps: {step+1}")
         _log_cuda_memory(log_prefix)
-        env.reset()
+        instance_file = env.reset()
+        _emit_sampling_progress(
+            progress_queue,
+            worker_id,
+            "started",
+            step + 1,
+            instance_file=instance_file,
+        )
         # reset action agent
         cutsel_agent = CutSelectAgent(
             env.m,
@@ -188,6 +432,15 @@ def generate_samples(return_queue,env,policy,value,epoch,samples_per_worker,sel_
             policy_type
         )
         env_step_info = env.step(cutsel_agent)
+        _emit_sampling_progress(
+            progress_queue,
+            worker_id,
+            "completed",
+            step + 1,
+            instance_file=instance_file,
+            status=env_step_info.get("status"),
+            solving_time=env_step_info.get("solving_time"),
+        )
         state_action_dict = cutsel_agent.get_data()
         lp_info = cutsel_agent.get_lp_info()
         # cuts_info = cutsel_agent.get_cuts_info()
@@ -220,9 +473,9 @@ def generate_samples(return_queue,env,policy,value,epoch,samples_per_worker,sel_
         cutsel_agent.free_problem()
 
     # list dict numpy cuda tensor 都可以传，cpu tensor 传不了，带梯度信息的cuda tensor 传不了
-    return_queue.put((env_step_infos, training_datasets)) 
+    _put_sampling_result(return_queue, worker_id, (env_step_infos, training_datasets))
 
-def generate_hierarchy_samples(return_queue,env,policy,cutsel_policy,value,epoch,samples_per_worker,sel_cuts_percent,device,train_decode_type,reward_type,seed,mean_std,policy_type,random_seed):
+def generate_hierarchy_samples(return_queue,env,policy,cutsel_policy,value,epoch,samples_per_worker,sel_cuts_percent,device,train_decode_type,reward_type,seed,mean_std,policy_type,random_seed,progress_queue=None,worker_id=None):
     runtime_device = _resolve_worker_device(device)
     device = str(runtime_device)
     policy = policy.to(runtime_device)
@@ -253,7 +506,14 @@ def generate_hierarchy_samples(return_queue,env,policy,cutsel_policy,value,epoch
     for step in range(samples_per_worker):
         logger.log(f"{log_prefix}: training...  epoch: {epoch}...  steps: {step+1}")
         _log_cuda_memory(log_prefix)
-        env.reset()
+        instance_file = env.reset()
+        _emit_sampling_progress(
+            progress_queue,
+            worker_id,
+            "started",
+            step + 1,
+            instance_file=instance_file,
+        )
         # reset action agent
         cutsel_agent = HierarchyCutSelectAgent(
             env.m,
@@ -267,6 +527,15 @@ def generate_hierarchy_samples(return_queue,env,policy,cutsel_policy,value,epoch
             policy_type
         )
         env_step_info = env.step(cutsel_agent)
+        _emit_sampling_progress(
+            progress_queue,
+            worker_id,
+            "completed",
+            step + 1,
+            instance_file=instance_file,
+            status=env_step_info.get("status"),
+            solving_time=env_step_info.get("solving_time"),
+        )
         state_action_dict = cutsel_agent.get_data()
         lp_info = cutsel_agent.get_lp_info()
         high_level_state_action_dict = cutsel_agent.get_high_level_data()
@@ -303,7 +572,11 @@ def generate_hierarchy_samples(return_queue,env,policy,cutsel_policy,value,epoch
         cutsel_agent.free_problem()
 
     # list dict numpy cuda tensor 都可以传，cpu tensor 传不了，带梯度信息的cuda tensor 传不了
-    return_queue.put((env_step_infos, training_datasets, training_high_level_datasets)) 
+    _put_sampling_result(
+        return_queue,
+        worker_id,
+        (env_step_infos, training_datasets, training_high_level_datasets),
+    )
 
 def evaluate(
     return_queue,
@@ -432,8 +705,9 @@ def test(
     if use_learned_cutsel:
         policy = policy.to(runtime_device)
     _ = set_global_seed(seed)
-    print(f"pid: {os.getpid()} debug log random seed {seed}")
-    print(f"pid: {os.getpid()}, instance_files: {instance_file_list}")
+    if not logger.is_compact_text_log():
+        print(f"pid: {os.getpid()} debug log random seed {seed}")
+        print(f"pid: {os.getpid()}, instance_files: {instance_file_list}")
     neg_solving_time = np.zeros((len(instance_file_list), 1))
     neg_total_nodes = np.zeros((len(instance_file_list), 1))
     primaldualintegral = np.zeros((len(instance_file_list), 1))
@@ -531,8 +805,9 @@ def test_hierarchy(
         policy = policy.to(runtime_device)
         cutsel_percent_policy = cutsel_percent_policy.to(device)
     _ = set_global_seed(seed)
-    print(f"pid: {os.getpid()} debug log random seed {seed}")
-    print(f"pid: {os.getpid()}, instance_files: {instance_file_list}")
+    if not logger.is_compact_text_log():
+        print(f"pid: {os.getpid()} debug log random seed {seed}")
+        print(f"pid: {os.getpid()}, instance_files: {instance_file_list}")
     neg_solving_time = np.zeros((len(instance_file_list), 1))
     neg_total_nodes = np.zeros((len(instance_file_list), 1))
     primaldualintegral = np.zeros((len(instance_file_list), 1))
@@ -851,10 +1126,14 @@ def main():
     parser.add_argument('--instance_type', type=str, default="item_placement") # for log file name 
     parser.add_argument('--time_limit', type=int, default=10) # for log file name 
     parser.add_argument('--test_time_limit', type=float, default=-1.0)
+    parser.add_argument('--test_gap_limit', type=float, default=-1.0)
+    parser.add_argument('--test_solution_limit', type=int, default=-1)
     parser.add_argument('--use_cutsel_percent_policy', type=str, default='False')
     parser.add_argument('--policy_type', type=str, default='with_token')
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--scip_seed', type=int, default=1)
+    parser.add_argument('--resume_model', type=str, default='')
+    parser.add_argument('--start_epoch', type=int, default=-1)
     parser.add_argument('--test_decode_type', type=str, default='beam_search')
     parser.add_argument('--generate_petri_instance', type=str, default='False')
     parser.add_argument('--petri_instance_dir', type=str, default='generated_instances/petri')
@@ -866,6 +1145,11 @@ def main():
     parser.add_argument('--petri_4x1_wafers', type=int, default=20)
     parser.add_argument('--petri_2x2_wafers', type=int, default=20)
     parser.add_argument('--petri_pec_pool_size', type=int, default=8)
+    parser.add_argument('--petri_warm_start_time_limit', type=float, default=180.0)
+    parser.add_argument('--petri_allow_missing_warm_start', action='store_true')
+    parser.add_argument('--petri_max_schedule_wait_time', type=float, default=0.0)
+    parser.add_argument('--petri_cleaning_interval', type=int, default=10)
+    parser.add_argument('--petri_cleaning_process_time', type=float, default=0.0)
     parser.add_argument('--petri_process_mode', type=str, default='auto')
     parser.add_argument('--petri_mode_sequence', type=str, default='')
     parser.add_argument('--petri_wafer_mode_map', '--petri_wafer_modes', dest='petri_wafer_mode_map', type=str, default='')
@@ -885,6 +1169,8 @@ def main():
     args = parser.parse_args()
     args.config_file = str(resolve_path(args.config_file))
     args.petri_instance_dir = str(resolve_path(args.petri_instance_dir))
+    if args.resume_model:
+        args.resume_model = str(resolve_path(args.resume_model))
     with open(args.config_file, 'r', encoding='utf-8') as f:
         all_kwargs = json.load(f)
     _resolve_runtime_paths(all_kwargs, resolve_latest_model=args.train_type == 'test')
@@ -906,6 +1192,9 @@ def main():
             num_steps=args.petri_num_steps,
             total_wafers=args.petri_total_wafers,
             pec_pool_size=args.petri_pec_pool_size,
+            cleaning_interval=args.petri_cleaning_interval,
+            cleaning_process_time=args.petri_cleaning_process_time,
+            max_schedule_wait_time=args.petri_max_schedule_wait_time,
             process_mode=args.petri_process_mode,
             mode_sequence=args.petri_mode_sequence,
             wafer_mode_map=args.petri_wafer_mode_map,
@@ -922,7 +1211,9 @@ def main():
         generated_path = generate_petri_mip_instance(
             args.petri_instance_dir,
             args.petri_instance_name,
-            petri_cfg
+            petri_cfg,
+            warm_start_time_limit=args.petri_warm_start_time_limit,
+            require_warm_start=not args.petri_allow_missing_warm_start,
         )
         generated_instance_name = os.path.basename(generated_path)
         args.petri_instance_name = generated_instance_name
@@ -933,8 +1224,21 @@ def main():
         )
         all_kwargs['env']['instance_file_path'] = args.petri_instance_dir
         all_kwargs['env']['single_instance_file'] = generated_instance_name
+        if (
+            petri_cfg.mix_wafer_ids
+            and not all_kwargs['env'].get('warm_start_solution_file')
+        ):
+            all_kwargs['env']['warm_start_solution_file'] = 'auto'
+            logger.log('enabled automatic warm-start loading for generated mixed Petri LP')
         if 'test_kwargs' in all_kwargs:
             all_kwargs['test_kwargs']['test_instance_path'] = args.petri_instance_dir
+            test_env_kwargs = all_kwargs['test_kwargs'].get('test_env_kwargs')
+            if (
+                isinstance(test_env_kwargs, dict)
+                and petri_cfg.mix_wafer_ids
+                and not test_env_kwargs.get('warm_start_solution_file')
+            ):
+                test_env_kwargs['warm_start_solution_file'] = 'auto'
         if args.single_instance_file in {'all', requested_instance_name}:
             args.single_instance_file = generated_instance_name
 
@@ -954,7 +1258,10 @@ def main():
         multi_devices = _resolve_worker_devices(device_kwargs['multi_devices'])
         file_num_each_worker = math.ceil(len(f_name_list) / (test_kwargs['n_jobs'] * len(multi_devices)))
 
-        env_kwargs = all_kwargs['env']
+        # Keep the training environment intact.  Formal test runs may need a
+        # substantially larger SCIP budget than the training sampler.
+        env_kwargs = dict(all_kwargs['env'])
+        env_kwargs.update(test_kwargs.get('test_env_kwargs', {}))
         env_kwargs.pop('instance_file_path')
         effective_use_learned_cutsel = _as_bool(env_kwargs.get('use_learned_cutsel', True))
         test_time_limit = args.test_time_limit
@@ -962,7 +1269,16 @@ def main():
             test_time_limit = args.time_limit
         if test_time_limit > 0:
             env_kwargs['scip_time_limit'] = test_time_limit
+        if args.test_gap_limit >= 0:
+            env_kwargs['scip_relative_gap_limit'] = args.test_gap_limit
+        if args.test_solution_limit > 0:
+            env_kwargs['scip_solution_limit'] = args.test_solution_limit
         print(f"effective test scip_time_limit: {env_kwargs.get('scip_time_limit')}")
+        print(
+            "effective test termination: "
+            f"gap={env_kwargs.get('scip_relative_gap_limit', 0.0)}, "
+            f"solutions={env_kwargs.get('scip_solution_limit', -1)}"
+        )
         all_kwargs['experiment']['seed'] = args.seed
         seed = set_global_seed(all_kwargs['experiment']['seed'])
 
@@ -981,17 +1297,46 @@ def main():
                 raise FileNotFoundError(
                     f"test_model_path does not exist: {test_kwargs['test_model_path']}"
                 )
-            state_dict = torch.load(test_kwargs['test_model_path'], map_location=device)
+            state_dict = torch.load(
+                test_kwargs['test_model_path'],
+                map_location=device,
+                weights_only=False,
+            )
             model_tag = os.path.basename(test_kwargs['test_model_path'])
         else:
             test_model_base_path = test_kwargs['test_model_base_path']
             test_model_file = test_kwargs['test_model']
             model_tag = str(test_model_file)
             if len(test_model_file) == 1:
-                state_dict = torch.load(os.path.join(test_model_base_path, test_model_file[0]), map_location=device)
+                state_dict = torch.load(
+                    os.path.join(test_model_base_path, test_model_file[0]),
+                    map_location=device,
+                    weights_only=False,
+                )
             else:
-                list_state_dict = [torch.load(os.path.join(test_model_base_path, cur_test_model_file), map_location=device) for cur_test_model_file in test_model_file]
-                state_dict = get_average_models(list_state_dict)
+                list_state_dict = [
+                    torch.load(
+                        os.path.join(test_model_base_path, cur_test_model_file),
+                        map_location=device,
+                        weights_only=False,
+                    )
+                    for cur_test_model_file in test_model_file
+                ]
+            state_dict = get_average_models(list_state_dict)
+        validate_checkpoint_feature_schema(
+            state_dict,
+            net_share_kwargs['embedding_dim'],
+            model_tag,
+        )
+        validate_checkpoint_postprocessor_schema(
+            state_dict,
+            net_share_kwargs['embedding_dim'],
+            model_tag,
+            cut_postprocessor_schema_for_dim(
+                net_share_kwargs['embedding_dim'],
+                all_kwargs['env'].get('cutsel_use_structure_rerank'),
+            ),
+        )
         # load policy
         policy = Pointer(
             embedding_dim=net_share_kwargs['embedding_dim'],
@@ -1088,6 +1433,33 @@ def main():
         if args.reward_type == "lp_solution_value":
             all_kwargs['env']['max_rounds_root'] = 2
             all_kwargs['env']['scip_time_limit'] = args.time_limit
+        if args.start_epoch >= 0:
+            all_kwargs['start_epoch'] = args.start_epoch
+
+        if all_kwargs['algorithm'].get('evaluate_freq', 0) > 0:
+            train_instance_path = os.path.realpath(
+                all_kwargs['env']['instance_file_path']
+            )
+            validation_instance_path = os.path.realpath(
+                all_kwargs['evaluate_kwargs']['test_instance_path']
+            )
+            if train_instance_path == validation_instance_path:
+                raise ValueError(
+                    "Validation instances must be held out from training; "
+                    f"both paths resolve to {train_instance_path}."
+                )
+            if not os.path.isdir(validation_instance_path):
+                raise FileNotFoundError(
+                    "No held-out validation instances were found in "
+                    f"{validation_instance_path}. Generate the structure "
+                    "benchmark suite before training."
+                )
+            validation_files = _collect_instance_files(validation_instance_path)
+            if not validation_files:
+                raise FileNotFoundError(
+                    "The held-out validation directory contains no LP/MPS/CIP "
+                    f"instances: {validation_instance_path}."
+                )
         
         all_kwargs['parser_args'] = dict(vars(args))
         experiment_kwargs = all_kwargs['experiment']
@@ -1162,12 +1534,42 @@ def main():
             # .to(device)
 
         # preload model for retraining
-        if (
+        resume_model_path = args.resume_model
+        if not resume_model_path and (
             experiment_kwargs['base_log_dir'] is not None
             and os.path.isdir(experiment_kwargs['base_log_dir'])
             and 'params.pkl' in os.listdir(experiment_kwargs['base_log_dir'])
         ):
-            state_dict = torch.load(os.path.join(experiment_kwargs['base_log_dir'], 'params.pkl'), map_location=device)
+            resume_model_path = os.path.join(
+                experiment_kwargs['base_log_dir'],
+                'params.pkl',
+            )
+        if resume_model_path:
+            if not os.path.isfile(resume_model_path):
+                raise FileNotFoundError(f"resume_model does not exist: {resume_model_path}")
+            logger.log(
+                f"resuming model weights from {resume_model_path}; "
+                f"start_epoch={all_kwargs['start_epoch']}"
+            )
+            state_dict = torch.load(
+                resume_model_path,
+                map_location=device,
+                weights_only=False,
+            )
+            validate_checkpoint_feature_schema(
+                state_dict,
+                net_share_kwargs['embedding_dim'],
+                resume_model_path,
+            )
+            validate_checkpoint_postprocessor_schema(
+                state_dict,
+                net_share_kwargs['embedding_dim'],
+                resume_model_path,
+                cut_postprocessor_schema_for_dim(
+                    net_share_kwargs['embedding_dim'],
+                    all_kwargs['env'].get('cutsel_use_structure_rerank'),
+                ),
+            )
             pointer_net.load_state_dict(state_dict['pointer_net'])
             if cutsel_percent_policy_kwargs['use_cutsel_percent_policy']:
                 cutsel_percent_policy.load_state_dict(state_dict['cutsel_percent_net'])
@@ -1203,10 +1605,13 @@ def main():
         gt.reset_root()
         test_stats = {}
         eva_stats = {}
+        best_validation_pdi = float('inf')
         train_highlevel_stats = {}
         tmp_stats = {}
         # training loop
         for epoch in gt.timed_for(range(all_kwargs['start_epoch'], alg_kwargs['num_epochs']), save_itrs=True):
+            test_stats = {}
+            eva_stats = {}
         # for epoch in range(alg_kwargs['num_epochs']):
             # samples per epoch 
             # mini_batchsize
@@ -1269,7 +1674,14 @@ def main():
                 logger.record_dict(test_stats)
             gt.stamp('online_testing', unique=False)
             # evaluating ..........
-            if  (alg_kwargs['evaluate_freq'] > 0) and (epoch % alg_kwargs['evaluate_freq'] == 0):
+            # Evaluation happens before this iteration's training update, so
+            # ``epoch`` is the number of completed epochs.  Skip epoch 0 to
+            # avoid selecting the untrained initialization as a checkpoint.
+            if (
+                alg_kwargs['evaluate_freq'] > 0
+                and epoch > 0
+                and epoch % alg_kwargs['evaluate_freq'] == 0
+            ):
                 # logger.log(f"evaluating...  epoch: {epoch+1}")
                 # assert alg_kwargs['evaluate_samples'] % trainer_kwargs['n_jobs'] == 0
                 # evaluate_sample_each_worker = int(alg_kwargs['evaluate_samples'] / trainer_kwargs['n_jobs'])
@@ -1296,7 +1708,7 @@ def main():
                 # eva_stats = algorithm.log_evaluate_stats(evaluate_results)
 
                 evaluate_kwargs = all_kwargs['evaluate_kwargs']
-                logger.log(f"evaluating...  epoch: {epoch+1}")
+                logger.log(f"evaluating held-out instances... completed epoch: {epoch}")
                 # get instance file path
                 test_instance_path = evaluate_kwargs['test_instance_path']
                 f_name_list = _collect_instance_files(test_instance_path)
@@ -1335,44 +1747,80 @@ def main():
 
             if eva_stats:
                 logger.record_dict(eva_stats)
+                validation_pdi = eva_stats.get(
+                    'evaluating/primaldualintegral Mean'
+                )
+                if (
+                    validation_pdi is not None
+                    and np.isfinite(float(validation_pdi))
+                    and float(validation_pdi) < best_validation_pdi
+                ):
+                    best_validation_pdi = float(validation_pdi)
+                    algorithm.save_best_validation_checkpoint(
+                        epoch,
+                        best_validation_pdi,
+                    )
+                logger.record_tabular(
+                    'evaluating/best_primaldualintegral',
+                    best_validation_pdi,
+                )
             gt.stamp('evaluating', unique=False)
             ####################################################
             # sampling ........
             logger.log(f"training...  epoch: {epoch+1}")
-            if len(worker_devices) == 1 and trainer_kwargs['n_jobs'] == 1:
-                worker_device = worker_devices[0]
-                s = train_multiprocess_seeds[0]
-                if cutsel_percent_policy_kwargs['use_cutsel_percent_policy']:
-                    raw_results = _run_single_worker(
-                        generate_hierarchy_samples,
-                        args=(env, pointer_net, cutsel_percent_policy, value_net, epoch+1, samples_each_worker, args.sel_cuts_percent, worker_device, alg_kwargs['train_decode_type'], alg_kwargs['reward_type'], s, mean_std, args.policy_type, seed)
-                    )
-                else:
-                    raw_results = _run_single_worker(
-                        generate_samples,
-                        args=(env, pointer_net, value_net, epoch+1, samples_each_worker, args.sel_cuts_percent, worker_device, alg_kwargs['train_decode_type'], alg_kwargs['reward_type'], s, mean_std, args.policy_type, seed)
-                    )
+            worker_specs = []
+            if cutsel_percent_policy_kwargs['use_cutsel_percent_policy']:
+                sampling_target = generate_hierarchy_samples
+                seed_index = 10
             else:
-                return_queue = mp.SimpleQueue()
-                processes = []
-                for i, worker_device in enumerate(worker_devices):
-                    for num in range(trainer_kwargs['n_jobs']):
-                        s = train_multiprocess_seeds[num] + i
-                        if cutsel_percent_policy_kwargs['use_cutsel_percent_policy']:
-                            p = mp.Process(
-                                target=generate_hierarchy_samples,
-                                args=(return_queue,env,pointer_net,cutsel_percent_policy,value_net,epoch+1,samples_each_worker,args.sel_cuts_percent,worker_device,alg_kwargs['train_decode_type'],alg_kwargs['reward_type'],s,mean_std,args.policy_type,seed)
-                            )
-                        else:     
-                            p = mp.Process(
-                                target=generate_samples,
-                                args=(return_queue,env,pointer_net,value_net,epoch+1,samples_each_worker,args.sel_cuts_percent,worker_device,alg_kwargs['train_decode_type'],alg_kwargs['reward_type'],s,mean_std,args.policy_type,seed)
-                            )
-                        p.start()
-                        processes.append(p)
-                raw_results = [return_queue.get() for p in processes] # list of tuple
-                for p in processes:
-                    p.join()
+                sampling_target = generate_samples
+                seed_index = 9
+            for i, worker_device in enumerate(worker_devices):
+                for num in range(trainer_kwargs['n_jobs']):
+                    s = train_multiprocess_seeds[num] + i
+                    if cutsel_percent_policy_kwargs['use_cutsel_percent_policy']:
+                        worker_args = (
+                            env,
+                            pointer_net,
+                            cutsel_percent_policy,
+                            value_net,
+                            epoch + 1,
+                            samples_each_worker,
+                            args.sel_cuts_percent,
+                            worker_device,
+                            alg_kwargs['train_decode_type'],
+                            alg_kwargs['reward_type'],
+                            s,
+                            mean_std,
+                            args.policy_type,
+                            seed,
+                        )
+                    else:
+                        worker_args = (
+                            env,
+                            pointer_net,
+                            value_net,
+                            epoch + 1,
+                            samples_each_worker,
+                            args.sel_cuts_percent,
+                            worker_device,
+                            alg_kwargs['train_decode_type'],
+                            alg_kwargs['reward_type'],
+                            s,
+                            mean_std,
+                            args.policy_type,
+                            seed,
+                        )
+                    worker_specs.append({
+                        "args": worker_args,
+                        "seed_index": seed_index,
+                    })
+            raw_results = _run_supervised_sampling(
+                sampling_target,
+                worker_specs,
+                env,
+                trainer_kwargs,
+            )
             gt.stamp('sampling data', unique=False)
 
             # training policy and value with data 

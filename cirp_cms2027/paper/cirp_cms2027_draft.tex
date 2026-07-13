@@ -1,0 +1,229 @@
+% Initial manuscript for the 60th CIRP Conference on Manufacturing Systems.
+% The class and CRC package are copied from the official CMS 2027 template.
+\documentclass[5p,times,procedia]{elsarticle}
+\flushbottom
+\pdfmapfile{+txfonts.map}
+
+\usepackage{ecrc}
+\usepackage{amssymb,amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage[bookmarks=false]{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\volume{00}
+\firstpage{1}
+\journalname{Procedia CIRP}
+\runauth{Author et al.}
+\jid{procir}
+
+\begin{document}
+\begin{frontmatter}
+
+\dochead{60th CIRP Conference on Manufacturing Systems (CIRP CMS 2027)}
+
+\title{Executable Scheduling of a Dual-Source Rotary Cluster Tool}
+
+\author[a]{First Author}
+\author[a]{Second Author\corref{cor1}}
+\address[a]{Affiliation, Street, City and Postcode, Country}
+\cortext[cor1]{Corresponding author. E-mail address: author@example.com}
+
+\begin{abstract}
+Rotary semiconductor cluster tools are commonly evaluated through chamber sequences, although throughput also depends on single-slot alignment, robot repositioning, load-lock capacity, auxiliary-wafer availability, and cleaning. This paper studies a manufacturing cell in which product wafers and reusable process-enabling carrier (PEC) wafers enter from different stores and share two robots, two load locks, and two rotary chambers. Two recipes coexist: a four-wafer batch and a two-pair exchange chain. We develop a finite-horizon mixed-integer scheduling model in which every loaded and empty transfer is represented, remaining single wafers are paired with physical PEC tokens, and cleaning can interrupt an exchange chain only after the chamber has been converted to PEC. A binary-skeleton procedure constructs feasible initial schedules without restricting the original optimization problem. Recorded validation solves reproduce both recipes and reveal a sharp difficulty increase under mixed production. The resulting model turns a Gantt chart into an executable equipment certificate and provides a basis for comparing release, cleaning, and warm-start policies by throughput and resource utilization.
+\end{abstract}
+
+\begin{keyword}
+Semiconductor manufacturing \sep cluster tool \sep production scheduling \sep mixed-integer optimization \sep manufacturing systems
+\end{keyword}
+
+\end{frontmatter}
+
+\section{Introduction}
+
+Cluster tools integrate transport, alignment, buffering, and processing in a tightly coupled manufacturing cell. A schedule that lists only chamber start times may look efficient while being impossible to execute: a single-slot aligner can be assigned two wafers, a robot can be shown performing consecutive loaded transfers from incompatible locations, or an unavailable auxiliary wafer can appear as an ``empty'' chamber position. These inconsistencies become more likely when multiple recipes and material sources share the same equipment.
+
+This work considers a dual-source rotary cluster tool. Product wafers enter through load ports (LPs), while reusable process-enabling carrier (PEC) wafers enter through a separate vacuum-side store. Both flows use an atmospheric robot (ATR), upper and lower load locks (LLs), a vacuum robot (VTR), and two four-pocket rotary chambers. Product wafers additionally require a single-slot aligner (AL). The tool alternates between a four-wafer batch recipe, denoted $4\times1$, and a pair-exchange recipe, denoted $2\times2$. Periodic cleaning occupies a chamber with PEC wafers.
+
+The manufacturing question is not only how to assign jobs to chambers, but how to synchronize the entire material-handling system so that the last product returns as early as possible. Existing work has formulated non-cyclic cluster-tool schedules with explicit precedence variables \cite{ahn2025cluster}, optimized concurrent wafer types through learned dispatching \cite{kim2025adaptive}, and studied cyclic or residency-constrained multi-type processing \cite{li2025cyclic,yang2025residency}. The present system differs in the combination of a reusable auxiliary stream, two rotary recipe grammars, a one-slot aligner, and cleaning inside a finite mixed-production horizon.
+
+The paper contributes: (i) an equipment-level representation that accounts for loaded and empty robot motion, explicit LL slots, serial alignment, PEC conservation, and chamber-side rotation; (ii) a mixed-integer scheduling formulation for joint $4\times1$ and $2\times2$ production; (iii) a PEC-aware binary-skeleton procedure that supplies an incumbent without changing the original feasible set; and (iv) validation cases and manufacturing metrics that separate productive utilization, loaded waiting, and true robot idle time.
+
+\section{Manufacturing system}
+
+\subsection{Material routes}
+
+Let $W=W^{F}\cup W^{M}$ be the product wafers for the two recipes, $Q$ the reusable PEC tokens, and $C=\{\mathrm{CH2},\mathrm{CH3}\}$ the rotary chambers. Product wafers follow
+\begin{equation}
+\begin{split}
+\mathrm{LP}\rightarrow\mathrm{ATR}\rightarrow\mathrm{AL}\rightarrow\mathrm{LL}^{up}
+\rightarrow\mathrm{VTR}\rightarrow\mathrm{CH}\rightarrow{}\\
+\mathrm{LL}^{low}\rightarrow\mathrm{ATR}\rightarrow\mathrm{LP},
+\end{split}
+\label{eq:product-route}
+\end{equation}
+whereas PEC wafers follow $\mathrm{PECStore}\rightarrow\mathrm{VTR}\rightarrow\mathrm{CH}\rightarrow\mathrm{VTR}\rightarrow\mathrm{PECStore}$. PEC tokens are reusable but not duplicable. Each token remains occupied from the beginning of its chamber-bound VTR operation until its return to storage.
+
+\begin{figure}[t]
+\centering
+\setlength{\fboxsep}{5pt}
+\begin{tabular}{c c c c c}
+\fbox{LP} & $\rightarrow$ & \fbox{ATR--AL} & $\rightarrow$ & \fbox{Upper LL}\\[4pt]
+&&&& $\downarrow$\\[-2pt]
+\fbox{PEC store} & $\leftrightarrow$ & \fbox{VTR} & $\leftrightarrow$ & \fbox{CH2 / CH3}\\[4pt]
+&&$\updownarrow$&&\\[-2pt]
+&&\fbox{Lower LL}&$\rightarrow$&\fbox{ATR--LP}
+\end{tabular}
+\caption{Dual-source material flow. Product wafers traverse both atmospheric and vacuum domains; PEC wafers circulate within the vacuum domain.}
+\label{fig:tool}
+\end{figure}
+
+AL can hold one wafer. If ATR brings a pair, it places and calibrates the first wafer, removes it, and only then places the second. The pair is subsequently moved to two explicit upper-LL slots. Near the end of a lot, the LP releases a single remaining product wafer instead of creating a fictitious partner; a real PEC token fills the required chamber pocket.
+
+\subsection{Rotary recipes}
+
+In a $4\times1$ operation, a product pair is assigned to each chamber side. The chamber performs front load, half rotation, rear load, processing, rear unload, half rotation, and front unload. A PEC pair may fill the unused side only in a tail batch.
+
+The $2\times2$ recipe is an exchange chain. Product pairs occupy a contiguous sequence between a PEC head and a PEC tail. A product pair participates in two adjacent exposures; the interval between them is used for the physical exchange. Thus bridge waiting is necessary for the exchanging pair, but long waits elsewhere indicate a resource conflict or a poor release decision.
+
+Cleaning is a pure-PEC rotary batch. When a cleaning interval is reached inside a $2\times2$ chain, production does not wait for every remaining product pair to finish. Instead, the current segment converts the chamber contents to PEC, cleaning occurs, and a later PEC-bounded segment resumes the exchange chain. Pure-PEC chamber contents outside this transition are unnecessary and are excluded from ordinary production batches.
+
+\section{Executable scheduling model}
+
+\subsection{Pair and batch assignment}
+
+Product wafers of the same recipe are paired. Let $P$ be the pair set, $B_c$ the candidate $4\times1$ batches in chamber $c$, and $K_c$ the candidate $2\times2$ exchange positions. Binary variables $x^{F}_{pbhc}$ and $x^{M}_{pkc}$ assign pair $p$ to side $h$ of batch $b$ or exchange position $k$. Every product pair is assigned exactly once:
+\begin{equation}
+\sum_{c\in C}\left(\sum_{b\in B_c}\sum_{h=1}^{2}x^{F}_{pbhc}
++\sum_{k\in K_c}x^{M}_{pkc}\right)=1,\quad p\in P.
+\label{eq:assignment}
+\end{equation}
+Activation variables enforce a contiguous prefix of used batches or chain positions. Further binary decisions choose LL slots, cleaning epochs, and the order of optional operations sharing a unary resource.
+
+\subsection{Time, movement, and capacity}
+
+Every physical action $a$ has start $s_a$, completion $e_a$, and duration $d_a$. When optional actions $a$ and $b$ use the same robot or module, binary variable $y_{ab}$ chooses their order:
+\begin{align}
+s_b &\ge e_a+\delta_{ab}-M(1-y_{ab}),\nonumber\\
+s_a &\ge e_b+\delta_{ba}-My_{ab}.
+\label{eq:disjunction}
+\end{align}
+The transition $\delta_{ab}$ depends on the endpoint of $a$ and pickup location of $b$. It therefore contains the empty repositioning needed before the next pickup. The same disjunctive structure prevents overlap on ATR, VTR, AL, chamber windows, and LL slots.
+
+Robot actions distinguish pickup, loaded travel, placement, and empty return. This distinction is important for both feasibility and reporting. VTR waiting means that a wafer is physically held by the VTR while no transfer action is executed. An empty VTR with no assigned move is idle and should not appear as wafer waiting in a Gantt chart.
+
+PEC conservation is enforced over complete token-occupancy intervals. Rotary precedences link chamber-side loading, half rotations, exposures, exchanges, and unloading. The makespan objective is
+\begin{equation}
+\min C_{\max},\qquad C_{\max}\ge C^{return}_w\quad \forall w\in W.
+\label{eq:makespan}
+\end{equation}
+For presentation, a second lexicographic phase may fix $C_{\max}$ and compact avoidable waits. This phase improves readability but cannot degrade the primary production objective.
+
+\subsection{Performance accounting}
+
+The event model supports a resource accounting that is consistent with the physical state. For resource $r$ and horizon $[0,C_{\max}]$, let $\mathcal{B}_r$ be its non-overlapping busy intervals. Utilization is
+\begin{equation}
+U_r=\frac{\sum_{a\in\mathcal{B}_r}(e_a-s_a)}{C_{\max}}.
+\label{eq:utilization}
+\end{equation}
+For chambers, busy time is separated into productive exposure, rotation/load/unload, and cleaning. For robots, it is separated into pickup/place, loaded travel, and empty repositioning. These components reveal whether an apparent utilization increase comes from value-adding processing or from additional handling.
+
+Loaded waiting is computed from wafer-state intervals rather than from blank space on a Gantt lane. If robot $r$ holds wafer $w$ from pickup completion $p_{wr}$ to placement start $d_{wr}$, and $\mathcal{T}_{wr}$ is the union of its loaded-travel actions, then
+\begin{equation}
+L_{wr}=d_{wr}-p_{wr}-\operatorname{length}(\mathcal{T}_{wr}).
+\label{eq:loadedwait}
+\end{equation}
+Robot idle time is the residual horizon in which the robot has no wafer and performs no action; it is not shown as wafer waiting. The distinction is particularly important for VTR, whose empty repositioning between a chamber and a load lock may otherwise be mistaken for a missing action.
+
+Product cycle time is measured from LP pickup to LP return. PEC circulation time is measured from store pickup to store return, and concurrent token occupancy determines the required PEC inventory. For $2\times2$, bridge waiting is tagged by recipe state. This makes it possible to separate the necessary wait of the exchanging pair from avoidable waiting caused by late release, VTR conflict, or a recipe transition.
+
+\section{Binary-skeleton initial schedule}
+
+Detailed scheduling models can spend considerable time before finding a feasible incumbent, particularly when cleaning divides a $2\times2$ exchange chain. The structure-preserving binary-skeleton (SPBS) procedure fixes only high-confidence discrete choices in a temporary model copy. These choices include pair-to-batch assignment, batch activation, cleaning segment, and LL slot. Local ATR/AL/LL precedences may be fixed in a full profile, whereas VTR order is left free in a relaxed profile because it has the strongest coupling with chamber availability.
+
+SCIP completes continuous times and all unfixed orders in the temporary model \cite{bestuzheva2023scip}. If the result is feasible, it is transferred to the original model as an incumbent. No fixing, bound, or ordering constraint is added to the original branch-and-bound problem. The solver can improve or reject the supplied schedule and retains its normal global-optimality guarantee.
+
+The skeleton follows the two recipe grammars. It uses PEC only for a legitimate $4\times1$ tail and creates PEC-bounded $2\times2$ segments around cleaning. This separation between high-confidence recipe structure and solver-completed timing is preferable to a complete hand-coded dispatch sequence, which can silently rule out better interleavings.
+
+\subsection{Independent schedule validation}
+
+A solver-feasible solution is necessary but not sufficient evidence that the implementation matches the intended equipment. We therefore define an independent event validator. It reconstructs resource and material states from the exported schedule and checks seven invariants: (1) AL occupancy never exceeds one wafer; (2) every LL slot contains at most one wafer; (3) consecutive robot events have location continuity, including empty repositioning; (4) every PEC token has non-overlapping circulation intervals; (5) chamber-side contents agree with the active rotary recipe; (6) a pure-PEC chamber state is linked to cleaning or a cleaning conversion boundary; and (7) each product has one complete LP-to-LP route.
+
+The validator also recomputes $C_{\max}$ and the utilization measures in (\ref{eq:utilization})--(\ref{eq:loadedwait}) from event timestamps instead of trusting model variables. A Gantt chart is released as a result only if these checks pass. This independent reconstruction is intended to catch indexing mistakes, inactive optional intervals that leak into plotting, and incorrect waiting labels even when the mathematical solver reports feasibility.
+
+\section{Validation and evaluation plan}
+
+\subsection{Recorded model checks}
+
+Table~\ref{tab:validation} summarizes recorded deterministic validation runs with two chambers, reusable PEC tokens, 110-s $4\times1$ processing, and 50-s $2\times2$ exposures. They verify route connectivity and expected recipe behavior; they are not a final comparative experiment.
+
+\begin{table}[t]
+\caption{Recorded formulation-validation runs.}
+\label{tab:validation}
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+Products & Vars & Cons. & $C_{\max}$ (s) & Status\\
+\midrule
+$4\times1$: 4 & 684 & 1,645 & 388 & optimal\\
+$2\times2$: 4 & 876 & 1,959 & 324 & optimal\\
+Mixed: $4+4$ & 1,182 & 2,765 & 508 & optimal\\
+Mixed: $8+8$ & 2,932 & 7,995 & 1,150 & 60-s limit\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The pure cases solve at the root in less than one second. Mixed $4+4$ takes approximately 11 s, while mixed $8+8$ retains a 99.98\% relative gap at the time limit. The abrupt change indicates that interaction between recipes, rather than either pure flow, is the central scheduling difficulty.
+
+SPBS has also generated a feasible incumbent for a mixed cleaning case with 53 $4\times1$ wafers, 43 $2\times2$ wafers, two chambers, eight PEC tokens, and cleaning every ten full-chamber cycles. The incumbent makespan is 7,086 s and can be accepted by the unfixed original model. This result verifies the transfer interface and cleaning segmentation, but a no-SPBS control is required before claiming a computational benefit.
+
+\subsection{Manufacturing performance study}
+
+The final study will vary product counts, recipe ratio, PEC inventory, cleaning interval, and process times. Pure recipes, balanced mixtures, and strongly unbalanced mixtures will be evaluated at unseen scales. The primary production measure is $C_{\max}$; supporting measures are throughput, product cycle time, and ATR, VTR, and chamber utilization. We will distinguish loaded-robot waiting from robot idle time and report the frequency and duration of bridge waits.
+
+For computation, no warm start, full SPBS, and relaxed SPBS will be paired by instance and solver seed. Required outcomes are time to first feasible schedule, primal-dual integral, final gap, nodes, optimality rate, and initial-schedule construction time. A schedule validator will independently check AL occupancy, LL capacity, robot location continuity, PEC-token overlap, chamber-side sequence, and cleaning boundaries.
+
+\begin{table*}[t]
+\caption{Planned manufacturing experiment factors.}
+\label{tab:doe}
+\centering
+\begin{tabular}{lll}
+\toprule
+Factor & Levels & Main response\\
+\midrule
+Recipe mix & pure, 1:3, 1:1, 3:1 & $C_{\max}$, utilization\\
+Product count & 8, 16, 24, 32 & time, gap, nodes\\
+PEC inventory & feasible low, nominal, high & delay, feasibility\\
+Cleaning interval & short, nominal, long & throughput, clean share\\
+SPBS profile & none, full, relaxed & first solution, PDI\\
+Motion times & low, nominal, high & bottleneck shift\\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+Table~\ref{tab:doe} separates design factors from solver randomness. Instances are generated before method comparison and remain fixed. Each method receives the same time limit, hardware allocation, solver parameters, and random seeds. Test recipe ratios and larger product counts are withheld while the SPBS profile and any solver settings are chosen on validation instances.
+
+Results will be reported per scenario, not only as one aggregate average. Paired differences in PDI and best-known makespan will receive bootstrap 95\% confidence intervals; solved-instance times will additionally use shifted geometric means. Timeout runs remain in gap and PDI statistics. Gantt examples will be selected by prespecified representative cases rather than by the largest observed improvement.
+
+\section{Discussion}
+
+The model is deliberately more detailed than a chamber-level assignment formulation. That detail has a manufacturing purpose. A late ATR release can leave a $2\times2$ chamber waiting for its next pair; a VTR sequence without a return move cannot be executed; and an ``empty'' tail position hides an actual PEC inventory requirement. Explicit modeling makes these losses visible and allows a Gantt chart to be audited against equipment logic.
+
+The same detail increases model size. Mixed recipes couple assignment binaries, chamber-side rotations, robot orders, and continuous timing, as the validation cliff shows. SPBS addresses the primal side by supplying a feasible schedule, but it is not a proof shortcut and may be ineffective when its batch assignment is poor. The planned sensitivity study must therefore identify the PEC inventory, cleaning frequency, and recipe ratios for which the skeleton remains useful.
+
+The present instances use engineering parameters rather than fab production traces. Consequently, the paper currently supports claims about model consistency and computational behavior, not a plant-level throughput gain. A final CMS submission should add either anonymized industrial parameters or a documented design-of-experiments range and should compare at least one dispatching or decomposition baseline in addition to SCIP without a warm start.
+
+\section{Conclusion}
+
+This paper formulates an executable schedule for a dual-source rotary cluster tool. Product and PEC wafers retain their distinct routes while sharing robots and chambers; serial alignment, robot repositioning, LL slots, PEC reuse, two rotary recipes, and cleaning are represented explicitly. A binary-skeleton procedure constructs an incumbent in a temporary model without constraining the original optimization. Initial solves validate both pure recipes and expose a marked mixed-production bottleneck. The remaining study will quantify when the additional physical fidelity and the warm start translate into shorter makespan, faster feasible schedules, and higher resource utilization.
+
+\section*{Acknowledgements}
+Funding and industrial support information will be added before submission.
+
+\section*{Declaration of generative AI and AI-assisted technologies}
+During preparation of this draft, the authors used OpenAI Codex to assist with template organization and language editing. The authors reviewed and edited the content and take full responsibility for the manuscript. The wording must be checked against the final Procedia CIRP policy before submission.
+
+\bibliographystyle{elsarticle-harv}
+\bibliography{references}
+
+\end{document}

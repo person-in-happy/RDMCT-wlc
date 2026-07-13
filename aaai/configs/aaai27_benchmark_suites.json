@@ -1,0 +1,111 @@
+{
+  "description": "AAAI-27 held-out benchmark suites. Paths are relative to this manifest.",
+  "suites": [
+    {
+      "name": "petri_small",
+      "family": "dual_source_cluster_tool",
+      "scale": "small",
+      "split": "train",
+      "root": "../data/petri_submodular/train",
+      "glob": "*.lp"
+    },
+    {
+      "name": "petri_medium",
+      "family": "dual_source_cluster_tool",
+      "scale": "medium",
+      "split": "validation",
+      "root": "../data/petri_submodular/validation",
+      "glob": "*.lp"
+    },
+    {
+      "name": "petri_large",
+      "family": "dual_source_cluster_tool",
+      "scale": "large",
+      "split": "test",
+      "root": "../data/petri_submodular/test",
+      "glob": "*.lp"
+    },
+    {
+      "name": "petri_wafer100_stress",
+      "family": "dual_source_cluster_tool",
+      "scale": "stress",
+      "split": "test",
+      "time_limit": 3600,
+      "seeds": [1],
+      "root": "../../generated_instances/test",
+      "glob": "wafer100_20260711.lp"
+    },
+    {
+      "name": "setcover_transfer",
+      "family": "setcover",
+      "scale": "all",
+      "split": "test",
+      "root": "../data/milp/setcover",
+      "glob": "**/test/*.mps"
+    },
+    {
+      "name": "setcover_validation",
+      "family": "setcover",
+      "scale": "all",
+      "split": "validation",
+      "root": "../data/milp/setcover",
+      "glob": "**/validation/*.mps"
+    },
+    {
+      "name": "knapsack_transfer",
+      "family": "knapsack",
+      "scale": "all",
+      "split": "test",
+      "root": "../data/milp/knapsack",
+      "glob": "**/test/*.mps"
+    },
+    {
+      "name": "knapsack_validation",
+      "family": "knapsack",
+      "scale": "all",
+      "split": "validation",
+      "root": "../data/milp/knapsack",
+      "glob": "**/validation/*.mps"
+    },
+    {
+      "name": "facility_location_transfer",
+      "family": "facility_location",
+      "scale": "all",
+      "split": "test",
+      "root": "../data/milp/facility_location",
+      "glob": "**/test/*.mps"
+    },
+    {
+      "name": "facility_location_validation",
+      "family": "facility_location",
+      "scale": "all",
+      "split": "validation",
+      "root": "../data/milp/facility_location",
+      "glob": "**/validation/*.mps"
+    },
+    {
+      "name": "independent_set_transfer",
+      "family": "independent_set",
+      "scale": "all",
+      "split": "test",
+      "root": "../data/milp/independent_set",
+      "glob": "**/test/*.mps"
+    },
+    {
+      "name": "independent_set_validation",
+      "family": "independent_set",
+      "scale": "all",
+      "split": "validation",
+      "root": "../data/milp/independent_set",
+      "glob": "**/validation/*.mps"
+    },
+    {
+      "name": "miplib2017_transfer",
+      "family": "MIPLIB2017",
+      "scale": "heterogeneous",
+      "split": "test",
+      "root": "../data/MIPLIB2017",
+      "glob": "**/*"
+    }
+  ]
+}

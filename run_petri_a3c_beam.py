@@ -134,6 +134,22 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--mode_4x1_wafers", type=int, default=20)
     parser.add_argument("--mode_2x2_wafers", type=int, default=20)
     parser.add_argument("--pec_pool_size", type=int, default=8)
+    parser.add_argument(
+        "--cleaning_interval",
+        type=int,
+        default=10,
+        help=(
+            "Maximum full-chamber process cycles between cleaning batches; "
+            "0 disables cleaning. A 2x2 chain is split with PEC boundary pairs "
+            "when cleaning falls inside the workload."
+        ),
+    )
+    parser.add_argument(
+        "--cleaning_process_time",
+        type=float,
+        default=0.0,
+        help="Cleaning recipe duration; 0 uses twice the 4x1 process time.",
+    )
     parser.add_argument("--process_mode", type=str, default="auto")
     parser.add_argument("--mode_sequence", type=str, default="")
     parser.add_argument("--wafer_mode_map", "--wafer_modes", dest="wafer_mode_map", type=str, default="")
@@ -422,6 +438,8 @@ def main() -> None:
         num_steps=args.num_steps,
         total_wafers=args.total_wafers,
         pec_pool_size=args.pec_pool_size,
+        cleaning_interval=args.cleaning_interval,
+        cleaning_process_time=args.cleaning_process_time,
         process_mode=args.process_mode,
         mode_sequence=args.mode_sequence,
         wafer_mode_map=args.wafer_mode_map,
@@ -435,7 +453,12 @@ def main() -> None:
         atr_capacity=args.atr_capacity,
         vtr_capacity=args.vtr_capacity,
     )
-    lp_path = generate_petri_mip_instance(args.instance_dir, args.instance_name, petri_cfg)
+    lp_path = generate_petri_mip_instance(
+        args.instance_dir,
+        args.instance_name,
+        petri_cfg,
+        warm_start_time_limit=0,
+    )
     generated_instance_name = os.path.basename(lp_path)
     pure_2x2 = bool(petri_cfg.mix_wafer_ids) and not bool(petri_cfg.full_wafer_ids)
     total_mode_wafers = len(petri_cfg.full_wafer_ids) + len(petri_cfg.mix_wafer_ids)
@@ -584,6 +607,10 @@ def main() -> None:
         str(args.mode_2x2_wafers),
         "--petri_pec_pool_size",
         str(args.pec_pool_size),
+        "--petri_cleaning_interval",
+        str(args.cleaning_interval),
+        "--petri_cleaning_process_time",
+        str(args.cleaning_process_time),
         "--petri_process_mode",
         args.process_mode,
         "--petri_mode_sequence",
@@ -648,6 +675,8 @@ def main() -> None:
             "process_mode": args.process_mode,
             "mode_4x1_wafers": len(petri_cfg.full_wafer_ids),
             "mode_2x2_wafers": len(petri_cfg.mix_wafer_ids),
+            "cleaning_interval": args.cleaning_interval,
+            "cleaning_process_time": petri_cfg.effective_cleaning_process_time,
         },
         heartbeat_seconds=args.heartbeat_seconds,
         max_wall_seconds=(

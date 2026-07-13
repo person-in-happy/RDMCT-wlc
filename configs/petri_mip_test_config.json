@@ -2,22 +2,31 @@
   "experiment": {
     "seed": 1,
     "exp_prefix": "",
-    "base_log_dir": "data/mip_20260618",
+    "base_log_dir": "data/mip_20260710_v2",
     "snapshot_mode": "gap_and_last",
     "snapshot_gap": 1
   },
   "env": {
     "instance_file_path": "generated_instances/train",
-    "scip_time_limit": 800,
-    "single_instance_file": "mip_wafer33_20260618.lp",
+    "scip_time_limit": 80,
+    "single_instance_file": "mix_wafer18_20260710.lp",
+    "scip_memory_limit_mb": 4096,
+    "scip_node_limit": 12000,
+    "scip_stall_node_limit": 8000,
+    "scip_emphasis": "feasibility",
+    "scip_heuristics_profile": "aggressive",
+    "scip_disable_expensive_heuristics": true,
+    "warm_start_solution_file": "auto",
+    "cutsel_max_candidates": 128,
+    "cutsel_max_selected_cuts": 30,
     "presolving": true,
     "separating": true,
     "conflict": true,
     "heuristics": true,
-    "max_rounds_root": 1,
-    "lexicographic_schedule_stability": true,
+    "max_rounds_root": 2,
+    "lexicographic_schedule_stability": false,
     "lexicographic_cmax_tolerance": 0.000001,
-    "lexicographic_stability_time_limit": 10,
+    "lexicographic_stability_time_limit": 0,
     "lexicographic_stability_node_limit": 5000,
     "schedule_chamber_idle_square_penalty": 0.00001,
     "schedule_pm_wait_square_penalty": 0.001,
@@ -25,13 +34,13 @@
     "schedule_robot_wait_square_penalty": 0.00001
   },
   "algorithm": {
-    "evaluate_freq": 1,
-    "evaluate_samples": 8,
+    "evaluate_freq": 0,
+    "evaluate_samples": 2,
     "optimizer_class": "Adam",
     "actor_net_lr": 0.0001,
     "critic_net_lr": 0.0001,
     "reward_scale": 1,
-    "num_epochs": 20,
+    "num_epochs": 80,
     "max_grad_norm": 2.0,
     "batch_size": 8,
     "train_decode_type": "stochastic",
@@ -39,16 +48,19 @@
     "reward_type": "primaldualintegral",
     "baseline_type": "simple",
     "critic_beta": 0.9,
-    "train_steps_per_epoch": 2,
+    "train_steps_per_epoch": 1,
     "lr_decay": true,
-    "lr_decay_step": 5,
-    "lr_decay_rate": 0.96,
-    "normalize": false,
-    "normalize_reward": false
+    "lr_decay_step": 20,
+    "lr_decay_rate": 0.9,
+    "normalize": true,
+    "normalize_reward": true
   },
   "trainer": {
-    "samples_per_epoch": 4,
-    "n_jobs": 2
+    "samples_per_epoch": 8,
+    "n_jobs": 1,
+    "worker_stall_timeout_seconds": 180,
+    "worker_stall_grace_seconds": 30,
+    "worker_restart_limit": 1
   },
   "net_share": {
     "embedding_dim": 23,
@@ -65,9 +77,9 @@
   },
   "cutsel_percent_policy": {
     "use_cutsel_percent_policy": true,
-    "train_freq": 2,
+    "train_freq": 1,
     "train_highlevel_batch_size": 8,
-    "highlevel_actor_lr": 0.0005
+    "highlevel_actor_lr": 0.0003
   },
   "devices": {
     "global_device": "cuda:0",
@@ -75,37 +87,37 @@
   },
   "test_kwargs": {
     "test_instance_path": "generated_instances/test",
-    "test_model_path": "data/mip_20260618/params.pkl",
+    "test_model_path": "data/mip_20260710/params.pkl",
     "n_jobs": 1
   },
   "evaluate_kwargs": {
     "test_instance_path": "generated_instances/train",
     "test_n_jobs": 2,
     "test_env_kwargs": {
-      "scip_time_limit": 300,
+      "scip_time_limit": 60,
       "single_instance_file": "all",
       "presolving": true,
       "separating": true,
       "conflict": true,
       "heuristics": true,
       "max_rounds_root": 1,
-      "lexicographic_stability_time_limit": 10,
+      "lexicographic_stability_time_limit": 0,
       "lexicographic_stability_node_limit": 5000
     }
   },
   "online_test_kwargs": {
-    "test_freq": 10,
+    "test_freq": 0,
     "test_instance_path": "generated_instances/test",
     "test_n_jobs": 1,
     "test_env_kwargs": {
-      "scip_time_limit": 800,
+      "scip_time_limit": 120,
       "single_instance_file": "all",
       "presolving": true,
       "separating": true,
       "conflict": true,
       "heuristics": true,
       "max_rounds_root": 1,
-      "lexicographic_stability_time_limit": 10,
+      "lexicographic_stability_time_limit": 0,
       "lexicographic_stability_node_limit": 5000
     }
   },

@@ -185,15 +185,17 @@ class PetriMIPConfig:
     aligner_time: float = 20.0
     llupper_time: float = 30.0
     lllower_time: float = 25.0
-    full_process_time: float = 80.0
+    full_process_time: float = 180.0
     # A 2x2 product PW pair is exposed twice in adjacent cycles. Both
     # exposures use the same physical recipe duration.
-    mix_boundary_process_time: float = 30.0
-    mix_internal_process_time: float = 30.0
+    mix_boundary_process_time: float = 130.0
+    mix_internal_process_time: float = 130.0
     cleaning_interval: int = 10
-    cleaning_process_time: float = 0.0
+    cleaning_process_time: float = 500.0
     max_module_residency_time: float = 10000.0
     max_robot_residency_time: float = 10000.0
+    # Per-interval cap for avoidable schedule waits; zero disables the cap.
+    max_schedule_wait_time: float = 0.0
     pm_balance_penalty: float = 0.01
     chamber_idle_penalty: float = 1e-4
     post_process_wait_penalty: float = 0.05
@@ -206,6 +208,15 @@ class PetriMIPConfig:
     # A VTR has enough fingers to carry both product wafers of a PW pair in
     # one same-route action.  This is the physical default for 4x1 work.
     force_full_vtr_double: bool = True
+    # ATR also has two grippers. Complete 4x1 product pairs use bundled
+    # LP->AL, AL->LLupper, and LLlower->LP transfers.
+    force_full_atr_double: bool = True
+    # The original pure-4x1 ATR chain forced every LLlower->LP return into a
+    # fixed AL-service gap. That hand-crafted cycle becomes infeasible for
+    # larger pure 4x1 workloads, so use the validated generic ATR resource
+    # model by default. Keep the legacy chain opt-in only for reproduction of
+    # older experiments.
+    use_legacy_pure_full_atr_chain: bool = False
     # 2x2 product PW pairs should use the same two-product robot behavior as
     # 4x1 pairs before and after chamber processing. A tail product+PEC pair
     # still has only one product wafer and is fixed to single-product action.
@@ -362,7 +373,8 @@ class PetriMIPConfig:
 
     @property
     def num_mix_cycles_per_pm(self) -> int:
-        return self.num_mix_positions_per_pm + 1
+        layouts = _canonical_cleaning_layout(self)
+        return max(1, *(layout["mix_cycle_count"] for layout in layouts.values()))
 
     @property
     def max_chamber_processes_per_pm(self) -> int:
@@ -372,7 +384,8 @@ class PetriMIPConfig:
     def num_clean_slots_per_pm(self) -> int:
         if self.cleaning_interval <= 0:
             return 0
-        return max(0, math.ceil(self.max_chamber_processes_per_pm / self.cleaning_interval) - 1)
+        layouts = _canonical_cleaning_layout(self)
+        return max(0, *(max(0, layout["last_epoch"] - 1) for layout in layouts.values()))
 
     @property
     def effective_cleaning_process_time(self) -> float:
@@ -451,9 +464,19 @@ class PetriMIPConfig:
             )
         if self.cleaning_interval < 0:
             raise ValueError("cleaning_interval must be non-negative; use 0 only to disable cleaning constraints.")
+        if self.mix_wafer_ids and self.cleaning_interval == 1:
+            raise ValueError(
+                "cleaning_interval=1 cannot complete a 2x2 product pair: each pair needs two "
+                "consecutive process exposures. Use cleaning_interval=0 to disable cleaning or "
+                "set it to at least 2."
+            )
         if self.cleaning_process_time < 0:
             raise ValueError("cleaning_process_time must be non-negative.")
-        if self.max_module_residency_time < 0 or self.max_robot_residency_time < 0:
+        if (
+            self.max_module_residency_time < 0
+            or self.max_robot_residency_time < 0
+            or self.max_schedule_wait_time < 0
+        ):
             raise ValueError("Residency-time limits must be non-negative.")
         if self.atr_capacity <= 0:
             raise ValueError("atr_capacity must be positive.")
@@ -480,6 +503,7 @@ class PetriMIPConfig:
             self.effective_cleaning_process_time,
             self.max_module_residency_time,
             self.max_robot_residency_time,
+            self.max_schedule_wait_time,
             self.pm_balance_penalty,
             self.chamber_idle_penalty,
             self.post_process_wait_penalty,
@@ -682,18 +706,148 @@ def _add_parallel_slot_resource(model, task_specs, slot_count: int, big_m: float
     return slot_assign
 
 
+def _canonical_cleaning_layout(cfg: PetriMIPConfig):
+    """Build the symmetry-broken CH epoch and 2x2 segment layout.
+
+    A 2x2 segment with ``k`` product pairs needs ``k + 1`` process
+    cycles: PEC+P1 at its head, adjacent product pairs internally, and Pk+PEC
+    at its tail. An epoch boundary therefore closes the current segment with
+    PEC and starts a fresh PEC-headed segment after cleaning.
+    """
+    full_slots = [
+        (m, b, side)
+        for b in range(1, cfg.num_full_batches_per_pm + 1)
+        for m in cfg.pm_ids
+        for side in (1, 2)
+    ]
+    active_full_batches = {m: set() for m in cfg.pm_ids}
+    for _, (m, b, _) in zip(cfg.full_pair_ids, full_slots):
+        active_full_batches[m].add(b)
+
+    mix_counts = {m: 0 for m in cfg.pm_ids}
+    for pair_index, _ in enumerate(cfg.mix_pair_ids):
+        mix_counts[cfg.pm_ids[pair_index % len(cfg.pm_ids)]] += 1
+
+    layouts = {}
+    for m in cfg.pm_ids:
+        epoch = 1
+        used = 0
+        full_epoch = {}
+        batches = sorted(active_full_batches[m])
+        for batch in batches:
+            if cfg.cleaning_interval > 0 and used == cfg.cleaning_interval:
+                epoch += 1
+                used = 0
+            full_epoch[batch] = epoch
+            used += 1
+
+        segments = []
+        next_position = 1
+        next_cycle = 1
+        remaining = mix_counts[m]
+        while remaining > 0:
+            if cfg.cleaning_interval <= 0:
+                segment_pairs = remaining
+            else:
+                room = cfg.cleaning_interval - used
+                # A nonempty segment needs both a PEC head and a PEC tail
+                # cycle. With fewer than two slots left, clean before 2x2.
+                if room < 2:
+                    epoch += 1
+                    used = 0
+                    room = cfg.cleaning_interval
+                segment_pairs = min(remaining, room - 1)
+
+            positions = list(range(next_position, next_position + segment_pairs))
+            cycles = list(range(next_cycle, next_cycle + segment_pairs + 1))
+            segments.append(
+                {
+                    "id": len(segments) + 1,
+                    "epoch": epoch,
+                    "positions": positions,
+                    "cycles": cycles,
+                }
+            )
+            next_position += segment_pairs
+            next_cycle += segment_pairs + 1
+            remaining -= segment_pairs
+            used += segment_pairs + 1
+            if remaining > 0:
+                epoch += 1
+                used = 0
+
+        layouts[m] = {
+            "full_epoch": full_epoch,
+            "segments": segments,
+            "mix_count": mix_counts[m],
+            "mix_cycle_count": next_cycle - 1,
+            "last_epoch": epoch if (batches or segments) else 0,
+        }
+    return layouts
+
+
 def build_petri_mip_model(cfg: PetriMIPConfig):
     cfg.validate()
     model = scip.Model("dual_source_rotary_cluster_full_flow")
     big_m = cfg.big_m
 
     pm_ids = cfg.pm_ids
+    cleaning_layout = _canonical_cleaning_layout(cfg)
     full_batches = list(range(1, cfg.num_full_batches_per_pm + 1))
     full_sides = [1, 2]
     mix_positions = list(range(1, cfg.num_mix_positions_per_pm + 1))
-    mix_cycles = list(range(1, cfg.num_mix_cycles_per_pm + 1))
-    clean_slots = list(range(1, cfg.num_clean_slots_per_pm + 1))
+    max_mix_cycles = max(1, *(layout["mix_cycle_count"] for layout in cleaning_layout.values()))
+    mix_cycles = list(range(1, max_mix_cycles + 1))
+    max_clean_slots = max(
+        0,
+        *(max(0, layout["last_epoch"] - 1) for layout in cleaning_layout.values()),
+    )
+    clean_slots = list(range(1, max_clean_slots + 1))
     chamber_epochs = list(range(1, len(clean_slots) + 2)) if clean_slots else []
+    mix_segments = {
+        (m, segment["id"]): segment
+        for m in pm_ids
+        for segment in cleaning_layout[m]["segments"]
+    }
+    mix_position_segment = {
+        (m, position): segment["id"]
+        for (m, _), segment in mix_segments.items()
+        for position in segment["positions"]
+    }
+    mix_position_first_cycle = {
+        (m, position): segment["cycles"][0] + local_index
+        for (m, _), segment in mix_segments.items()
+        for local_index, position in enumerate(segment["positions"])
+    }
+    mix_cycle_segment = {
+        (m, cycle): segment["id"]
+        for (m, _), segment in mix_segments.items()
+        for cycle in segment["cycles"]
+    }
+    mix_segment_first_position = {
+        (m, segment_id): segment["positions"][0]
+        for (m, segment_id), segment in mix_segments.items()
+    }
+    mix_segment_last_position = {
+        (m, segment_id): segment["positions"][-1]
+        for (m, segment_id), segment in mix_segments.items()
+    }
+    mix_segment_first_cycle = {
+        (m, segment_id): segment["cycles"][0]
+        for (m, segment_id), segment in mix_segments.items()
+    }
+    mix_segment_last_cycle = {
+        (m, segment_id): segment["cycles"][-1]
+        for (m, segment_id), segment in mix_segments.items()
+    }
+    mix_bridge_active = {
+        (m, cycle): int(
+            (m, cycle) in mix_cycle_segment
+            and cycle != mix_segment_first_cycle[(m, mix_cycle_segment[(m, cycle)])]
+        )
+        for m in pm_ids
+        for cycle in mix_cycles[1:]
+    }
     pec_tokens_per_pm = cfg.pec_pool_size // len(pm_ids)
     pec_slots_by_pm = {
         pm_id: list(range(idx * pec_tokens_per_pm + 1, (idx + 1) * pec_tokens_per_pm + 1))
@@ -921,12 +1075,12 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
     )
 
     mix_head_start = {
-        m: model.addVar(vtype="C", lb=0.0, name=f"mix_head_start_{m}")
-        for m in pm_ids
+        (m, segment_id): model.addVar(vtype="C", lb=0.0, name=f"mix_head_start_{m}_{segment_id}")
+        for m, segment_id in mix_segments
     }
     mix_head_end = {
-        m: model.addVar(vtype="C", lb=0.0, name=f"mix_head_end_{m}")
-        for m in pm_ids
+        (m, segment_id): model.addVar(vtype="C", lb=0.0, name=f"mix_head_end_{m}_{segment_id}")
+        for m, segment_id in mix_segments
     }
     mix_cycle_start = {
         (m, c): model.addVar(vtype="C", lb=0.0, name=f"mix_cycle_start_{m}_{c}")
@@ -949,32 +1103,28 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
         for c in mix_cycles[1:]
     }
     mix_tail_load_start = {
-        m: model.addVar(vtype="C", lb=0.0, name=f"mix_tail_load_start_{m}")
-        for m in pm_ids
+        (m, segment_id): model.addVar(vtype="C", lb=0.0, name=f"mix_tail_load_start_{m}_{segment_id}")
+        for m, segment_id in mix_segments
     }
     mix_tail_load_end = {
-        m: model.addVar(vtype="C", lb=0.0, name=f"mix_tail_load_end_{m}")
-        for m in pm_ids
+        (m, segment_id): model.addVar(vtype="C", lb=0.0, name=f"mix_tail_load_end_{m}_{segment_id}")
+        for m, segment_id in mix_segments
     }
     mix_last_cycle_start = {
-        m: model.addVar(vtype="C", lb=0.0, name=f"mix_last_cycle_start_{m}")
-        for m in pm_ids
+        (m, segment_id): model.addVar(vtype="C", lb=0.0, name=f"mix_last_cycle_start_{m}_{segment_id}")
+        for m, segment_id in mix_segments
     }
     mix_last_cycle_end = {
-        m: model.addVar(vtype="C", lb=0.0, name=f"mix_last_cycle_end_{m}")
-        for m in pm_ids
+        (m, segment_id): model.addVar(vtype="C", lb=0.0, name=f"mix_last_cycle_end_{m}_{segment_id}")
+        for m, segment_id in mix_segments
     }
     mix_tail_start = {
-        m: model.addVar(vtype="C", lb=0.0, name=f"mix_tail_start_{m}")
-        for m in pm_ids
+        (m, segment_id): model.addVar(vtype="C", lb=0.0, name=f"mix_tail_start_{m}_{segment_id}")
+        for m, segment_id in mix_segments
     }
     mix_tail_end = {
-        m: model.addVar(vtype="C", lb=0.0, name=f"mix_tail_end_{m}")
-        for m in pm_ids
-    }
-    mix_block_end = {
-        m: model.addVar(vtype="C", lb=0.0, name=f"mix_block_end_{m}")
-        for m in pm_ids
+        (m, segment_id): model.addVar(vtype="C", lb=0.0, name=f"mix_tail_end_{m}_{segment_id}")
+        for m, segment_id in mix_segments
     }
 
     clean_active = {
@@ -1132,6 +1282,7 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
         for m in pm_ids
     }
     chamber_nonprocess_wait_square_terms = {m: [] for m in pm_ids}
+    chamber_nonprocess_wait_terms = []
 
     def add_chamber_nonprocess_square_term(m, wait_expr, active_var, name: str) -> None:
         wait = model.addVar(vtype="C", lb=0.0, name=f"chamber_nonprocess_wait_{name}")
@@ -1152,6 +1303,7 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
             square >= wait * wait,
             name=f"chamber_nonprocess_wait_square_def_{name}",
         )
+        chamber_nonprocess_wait_terms.append(wait)
         chamber_nonprocess_wait_square_terms[m].append(square)
 
     # Wafers of the same process mode have identical model data. Pairing them
@@ -1192,9 +1344,22 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 full_vtr_unload_double[p] == 1,
                 name=f"full_vtr_unload_double_required_{p}",
             )
+        if cfg.force_full_atr_double and double_allowed:
+            model.addCons(
+                full_atr_lp_al_double[p] == 1,
+                name=f"full_atr_lp_al_double_required_{p}",
+            )
+            model.addCons(
+                full_atr_al_llupper_double[p] == 1,
+                name=f"full_atr_al_llupper_double_required_{p}",
+            )
+            model.addCons(
+                full_atr_return_double[p] == 1,
+                name=f"full_atr_return_double_required_{p}",
+            )
         # AL is single-slot, but ATR's two-gripper capability is available in
         # both pure 4x1 and mixed 4x1+2x2 schedules. A complete two-wafer pair
-        # may choose a shared LP->AL pickup and shared AL->LLupper placement;
+        # uses a shared LP->AL pickup and shared AL->LLupper placement;
         # a shared output move requires the shared input move. No process-mode
         # condition is allowed to force these two decision variables to zero.
         model.addCons(
@@ -1476,57 +1641,17 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
         )
 
         last_position = mix_positions[-1]
-        last_cycle = mix_cycles[-1]
-        model.addCons(
-            mix_cycle_used[(m, 1)] == mix_pos_used[(m, 1)],
-            name=f"mix_cycle_lead_{m}",
-        )
-        for c in mix_cycles[1:-1]:
-            prev_pos = mix_pos_used[(m, c - 1)]
-            next_pos = mix_pos_used[(m, c)]
+        active_cycle_count = cleaning_layout[m]["mix_cycle_count"]
+        for c in mix_cycles:
             model.addCons(
-                mix_cycle_used[(m, c)] >= prev_pos,
-                name=f"mix_cycle_prev_{m}_{c}",
+                mix_cycle_used[(m, c)] == (mix_active[m] if c <= active_cycle_count else 0),
+                name=f"mix_cycle_layout_{m}_{c}",
             )
             model.addCons(
-                mix_cycle_used[(m, c)] >= next_pos,
-                name=f"mix_cycle_next_{m}_{c}",
+                mix_last_cycle[(m, c)]
+                == (mix_active[m] if c == active_cycle_count and active_cycle_count else 0),
+                name=f"mix_last_cycle_layout_{m}_{c}",
             )
-            model.addCons(
-                mix_cycle_used[(m, c)] <= prev_pos + next_pos,
-                name=f"mix_cycle_union_{m}_{c}",
-            )
-        model.addCons(
-            mix_cycle_used[(m, last_cycle)] == mix_pos_used[(m, last_position)],
-            name=f"mix_cycle_tail_{m}",
-        )
-        for c in mix_cycles[:-1]:
-            model.addCons(
-                mix_cycle_used[(m, c)] >= mix_cycle_used[(m, c + 1)],
-                name=f"mix_cycle_prefix_{m}_{c}",
-            )
-
-        model.addCons(
-            mix_active[m] == scip.quicksum(mix_last_cycle[(m, c)] for c in mix_cycles),
-            name=f"mix_last_cycle_unique_{m}",
-        )
-        for c in mix_cycles[:-1]:
-            model.addCons(
-                mix_last_cycle[(m, c)] <= mix_cycle_used[(m, c)],
-                name=f"mix_last_cycle_active_{m}_{c}",
-            )
-            model.addCons(
-                mix_last_cycle[(m, c)] + mix_cycle_used[(m, c + 1)] <= 1,
-                name=f"mix_last_cycle_tail_only_{m}_{c}",
-            )
-            model.addCons(
-                mix_last_cycle[(m, c)] >= mix_cycle_used[(m, c)] - mix_cycle_used[(m, c + 1)],
-                name=f"mix_last_cycle_exact_{m}_{c}",
-            )
-        model.addCons(
-            mix_last_cycle[(m, last_cycle)] == mix_cycle_used[(m, last_cycle)],
-            name=f"mix_last_cycle_terminal_{m}",
-        )
 
         model.addCons(
             mix_active[m] == scip.quicksum(mix_last_pos[(m, r)] for r in mix_positions),
@@ -1556,10 +1681,16 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
     process_epoch_used = {}
     if clean_slots:
         for m in pm_ids:
+            layout = cleaning_layout[m]
+            epochs_with_mix = {segment["epoch"] for segment in layout["segments"]}
             for epoch in chamber_epochs:
                 process_epoch_used[(m, epoch)] = model.addVar(
                     vtype="B",
                     name=f"process_epoch_used_{m}_{epoch}",
+                )
+                model.addCons(
+                    process_epoch_used[(m, epoch)] == int(0 < epoch <= layout["last_epoch"]),
+                    name=f"process_epoch_layout_{m}_{epoch}",
                 )
 
             for b in full_batches:
@@ -1568,21 +1699,23 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                         vtype="B",
                         name=f"full_batch_epoch_{m}_{b}_{epoch}",
                     )
-                model.addCons(
-                    scip.quicksum(full_batch_epoch[(m, b, epoch)] for epoch in chamber_epochs)
-                    == full_batch_used[(m, b)],
-                    name=f"full_batch_epoch_once_{m}_{b}",
-                )
+                    target_epoch = layout["full_epoch"].get(b)
+                    model.addCons(
+                        full_batch_epoch[(m, b, epoch)]
+                        == (full_batch_used[(m, b)] if epoch == target_epoch else 0),
+                        name=f"full_batch_epoch_layout_{m}_{b}_{epoch}",
+                    )
 
             for epoch in chamber_epochs:
                 mix_block_epoch[(m, epoch)] = model.addVar(
                     vtype="B",
                     name=f"mix_block_epoch_{m}_{epoch}",
                 )
-            model.addCons(
-                scip.quicksum(mix_block_epoch[(m, epoch)] for epoch in chamber_epochs) == mix_active[m],
-                name=f"mix_block_epoch_once_{m}",
-            )
+                model.addCons(
+                    mix_block_epoch[(m, epoch)]
+                    == (mix_active[m] if epoch in epochs_with_mix else 0),
+                    name=f"mix_block_epoch_layout_{m}_{epoch}",
+                )
 
             for c in mix_cycles:
                 for epoch in chamber_epochs:
@@ -1590,18 +1723,16 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                         vtype="B",
                         name=f"mix_cycle_epoch_{m}_{c}_{epoch}",
                     )
-                    model.addCons(
-                        mix_cycle_epoch[(m, c, epoch)] <= mix_cycle_used[(m, c)],
-                        name=f"mix_cycle_epoch_cycle_ub_{m}_{c}_{epoch}",
-                    )
-                    model.addCons(
-                        mix_cycle_epoch[(m, c, epoch)] <= mix_block_epoch[(m, epoch)],
-                        name=f"mix_cycle_epoch_block_ub_{m}_{c}_{epoch}",
+                    cycle_segment_id = mix_cycle_segment.get((m, c))
+                    cycle_epoch = (
+                        mix_segments[(m, cycle_segment_id)]["epoch"]
+                        if cycle_segment_id is not None
+                        else None
                     )
                     model.addCons(
                         mix_cycle_epoch[(m, c, epoch)]
-                        >= mix_cycle_used[(m, c)] + mix_block_epoch[(m, epoch)] - 1,
-                        name=f"mix_cycle_epoch_exact_{m}_{c}_{epoch}",
+                        == (mix_cycle_used[(m, c)] if epoch == cycle_epoch else 0),
+                        name=f"mix_cycle_epoch_layout_{m}_{c}_{epoch}",
                     )
 
             for epoch in chamber_epochs:
@@ -1615,12 +1746,6 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 model.addCons(
                     epoch_process_count >= process_epoch_used[(m, epoch)],
                     name=f"process_epoch_nonempty_{m}_{epoch}",
-                )
-
-            for epoch in chamber_epochs[:-1]:
-                model.addCons(
-                    process_epoch_used[(m, epoch)] >= process_epoch_used[(m, epoch + 1)],
-                    name=f"process_epoch_prefix_{m}_{epoch}",
                 )
 
             for clean_slot in clean_slots:
@@ -1671,6 +1796,9 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 )
 
         for b in full_batches:
+            if not cleaning_layout[m]["segments"]:
+                continue
+            first_segment_id = cleaning_layout[m]["segments"][0]["id"]
             if clean_slots:
                 for epoch in chamber_epochs:
                     same_epoch = model.addVar(
@@ -1700,7 +1828,7 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                     _add_optional_gap_slack(
                         model,
                         chamber_idle_slacks,
-                        mix_head_start[m],
+                        mix_head_start[(m, first_segment_id)],
                         full_front_unload_end[(m, b)],
                         same_epoch,
                         big_m,
@@ -1723,7 +1851,7 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 _add_optional_gap_slack(
                     model,
                     chamber_idle_slacks,
-                    mix_head_start[m],
+                    mix_head_start[(m, first_segment_id)],
                     full_front_unload_end[(m, b)],
                     tail_to_mix,
                     big_m,
@@ -1965,8 +2093,8 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
             )
 
         # Chamber occupancy follows the technical disclosure: a chamber has one
-        # serial 4x1 block, optional cleaning windows, and then at most one
-        # contiguous 2x2 block.
+        # serial 4x1 block followed by PEC-bounded 2x2 segments, with cleaning
+        # windows between process epochs when the interval is reached.
         full_batch_tasks = [
             (
                 f"full_batch_window_{m}_{b}",
@@ -1988,42 +2116,6 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
         _add_unary_resource_no_overlap(model, full_batch_tasks, big_m, f"seq_full_batch_{m}")
 
     for m in pm_ids:
-        _add_duration_cons(
-            model,
-            mix_head_start[m],
-            mix_head_end[m],
-            cfg.pair_transfer_time,
-            f"mix_head_{m}",
-            mix_active[m],
-        )
-        _add_residency_upper_bound(
-            model,
-            mix_head_start[m],
-            mix_head_end[m],
-            cfg.max_robot_residency_time,
-            f"mix_head_robot_residency_{m}",
-            mix_active[m],
-        )
-        _add_duration_cons(
-            model,
-            mix_tail_start[m],
-            mix_tail_end[m],
-            cfg.pair_transfer_time,
-            f"mix_tail_{m}",
-            mix_active[m],
-        )
-        _add_residency_upper_bound(
-            model,
-            mix_tail_start[m],
-            mix_tail_end[m],
-            cfg.max_robot_residency_time,
-            f"mix_tail_robot_residency_{m}",
-            mix_active[m],
-        )
-        model.addCons(
-            mix_block_end[m] == mix_tail_end[m],
-            name=f"mix_block_end_def_{m}",
-        )
         for c in mix_cycles:
             used = mix_cycle_used[(m, c)]
             model.addCons(
@@ -2039,16 +2131,8 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 name=f"mix_cycle_duration_{m}_{c}",
             )
 
-        # Once the four pockets have been filled by the head transfer, the
-        # first 2x2 exposure must start immediately. Waiting here is not a
-        # physical resource delay; any upstream delay belongs before the head.
-        model.addCons(
-            mix_cycle_start[(m, 1)] == mix_head_end[m],
-            name=f"mix_head_to_cycle_tight_{m}",
-        )
-
         for c in mix_cycles[1:]:
-            used = mix_cycle_used[(m, c)]
+            used = mix_active[m] if mix_bridge_active[(m, c)] else 0
             _add_duration_cons(
                 model,
                 mix_bridge_start[(m, c)],
@@ -2065,105 +2149,118 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 f"mix_bridge_robot_residency_{m}_{c}",
                 used,
             )
+            if mix_bridge_active[(m, c)]:
+                _add_precedence_lower_bound(
+                    model,
+                    mix_bridge_start[(m, c)],
+                    mix_cycle_end[(m, c - 1)],
+                    big_m,
+                    f"mix_cycle_to_bridge_lb_{m}_{c}",
+                    used,
+                )
+                _add_optional_gap_slack(
+                    model,
+                    chamber_idle_slacks,
+                    mix_bridge_start[(m, c)],
+                    mix_cycle_end[(m, c - 1)],
+                    used,
+                    big_m,
+                    f"mix_cycle_to_bridge_idle_{m}_{c}",
+                )
+                model.addCons(
+                    mix_cycle_start[(m, c)] == mix_bridge_end[(m, c)],
+                    name=f"mix_bridge_to_cycle_tight_{m}_{c}",
+                )
+
+        for segment in cleaning_layout[m]["segments"]:
+            segment_id = segment["id"]
+            first_cycle = segment["cycles"][0]
+            last_cycle = segment["cycles"][-1]
+            key = (m, segment_id)
+            _add_duration_cons(
+                model,
+                mix_head_start[key],
+                mix_head_end[key],
+                cfg.pair_transfer_time,
+                f"mix_head_{m}_{segment_id}",
+                mix_active[m],
+            )
+            _add_residency_upper_bound(
+                model,
+                mix_head_start[key],
+                mix_head_end[key],
+                cfg.max_robot_residency_time,
+                f"mix_head_robot_residency_{m}_{segment_id}",
+                mix_active[m],
+            )
+            model.addCons(
+                mix_cycle_start[(m, first_cycle)] == mix_head_end[key],
+                name=f"mix_head_to_cycle_tight_{m}_{segment_id}",
+            )
+            _add_duration_cons(
+                model,
+                mix_tail_start[key],
+                mix_tail_end[key],
+                cfg.pair_transfer_time,
+                f"mix_tail_{m}_{segment_id}",
+                mix_active[m],
+            )
+            _add_residency_upper_bound(
+                model,
+                mix_tail_start[key],
+                mix_tail_end[key],
+                cfg.max_robot_residency_time,
+                f"mix_tail_robot_residency_{m}_{segment_id}",
+                mix_active[m],
+            )
+            _link_optional_stage(
+                model,
+                mix_last_cycle_start[key],
+                mix_last_cycle_end[key],
+                mix_cycle_start[(m, last_cycle)],
+                mix_cycle_end[(m, last_cycle)],
+                mix_active[m],
+                big_m,
+                f"mix_last_cycle_link_{m}_{segment_id}",
+            )
+            _link_optional_stage(
+                model,
+                mix_tail_load_start[key],
+                mix_tail_load_end[key],
+                mix_bridge_start[(m, last_cycle)],
+                mix_bridge_end[(m, last_cycle)],
+                mix_active[m],
+                big_m,
+                f"mix_tail_load_link_{m}_{segment_id}",
+            )
             _add_precedence_lower_bound(
                 model,
-                mix_bridge_start[(m, c)],
-                mix_cycle_end[(m, c - 1)],
+                mix_tail_start[key],
+                mix_last_cycle_end[key],
                 big_m,
-                f"mix_cycle_to_bridge_lb_{m}_{c}",
-                used,
+                f"mix_last_cycle_to_tail_lb_{m}_{segment_id}",
+                mix_active[m],
             )
             _add_optional_gap_slack(
                 model,
                 chamber_idle_slacks,
-                mix_bridge_start[(m, c)],
-                mix_cycle_end[(m, c - 1)],
-                used,
+                mix_tail_start[key],
+                mix_last_cycle_end[key],
+                mix_active[m],
                 big_m,
-                f"mix_cycle_to_bridge_idle_{m}_{c}",
-            )
-            # A bridge action unloads the departing pair and loads the next
-            # pair/tail PEC, so the chamber is full at bridge_end. Start the
-            # next exposure immediately instead of relying on a soft penalty
-            # to remove post-bridge gaps.
-            model.addCons(
-                mix_cycle_start[(m, c)] == mix_bridge_end[(m, c)],
-                name=f"mix_bridge_to_cycle_tight_{m}_{c}",
+                f"mix_tail_idle_{m}_{segment_id}",
             )
 
-        model.addCons(
-            mix_tail_start[m] <= big_m * mix_active[m],
-            name=f"mix_tail_start_cap_{m}",
-        )
-        model.addCons(
-            mix_tail_end[m] <= big_m * mix_active[m],
-            name=f"mix_tail_end_cap_{m}",
-        )
-        model.addCons(
-            mix_tail_load_start[m] <= big_m * mix_active[m],
-            name=f"mix_tail_load_start_cap_{m}",
-        )
-        model.addCons(
-            mix_tail_load_end[m] <= big_m * mix_active[m],
-            name=f"mix_tail_load_end_cap_{m}",
-        )
-        model.addCons(
-            mix_last_cycle_start[m] <= big_m * mix_active[m],
-            name=f"mix_last_cycle_start_cap_{m}",
-        )
-        model.addCons(
-            mix_last_cycle_end[m] <= big_m * mix_active[m],
-            name=f"mix_last_cycle_end_cap_{m}",
-        )
-        for c in mix_cycles:
-            selector = mix_last_cycle[(m, c)]
-            _link_stage_by_binary(
-                model,
-                mix_last_cycle_start[m],
-                mix_last_cycle_end[m],
-                mix_cycle_start[(m, c)],
-                mix_cycle_end[(m, c)],
-                selector,
-                big_m,
-                f"mix_last_cycle_link_{m}_{c}",
-            )
-            if c >= 2:
-                _link_stage_by_binary(
-                    model,
-                    mix_tail_load_start[m],
-                    mix_tail_load_end[m],
-                    mix_bridge_start[(m, c)],
-                    mix_bridge_end[(m, c)],
-                    selector,
-                    big_m,
-                    f"mix_tail_load_link_{m}_{c}",
+        if cleaning_layout[m]["segments"]:
+            first_segment_id = cleaning_layout[m]["segments"][0]["id"]
+            for b in full_batches:
+                model.addCons(
+                    full_front_unload_end[(m, b)]
+                    <= mix_head_start[(m, first_segment_id)]
+                    + big_m * (1 - full_batch_used[(m, b)])
+                    + big_m * (1 - mix_active[m]),
+                    name=f"full_before_mix_{m}_{b}",
                 )
-        _add_precedence_lower_bound(
-            model,
-            mix_tail_start[m],
-            mix_last_cycle_end[m],
-            big_m,
-            f"mix_last_cycle_to_tail_lb_{m}",
-            mix_active[m],
-        )
-        _add_optional_gap_slack(
-            model,
-            chamber_idle_slacks,
-            mix_tail_start[m],
-            mix_last_cycle_end[m],
-            mix_active[m],
-            big_m,
-            f"mix_tail_idle_{m}",
-        )
-
-        for b in full_batches:
-            model.addCons(
-                full_front_unload_end[(m, b)]
-                <= mix_head_start[m]
-                + big_m * (1 - full_batch_used[(m, b)])
-                + big_m * (1 - mix_active[m]),
-                name=f"full_before_mix_{m}_{b}",
-            )
 
     if clean_slots:
         for m in pm_ids:
@@ -2185,20 +2282,23 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                             name=f"full_epoch_before_clean_{m}_{b}_{epoch}",
                         )
 
-            for epoch in chamber_epochs:
-                selector = mix_block_epoch[(m, epoch)]
+            for segment in cleaning_layout[m]["segments"]:
+                segment_id = segment["id"]
+                epoch = segment["epoch"]
+                key = (m, segment_id)
                 if epoch > 1:
                     model.addCons(
-                        mix_head_start[m] >= clean_front_unload_end[(m, epoch - 1)] - big_m * (1 - selector),
-                        name=f"mix_epoch_after_clean_{m}_{epoch}",
+                        mix_head_start[key]
+                        >= clean_front_unload_end[(m, epoch - 1)] - big_m * (1 - mix_active[m]),
+                        name=f"mix_segment_after_clean_{m}_{segment_id}",
                     )
                 if epoch <= len(clean_slots):
                     model.addCons(
-                        mix_tail_end[m]
+                        mix_tail_end[key]
                         <= clean_front_load_start[(m, epoch)]
-                        + big_m * (1 - selector)
+                        + big_m * (1 - mix_active[m])
                         + big_m * (1 - clean_active[(m, epoch)]),
-                        name=f"mix_epoch_before_clean_{m}_{epoch}",
+                        name=f"mix_segment_before_clean_{m}_{segment_id}",
                     )
 
     for p in full_pair_ids:
@@ -2245,30 +2345,33 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
             name=f"full_pair_post_process_wait_def_{p}",
         )
 
-    mix_pair_mid_link = {}
-    mix_pair_tail_link = {}
     for p in mix_pair_ids:
         for m in pm_ids:
             for r in mix_positions:
                 selector = assign_mix[(p, m, r)]
-                if r == 1:
+                segment_id = mix_position_segment.get((m, r))
+                if segment_id is None:
+                    continue
+                first_cycle = mix_position_first_cycle[(m, r)]
+                segment_key = (m, segment_id)
+                if r == mix_segment_first_position[segment_key]:
                     _link_stage_by_binary(
                         model,
                         mix_pair_vtr_load_start[p],
                         mix_pair_vtr_load_end[p],
-                        mix_head_start[m],
-                        mix_head_end[m],
+                        mix_head_start[segment_key],
+                        mix_head_end[segment_key],
                         selector,
                         big_m,
-                        f"mix_pair_load_head_link_{p}_{m}_{r}",
+                        f"mix_pair_load_head_link_{p}_{m}_{r}_{segment_id}",
                     )
                 else:
                     _link_stage_by_binary(
                         model,
                         mix_pair_vtr_load_start[p],
                         mix_pair_vtr_load_end[p],
-                        mix_bridge_start[(m, r)],
-                        mix_bridge_end[(m, r)],
+                        mix_bridge_start[(m, first_cycle)],
+                        mix_bridge_end[(m, first_cycle)],
                         selector,
                         big_m,
                         f"mix_pair_load_bridge_link_{p}_{m}_{r}",
@@ -2277,67 +2380,34 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                     model,
                     mix_pair_pm_start[p],
                     mix_pair_pm_end[p],
-                    mix_cycle_start[(m, r)],
-                    mix_cycle_end[(m, r + 1)],
+                    mix_cycle_start[(m, first_cycle)],
+                    mix_cycle_end[(m, first_cycle + 1)],
                     selector,
                     big_m,
                     f"mix_pair_pm_link_{p}_{m}_{r}",
                 )
-                tail_selector = model.addVar(vtype="B", name=f"mix_pair_tail_link_{p}_{m}_{r}")
-                mix_pair_tail_link[(p, m, r)] = tail_selector
-                model.addCons(
-                    tail_selector <= selector,
-                    name=f"mix_pair_tail_assign_ub_{p}_{m}_{r}",
-                )
-                model.addCons(
-                    tail_selector <= mix_last_pos[(m, r)],
-                    name=f"mix_pair_tail_pos_ub_{p}_{m}_{r}",
-                )
-                model.addCons(
-                    tail_selector >= selector + mix_last_pos[(m, r)] - 1,
-                    name=f"mix_pair_tail_exact_{p}_{m}_{r}",
-                )
-                _link_stage_by_binary(
-                    model,
-                    mix_pair_vtr_unload_start[p],
-                    mix_pair_vtr_unload_end[p],
-                    mix_tail_start[m],
-                    mix_tail_end[m],
-                    tail_selector,
-                    big_m,
-                    f"mix_pair_tail_unload_link_{p}_{m}_{r}",
-                )
-                if r < mix_positions[-1]:
-                    mid_selector = model.addVar(vtype="B", name=f"mix_pair_mid_link_{p}_{m}_{r}")
-                    mix_pair_mid_link[(p, m, r)] = mid_selector
-                    model.addCons(
-                        mid_selector <= selector,
-                        name=f"mix_pair_mid_assign_ub_{p}_{m}_{r}",
-                    )
-                    model.addCons(
-                        mid_selector <= mix_pos_used[(m, r + 1)],
-                        name=f"mix_pair_mid_next_ub_{p}_{m}_{r}",
-                    )
-                    model.addCons(
-                        mid_selector >= selector + mix_pos_used[(m, r + 1)] - 1,
-                        name=f"mix_pair_mid_exact_{p}_{m}_{r}",
-                    )
+                if r == mix_segment_last_position[segment_key]:
                     _link_stage_by_binary(
                         model,
                         mix_pair_vtr_unload_start[p],
                         mix_pair_vtr_unload_end[p],
-                        mix_bridge_start[(m, r + 2)],
-                        mix_bridge_end[(m, r + 2)],
-                        mid_selector,
+                        mix_tail_start[segment_key],
+                        mix_tail_end[segment_key],
+                        selector,
+                        big_m,
+                        f"mix_pair_tail_unload_link_{p}_{m}_{r}_{segment_id}",
+                    )
+                else:
+                    _link_stage_by_binary(
+                        model,
+                        mix_pair_vtr_unload_start[p],
+                        mix_pair_vtr_unload_end[p],
+                        mix_bridge_start[(m, first_cycle + 2)],
+                        mix_bridge_end[(m, first_cycle + 2)],
+                        selector,
                         big_m,
                         f"mix_pair_mid_unload_link_{p}_{m}_{r}",
                     )
-        model.addCons(
-            scip.quicksum(mix_pair_tail_link[(p, m, r)] for m in pm_ids for r in mix_positions)
-            + scip.quicksum(mix_pair_mid_link[(p, m, r)] for m in pm_ids for r in mix_positions[:-1])
-            == 1,
-            name=f"mix_pair_unload_once_{p}",
-        )
         model.addCons(
             mix_pair_completion[p] == mix_pair_vtr_unload_end[p],
             name=f"mix_pair_completion_def_{p}",
@@ -2879,23 +2949,27 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                         (full_start[(m, b)], full_end[(m, b)]),
                         (full_side_unload_start[(m, b, lane)], full_side_unload_end[(m, b, lane)]),
                     )
-        for lane in range(1, 3):
-            add_pec_job(
-                f"mix_head_{m}_{lane}",
-                m,
-                mix_active[m],
-                (mix_head_start[m], mix_head_end[m]),
-                (mix_cycle_start[(m, 1)], mix_cycle_end[(m, 1)]),
-                (mix_bridge_start[(m, 2)], mix_bridge_end[(m, 2)]),
-            )
-            add_pec_job(
-                f"mix_tail_{m}_{lane}",
-                m,
-                mix_active[m],
-                (mix_tail_load_start[m], mix_tail_load_end[m]),
-                (mix_last_cycle_start[m], mix_last_cycle_end[m]),
-                (mix_tail_start[m], mix_tail_end[m]),
-            )
+        for segment in cleaning_layout[m]["segments"]:
+            segment_id = segment["id"]
+            key = (m, segment_id)
+            first_cycle = segment["cycles"][0]
+            for lane in range(1, 3):
+                add_pec_job(
+                    f"mix_head_{m}_{segment_id}_{lane}",
+                    m,
+                    mix_active[m],
+                    (mix_head_start[key], mix_head_end[key]),
+                    (mix_cycle_start[(m, first_cycle)], mix_cycle_end[(m, first_cycle)]),
+                    (mix_bridge_start[(m, first_cycle + 1)], mix_bridge_end[(m, first_cycle + 1)]),
+                )
+                add_pec_job(
+                    f"mix_tail_{m}_{segment_id}_{lane}",
+                    m,
+                    mix_active[m],
+                    (mix_tail_load_start[key], mix_tail_load_end[key]),
+                    (mix_last_cycle_start[key], mix_last_cycle_end[key]),
+                    (mix_tail_start[key], mix_tail_end[key]),
+                )
         for clean_slot in clean_slots:
             for lane in range(1, 3):
                 add_pec_job(
@@ -3045,12 +3119,25 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
         vtr_task_locations[task_name] = (source, destination)
 
     for m in pm_ids:
-        append_vtr_task(
-            f"mix_head_{m}", mix_head_start[m], mix_head_end[m], mix_active[m], "LLupper", f"CH{m}"
-        )
-        append_vtr_task(
-            f"mix_tail_{m}", mix_tail_start[m], mix_tail_end[m], mix_active[m], f"CH{m}", "LLlower"
-        )
+        for segment in cleaning_layout[m]["segments"]:
+            segment_id = segment["id"]
+            key = (m, segment_id)
+            append_vtr_task(
+                f"mix_head_{m}_{segment_id}",
+                mix_head_start[key],
+                mix_head_end[key],
+                mix_active[m],
+                "LLupper",
+                f"CH{m}",
+            )
+            append_vtr_task(
+                f"mix_tail_{m}_{segment_id}",
+                mix_tail_start[key],
+                mix_tail_end[key],
+                mix_active[m],
+                f"CH{m}",
+                "LLlower",
+            )
         for b in full_batches:
             append_vtr_task(
                 f"full_front_load_{m}_{b}",
@@ -3122,7 +3209,7 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 f"mix_bridge_{m}_{c}",
                 mix_bridge_start[(m, c)],
                 mix_bridge_end[(m, c)],
-                mix_cycle_used[(m, c)],
+                mix_active[m] if mix_bridge_active[(m, c)] else 0,
                 "LLupper",
                 "LLlower",
             )
@@ -3267,7 +3354,7 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
     # serially calibrates the two wafers in the one-slot AL while retaining the
     # companion wafer, then carries the pair from AL to LLupper. Otherwise it
     # uses the original one-wafer-at-a-time action sequence.
-    if pure_full_mode:
+    if pure_full_mode and cfg.use_legacy_pure_full_atr_chain:
         atr_return_actions = full_pair_robot_actions(
             "atr",
             (("lllower_lp", "atr_lllower_lp", full_atr_return_double),),
@@ -3582,11 +3669,15 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
             - cfg.full_process_time * full_batch_used[(m, b)]
             for b in full_batches
         )
-        mix_process_expr = scip.quicksum(
-            mix_cycle_end[(m, c)] - mix_cycle_start[(m, c)]
-            for c in mix_cycles
+        mix_idle_expr = scip.quicksum(
+            mix_tail_end[(m, segment["id"])]
+            - mix_head_start[(m, segment["id"])]
+            - scip.quicksum(
+                mix_cycle_end[(m, c)] - mix_cycle_start[(m, c)]
+                for c in segment["cycles"]
+            )
+            for segment in cleaning_layout[m]["segments"]
         )
-        mix_idle_expr = mix_block_end[m] - mix_head_start[m] - mix_process_expr
         clean_idle_expr = scip.quicksum(
             clean_front_unload_end[(m, clean_slot)]
             - clean_front_load_start[(m, clean_slot)]
@@ -3606,25 +3697,30 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 full_batch_used[(m, b)],
                 f"full_{m}_{b}",
             )
-        add_chamber_nonprocess_square_term(
-            m,
-            mix_cycle_start[(m, 1)] - mix_head_start[m],
-            mix_cycle_used[(m, 1)],
-            f"mix_head_{m}",
-        )
-        for c in mix_cycles[1:]:
+        for segment in cleaning_layout[m]["segments"]:
+            segment_id = segment["id"]
+            first_cycle = segment["cycles"][0]
+            last_cycle = segment["cycles"][-1]
             add_chamber_nonprocess_square_term(
                 m,
-                mix_cycle_start[(m, c)] - mix_cycle_end[(m, c - 1)],
-                mix_cycle_used[(m, c)],
-                f"mix_bridge_{m}_{c}",
+                mix_cycle_start[(m, first_cycle)] - mix_head_start[(m, segment_id)],
+                mix_active[m],
+                f"mix_head_{m}_{segment_id}",
             )
-        add_chamber_nonprocess_square_term(
-            m,
-            mix_tail_end[m] - mix_last_cycle_end[m],
-            mix_active[m],
-            f"mix_tail_{m}",
-        )
+            add_chamber_nonprocess_square_term(
+                m,
+                mix_tail_end[(m, segment_id)] - mix_cycle_end[(m, last_cycle)],
+                mix_active[m],
+                f"mix_tail_{m}_{segment_id}",
+            )
+        for c in mix_cycles[1:]:
+            if mix_bridge_active[(m, c)]:
+                add_chamber_nonprocess_square_term(
+                    m,
+                    mix_cycle_start[(m, c)] - mix_cycle_end[(m, c - 1)],
+                    mix_active[m],
+                    f"mix_bridge_{m}_{c}",
+                )
         for clean_slot in clean_slots:
             add_chamber_nonprocess_square_term(
                 m,
@@ -3639,6 +3735,22 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
             name=f"chamber_nonprocess_wait_square_def_{m}",
         )
 
+    if cfg.max_schedule_wait_time > 0:
+        wait_cap = float(cfg.max_schedule_wait_time)
+        capped_waits = (
+            list(llupper_wait.values())
+            + list(lllower_wait.values())
+            + list(full_pair_post_process_wait.values())
+            + list(mix_pair_post_process_wait.values())
+            + chamber_idle_slacks
+            + chamber_nonprocess_wait_terms
+        )
+        for variable in capped_waits:
+            model.addCons(
+                variable <= wait_cap,
+                name=f"schedule_wait_cap_{variable.name}",
+            )
+
     c_max = model.addVar(vtype="C", lb=0.0, name="c_max")
     for w in product_wafers:
         model.addCons(c_max >= wafer_completion[w], name=f"makespan_lb_{w}")
@@ -3648,27 +3760,77 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
     # c_max to either the proven optimum or the current incumbent and compact
     # that schedule in a bounded second phase. Keeping this score explicit in
     # the LP makes both objectives auditable in a saved solution.
-    post_process_wait_terms = list(full_pair_post_process_wait.values()) + list(mix_pair_post_process_wait.values())
-    ll_wait_terms = list(llupper_wait.values()) + list(lllower_wait.values())
-    # Keep the established command-line knobs meaningful, but normalize them
-    # by their historical defaults.  At default settings all stability gaps
-    # have equal time-unit weight; changing a knob adjusts only its relative
-    # importance inside the WPH-preserving second phase.
-    balance_weight = cfg.pm_balance_penalty / 0.01
-    chamber_gap_weight = cfg.chamber_idle_penalty / 1e-4
-    post_process_weight = cfg.post_process_wait_penalty / 0.05
-    ll_wait_weight = cfg.ll_wait_penalty / 1e-4
-    chamber_nonprocess_square_weight = cfg.chamber_nonprocess_wait_square_penalty / 1e-2
-    stability_expr = chamber_gap_weight * scip.quicksum(chamber_idle_slacks)
-    stability_expr += chamber_nonprocess_square_weight * scip.quicksum(
-        chamber_nonprocess_wait_square[m] for m in pm_ids
-    )
-    stability_expr += post_process_weight * scip.quicksum(post_process_wait_terms)
-    stability_expr += ll_wait_weight * scip.quicksum(ll_wait_terms)
-    if full_pm_imbalance is not None:
-        stability_expr += balance_weight * full_pm_imbalance
-    if mix_pm_imbalance is not None:
-        stability_expr += balance_weight * mix_pm_imbalance
+    # Strict secondary objective: after phase 1 fixes Cmax, minimize the sum
+    # of squared waiting intervals over every chamber and every product path.
+    # This is lexicographic rather than a fragile weighted blend, so no amount
+    # of wait reduction is allowed to worsen WPH/makespan.
+    wait_square_terms = [
+        square
+        for m in pm_ids
+        for square in chamber_nonprocess_wait_square_terms[m]
+    ]
+
+    def add_wait_square(wait_expr, name: str) -> None:
+        wait = model.addVar(vtype="C", lb=0.0, name=f"schedule_wait_{name}")
+        square = model.addVar(vtype="C", lb=0.0, name=f"schedule_wait_square_{name}")
+        model.addCons(wait == wait_expr, name=f"schedule_wait_def_{name}")
+        if cfg.max_schedule_wait_time > 0:
+            model.addCons(
+                wait <= float(cfg.max_schedule_wait_time),
+                name=f"schedule_wait_cap_{wait.name}",
+            )
+        model.addCons(square >= wait * wait, name=f"schedule_wait_square_def_{name}")
+        wait_square_terms.append(square)
+
+    for w in product_wafers:
+        # Chamber/module queueing before and after processing and LL service.
+        add_wait_square(
+            prod_stage_start[(w, "pm")] - prod_stage_end[(w, "vtr_load")],
+            f"pm_before_{w}",
+        )
+        add_wait_square(
+            prod_stage_start[(w, "vtr_unload")] - prod_stage_end[(w, "pm")],
+            f"pm_after_{w}",
+        )
+        add_wait_square(
+            prod_stage_start[(w, "al")] - prod_stage_end[(w, "atr_lp_al")],
+            f"al_before_{w}",
+        )
+        add_wait_square(
+            prod_stage_start[(w, "atr_al_llupper")] - prod_stage_end[(w, "al")],
+            f"al_after_{w}",
+        )
+        add_wait_square(llupper_wait[w], f"llupper_{w}")
+        add_wait_square(lllower_wait[w], f"lllower_{w}")
+
+        # ATR holding and excess loaded-action duration; VTR uses the same
+        # exact-duration check. These terms cover robot-side waiting without
+        # introducing an artificial preference for early absolute timestamps.
+        add_wait_square(
+            prod_stage_end[(w, "atr_hold_before_al")]
+            - prod_stage_start[(w, "atr_hold_before_al")],
+            f"atr_hold_before_al_{w}",
+        )
+        add_wait_square(
+            prod_stage_end[(w, "atr_hold_after_al")]
+            - prod_stage_start[(w, "atr_hold_after_al")],
+            f"atr_hold_after_al_{w}",
+        )
+        for stage, minimum_duration in (
+            ("atr_lp_al", cfg.atr_lp_al_total_time),
+            ("atr_al_llupper", cfg.atr_al_llupper_total_time),
+            ("vtr_load", cfg.pair_transfer_time),
+            ("vtr_unload", cfg.pair_transfer_time),
+            ("atr_lllower_lp", cfg.atr_lllower_lp_total_time),
+        ):
+            add_wait_square(
+                prod_stage_end[(w, stage)]
+                - prod_stage_start[(w, stage)]
+                - minimum_duration,
+                f"{stage}_excess_{w}",
+            )
+
+    stability_expr = scip.quicksum(wait_square_terms)
     schedule_stability = model.addVar(vtype="C", lb=0.0, name="schedule_stability")
     model.addCons(
         schedule_stability == stability_expr,
@@ -3756,12 +3918,13 @@ Embedded PEC wafers forced by odd product counts: `{embedded_pec}`.
 - an active `4x1` batch fills both side slots. If only one product-carrying PW pair is assigned, the other side is forced to a pure `PEC+PEC` filler pair.
 - per chamber, `4x1` batches form one serial block by batch index; batch `b+1` can start only after batch `b` has fully unloaded.
 - a pure `PEC+PEC` filler side is allowed only on the tail `4x1` batch of a chamber sequence. Earlier active `4x1` batches must carry two product PW pairs.
-- `2x2`: product PW pairs form one contiguous prefix block on a chamber, with one pure PEC pair at the head and one pure PEC pair at the tail. Each product PW pair is processed in two adjacent cycles: first with the preceding PW pair (or head PEC), then with the following PW pair (or tail PEC).
+- `2x2`: product PW pairs form ordered PEC-bounded segments on a chamber. Within each segment, a product pair is processed in two adjacent cycles: first with the preceding product pair (or head PEC), then with the following product pair (or tail PEC).
+- if the next `2x2` exposure reaches the cleaning interval, the preceding bridge loads tail PEC instead of the next product pair. After that exposure, the remaining product pair is removed/replaced by PEC, the chamber cleans, and the next segment restarts with head PEC plus the next product pair.
 - per chamber, every active `4x1` batch must finish before that chamber's `2x2` block begins, matching the disclosure rule that `4x1` is completed before `2x2`.
 - for every `4x1` batch, PM processing starts exactly when the second side finishes loading, so a full chamber cannot wait before processing (`full_start == full_back_load_end`).
-- downstream stages may wait, but they cannot start before the required transfer or process has finished. For every complete two-product PW pair, the ATR double-gripper decisions are available in pure and mixed production alike; they are never disabled merely because both process families coexist. A selected double action synchronizes that transfer route, while the two AL calibrations remain serial because AL has one physical slot. Between them, ATR explicitly picks the calibrated wafer and places the held companion into AL; this exchange is not a zero-time or double-place operation. An odd one-product tail pair remains a single-gripper action.
+- downstream stages may wait, but they cannot start before the required transfer or process has finished. Every complete two-product PW pair uses ATR double-gripper transfer in pure and mixed production alike, while the two AL calibrations remain serial because AL has one physical slot. Between them, ATR explicitly picks the calibrated wafer and places the held companion into AL; this exchange is not a zero-time or double-place operation. An odd one-product tail pair remains a single-gripper action.
 - `ATR` and `VTR` each represent one physical robot. Their capacities describe how many wafers an atomic transfer can carry; they do not permit independent moves on different routes at the same time. Every ATR loaded transfer consists of load, route movement, and unload. Between consecutive ATR actions, the model inserts the empty movement required from the previous destination to the next source; in particular, `LL->LP` empty return takes two `LP->AL` route movements.
-- ATR has a two-gripper payload, while AL has one physical slot. For every complete two-product PW pair in `4x1`, `2x2`, or mixed production, the model permits one shared `LP->AL` move, a single-wafer AL placement, serial calibration with an explicit AL wafer exchange while ATR retains the companion, one shared `AL->LLupper` move, and a shared `LLlower->LP` return. A shared output move requires the corresponding shared input move. All ATR routes remain globally non-overlapping.
+- ATR has a two-gripper payload, while AL has one physical slot. Every complete two-product PW pair in `4x1`, `2x2`, or mixed production uses one shared `LP->AL` move, a single-wafer AL placement, serial calibration with an explicit AL wafer exchange while ATR retains the companion, one shared `AL->LLupper` move, and a shared `LLlower->LP` return. All ATR routes remain globally non-overlapping.
 - VTR `front/back load/unload` and `2x2` head/bridge/tail actions carry a two-product PW pair as one double-gripper action when both members are product wafers. Every loaded VTR action has exact duration `{cfg.pair_transfer_time:.1f}`. If one action's destination differs from the next action's source, an explicit `{cfg.pair_transfer_time:.1f}` empty reposition is required; for example, consecutive `LLupper->CH2` loads contain a `CH2->LLupper` return between them. Robot idle time carries no wafer and is not a VTR wait.
 - For a pure `4x1` input, product wafers and PW pairs are indistinguishable apart from their identifiers. The model uses one canonical pairing and batch placement, then writes the implied ATR action chain, VTR action chain, and two LL slot chains directly. This removes label symmetry while retaining synchronized pair-transfer stages and serial AL calibration.
 - chamber compactness slack measures avoidable gaps between adjacent `4x1` batches, between the tail `4x1` batch and the `2x2` block, and before `2x2` bridge/tail transfer actions. After a `2x2` head or bridge transfer has filled the chamber, the following exposure starts immediately by hard equality. In addition, every CH window that contains wafers but is not running a process recipe contributes a separate squared term to `chamber_nonprocess_wait_square_*`.
@@ -3775,7 +3938,7 @@ Embedded PEC wafers forced by odd product counts: `{embedded_pec}`.
   double-gripper variable, the two wafers enter or leave synchronously on two independent slots.
 - PEC wafers are modeled as reusable, chamber-bound tokens. Each active PEC job occupies exactly one token from its assigned chamber's PEC subset, from `vtr_load` start until `vtr_unload` end.
 - chamber cleaning is modeled as a pure `PEC+PEC` / `PEC+PEC` rotary batch. It uses the same VTR load/unload and chamber rotation semantics as `4x1`, occupies four PEC tokens, and adds a cleaning process interval.
-- per chamber, process epochs are separated by cleaning batches so that each epoch contains at most `{cfg.cleaning_interval}` full-chamber process cycles. `2x2` chains are kept inside one epoch, so the model will split such work across chambers or report infeasibility rather than silently violating the cleaning requirement.
+- per chamber, process epochs are separated by cleaning batches so that each epoch contains at most `{cfg.cleaning_interval}` full-chamber process cycles. A long `2x2` workload is split at an exposure boundary with PEC tail/head pairs; it no longer has to fit in one cleaning epoch.
 
 ## Resource Constraints Added Explicitly
 
@@ -3811,6 +3974,7 @@ Embedded PEC wafers forced by odd product counts: `{embedded_pec}`.
 - cleaning process time: `{cfg.effective_cleaning_process_time:.1f}`
 - max module residency time: `{cfg.max_module_residency_time:.1f}`
 - max robot residency time: `{cfg.max_robot_residency_time:.1f}`
+- maximum individual avoidable schedule wait: `{cfg.max_schedule_wait_time:.1f}` (`0` disables the hard cap)
 - secondary stability score: normalized weighted sum of PM imbalance, avoidable chamber gaps,
   squared CH non-process wafer residence, post-process wait, and excess LL wait
   (evaluated after fixing either the optimal or incumbent WPH)
@@ -3829,7 +3993,7 @@ Embedded PEC wafers forced by odd product counts: `{embedded_pec}`.
 - `full_atr_*_double_*`, `full_vtr_*_double_*`, `mix_atr_*_double_*`, `mix_vtr_*_double_*`: per-PW-pair selection of single- or double-gripper action on the named robot route; `*_atr_al_llupper_double_*` can be `1` only when the corresponding `*_atr_lp_al_double_*` is `1`
 - `chamber_idle_total_*`: total per-CH time that is neither processing nor cleaning
 - `chamber_nonprocess_wait_*`, `chamber_nonprocess_wait_square_*`: per-window non-process CH residence and its squared sum, used as a high-priority stability penalty
-- `process_epoch_used_*`, `full_batch_epoch_*`, `mix_block_epoch_*`, `mix_cycle_epoch_*`: cleaning-separated chamber process epochs
+- `process_epoch_used_*`, `full_batch_epoch_*`, `mix_block_epoch_*`, `mix_cycle_epoch_*`: the canonical cleaning-separated process epochs (`mix_block_epoch` marks every epoch containing a 2x2 segment)
 - `prod_stage_start_*`, `prod_stage_end_*`: full product-wafer path stages, including `atr_hold_before_al`, `atr_al_exchange`, and `atr_hold_after_al` across serial single-slot AL calibration
 - `full_side_llupper_release_*`, `full_side_lllower_release_*`: 4x1 front/back LL release-time envelopes, used only to
   enforce physical two-slot handoff order
@@ -3837,14 +4001,15 @@ Embedded PEC wafers forced by odd product counts: `{embedded_pec}`.
 - `pec_token_assign_*`: reusable PEC token assignment
 - `atr_pair_action_start/end_*`, `atr_mix_pair_action_start/end_*`, `vtr_pair_action_start/end_*`: one PW pair's non-preemptive ATR/VTR action envelope; a double action has one shared transfer window, while two single actions are consecutive within this envelope
 - `atr_al_service_physical_action_order_*`: pure-4x1 AL service order; a PW pair may share LP pickup, but its two wafers always enter the one-slot AL and calibrate one after the other
-- `atr_return_during_al_*`, `atr_return_after_all_al_*`: selects either an AL calibration window or the post-input tail for each LLlower-to-LP ATR return; return actions remain in physical PM unload order
+- `atr_return_during_al_*`, `atr_return_after_all_al_*`: legacy pure-4x1 ATR-return window selectors. They are emitted only when `use_legacy_pure_full_atr_chain=True`; the default uses `seq_atr_action_*` for pure 4x1 as well.
 - `vtr_physical_action_order_*`: pure-4x1 continuous VTR cycle, which loads the next PM batch without waiting for an entire four-wafer batch to return to LP
 - `seq_atr_action_*`, `seq_vtr_action_*`: generic mixed-mode ATR/VTR non-overlap ordering with endpoint-aware empty reposition times, used when the pure-4x1 continuous cycle is not applicable
 - `llupper_slot_assign_*`, `lllower_slot_assign_*`: LL slot occupancy assignment
 - `wafer_completion_*`: auxiliary terminal timestamp linking each product wafer's LP return to the makespan; it is
   not separately summed in the objective
 - `c_max`: end-to-end makespan
-- `schedule_stability`: squared CH non-process residence, avoidable chamber gap, post-process wait, excess LL wait, and PM load imbalance;
+- `schedule_wait_*`, `schedule_wait_square_*`: chamber/module/ATR/VTR/LL waiting intervals and their squared values;
+- `schedule_stability`: sum of all chamber and robot waiting-time squares, minimized only after `c_max` is fixed;
   it is optimized only after the optimal `c_max` is fixed
 
 ## Objective
@@ -3870,7 +4035,18 @@ def _write_model_description(output_dir: str, instance_name: str, cfg: PetriMIPC
     return description_path
 
 
-def generate_petri_mip_instance(output_dir: str, instance_name: str, cfg: PetriMIPConfig) -> str:
+def generate_petri_mip_instance(
+    output_dir: str,
+    instance_name: str,
+    cfg: PetriMIPConfig,
+    warm_start_time_limit: float = 180.0,
+    require_warm_start: bool = True,
+) -> str:
+    """Generate an LP and, for mixed flows, its compatible primal warm start.
+
+    The warm start is cached beside the LP and tagged with the LP SHA-256, so
+    stale starts are never reused after an instance is regenerated.
+    """
     output_dir = str(resolve_path(output_dir))
     os.makedirs(output_dir, exist_ok=True)
     dated_instance_name = append_date_to_filename(instance_name)
@@ -3878,6 +4054,64 @@ def generate_petri_mip_instance(output_dir: str, instance_name: str, cfg: PetriM
     model = build_petri_mip_model(cfg)
     model.writeProblem(lp_path)
     _write_model_description(output_dir, dated_instance_name, cfg)
+
+    if cfg.mix_wafer_ids and float(warm_start_time_limit) > 0:
+        try:
+            # Import lazily: petri_warm_start imports this generator module.
+            from petri_warm_start import (
+                find_compatible_mixed_warm_start,
+                polish_mixed_warm_start,
+                write_mixed_warm_start,
+            )
+
+            warm_start = find_compatible_mixed_warm_start(
+                output_dir,
+                dated_instance_name,
+            )
+            if warm_start:
+                print(f"reusing compatible Petri warm start: {warm_start}")
+            else:
+                warm_start = write_mixed_warm_start(
+                    output_dir,
+                    dated_instance_name,
+                    cfg,
+                    time_limit=float(warm_start_time_limit),
+                )
+                if warm_start:
+                    print(f"generated Petri warm start: {warm_start}")
+                else:
+                    message = (
+                        "LP was generated, but no compatible Petri warm start "
+                        f"was found within {float(warm_start_time_limit):.0f}s"
+                    )
+                    if require_warm_start:
+                        raise RuntimeError(message)
+                    print(f"warning: {message}")
+            if warm_start:
+                polish_budget = min(
+                    1800.0,
+                    max(60.0, 0.20 * float(warm_start_time_limit)),
+                )
+                polished_start = polish_mixed_warm_start(
+                    output_dir,
+                    dated_instance_name,
+                    cfg,
+                    time_limit=polish_budget,
+                )
+                if not polished_start:
+                    message = "compatible Petri warm start could not be schedule-polished"
+                    if require_warm_start:
+                        raise RuntimeError(message)
+                    print(f"warning: {message}")
+                else:
+                    warm_start = polished_start
+                    print(f"polished Petri warm start: {warm_start}")
+        except Exception as exc:
+            if require_warm_start:
+                raise RuntimeError(
+                    f"LP was generated, but required warm-start generation failed: {exc}"
+                ) from exc
+            print(f"warning: LP was generated, but warm-start generation failed: {exc}")
     return lp_path
 
 
@@ -3887,6 +4121,17 @@ def main() -> None:
     )
     parser.add_argument("--output_dir", type=str, default="generated_instances/petri")
     parser.add_argument("--instance_name", type=str, default="petri_batch10_fullflow_v7.lp")
+    parser.add_argument(
+        "--warm_start_time_limit",
+        type=float,
+        default=180.0,
+        help="Seconds used to build a compatible mixed-flow warm start; 0 disables it.",
+    )
+    parser.add_argument(
+        "--allow_missing_warm_start",
+        action="store_true",
+        help="Allow mixed LP generation to succeed without a verified warm-start file.",
+    )
     parser.add_argument("--num_batches", type=int, default=10)
     parser.add_argument("--num_pm", type=int, default=2)
     parser.add_argument("--num_steps", type=int, default=13)
@@ -3923,6 +4168,12 @@ def main() -> None:
     parser.add_argument("--cleaning_process_time", type=float, default=0.0)
     parser.add_argument("--max_module_residency_time", type=float, default=10000.0)
     parser.add_argument("--max_robot_residency_time", type=float, default=10000.0)
+    parser.add_argument(
+        "--max_schedule_wait_time",
+        type=float,
+        default=0.0,
+        help="Hard cap for each avoidable LL, post-process, bridge, and chamber wait; 0 disables it.",
+    )
     parser.add_argument("--pm_balance_penalty", type=float, default=0.01)
     parser.add_argument(
         "--chamber_idle_penalty",
@@ -3997,6 +4248,7 @@ def main() -> None:
         cleaning_process_time=args.cleaning_process_time,
         max_module_residency_time=args.max_module_residency_time,
         max_robot_residency_time=args.max_robot_residency_time,
+        max_schedule_wait_time=args.max_schedule_wait_time,
         pm_balance_penalty=args.pm_balance_penalty,
         chamber_idle_penalty=args.chamber_idle_penalty,
         post_process_wait_penalty=args.post_process_wait_penalty,
@@ -4009,7 +4261,13 @@ def main() -> None:
         full_mode_wafers=args.mode_4x1_wafers,
         mix_mode_wafers=args.mode_2x2_wafers,
     )
-    lp_path = generate_petri_mip_instance(args.output_dir, args.instance_name, cfg)
+    lp_path = generate_petri_mip_instance(
+        args.output_dir,
+        args.instance_name,
+        cfg,
+        warm_start_time_limit=args.warm_start_time_limit,
+        require_warm_start=not args.allow_missing_warm_start,
+    )
     generated_instance_name = os.path.basename(lp_path)
     print(f"generated MIP instance: {lp_path}")
     print(
