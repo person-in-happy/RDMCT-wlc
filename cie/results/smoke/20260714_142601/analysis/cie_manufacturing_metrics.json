@@ -1,0 +1,40 @@
+{
+  "source_benchmarks": [
+    "G:\\git\\RDMCT-A3C\\cie\\results\\smoke\\20260714_142601\\runs\\aaai27_benchmark_20260714_142605.json"
+  ],
+  "solution_count": 1,
+  "invalid_count": 0,
+  "rows": [
+    {
+      "suite": "cie_validation",
+      "instance": "cie_validation_n004_f004_m000_proc100.lp",
+      "path": "G:\\git\\RDMCT-A3C\\cie\\data\\validation\\pure41\\cie_validation_n004_f004_m000_proc100.lp",
+      "method": "scip_default",
+      "run_label": "",
+      "warm_start": "none",
+      "solver_seed": 1,
+      "training_seed": -1,
+      "status": "optimal",
+      "solving_time": 0.0,
+      "gap": 0.0,
+      "pdi": 0.0,
+      "solution_file": "G:\\git\\RDMCT-A3C\\cie\\results\\smoke\\20260714_142601\\solutions\\cie_validation__cie_validation_n004_f004_m000_proc100__scip_default__solverseed_1__trainseed_-1__unlabeled.sol",
+      "physically_feasible": true,
+      "validation_note": "checked active primary model; removed 115 inactive auxiliaries",
+      "total_wafers": 4,
+      "cmax": 458.0,
+      "throughput_wph": 31.441048034934497,
+      "mean_cycle_time": 391.0,
+      "p95_cycle_time": 458.0,
+      "atr_utilization": 0.3537117903930131,
+      "vtr_utilization": 0.034934497816593885,
+      "al_utilization": 0.17467248908296942,
+      "llupper_capacity_utilization": 0.14847161572052403,
+      "lllower_capacity_utilization": 0.1091703056768559,
+      "pec_peak_in_tool": 0,
+      "clean_count": 0,
+      "clean_time_share": 0.0,
+      "ch2_utilization": 0.3930131004366812
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "best_weights": {
+    "dircutoffdistweight": 0.0,
+    "efficacyweight": 0.0,
+    "intsupportweight": 1.0,
+    "objparalweight": 0.0
+  },
+  "selection_rule": "minimum mean validation metric normalized by SCIP default",
+  "grid_step": 1.0,
+  "seeds": [
+    1
+  ],
+  "validation_instances": [
+    "G:\\git\\RDMCT-A3C\\aaai\\data\\petri_submodular\\validation\\petri_f12_m4_20260710.lp",
+    "G:\\git\\RDMCT-A3C\\aaai\\data\\milp\\setcover\\large\\validation\\setcover_large_validation_000.mps",
+    "G:\\git\\RDMCT-A3C\\aaai\\data\\milp\\knapsack\\large\\validation\\knapsack_large_validation_000.mps",
+    "G:\\git\\RDMCT-A3C\\aaai\\data\\milp\\facility_location\\large\\validation\\facility_location_large_validation_000.mps",
+    "G:\\git\\RDMCT-A3C\\aaai\\data\\milp\\independent_set\\large\\validation\\independent_set_large_validation_000.mps"
+  ],
+  "profiles": [
+    {
+      "weights": {
+        "dircutoffdistweight": 0.0,
+        "efficacyweight": 0.0,
+        "intsupportweight": 1.0,
+        "objparalweight": 0.0
+      },
+      "mean_normalized_metric": 0.9100604341721443,
+      "std_normalized_metric": 0.1294873066289991,
+      "failures": 0,
+      "runs": 5
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.0,
+        "efficacyweight": 0.0,
+        "intsupportweight": 0.0,
+        "objparalweight": 1.0
+      },
+      "mean_normalized_metric": 0.9600142721791789,
+      "std_normalized_metric": 0.15542088828621903,
+      "failures": 0,
+      "runs": 5
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.0,
+        "efficacyweight": 1.0,
+        "intsupportweight": 0.0,
+        "objparalweight": 0.0
+      },
+      "mean_normalized_metric": 0.9696133408640046,
+      "std_normalized_metric": 0.06899374562855563,
+      "failures": 0,
+      "runs": 5
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 1.0,
+        "efficacyweight": 0.0,
+        "intsupportweight": 0.0,
+        "objparalweight": 0.0
+      },
+      "mean_normalized_metric": 0.9923138166637304,
+      "std_normalized_metric": 0.1510103127087023,
+      "failures": 0,
+      "runs": 5
+    }
+  ]
+}

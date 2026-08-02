@@ -1,0 +1,189 @@
+{
+  "meta": {
+    "manifest": "G:\\git\\RDMCT-A3C\\cie\\configs\\cie_benchmark_suites.json",
+    "methods": [
+      "scip_default"
+    ],
+    "seeds": [
+      1
+    ],
+    "training_seed": -1,
+    "run_label": "",
+    "time_limit": 30.0,
+    "node_limit": -1,
+    "memory_limit_mb": 8192.0,
+    "instance_count": 1,
+    "empty_suites": [],
+    "hem_model": null,
+    "a3c_model": null,
+    "feature_only_model": null,
+    "proposed_model": null,
+    "acs_global_weights": {
+      "dircutoffdistweight": 0.0,
+      "efficacyweight": 1.0,
+      "intsupportweight": 0.0,
+      "objparalweight": 0.0
+    },
+    "acs_predictions": "",
+    "warm_start": "none",
+    "structure_submodular": {
+      "pool_factor": 2.0,
+      "anchor_ratio": 0.25,
+      "quality_weight": 0.35,
+      "policy_weight": 0.2,
+      "coverage_weight": 0.25,
+      "representation_weight": 0.2
+    }
+  },
+  "summary": [
+    {
+      "method": "scip_default",
+      "suite": "cie_validation",
+      "family": "dual_source_cluster_tool",
+      "scale": "small_validation",
+      "split": "validation",
+      "runs": 1,
+      "completed": 1,
+      "with_incumbent": 1,
+      "optimal": 1,
+      "incumbent_rate": 1.0,
+      "optimal_rate": 1.0,
+      "mean_time": 0.0,
+      "std_time": 0.0,
+      "median_time": 0.0,
+      "shifted_geomean_time": 0.0,
+      "mean_nodes": 1.0,
+      "mean_gap": 0.0,
+      "std_gap": 0.0,
+      "median_gap": 0.0,
+      "mean_primal_dual_integral": 0.0,
+      "std_primal_dual_integral": 0.0,
+      "median_primal_dual_integral": 0.0,
+      "mean_best_objective": 458.0,
+      "std_best_objective": 0.0,
+      "median_best_objective": 458.0,
+      "mean_par2_time": 0.0,
+      "mean_schedule_total_wait": 208.0,
+      "mean_schedule_max_wait": 58.0,
+      "mean_schedule_cadence_cv": 0.0,
+      "mean_schedule_cadence_deviation_sum": 0.0,
+      "mean_speedup_vs_scip": null,
+      "std_speedup_vs_scip": null,
+      "median_speedup_vs_scip": null,
+      "speedup_95ci_low": null,
+      "speedup_95ci_high": null,
+      "mean_node_reduction_factor": 1.0
+    }
+  ],
+  "paired_significance": {
+    "metric": "primal_dual_integral",
+    "test": "paired one-sided Wilcoxon signed-rank",
+    "multiple_testing": "Holm",
+    "claim_ready": false,
+    "claim_rule": "For every baseline: >=10 valid pairs, mean PDI improvement >=5%, win rate >=60%, no lower incumbent rate, and Holm-adjusted p<0.05.",
+    "comparisons": [
+      {
+        "baseline": "scip_default",
+        "paired_total": 0,
+        "baseline_incumbent_rate": null,
+        "proposed_incumbent_rate": null,
+        "paired_runs": 0,
+        "wins": 0,
+        "ties": 0,
+        "win_rate": null,
+        "mean_pdi_improvement_percent": null,
+        "median_pdi_improvement_percent": null,
+        "objective_pairs": 0,
+        "mean_objective_improvement_percent": null,
+        "gap_pairs": 0,
+        "mean_gap_absolute_reduction": null,
+        "optimal_time_pairs": 0,
+        "mean_optimal_time_improvement_percent": null,
+        "wilcoxon_p": null,
+        "holm_p": null
+      }
+    ],
+    "module_effects": [
+      {
+        "effect": "beam_without_structure",
+        "baseline": "hem",
+        "target": "hem_beam",
+        "paired_runs": 0,
+        "wins": 0,
+        "win_rate": null,
+        "mean_pdi_improvement_percent": null,
+        "median_pdi_improvement_percent": null
+      },
+      {
+        "effect": "structure_with_greedy",
+        "baseline": "hem",
+        "target": "hem_structure",
+        "paired_runs": 0,
+        "wins": 0,
+        "win_rate": null,
+        "mean_pdi_improvement_percent": null,
+        "median_pdi_improvement_percent": null
+      },
+      {
+        "effect": "structure_with_beam",
+        "baseline": "hem_beam",
+        "target": "proposed",
+        "paired_runs": 0,
+        "wins": 0,
+        "win_rate": null,
+        "mean_pdi_improvement_percent": null,
+        "median_pdi_improvement_percent": null
+      },
+      {
+        "effect": "beam_with_structure",
+        "baseline": "hem_structure",
+        "target": "proposed",
+        "paired_runs": 0,
+        "wins": 0,
+        "win_rate": null,
+        "mean_pdi_improvement_percent": null,
+        "median_pdi_improvement_percent": null
+      }
+    ]
+  },
+  "rows": [
+    {
+      "suite": "cie_validation",
+      "family": "dual_source_cluster_tool",
+      "scale": "small_validation",
+      "split": "validation",
+      "time_limit": 30.0,
+      "solver_seeds": [],
+      "path": "G:\\git\\RDMCT-A3C\\cie\\data\\validation\\pure41\\cie_validation_n004_f004_m000_proc100.lp",
+      "relative_path": "pure41\\cie_validation_n004_f004_m000_proc100.lp",
+      "instance": "cie_validation_n004_f004_m000_proc100.lp",
+      "method": "scip_default",
+      "seed": 1,
+      "training_seed": -1,
+      "run_label": "",
+      "warm_start": "none",
+      "started_at": "2026-07-14T13:59:45",
+      "status": "optimal",
+      "solving_time": 0.0,
+      "nodes": 1,
+      "gap": 0.0,
+      "primal_dual_integral": 0.0,
+      "best_objective": 458.0,
+      "schedule_total_wait": 208.0,
+      "schedule_max_wait": 58.0,
+      "schedule_cadence_cv": 0.0,
+      "schedule_cadence_deviation_sum": 0.0,
+      "n_solutions": 1,
+      "has_incumbent": true,
+      "solution_file": "G:\\git\\RDMCT-A3C\\cie\\results\\smoke\\20260714_135943\\solutions\\cie_validation__cie_validation_n004_f004_m000_proc100__scip_default__solverseed_1__trainseed_-1.sol",
+      "solution_write_error": null,
+      "acs_weights": null,
+      "acs_weight_source": null,
+      "policy_model": null,
+      "feature_dim": null,
+      "structure_rerank": false,
+      "decode_type": null,
+      "error": null
+    }
+  ]
+}

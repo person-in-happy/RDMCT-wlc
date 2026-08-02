@@ -1,0 +1,454 @@
+{
+  "best_weights": {
+    "dircutoffdistweight": 0.0,
+    "efficacyweight": 0.0,
+    "intsupportweight": 0.75,
+    "objparalweight": 0.25
+  },
+  "selection_rule": "minimum mean validation metric normalized by SCIP default",
+  "grid_step": 0.25,
+  "seeds": [
+    1,
+    2,
+    3
+  ],
+  "validation_instances": [
+    "G:\\git\\RDMCT-A3C\\aaai\\data\\petri_submodular\\validation\\petri_f12_m4_20260710.lp",
+    "G:\\git\\RDMCT-A3C\\aaai\\data\\petri_submodular\\validation\\petri_f4_m12_20260710.lp",
+    "G:\\git\\RDMCT-A3C\\aaai\\data\\petri_submodular\\validation\\petri_f8_m8_20260710.lp",
+    "G:\\git\\RDMCT-A3C\\aaai\\data\\milp\\setcover\\large\\validation\\setcover_large_validation_000.mps",
+    "G:\\git\\RDMCT-A3C\\aaai\\data\\milp\\setcover\\large\\validation\\setcover_large_validation_001.mps",
+    "G:\\git\\RDMCT-A3C\\aaai\\data\\milp\\setcover\\large\\validation\\setcover_large_validation_002.mps",
+    "G:\\git\\RDMCT-A3C\\aaai\\data\\milp\\knapsack\\large\\validation\\knapsack_large_validation_000.mps",
+    "G:\\git\\RDMCT-A3C\\aaai\\data\\milp\\knapsack\\large\\validation\\knapsack_large_validation_001.mps",
+    "G:\\git\\RDMCT-A3C\\aaai\\data\\milp\\knapsack\\large\\validation\\knapsack_large_validation_002.mps",
+    "G:\\git\\RDMCT-A3C\\aaai\\data\\milp\\facility_location\\large\\validation\\facility_location_large_validation_000.mps",
+    "G:\\git\\RDMCT-A3C\\aaai\\data\\milp\\facility_location\\large\\validation\\facility_location_large_validation_001.mps",
+    "G:\\git\\RDMCT-A3C\\aaai\\data\\milp\\facility_location\\large\\validation\\facility_location_large_validation_002.mps",
+    "G:\\git\\RDMCT-A3C\\aaai\\data\\milp\\independent_set\\large\\validation\\independent_set_large_validation_000.mps",
+    "G:\\git\\RDMCT-A3C\\aaai\\data\\milp\\independent_set\\large\\validation\\independent_set_large_validation_001.mps",
+    "G:\\git\\RDMCT-A3C\\aaai\\data\\milp\\independent_set\\large\\validation\\independent_set_large_validation_002.mps"
+  ],
+  "profiles": [
+    {
+      "weights": {
+        "dircutoffdistweight": 0.0,
+        "efficacyweight": 0.0,
+        "intsupportweight": 0.75,
+        "objparalweight": 0.25
+      },
+      "mean_normalized_metric": 0.8034637236719031,
+      "std_normalized_metric": 0.284546478290224,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.0,
+        "efficacyweight": 0.0,
+        "intsupportweight": 0.25,
+        "objparalweight": 0.75
+      },
+      "mean_normalized_metric": 0.8501668076426968,
+      "std_normalized_metric": 0.2663419974800085,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.0,
+        "efficacyweight": 0.25,
+        "intsupportweight": 0.25,
+        "objparalweight": 0.5
+      },
+      "mean_normalized_metric": 0.8503959882332394,
+      "std_normalized_metric": 0.29333136074846894,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.0,
+        "efficacyweight": 0.25,
+        "intsupportweight": 0.0,
+        "objparalweight": 0.75
+      },
+      "mean_normalized_metric": 0.8575411887879651,
+      "std_normalized_metric": 0.2595697467663257,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.0,
+        "efficacyweight": 0.5,
+        "intsupportweight": 0.0,
+        "objparalweight": 0.5
+      },
+      "mean_normalized_metric": 0.8626073885119927,
+      "std_normalized_metric": 0.3122053807346157,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.25,
+        "efficacyweight": 0.0,
+        "intsupportweight": 0.0,
+        "objparalweight": 0.75
+      },
+      "mean_normalized_metric": 0.8639656294457303,
+      "std_normalized_metric": 0.26471042490275215,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.25,
+        "efficacyweight": 0.5,
+        "intsupportweight": 0.25,
+        "objparalweight": 0.0
+      },
+      "mean_normalized_metric": 0.8654039938978506,
+      "std_normalized_metric": 0.2788397358169981,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.75,
+        "efficacyweight": 0.0,
+        "intsupportweight": 0.0,
+        "objparalweight": 0.25
+      },
+      "mean_normalized_metric": 0.8683249361329269,
+      "std_normalized_metric": 0.33160586072192355,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.5,
+        "efficacyweight": 0.0,
+        "intsupportweight": 0.5,
+        "objparalweight": 0.0
+      },
+      "mean_normalized_metric": 0.8729049981224679,
+      "std_normalized_metric": 0.3102253839580734,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.5,
+        "efficacyweight": 0.0,
+        "intsupportweight": 0.0,
+        "objparalweight": 0.5
+      },
+      "mean_normalized_metric": 0.9152986891124613,
+      "std_normalized_metric": 0.2775843894224755,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.0,
+        "efficacyweight": 0.5,
+        "intsupportweight": 0.5,
+        "objparalweight": 0.0
+      },
+      "mean_normalized_metric": 0.9293009785805446,
+      "std_normalized_metric": 0.5369129996375296,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.25,
+        "efficacyweight": 0.0,
+        "intsupportweight": 0.5,
+        "objparalweight": 0.25
+      },
+      "mean_normalized_metric": 0.9354071088159144,
+      "std_normalized_metric": 0.299552610618928,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.0,
+        "efficacyweight": 1.0,
+        "intsupportweight": 0.0,
+        "objparalweight": 0.0
+      },
+      "mean_normalized_metric": 0.9595611943542683,
+      "std_normalized_metric": 0.3636718709378195,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.0,
+        "efficacyweight": 0.25,
+        "intsupportweight": 0.75,
+        "objparalweight": 0.0
+      },
+      "mean_normalized_metric": 0.9805592540477555,
+      "std_normalized_metric": 0.37048910947445873,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.0,
+        "efficacyweight": 0.0,
+        "intsupportweight": 0.5,
+        "objparalweight": 0.5
+      },
+      "mean_normalized_metric": 0.994311528296558,
+      "std_normalized_metric": 1.2481496904224236,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.0,
+        "efficacyweight": 0.5,
+        "intsupportweight": 0.25,
+        "objparalweight": 0.25
+      },
+      "mean_normalized_metric": 0.9959467085788376,
+      "std_normalized_metric": 0.4757064203306331,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.0,
+        "efficacyweight": 0.25,
+        "intsupportweight": 0.5,
+        "objparalweight": 0.25
+      },
+      "mean_normalized_metric": 1.0038168942481718,
+      "std_normalized_metric": 0.42990298300082747,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.0,
+        "efficacyweight": 0.0,
+        "intsupportweight": 1.0,
+        "objparalweight": 0.0
+      },
+      "mean_normalized_metric": 1.00714355129026,
+      "std_normalized_metric": 0.39665515130136786,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.0,
+        "efficacyweight": 0.75,
+        "intsupportweight": 0.0,
+        "objparalweight": 0.25
+      },
+      "mean_normalized_metric": 1.0110993549492646,
+      "std_normalized_metric": 1.2554670739443252,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.25,
+        "efficacyweight": 0.25,
+        "intsupportweight": 0.25,
+        "objparalweight": 0.25
+      },
+      "mean_normalized_metric": 1.011834187201532,
+      "std_normalized_metric": 0.930080944928242,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.25,
+        "efficacyweight": 0.25,
+        "intsupportweight": 0.5,
+        "objparalweight": 0.0
+      },
+      "mean_normalized_metric": 1.0137124654839627,
+      "std_normalized_metric": 0.5749369474249547,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.25,
+        "efficacyweight": 0.75,
+        "intsupportweight": 0.0,
+        "objparalweight": 0.0
+      },
+      "mean_normalized_metric": 1.023297976217114,
+      "std_normalized_metric": 0.5548075787873842,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.5,
+        "efficacyweight": 0.5,
+        "intsupportweight": 0.0,
+        "objparalweight": 0.0
+      },
+      "mean_normalized_metric": 1.0246825948123761,
+      "std_normalized_metric": 0.5846837324966758,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.25,
+        "efficacyweight": 0.5,
+        "intsupportweight": 0.0,
+        "objparalweight": 0.25
+      },
+      "mean_normalized_metric": 1.0324038158715585,
+      "std_normalized_metric": 0.5673586783271699,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.25,
+        "efficacyweight": 0.0,
+        "intsupportweight": 0.25,
+        "objparalweight": 0.5
+      },
+      "mean_normalized_metric": 1.0393641115288246,
+      "std_normalized_metric": 0.5658089914277065,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.0,
+        "efficacyweight": 0.0,
+        "intsupportweight": 0.0,
+        "objparalweight": 1.0
+      },
+      "mean_normalized_metric": 1.042592423400389,
+      "std_normalized_metric": 0.4724048221729661,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.5,
+        "efficacyweight": 0.0,
+        "intsupportweight": 0.25,
+        "objparalweight": 0.25
+      },
+      "mean_normalized_metric": 1.0430416195358623,
+      "std_normalized_metric": 0.5541783704778425,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.5,
+        "efficacyweight": 0.25,
+        "intsupportweight": 0.0,
+        "objparalweight": 0.25
+      },
+      "mean_normalized_metric": 1.0493959301708062,
+      "std_normalized_metric": 1.1810603792646868,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.25,
+        "efficacyweight": 0.0,
+        "intsupportweight": 0.75,
+        "objparalweight": 0.0
+      },
+      "mean_normalized_metric": 1.0688283956977502,
+      "std_normalized_metric": 0.5552759031026441,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.75,
+        "efficacyweight": 0.0,
+        "intsupportweight": 0.25,
+        "objparalweight": 0.0
+      },
+      "mean_normalized_metric": 1.0713287684703812,
+      "std_normalized_metric": 0.5691074724622149,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.0,
+        "efficacyweight": 0.75,
+        "intsupportweight": 0.25,
+        "objparalweight": 0.0
+      },
+      "mean_normalized_metric": 1.1023801571184735,
+      "std_normalized_metric": 1.1610263027580199,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.25,
+        "efficacyweight": 0.25,
+        "intsupportweight": 0.0,
+        "objparalweight": 0.5
+      },
+      "mean_normalized_metric": 1.118707801891153,
+      "std_normalized_metric": 1.6245281918130117,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.75,
+        "efficacyweight": 0.25,
+        "intsupportweight": 0.0,
+        "objparalweight": 0.0
+      },
+      "mean_normalized_metric": 1.1261521917912491,
+      "std_normalized_metric": 0.6239462790164904,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 1.0,
+        "efficacyweight": 0.0,
+        "intsupportweight": 0.0,
+        "objparalweight": 0.0
+      },
+      "mean_normalized_metric": 1.4204112966680604,
+      "std_normalized_metric": 1.4122589014771774,
+      "failures": 0,
+      "runs": 45
+    },
+    {
+      "weights": {
+        "dircutoffdistweight": 0.5,
+        "efficacyweight": 0.25,
+        "intsupportweight": 0.25,
+        "objparalweight": 0.0
+      },
+      "mean_normalized_metric": 2.0741072953191897,
+      "std_normalized_metric": 7.194689004599651,
+      "failures": 0,
+      "runs": 45
+    }
+  ]
+}
