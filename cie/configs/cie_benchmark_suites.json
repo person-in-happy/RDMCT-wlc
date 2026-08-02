@@ -1,0 +1,53 @@
+{
+  "description": "Frozen Computers & Industrial Engineering experiment suites.",
+  "suites": [
+    {
+      "name": "cie_validation",
+      "family": "dual_source_cluster_tool",
+      "scale": "small_validation",
+      "split": "validation",
+      "root": "../data/validation",
+      "glob": "**/*.lp"
+    },
+    {
+      "name": "cie_core",
+      "family": "dual_source_cluster_tool",
+      "scale": "8_to_32_wafers",
+      "split": "test",
+      "root": "../data/core",
+      "glob": "**/*.lp"
+    },
+    {
+      "name": "cie_core_nominal",
+      "family": "dual_source_cluster_tool",
+      "scale": "8_to_32_wafers_nominal_processing",
+      "split": "test",
+      "root": "../data/core",
+      "glob": "**/*proc100.lp"
+    },
+    {
+      "name": "cie_core_spbs",
+      "family": "dual_source_cluster_tool",
+      "scale": "8_to_32_wafers_nonpure41",
+      "split": "test",
+      "root": "../data/core/spbs",
+      "glob": "*.lp"
+    },
+    {
+      "name": "cie_sensitivity",
+      "family": "dual_source_cluster_tool",
+      "scale": "n24_1to1",
+      "split": "test",
+      "root": "../data/sensitivity",
+      "glob": "**/*.lp"
+    },
+    {
+      "name": "cie_ood",
+      "family": "dual_source_cluster_tool",
+      "scale": "40_to_64_wafers",
+      "split": "test",
+      "root": "../data/ood",
+      "glob": "**/*.lp"
+    }
+  ]
+}

@@ -11,7 +11,12 @@ import numpy as np
 
 from scip_imports import SCIP_RESULT, scip
 
-from beam_search import Beam
+from beam_search import (
+    Beam,
+    gather_beam_embeddings,
+    probabilities_to_log_probs,
+    reorder_beam_tensor,
+)
 from utils import cut_feature_generator
 from logger import logger
 from pointer_net import Encoder, StructureAwareInputAdapter
@@ -236,9 +241,13 @@ class DecoderEndToken(nn.Module):
             for i in steps:
                 hx, cx, probs, mask = recurrence(decoder_input, hidden, mask, idxs, i)
                 hidden = (hx, cx)
+                selection_probs = probs
+                if i == max_length - 1:
+                    selection_probs = torch.zeros_like(probs)
+                    selection_probs[:, end_token_idx] = 1.0
                 # select the next inputs for the decoder [batch_size x hidden_dim]
                 decoder_input, idxs = self.decode(
-                    probs,
+                    selection_probs,
                     embedded_inputs,
                     selections,
                     decode_type) # 每一次decode 都是随机sample 一个输出
@@ -253,44 +262,89 @@ class DecoderEndToken(nn.Module):
             return (outputs, selections), hidden
         
         elif decode_type == "beam_search":
-            
-            # Expand input tensors for beam search
-            decoder_input = Variable(decoder_input.data.repeat(self.beam_size, 1))
-            context = Variable(context.data.repeat(1, self.beam_size, 1))
-            hidden = (Variable(hidden[0].data.repeat(self.beam_size, 1)),
-                    Variable(hidden[1].data.repeat(self.beam_size, 1)))
-            
-            beam = [
-                    Beam(self.beam_size, max_length, cuda=self.use_cuda) 
-                    for k in range(batch_size)
+            if batch_size != 1:
+                raise ValueError(
+                    "end-token beam decoding currently requires batch_size == 1"
+                )
+            beam_size = max(1, min(int(self.beam_size), int(embedded_inputs.size(0))))
+            decoder_input = decoder_input.repeat(beam_size, 1)
+            context = context.repeat(1, beam_size, 1)
+            hidden = (
+                hidden[0].repeat(beam_size, 1),
+                hidden[1].repeat(beam_size, 1),
+            )
+            beams = [
+                Beam(
+                    beam_size,
+                    max_length,
+                    device=decoder_input.device,
+                    dtype=decoder_input.dtype,
+                    eos_idx=end_token_idx,
+                )
+                for _ in range(batch_size)
             ]
-            
+            probability_history = []
+
             for i in steps:
                 hx, cx, probs, mask = recurrence(decoder_input, hidden, mask, idxs, i)
-                hidden = (hx, cx)
-                
-                probs = probs.view(self.beam_size, batch_size, -1
-                        ).transpose(0, 1).contiguous()
-                
-                n_best = 1
-                # select the next inputs for the decoder [batch_size x hidden_dim]
-                decoder_input, idxs, active = self.decode_beam(probs,
-                        embedded_inputs, beam, batch_size, n_best, i)
-               
-                inps.append(decoder_input) 
-                # use probs to point to next object
-                if self.beam_size > 1:
-                    outputs.append(probs[:, 0,:])
-                else:
-                    outputs.append(probs.squeeze(0))
-                # Check for indexing
-                selections.append(idxs)
-                 # Should be done decoding
-                if len(active) == 0:
-                    break
-                decoder_input = Variable(decoder_input.data.repeat(self.beam_size, 1))
+                probs_by_batch = (
+                    probs.reshape(beam_size, batch_size, -1)
+                    .transpose(0, 1)
+                    .contiguous()
+                )
+                log_probs_by_batch = probabilities_to_log_probs(probs_by_batch)
+                force_eos = i == max_length - 1
+                for batch_idx in range(batch_size):
+                    beams[batch_idx].advance(
+                        log_probs_by_batch[batch_idx],
+                        force_eos=force_eos,
+                    )
 
-            return (outputs, selections), hidden
+                parent_rows = torch.stack(
+                    [item.get_current_origin() for item in beams],
+                    dim=0,
+                )
+                token_rows = torch.stack(
+                    [item.get_current_state() for item in beams],
+                    dim=0,
+                )
+                hidden = (
+                    reorder_beam_tensor(hx, parent_rows),
+                    reorder_beam_tensor(cx, parent_rows),
+                )
+                mask = reorder_beam_tensor(mask, parent_rows)
+                idxs = token_rows.transpose(0, 1).contiguous().reshape(-1)
+                decoder_input = gather_beam_embeddings(embedded_inputs, token_rows)
+                probability_history.append(probs_by_batch)
+                if all(item.done for item in beams):
+                    break
+
+            best = [item.get_best_hypothesis(prefer_finished=True) for item in beams]
+            decoded_steps = len(best[0][0])
+            selections = [
+                torch.stack([best[b][0][step] for b in range(batch_size)])
+                for step in range(decoded_steps)
+            ]
+            outputs = [
+                torch.stack(
+                    [
+                        probability_history[step][b, best[b][1][step], :]
+                        for b in range(batch_size)
+                    ],
+                    dim=0,
+                )
+                for step in range(decoded_steps)
+            ]
+            final_rows = torch.tensor(
+                [item[2] for item in best],
+                dtype=torch.long,
+                device=decoder_input.device,
+            )
+            final_hidden = (
+                hidden[0].index_select(0, final_rows),
+                hidden[1].index_select(0, final_rows),
+            )
+            return (outputs, selections), final_hidden
 
         else:
             raise NotImplementedError
@@ -321,44 +375,6 @@ class DecoderEndToken(nn.Module):
         sels = embedded_inputs[idxs.data, [i for i in range(batch_size)], :] 
         return sels, idxs
 
-
-    def decode_beam(self, probs, embedded_inputs, beam, batch_size, n_best, step):
-        active = []
-        for b in range(batch_size):
-            if beam[b].done:
-                continue
-
-            if not beam[b].advance(probs.data[b]):
-                active += [b]
-
-        selected_tokens = []
-        for b in range(batch_size):
-            _, ks = beam[b].sort_best()
-            batch_tokens = []
-            for k in ks[:n_best]:
-                hyp = beam[b].get_hyp(k)
-                last_token = hyp[-1] if len(hyp) > 0 else 0
-                if torch.is_tensor(last_token):
-                    last_token = int(last_token.item())
-                batch_tokens.append(int(last_token))
-            if not batch_tokens:
-                batch_tokens = [0] * n_best
-            while len(batch_tokens) < n_best:
-                batch_tokens.append(batch_tokens[-1])
-            selected_tokens.append(batch_tokens)
-
-        idxs = torch.tensor(selected_tokens, dtype=torch.long, device=self.pointer.v.device)
-        if n_best == 1:
-            idxs = idxs.squeeze(1)
-
-        idxs = idxs.to(self.pointer.v.device)
-
-        if idxs.dim() > 1:
-            x = embedded_inputs[idxs.transpose(0,1).contiguous().data,
-                    [x for x in range(batch_size)], :]
-        else:
-            x = embedded_inputs[idxs.data, [x for x in range(batch_size)], :]
-        return x.view(max(int(idxs.numel()), 1), embedded_inputs.size(2)), idxs, active
 
 class PointerNetworkEndToken(nn.Module):
     """The pointer network, which is the core seq2seq 

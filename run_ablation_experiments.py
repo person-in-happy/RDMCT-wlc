@@ -4,7 +4,9 @@ import hashlib
 import json
 import os
 import re
+import sys
 import time
+from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime
 from pathlib import Path
 
@@ -14,6 +16,7 @@ configure_openmp_runtime()
 
 import numpy as np
 import torch
+from tqdm.auto import tqdm
 
 from cutsel_agent_parallel import (
     CutSelectAgent,
@@ -30,6 +33,7 @@ from petri_warm_start import find_compatible_mixed_warm_start, write_mixed_warm_
 from pointer_net import CutsPercentPolicy, PointerNetwork
 from pointer_net_end_token import PointerNetworkEndToken
 from path_utils import is_latest_keyword, latest_matching_file, resolve_path
+from logger import logger
 from global_const import (
     validate_checkpoint_feature_schema,
     validate_checkpoint_postprocessor_schema,
@@ -44,6 +48,23 @@ METHOD_DISPLAY_NAMES = {
     "a3c_only": "A3C Only",
     "beam_only": "Structure Rerank Only",
     "a3c_beam": "A3C + Structure Rerank",
+}
+STABILITY_ABLATION_PROFILES = {
+    # The normal algorithm ablation uses the complete schedule-compaction setup.
+    "full": {
+        "lexicographic_schedule_stability": True,
+        "schedule_stability_mode": "linear",
+    },
+    # Controlled-variable ablation A: only disable the second solve.
+    "stage2_off": {
+        "lexicographic_schedule_stability": False,
+        "schedule_stability_mode": "linear",
+    },
+    # Controlled-variable ablation B: retain stage two but remove the linear objective.
+    "linear_off": {
+        "lexicographic_schedule_stability": True,
+        "schedule_stability_mode": "quadratic",
+    },
 }
 METHOD_COLORS = {
     "solver_only": "#4C78A8",
@@ -78,6 +99,21 @@ def _parse_args():
         help="Evaluate every LP/MPS/CIP in instance_dir; use this for formal multi-instance evidence.",
     )
     parser.add_argument("--output_dir", type=str, default="ablation_results")
+    parser.add_argument(
+        "--console_mode",
+        choices=("progress", "full"),
+        default="progress",
+        help=(
+            "progress keeps PowerShell limited to one progress bar and writes "
+            "detailed output to a log file; full restores legacy console logs."
+        ),
+    )
+    parser.add_argument(
+        "--detailed_log_file",
+        type=str,
+        default="",
+        help="Detailed log path; default: <output_dir>/ablation_<type>_<timestamp>.log.",
+    )
     parser.add_argument("--instance_type", type=str, default="petri_transfer")
     parser.add_argument(
         "--methods",
@@ -89,6 +125,15 @@ def _parse_args():
     parser.add_argument("--scip_seed", type=int, default=1)
     parser.add_argument("--sel_cuts_percent", type=float, default=0.2)
     parser.add_argument("--policy_type", type=str, default="with_token")
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="auto",
+        help=(
+            "Torch inference device: auto, cpu, cuda, or cuda:N. "
+            "This accelerates A3C policy inference only; SCIP remains CPU-bound."
+        ),
+    )
     parser.add_argument("--use_cutsel_percent_policy", type=str, default="True")
     parser.add_argument("--a3c_decode_type", type=str, default="greedy")
     parser.add_argument(
@@ -149,6 +194,35 @@ def _parse_args():
         ),
     )
     parser.add_argument(
+        "--stability_ablation_profile",
+        choices=tuple(STABILITY_ABLATION_PROFILES),
+        default="full",
+        help=(
+            "Controlled schedule-stability profile. The normal four-method "
+            "algorithm ablation must use full. For a separate one-factor "
+            "stability ablation, compare full, stage2_off, and linear_off "
+            "while keeping method, instances, seeds, and budgets unchanged."
+        ),
+    )
+    parser.add_argument(
+        "--lexicographic_schedule_stability",
+        type=str,
+        default="",
+        help=(
+            "True/False enables the second-stage stability solve for every "
+            "ablation method; empty uses the config file value."
+        ),
+    )
+    parser.add_argument(
+        "--lexicographic_stability_time_limit",
+        type=float,
+        default=-1.0,
+        help=(
+            "Seconds reserved from the common SCIP budget for stage two; "
+            "-1 uses the config file value and 0 disables stage two."
+        ),
+    )
+    parser.add_argument(
         "--warm_start_time_limit",
         type=float,
         default=180.0,
@@ -166,7 +240,7 @@ def _parse_args():
     parser.add_argument("--total_wafers", type=int, default=0)
     parser.add_argument("--mode_4x1_wafers", type=int, default=20)
     parser.add_argument("--mode_2x2_wafers", type=int, default=20)
-    parser.add_argument("--pec_pool_size", type=int, default=40)
+    parser.add_argument("--pec_pool_size", type=int, default=8)
     parser.add_argument("--cleaning_interval", type=int, default=10)
     parser.add_argument("--cleaning_process_time", type=float, default=0.0)
     parser.add_argument("--process_mode", type=str, default="auto")
@@ -183,6 +257,20 @@ def _parse_args():
     parser.add_argument("--schedule_pm_wait_square_penalty", "--pm_wait_square_penalty", dest="schedule_pm_wait_square_penalty", type=float, default=1e-3)
     parser.add_argument("--schedule_module_wait_square_penalty", "--module_wait_square_penalty", dest="schedule_module_wait_square_penalty", type=float, default=1e-5)
     parser.add_argument("--schedule_robot_wait_square_penalty", "--robot_wait_square_penalty", dest="schedule_robot_wait_square_penalty", type=float, default=1e-5)
+    raw_args = sys.argv[1:]
+    if "--test_model_path=" in raw_args:
+        parser.error(
+            "--test_model_path is empty. In PowerShell, set and validate "
+            "$LegacyCheckpoint before running the command."
+        )
+    if "--test_model_path" in raw_args:
+        index = raw_args.index("--test_model_path")
+        if index + 1 >= len(raw_args) or raw_args[index + 1].startswith("--"):
+            parser.error(
+                "--test_model_path received no value. In PowerShell, "
+                "$LegacyCheckpoint is probably empty or undefined; set it and "
+                "verify Test-Path -LiteralPath $LegacyCheckpoint first."
+            )
     return parser.parse_args()
 
 
@@ -265,7 +353,7 @@ def _selected_methods(args):
 def _label_expected_mode(instance_name):
     tokens = set(
         token
-        for token in re.split(r"[^a-z0-9x]+", Path(instance_name).stem.lower())
+        for token in re.split(r"[^a-z0-9x]+", Path(instance_name).name.lower())
         if token
     )
     if "41" in tokens or "4x1" in tokens:
@@ -337,6 +425,15 @@ def _build_instance_manifest(args, instance_files):
                 mode_signature["mode_2x2_wafers"],
                 "model description",
             )
+        if _str2bool(args.validate_instance_label):
+            run_label_mode = _label_expected_mode(getattr(args, "instance_type", ""))
+            file_label_mode = _label_expected_mode(instance_path.name)
+            if run_label_mode and file_label_mode and run_label_mode != file_label_mode:
+                raise ValueError(
+                    "Ablation label/file mismatch: "
+                    f"--instance_type {args.instance_type!r} means {run_label_mode}, "
+                    f"but {instance_path.name!r} means {file_label_mode}."
+                )
         fingerprint = _sha256_file(instance_path)
         duplicate_of = seen_hashes.get(fingerprint)
         if duplicate_of and not _str2bool(args.allow_duplicate_instances):
@@ -425,14 +522,15 @@ def _get_instance_list(instance_dir, single_instance_file):
     )
 
 
-def _prepare_shared_warm_start(args, petri_cfg):
+def _prepare_shared_warm_start(args, petri_cfg, instance_name=None):
     if args.warm_start_solution_file:
         warm_path = resolve_path(args.warm_start_solution_file)
         if not warm_path.is_file():
             raise FileNotFoundError(f"warm_start_solution_file does not exist: {warm_path}")
         return str(warm_path)
 
-    cached = find_compatible_mixed_warm_start(args.instance_dir, args.instance_name)
+    target_instance = instance_name or args.instance_name
+    cached = find_compatible_mixed_warm_start(args.instance_dir, target_instance)
     if cached:
         print(f"Reusing shared ablation warm start: {cached}")
         return str(resolve_path(cached))
@@ -446,6 +544,7 @@ def _prepare_shared_warm_start(args, petri_cfg):
             args.instance_dir,
             args.instance_name,
             petri_cfg,
+            random_seed=args.scip_seed,
             time_limit=args.warm_start_time_limit,
         )
         if generated:
@@ -468,11 +567,22 @@ def _load_policy_bundle(cfg, args):
     value_kwargs = cfg["value"]
     use_high_level = _str2bool(args.use_cutsel_percent_policy)
 
-    if torch.cuda.is_available():
-        device_str = cfg["devices"]["global_device"]
+    requested_device = str(args.device or "auto").strip().lower()
+    if requested_device == "auto":
+        device_str = (
+            cfg["devices"]["global_device"]
+            if torch.cuda.is_available()
+            else "cpu"
+        )
     else:
-        device_str = "cpu"
+        device_str = requested_device
     device = torch.device(device_str)
+    if device.type == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError(
+            f"CUDA device {device_str!r} was requested, but torch.cuda.is_available() is False."
+        )
+    use_cuda = device.type == "cuda"
+    print(f"A3C policy inference device: {device}")
 
     state_dict = torch.load(
         args.test_model_path,
@@ -497,7 +607,7 @@ def _load_policy_bundle(cfg, args):
         tanh_exploration=net_share_kwargs["tanh_exploration"],
         use_tanh=net_share_kwargs["use_tanh"],
         beam_size=policy_kwargs["beam_size"],
-        use_cuda=torch.cuda.is_available(),
+        use_cuda=use_cuda,
     ).to(device)
     policy.load_state_dict(state_dict["pointer_net"])
     policy.eval()
@@ -516,7 +626,7 @@ def _load_policy_bundle(cfg, args):
             n_process_block_iters=value_kwargs["n_process_block_iters"],
             tanh_exploration=net_share_kwargs["tanh_exploration"],
             use_tanh=net_share_kwargs["use_tanh"],
-            use_cuda=torch.cuda.is_available(),
+            use_cuda=use_cuda,
         ).to(device)
         cutsel_percent_policy.load_state_dict(state_dict["cutsel_percent_net"])
         cutsel_percent_policy.eval()
@@ -541,6 +651,25 @@ def _build_env_kwargs(cfg, args):
         env_kwargs["scip_time_limit"] = args.time_limit
     env_kwargs["scip_node_limit"] = args.evaluation_node_limit
     env_kwargs["scip_stall_node_limit"] = args.evaluation_stall_node_limit
+    if getattr(args, "console_mode", "progress") == "progress":
+        env_kwargs["scip_verbosity"] = 0
+    profile_name = getattr(args, "stability_ablation_profile", "full")
+    try:
+        profile = STABILITY_ABLATION_PROFILES[profile_name]
+    except KeyError as exc:
+        raise ValueError(
+            f"Unknown stability ablation profile {profile_name!r}; "
+            f"choose from {tuple(STABILITY_ABLATION_PROFILES)}."
+        ) from exc
+    env_kwargs.update(profile)
+    if args.lexicographic_schedule_stability != "":
+        env_kwargs["lexicographic_schedule_stability"] = _str2bool(
+            args.lexicographic_schedule_stability
+        )
+    if args.lexicographic_stability_time_limit >= 0:
+        env_kwargs["lexicographic_stability_time_limit"] = (
+            args.lexicographic_stability_time_limit
+        )
     env_kwargs.update(
         {
             "schedule_chamber_idle_square_penalty": args.schedule_chamber_idle_square_penalty,
@@ -565,18 +694,33 @@ def _build_method_hyperparams(method_name, cfg, args, policy_bundle=None, run_en
         "heuristics": env_kwargs["heuristics"],
         "sel_cuts_percent": args.sel_cuts_percent,
         "policy_type": args.policy_type,
+        "torch_device": args.device,
         "post_process_wait_penalty": args.post_process_wait_penalty,
         "chamber_nonprocess_wait_square_penalty": args.chamber_nonprocess_wait_square_penalty,
         "schedule_chamber_idle_square_penalty": args.schedule_chamber_idle_square_penalty,
         "chamber_idle_penalty": args.chamber_idle_penalty,
         "atr_capacity": args.atr_capacity,
         "vtr_capacity": args.vtr_capacity,
+        "pec_pool_size": args.pec_pool_size,
+        "pec_identity_mode": "anonymous_round_robin_display",
         "schedule_pm_wait_square_penalty": args.schedule_pm_wait_square_penalty,
         "schedule_module_wait_square_penalty": args.schedule_module_wait_square_penalty,
         "schedule_robot_wait_square_penalty": args.schedule_robot_wait_square_penalty,
         "warm_start_solution_file": env_kwargs.get("warm_start_solution_file", ""),
         "scip_node_limit": env_kwargs.get("scip_node_limit", -1),
         "scip_stall_node_limit": env_kwargs.get("scip_stall_node_limit", -1),
+        "lexicographic_schedule_stability": env_kwargs.get(
+            "lexicographic_schedule_stability", False
+        ),
+        "schedule_stability_mode": env_kwargs.get(
+            "schedule_stability_mode", "linear"
+        ),
+        "stability_ablation_profile": getattr(
+            args, "stability_ablation_profile", "full"
+        ),
+        "lexicographic_stability_time_limit": env_kwargs.get(
+            "lexicographic_stability_time_limit", 0.0
+        ),
     }
     if method_name == "solver_only":
         base["solver"] = "SCIP default cut selection"
@@ -585,6 +729,7 @@ def _build_method_hyperparams(method_name, cfg, args, policy_bundle=None, run_en
             {
                 "decode_type": args.a3c_decode_type,
                 "model_path": policy_bundle["model_path"],
+                "resolved_torch_device": policy_bundle.get("device_str", args.device),
                 "beam_size": policy_bundle["beam_size"],
                 "use_cutsel_percent_policy": policy_bundle["use_high_level"],
                 "use_structure_rerank": False,
@@ -614,6 +759,7 @@ def _build_method_hyperparams(method_name, cfg, args, policy_bundle=None, run_en
             {
                 "decode_type": args.a3c_beam_decode_type,
                 "model_path": policy_bundle["model_path"],
+                "resolved_torch_device": policy_bundle.get("device_str", args.device),
                 "beam_size": policy_bundle["beam_size"],
                 "use_cutsel_percent_policy": policy_bundle["use_high_level"],
                 "use_structure_rerank": True,
@@ -730,9 +876,10 @@ def _safe_float(value):
     if value is None:
         return None
     try:
-        return float(value)
+        value = float(value)
     except Exception:
         return None
+    return value if np.isfinite(value) else None
 
 
 def _has_incumbent(stats):
@@ -760,11 +907,59 @@ def _format_instance_result(method_name, instance_file, stats, hyperparams, erro
         "instance": instance_file,
         "status": None if stats is None else stats.get("status"),
         "solving_time": None if stats is None else _safe_float(stats.get("solving_time")),
+        "primary_solving_time": (
+            None if stats is None else _safe_float(stats.get("primary_solving_time"))
+        ),
+        "primary_scip_solving_time": (
+            None
+            if stats is None
+            else _safe_float(stats.get("primary_scip_solving_time"))
+        ),
+        "stability_solving_time": (
+            None if stats is None else _safe_float(stats.get("stability_solving_time"))
+        ),
+        "stability_scip_solving_time": (
+            None
+            if stats is None
+            else _safe_float(stats.get("stability_scip_solving_time"))
+        ),
+        "scip_solving_time_raw": (
+            None if stats is None else _safe_float(stats.get("scip_solving_time_raw"))
+        ),
         "wall_time": None if stats is None else _safe_float(stats.get("wall_time")),
         "best_obj": None if stats is None else _safe_float(stats.get("best_obj")),
         "ntotal_nodes": None if stats is None else _safe_float(stats.get("ntotal_nodes")),
+        "primary_ntotal_nodes": (
+            None if stats is None else _safe_float(stats.get("primary_ntotal_nodes"))
+        ),
+        "stability_ntotal_nodes": (
+            None if stats is None else _safe_float(stats.get("stability_ntotal_nodes"))
+        ),
+        "total_ntotal_nodes": (
+            None if stats is None else _safe_float(stats.get("total_ntotal_nodes"))
+        ),
         "primal_dual_gap": None if stats is None else _safe_float(stats.get("primal_dual_gap")),
         "primaldualintegral": None if stats is None else _safe_float(stats.get("primaldualintegral")),
+        "primary_primal_dual_gap": (
+            None
+            if stats is None
+            else _safe_float(stats.get("primary_primal_dual_gap"))
+        ),
+        "primary_primaldualintegral": (
+            None
+            if stats is None
+            else _safe_float(stats.get("primary_primaldualintegral"))
+        ),
+        "stability_primal_dual_gap": (
+            None
+            if stats is None
+            else _safe_float(stats.get("stability_primal_dual_gap"))
+        ),
+        "stability_primaldualintegral": (
+            None
+            if stats is None
+            else _safe_float(stats.get("stability_primaldualintegral"))
+        ),
         "n_solutions": None if n_solutions is None else int(n_solutions),
         "has_solution": has_solution,
         "comparison_valid": error is None and has_solution,
@@ -812,6 +1007,12 @@ def _aggregate_results(results):
         with_solution = [r for r in completed if r.get("has_solution")]
         solved = [r for r in completed if _status_is_solved(r.get("status"))]
         solving_times = _valid_metric_values(completed, "solving_time")
+        primary_solving_times = _valid_metric_values(
+            completed, "primary_solving_time"
+        )
+        stability_solving_times = _valid_metric_values(
+            completed, "stability_solving_time"
+        )
         wall_times = _valid_metric_values(completed, "wall_time")
         callback_times = [
             float(r.get("cutsel_telemetry", {}).get("callback_time_seconds", 0.0))
@@ -821,6 +1022,7 @@ def _aggregate_results(results):
         incumbent_solving_times = _valid_metric_values(with_solution, "solving_time")
         best_objs = _valid_metric_values(with_solution, "best_obj")
         total_nodes = _valid_metric_values(completed, "ntotal_nodes")
+        cumulative_nodes = _valid_metric_values(completed, "total_ntotal_nodes")
         primal_dual_gaps = _valid_metric_values(
             with_solution,
             "primal_dual_gap",
@@ -833,13 +1035,37 @@ def _aggregate_results(results):
             "num_completed": len(completed),
             "num_valid": len(completed),
             "num_with_solution": len(with_solution),
+            "incumbent_rate_percent": 100.0 * len(with_solution) / max(1, len(method_results)),
+            "solved_rate_percent": 100.0 * len(solved) / max(1, len(method_results)),
             "num_solved": len(solved),
+            "num_valid_solving_time": len(solving_times),
+            "num_valid_primary_solving_time": len(primary_solving_times),
+            "num_valid_stability_solving_time": len(stability_solving_times),
+            "num_valid_wall_time": len(wall_times),
+            "num_valid_callback_time": len(callback_times),
+            "num_valid_best_obj": len(best_objs),
+            "num_valid_ntotal_nodes": len(total_nodes),
+            "num_valid_primal_dual_gap": len(primal_dual_gaps),
+            "num_valid_primaldualintegral": len(primal_dual_integrals),
             "mean_solving_time": None if not solving_times else float(np.mean(solving_times)),
+            "mean_primary_solving_time": (
+                None
+                if not primary_solving_times
+                else float(np.mean(primary_solving_times))
+            ),
+            "mean_stability_solving_time": (
+                None
+                if not stability_solving_times
+                else float(np.mean(stability_solving_times))
+            ),
             "mean_wall_time": None if not wall_times else float(np.mean(wall_times)),
             "mean_callback_time": None if not callback_times else float(np.mean(callback_times)),
             "mean_incumbent_solving_time": None if not incumbent_solving_times else float(np.mean(incumbent_solving_times)),
             "mean_best_obj": None if not best_objs else float(np.mean(best_objs)),
             "mean_ntotal_nodes": None if not total_nodes else float(np.mean(total_nodes)),
+            "mean_total_ntotal_nodes": (
+                None if not cumulative_nodes else float(np.mean(cumulative_nodes))
+            ),
             "mean_primal_dual_gap": None if not primal_dual_gaps else float(np.mean(primal_dual_gaps)),
             "mean_primaldualintegral": None if not primal_dual_integrals else float(np.mean(primal_dual_integrals)),
             "mean_nonzero_solution_vars": None if not nonzero_solution_vars else float(np.mean(nonzero_solution_vars)),
@@ -954,31 +1180,80 @@ def _flatten_results(results):
 
 
 def _metric_count_label(item, metric_key):
-    if metric_key in {"mean_best_obj", "mean_primal_dual_gap", "mean_primaldualintegral"}:
+    count_keys = {
+        "mean_solving_time": "num_valid_solving_time",
+        "mean_primary_solving_time": "num_valid_primary_solving_time",
+        "mean_stability_solving_time": "num_valid_stability_solving_time",
+        "mean_wall_time": "num_valid_wall_time",
+        "mean_callback_time": "num_valid_callback_time",
+        "mean_best_obj": "num_valid_best_obj",
+        "mean_ntotal_nodes": "num_valid_ntotal_nodes",
+        "mean_primal_dual_gap": "num_valid_primal_dual_gap",
+        "mean_primaldualintegral": "num_valid_primaldualintegral",
+    }
+    if metric_key in count_keys:
+        return (
+            f"{item.get(count_keys[metric_key], 0)}/"
+            f"{item['num_instances']} valid"
+        )
+    if metric_key == "incumbent_rate_percent":
         return f"{item['num_with_solution']}/{item['num_instances']} inc."
     return f"{item['num_completed']}/{item['num_instances']} run"
 
 
-def _render_metric_chart(parts, x, y, width, title, metric_key, summary):
+def _render_metric_chart(
+    parts,
+    x,
+    y,
+    width,
+    title,
+    metric_key,
+    summary,
+    guidance="Lower is better. Values are means over valid runs.",
+    higher_is_better=False,
+):
     methods = [method_name for method_name in METHOD_ORDER if method_name in summary]
-    values = [summary[method_name].get(metric_key) for method_name in methods]
-    valid_values = [value for value in values if value is not None and np.isfinite(value)]
-    max_value = max(valid_values) if valid_values else 1.0
+    values = [_safe_float(summary[method_name].get(metric_key)) for method_name in methods]
+    valid_values = [value for value in values if value is not None]
+    min_value = min(valid_values) if valid_values else 0.0
+    max_value = max(valid_values) if valid_values else 0.0
+    tied = bool(valid_values) and np.isclose(
+        min_value, max_value, rtol=1e-6, atol=1e-9
+    )
+    baseline = _safe_float(summary.get("solver_only", {}).get(metric_key))
     row_height = 38
     label_width = 150
-    value_width = 160
+    value_width = 250
     plot_x = x + label_width
     plot_width = max(width - label_width - value_width, 120)
     chart_height = 50 + len(methods) * row_height
 
     parts.append(f'<text x="{x:.2f}" y="{y:.2f}" font-size="18" font-weight="700" fill="#222">{title}</text>')
     parts.append(
-        f'<text x="{x:.2f}" y="{y + 22:.2f}" font-size="11" fill="#666">Lower is better. Values are means over valid runs.</text>'
+        f'<text x="{x:.2f}" y="{y + 22:.2f}" font-size="11" fill="#666">{_escape_svg(guidance)}</text>'
     )
+    if tied:
+        parts.append(
+            f'<text x="{x + width:.2f}" y="{y:.2f}" text-anchor="end" '
+            'font-size="12" font-weight="700" fill="#7A4C00">TIE: all valid values equal</text>'
+        )
     for idx, method_name in enumerate(methods):
         row_y = y + 46 + idx * row_height
         value = values[idx]
-        fill_width = 0.0 if value is None or not np.isfinite(value) else plot_width * (value / max_value if max_value > 0 else 0.0)
+        if value is None:
+            fill_width = 0.0
+        elif tied:
+            fill_width = plot_width * 0.65
+        else:
+            span = max_value - min_value
+            score = (
+                (value - min_value) / span
+                if higher_is_better
+                else (max_value - value) / span
+            )
+            # Every finite value remains visible, including a valid zero. The
+            # remaining width encodes relative standing, with better longer.
+            fill_width = plot_width * (0.12 + 0.88 * score)
         parts.append(
             f'<text x="{x:.2f}" y="{row_y + 13:.2f}" font-size="13" font-weight="600" fill="#2b2b2b">{METHOD_DISPLAY_NAMES[method_name]}</text>'
         )
@@ -989,8 +1264,24 @@ def _render_metric_chart(parts, x, y, width, title, metric_key, summary):
             parts.append(
                 f'<rect x="{plot_x:.2f}" y="{row_y:.2f}" width="{fill_width:.2f}" height="18" rx="9" fill="{METHOD_COLORS[method_name]}"/>'
             )
+        comparison = ""
+        if value is not None and baseline is not None:
+            if method_name == "solver_only":
+                comparison = "; baseline"
+            elif np.isclose(value, baseline, rtol=1e-6, atol=1e-9):
+                comparison = "; tie vs SCIP"
+            elif not np.isclose(baseline, 0.0, rtol=0.0, atol=1e-12):
+                improvement = (
+                    100.0 * (value - baseline) / abs(baseline)
+                    if higher_is_better
+                    else 100.0 * (baseline - value) / abs(baseline)
+                )
+                comparison = f"; {improvement:+.1f}% vs SCIP"
+            else:
+                signed_delta = value - baseline
+                comparison = f"; delta={_format_display_value(signed_delta)}"
         parts.append(
-            f'<text x="{plot_x + plot_width + 10:.2f}" y="{row_y + 13:.2f}" font-size="12" fill="#404040">{_format_display_value(value)} ({_metric_count_label(summary[method_name], metric_key)})</text>'
+            f'<text x="{plot_x + plot_width + 10:.2f}" y="{row_y + 13:.2f}" font-size="12" fill="#404040">{_format_display_value(value)} ({_metric_count_label(summary[method_name], metric_key)}{_escape_svg(comparison)})</text>'
         )
     return chart_height
 
@@ -1003,7 +1294,7 @@ def _write_comparison_svg(path, summary, meta):
     top_y = 132
 
     left_panel_charts = [
-        ("Mean Solving Time", "mean_solving_time"),
+        ("Mean Primary Cmax Optimize Time", "mean_primary_solving_time"),
         ("Mean Primal-Dual Integral", "mean_primaldualintegral"),
     ]
     right_panel_charts = [
@@ -1036,12 +1327,55 @@ def _write_comparison_svg(path, summary, meta):
         current_y += _render_metric_chart(parts, right_x + panel_padding_x, current_y, panel_width - 2 * panel_padding_x, title, metric_key, summary) + panel_gap
 
     parts.append(
-        '<text x="42" y="730" font-size="12" fill="#666">Every metric uses its own bar scale to keep labels readable and prevent overlap.</text>'
+        '<text x="42" y="730" font-size="12" fill="#666">Bars are normalized within each metric: longer is better. Raw values and change versus SCIP remain authoritative.</text>'
     )
     parts.append("</svg>")
 
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(parts))
+
+
+def _write_metric_svgs(output_dir, prefix, summary):
+    """Write separate figures so every ablation metric is directly inspectable."""
+    definitions = (
+        ("feasibility", "Incumbent Availability", "incumbent_rate_percent", "Higher is better. Percentage of runs with a feasible schedule.", True),
+        ("objective", "Mean Best Cmax", "mean_best_obj", "Lower Cmax is better and is equivalent to higher WPH for a fixed wafer count.", False),
+        ("gap", "Primary Cmax Primal-Dual Gap", "mean_primal_dual_gap", "Lower is better. This is captured before the schedule-stability objective is activated.", False),
+        ("pdi", "Primary Cmax Primal-Dual Integral", "mean_primaldualintegral", "Lower is better. This is the primary time-to-quality comparison metric.", False),
+        ("time", "Mean Primary Cmax Optimize Time", "mean_primary_solving_time", "High-resolution elapsed time around the primary optimize call; lower is better only at comparable quality.", False),
+        ("two_stage_time", "Mean Total Two-Stage Optimize Time", "mean_solving_time", "High-resolution primary and schedule-stability optimize times are added.", False),
+        ("wall_time", "Mean End-to-End Wall Time", "mean_wall_time", "Includes Python, policy callback, solution extraction, and both SCIP phases.", False),
+        ("callback", "Mean Cut-Selection Callback Time", "mean_callback_time", "Lower is better. This isolates policy and heuristic callback overhead.", False),
+        ("nodes", "Mean Primary Cmax Search Nodes", "mean_ntotal_nodes", "Lower is better only when incumbent quality and stopping conditions are comparable.", False),
+    )
+    generated = []
+    width = 1040
+    height = 330
+    for suffix, title, metric_key, guidance, higher_is_better in definitions:
+        path = os.path.join(output_dir, f"{prefix}_{suffix}.svg")
+        parts = [
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
+            f'<rect x="0" y="0" width="{width}" height="{height}" fill="#FFFFFF"/>',
+        ]
+        _render_metric_chart(
+            parts,
+            42,
+            38,
+            width - 84,
+            title,
+            metric_key,
+            summary,
+            guidance=guidance,
+            higher_is_better=higher_is_better,
+        )
+        parts.append(
+            '<text x="42" y="306" font-size="11" fill="#777">Longer means better after within-metric normalization; labels show raw values. n/a is missing, while 0 is a valid result.</text>'
+        )
+        parts.append("</svg>")
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write("\n".join(parts))
+        generated.append(path)
+    return generated
 
 
 def _write_json(path, payload):
@@ -1055,11 +1389,23 @@ def _write_csv(path, results):
         "instance",
         "status",
         "solving_time",
+        "primary_solving_time",
+        "primary_scip_solving_time",
+        "stability_solving_time",
+        "stability_scip_solving_time",
+        "scip_solving_time_raw",
         "wall_time",
         "best_obj",
         "ntotal_nodes",
+        "primary_ntotal_nodes",
+        "stability_ntotal_nodes",
+        "total_ntotal_nodes",
         "primal_dual_gap",
         "primaldualintegral",
+        "primary_primal_dual_gap",
+        "primary_primaldualintegral",
+        "stability_primal_dual_gap",
+        "stability_primaldualintegral",
         "n_solutions",
         "has_solution",
         "comparison_valid",
@@ -1108,11 +1454,32 @@ def _build_diagnostics(results, summary, meta):
         if row.get("has_solution") and row.get("best_obj") is not None
     ]
     if len(incumbent_objectives) > 1 and np.isclose(
-        min(incumbent_objectives), max(incumbent_objectives), rtol=1e-9, atol=1e-9
+        min(incumbent_objectives), max(incumbent_objectives), rtol=1e-6, atol=1e-9
     ):
         diagnostics.append(
-            "All methods retained the same incumbent objective, so their Gantt charts are expected to be identical; "
-            "compare primal-dual integral and gap trajectory instead of schedule appearance."
+            "All methods retained the same incumbent objective, so the objective chart is a tie and their Gantt charts may be identical."
+        )
+
+    valid_gaps = [
+        value
+        for item in summary.values()
+        for value in [item.get("mean_primal_dual_gap")]
+        if value is not None
+    ]
+    valid_pdis = [
+        value
+        for item in summary.values()
+        for value in [item.get("mean_primaldualintegral")]
+        if value is not None
+    ]
+    if (
+        valid_gaps
+        and valid_pdis
+        and np.isclose(min(valid_gaps), max(valid_gaps), rtol=1e-6, atol=1e-9)
+        and np.isclose(min(valid_pdis), max(valid_pdis), rtol=1e-6, atol=1e-9)
+    ):
+        diagnostics.append(
+            "Gap and PDI are valid but tied across methods; zero means every method proved optimal immediately, not that the metrics are missing."
         )
 
     completed_rows = [
@@ -1124,6 +1491,16 @@ def _build_diagnostics(results, summary, meta):
     if completed_rows and all(float(row.get("ntotal_nodes") or 0.0) <= 1.0 for row in completed_rows):
         diagnostics.append(
             "All completed runs stayed at the root node, so this experiment mainly measures root LP/presolve difficulty rather than tree-search cut selection."
+        )
+
+    primary_times = [
+        float(row["primary_solving_time"])
+        for row in completed_rows
+        if row.get("primary_solving_time") is not None
+    ]
+    if primary_times and max(primary_times) < 1.0:
+        diagnostics.append(
+            "Every primary optimize call finished in under 1 second. This is a pipeline smoke test: SCIP's native PDI can be dominated by timer resolution at this scale, so do not use its apparent PDI advantage as publication evidence."
         )
 
     solver_time = summary.get("solver_only", {}).get("mean_solving_time")
@@ -1198,18 +1575,28 @@ def _write_markdown(path, results, summary, meta):
     lines.append(f"- Model description: `{meta['model_description']}`")
     lines.append(f"- Shared warm start: `{meta.get('warm_start_solution_file', '')}`")
     lines.append(
+        f"- Schedule-stability profile: "
+        f"`{meta.get('stability_ablation_profile', 'full')}` "
+        f"(stage two `{meta.get('lexicographic_schedule_stability')}`, "
+        f"mode `{meta.get('schedule_stability_mode', 'linear')}`)"
+    )
+    lines.append(
         f"- Evaluation stopping: time `{meta.get('time_limit')}`, nodes "
         f"`{meta.get('evaluation_node_limit', -1)}`, stall nodes "
         f"`{meta.get('evaluation_stall_node_limit', -1)}`"
     )
     if meta.get("comparison_svg"):
         lines.append(f"- Comparison SVG: `{meta['comparison_svg']}`")
+    if meta.get("metric_svgs"):
+        lines.append("- Separate metric SVGs:")
+        for metric_svg in meta["metric_svgs"]:
+            lines.append(f"  - `{metric_svg}`")
     if meta.get("gantt_dir"):
         lines.append(f"- Gantt directory: `{meta['gantt_dir']}`")
     lines.append("")
     lines.append("## Summary")
     lines.append("")
-    lines.append("| Method | Completed | With Incumbent | Solved | SCIP Time | Wall Time | Callback Time | Mean Nodes | Mean Best Obj | Mean Gap | Mean PDI |")
+    lines.append("| Method | Completed | With Incumbent | Solved | Optimize Time | Wall Time | Callback Time | Mean Nodes | Mean Best Obj | Mean Gap | Mean PDI |")
     lines.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
     for method_name in METHOD_ORDER:
         if method_name not in summary:
@@ -1252,7 +1639,7 @@ def _write_markdown(path, results, summary, meta):
     lines.append("")
     lines.append("## Per-Instance Results")
     lines.append("")
-    lines.append("| Method | Instance | Status | SCIP Time | Wall Time | Callback | Best Obj | Nodes | Gap | PDI | Effective Budget | Error |")
+    lines.append("| Method | Instance | Status | Optimize Time | Wall Time | Callback | Best Obj | Nodes | Gap | PDI | Effective Budget | Error |")
     lines.append("| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |")
     for method_name in METHOD_ORDER:
         for row in results.get(method_name, []):
@@ -1285,10 +1672,26 @@ def _write_markdown(path, results, summary, meta):
         f.write("\n".join(lines))
 
 
-def main():
-    args = _resolve_runtime_args(_parse_args())
+def _execute_ablation(args, run_timestamp, progress_file):
     _validate_ablation_protocol(args)
     selected_methods = _selected_methods(args)
+    stability_profile = getattr(args, "stability_ablation_profile", "full")
+    if stability_profile != "full" and len(selected_methods) != 1:
+        raise ValueError(
+            "stage2_off/linear_off are controlled-variable schedule ablations "
+            "and must evaluate exactly one fixed method. Use full for the "
+            "multi-method algorithm-advantage ablation."
+        )
+    if (
+        len(selected_methods) > 1
+        and args.lexicographic_schedule_stability != ""
+        and not _str2bool(args.lexicographic_schedule_stability)
+    ):
+        raise ValueError(
+            "The multi-method algorithm-advantage ablation must keep stage two "
+            "enabled. Remove --lexicographic_schedule_stability False and use "
+            "a separate one-method stage2_off run."
+        )
     cfg = _load_config(args.config_file)
     set_global_seed(args.seed)
 
@@ -1304,8 +1707,21 @@ def main():
     if not instance_files:
         raise ValueError(f"No instance files found in {args.instance_dir}")
     instance_manifest = _build_instance_manifest(args, instance_files)
+    progress = tqdm(
+        total=len(instance_files) * len(selected_methods),
+        desc="Ablation",
+        unit="run",
+        dynamic_ncols=True,
+        file=progress_file,
+        leave=True,
+    )
+    progress.set_postfix_str("preparing instance/warm start/policy")
 
-    shared_warm_start = _prepare_shared_warm_start(args, petri_cfg)
+    shared_warm_start = _prepare_shared_warm_start(
+        args,
+        petri_cfg,
+        instance_file or args.instance_name,
+    )
     if not shared_warm_start:
         print(
             "warning: no shared ablation warm start is available; methods may reach "
@@ -1320,6 +1736,7 @@ def main():
         "beam_only": [],
         "a3c_beam": [],
     }
+
 
     for instance_index, instance_name in enumerate(instance_files):
         instance_warm_start = shared_warm_start
@@ -1344,6 +1761,9 @@ def main():
             if method_name in selected_methods
         ]
         for method_name in method_order:
+            progress.set_postfix_str(
+                f"{Path(instance_name).name} | {method_name} | running"
+            )
             requires_policy = method_name in {"a3c_only", "a3c_beam"}
             hyper_policy = policy_bundle
             if requires_policy and hyper_policy is None:
@@ -1369,6 +1789,11 @@ def main():
                         error="skipped: test_model_path not provided",
                     )
                 )
+                progress.set_postfix_str(
+                    f"{Path(instance_name).name} | {method_name} | skipped",
+                    refresh=False,
+                )
+                progress.update(1)
                 continue
 
             try:
@@ -1399,10 +1824,17 @@ def main():
                         method_name, instance_name, None, hyper, error=str(exc)
                     )
                 )
+            latest = experiment_results[method_name][-1]
+            progress.set_postfix_str(
+                f"{Path(instance_name).name} | {method_name} | {latest['status']}",
+                refresh=False,
+            )
+            progress.update(1)
 
+    progress.close()
     summary = _aggregate_results(experiment_results)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    prefix = f"ablation_{args.instance_type}_{timestamp}"
+    timestamp = run_timestamp
+    prefix = f"ablation_{args.instance_type}_{stability_profile}_{timestamp}"
     json_path = os.path.join(args.output_dir, f"{prefix}.json")
     csv_path = os.path.join(args.output_dir, f"{prefix}.csv")
     md_path = os.path.join(args.output_dir, f"{prefix}.md")
@@ -1419,6 +1851,7 @@ def main():
     )
 
     generated_gantt = []
+    metric_svgs = _write_metric_svgs(args.output_dir, prefix, summary)
     incumbent_count = sum(
         1
         for row in _flatten_results(experiment_results)
@@ -1438,6 +1871,7 @@ def main():
             gantt_dir,
             view="all",
             comparison_svg=comparison_svg,
+            metric_svgs=metric_svgs,
         )
     except Exception as exc:
         gantt_error = str(exc)
@@ -1460,9 +1894,11 @@ def main():
             "instance_files": instance_files,
             "instance_manifest": instance_manifest,
             "model_path": args.test_model_path,
+            "detailed_log_file": args.detailed_log_file,
             "generated_lp": generated_lp,
             "model_description": model_description,
             "time_limit": env_kwargs["scip_time_limit"],
+            "metric_svgs": metric_svgs,
             "evaluation_node_limit": args.evaluation_node_limit,
             "evaluation_stall_node_limit": args.evaluation_stall_node_limit,
             "warm_start_solution_file": shared_warm_start,
@@ -1470,11 +1906,22 @@ def main():
             "gantt_dir": gantt_dir if generated_gantt else "",
             "fair_ablation_enforced": _str2bool(args.enforce_fair_ablation),
             "methods": selected_methods,
+            "stability_ablation_profile": stability_profile,
+            "lexicographic_schedule_stability": env_kwargs.get(
+                "lexicographic_schedule_stability"
+            ),
+            "schedule_stability_mode": env_kwargs.get(
+                "schedule_stability_mode"
+            ),
+            "lexicographic_stability_time_limit": env_kwargs.get(
+                "lexicographic_stability_time_limit"
+            ),
             "generation_config": (
                 {
                     "process_mode": args.process_mode,
                     "mode_4x1_wafers": len(petri_cfg.full_wafer_ids),
                     "mode_2x2_wafers": len(petri_cfg.mix_wafer_ids),
+                    "pec_pool_size": args.pec_pool_size,
                 }
                 if _str2bool(args.generate_petri_instance)
                 else None
@@ -1490,6 +1937,7 @@ def main():
         "artifacts": {
             "comparison_svg": comparison_svg,
             "gantt_outputs": generated_gantt,
+            "metric_svgs": metric_svgs,
             "gantt_error": gantt_error,
         },
     }
@@ -1497,6 +1945,8 @@ def main():
     _write_csv(csv_path, experiment_results)
     _write_markdown(md_path, experiment_results, summary, payload["meta"])
 
+    for metric_svg in metric_svgs:
+        print(f"Ablation Metric SVG: {metric_svg}")
     print(f"Ablation JSON: {json_path}")
     print(f"Ablation CSV: {csv_path}")
     print(f"Ablation Markdown: {md_path}")
@@ -1505,6 +1955,54 @@ def main():
         print(f"Ablation Gantt directory: {gantt_dir}")
     if gantt_error:
         print(f"Ablation Gantt warning: {gantt_error}")
+
+
+def _resolve_detailed_log_path(args, run_timestamp):
+    if args.detailed_log_file:
+        path = Path(args.detailed_log_file).expanduser()
+        if not path.is_absolute():
+            path = Path(args.output_dir) / path
+    else:
+        path = Path(args.output_dir) / (
+            f"ablation_{args.instance_type}_{run_timestamp}.log"
+        )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path.resolve()
+
+
+def main():
+    args = _resolve_runtime_args(_parse_args())
+    os.makedirs(args.output_dir, exist_ok=True)
+    run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    detailed_log_path = _resolve_detailed_log_path(args, run_timestamp)
+    args.detailed_log_file = str(detailed_log_path)
+    console_mode = str(args.console_mode).strip().lower()
+    console_progress_stream = sys.stderr
+    previous_console_output = logger.get_console_output_enabled()
+    logger.add_text_output(str(detailed_log_path))
+    try:
+        if console_mode == "progress":
+            logger.set_console_output_enabled(False)
+            with open(
+                detailed_log_path,
+                "a",
+                encoding="utf-8",
+                buffering=1,
+            ) as detailed_stream:
+                with redirect_stdout(detailed_stream), redirect_stderr(detailed_stream):
+                    print("argv: " + json.dumps(sys.argv, ensure_ascii=False))
+                    print(f"detailed_log_file: {detailed_log_path}")
+                    _execute_ablation(
+                        args,
+                        run_timestamp,
+                        console_progress_stream,
+                    )
+        else:
+            logger.set_console_output_enabled(True)
+            _execute_ablation(args, run_timestamp, console_progress_stream)
+    finally:
+        logger.set_console_output_enabled(previous_console_output)
+        logger.remove_text_output(str(detailed_log_path))
 
 
 if __name__ == "__main__":

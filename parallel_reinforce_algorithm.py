@@ -4,7 +4,6 @@ import sys
 from random import random
 from re import L
 from unittest import result
-from sqlalchemy import all_
 from tqdm import tqdm 
 
 from runtime_compat import configure_openmp_runtime
@@ -19,6 +18,7 @@ import os.path as osp
 import math
 import queue
 import time
+import warnings
 import gtimer as gt
 from collections import OrderedDict
 
@@ -381,6 +381,27 @@ def _a3c_reward_with_schedule_penalty(env_step_info, reward_type):
     # learning target and weakens PDI optimization.  Keep the cut policy's
     # reward identical to the metric used by the formal ablation.
     return env_step_info[reward_type]
+
+
+def _validate_checkpoint_reward_type(state_dict, expected_reward_type, source, strict=False):
+    """Make reward semantics explicit while keeping legacy checkpoints usable."""
+    recorded_reward_type = state_dict.get("reward_type")
+    if recorded_reward_type is None:
+        warnings.warn(
+            f"checkpoint {source!s} has no reward_type metadata; treating it as a legacy checkpoint",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return
+    if recorded_reward_type == expected_reward_type:
+        return
+    message = (
+        f"checkpoint reward_type={recorded_reward_type!r} does not match "
+        f"requested reward_type={expected_reward_type!r}: {source!s}"
+    )
+    if strict:
+        raise ValueError(message)
+    warnings.warn(message, RuntimeWarning, stacklevel=2)
 
 def generate_samples(return_queue,env,policy,value,epoch,samples_per_worker,sel_cuts_percent,device,train_decode_type,reward_type,seed,mean_std,policy_type,random_seed,progress_queue=None,worker_id=None):
     runtime_device = _resolve_worker_device(device)
@@ -1120,7 +1141,7 @@ def main():
     parser.add_argument('--config_file', type=str, default='configs/petri_mip_test_config.json', help="base config json dir")
     parser.add_argument('--sel_cuts_percent', type=float, default=0.1)
     parser.add_argument('--single_instance_file', type=str, default="all")  
-    parser.add_argument('--reward_type', type=str, default="lp_solution_value")
+    parser.add_argument('--reward_type', type=str, default="primaldualintegral")
     parser.add_argument('--baseline_type', type=str, default="simple")
     parser.add_argument('--train_type', type=str, default="train")
     parser.add_argument('--instance_type', type=str, default="item_placement") # for log file name 
@@ -1323,6 +1344,12 @@ def main():
                     for cur_test_model_file in test_model_file
                 ]
             state_dict = get_average_models(list_state_dict)
+        _validate_checkpoint_reward_type(
+            state_dict,
+            args.reward_type,
+            model_tag,
+            strict=False,
+        )
         validate_checkpoint_feature_schema(
             state_dict,
             net_share_kwargs['embedding_dim'],
@@ -1426,6 +1453,10 @@ def main():
         # process test results
     elif args.train_type == 'train':
         # preprocess config from cmd 
+        # A CLI seed is part of the experiment identity.  Override the config
+        # before any worker RNG is initialised so seed_1 ... seed_n are truly
+        # independent training runs rather than copies of the config seed.
+        all_kwargs['experiment']['seed'] = args.seed
         all_kwargs['experiment']['exp_prefix'] = all_kwargs['experiment']['exp_prefix'] + '_' + args.single_instance_file + '_' + args.instance_type
         all_kwargs['env']['single_instance_file'] = args.single_instance_file
         all_kwargs['algorithm']['reward_type'] = args.reward_type
@@ -1555,6 +1586,12 @@ def main():
                 resume_model_path,
                 map_location=device,
                 weights_only=False,
+            )
+            _validate_checkpoint_reward_type(
+                state_dict,
+                all_kwargs['algorithm']['reward_type'],
+                resume_model_path,
+                strict=True,
             )
             validate_checkpoint_feature_schema(
                 state_dict,

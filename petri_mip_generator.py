@@ -188,14 +188,25 @@ class PetriMIPConfig:
     full_process_time: float = 180.0
     # A 2x2 product PW pair is exposed twice in adjacent cycles. Both
     # exposures use the same physical recipe duration.
-    mix_boundary_process_time: float = 130.0
-    mix_internal_process_time: float = 130.0
-    cleaning_interval: int = 10
+    mix_boundary_process_time: float = 180.0
+    mix_internal_process_time: float = 180.0
+    cleaning_interval: int = 5
     cleaning_process_time: float = 500.0
+    # These bounds cover the complete modeled residence interval, not merely
+    # an individual processing operation.  A 2x2 wafer can remain in a PM
+    # across two 180-second exposures, so 200 seconds incorrectly makes valid
+    # 2x2 instances infeasible.  Keep the programmatic defaults aligned with
+    # the long-standing CLI defaults; callers may still impose tighter limits.
     max_module_residency_time: float = 10000.0
     max_robot_residency_time: float = 10000.0
     # Per-interval cap for avoidable schedule waits; zero disables the cap.
     max_schedule_wait_time: float = 0.0
+    # Compact is the default: five physical-module idle-square epigraphs plus
+    # a linear wait tie-break. Legacy recreates one quadratic term per gap.
+    schedule_stability_objective: str = "compact_resource_idle"
+    # Legacy objective-weight fields retained for config/checkpoint
+    # compatibility.  The current primary and schedule-stability objectives
+    # do not consume these coefficients.
     pm_balance_penalty: float = 0.01
     chamber_idle_penalty: float = 1e-4
     post_process_wait_penalty: float = 0.05
@@ -435,6 +446,14 @@ class PetriMIPConfig:
 
     def validate(self) -> None:
         _normalize_process_mode(self.process_mode)
+        if self.schedule_stability_objective not in {
+            "compact_resource_idle",
+            "legacy_wait_square",
+        }:
+            raise ValueError(
+                "schedule_stability_objective must be compact_resource_idle "
+                "or legacy_wait_square."
+            )
         if self.default_wafer_mode.strip():
             _normalize_mode_token(self.default_wafer_mode)
         if self.num_pm != 2:
@@ -663,9 +682,15 @@ def _add_parallel_slot_resource(model, task_specs, slot_count: int, big_m: float
         normalized_specs.append((task_name, task_start, task_end, active_var, allowed_slots, demand))
 
     for task_name, _, _, active_var, allowed_slots, demand in normalized_specs:
+        # If a task consumes every allowed slot, the selection equation plus
+        # 0/1 bounds fixes every assignment to the activity value. Continuous
+        # aliases preserve exported names without adding branch decisions.
+        assignment_vtype = "C" if demand == len(allowed_slots) else "B"
         for slot_id in allowed_slots:
             slot_assign[(task_name, slot_id)] = model.addVar(
-                vtype="B",
+                vtype=assignment_vtype,
+                lb=0.0,
+                ub=1.0,
                 name=f"{slot_prefix}_{task_name}_{slot_id}",
             )
         rhs = _maybe_one(active_var)
@@ -865,25 +890,25 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
     chamber_idle_slacks = []
 
     wafer_to_full_pair = {
-        (w, p): model.addVar(vtype="B", name=f"wafer_to_full_pair_{w}_{p}")
+        (w, p): model.addVar(vtype="C", lb=0.0, ub=1.0, name=f"wafer_to_full_pair_{w}_{p}")
         for w in full_wafers
         for p in full_pair_ids
     }
     wafer_to_mix_pair = {
-        (w, p): model.addVar(vtype="B", name=f"wafer_to_mix_pair_{w}_{p}")
+        (w, p): model.addVar(vtype="C", lb=0.0, ub=1.0, name=f"wafer_to_mix_pair_{w}_{p}")
         for w in mix_wafers
         for p in mix_pair_ids
     }
 
     assign_full = {
-        (p, m, b, s): model.addVar(vtype="B", name=f"assign_full_{p}_{m}_{b}_{s}")
+        (p, m, b, s): model.addVar(vtype="C", lb=0.0, ub=1.0, name=f"assign_full_{p}_{m}_{b}_{s}")
         for p in full_pair_ids
         for m in pm_ids
         for b in full_batches
         for s in full_sides
     }
     assign_mix = {
-        (p, m, r): model.addVar(vtype="B", name=f"assign_mix_{p}_{m}_{r}")
+        (p, m, r): model.addVar(vtype="C", lb=0.0, ub=1.0, name=f"assign_mix_{p}_{m}_{r}")
         for p in mix_pair_ids
         for m in pm_ids
         for r in mix_positions
@@ -1273,6 +1298,7 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
         p: model.addVar(vtype="C", lb=0.0, name=f"mix_pair_post_process_wait_{p}")
         for p in mix_pair_ids
     }
+    use_legacy_wait_squares = cfg.schedule_stability_objective == "legacy_wait_square"
     chamber_idle_total = {
         m: model.addVar(vtype="C", lb=0.0, name=f"chamber_idle_total_{m}")
         for m in pm_ids
@@ -1285,6 +1311,8 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
     chamber_nonprocess_wait_terms = []
 
     def add_chamber_nonprocess_square_term(m, wait_expr, active_var, name: str) -> None:
+        if not use_legacy_wait_squares:
+            return
         wait = model.addVar(vtype="C", lb=0.0, name=f"chamber_nonprocess_wait_{name}")
         square = model.addVar(vtype="C", lb=0.0, name=f"chamber_nonprocess_wait_square_{name}")
         model.addCons(
@@ -3003,7 +3031,9 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
     }
     pec_job_chamber = {
         job_id: model.addVar(
-            vtype="B",
+            vtype="C",
+            lb=0.0,
+            ub=1.0,
             name=f"pec_job_chamber_{job_id}_{pec_job_specs[job_id]['chamber_id']}",
         )
         for job_id in pec_job_ids
@@ -3771,6 +3801,8 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
     ]
 
     def add_wait_square(wait_expr, name: str) -> None:
+        if not use_legacy_wait_squares:
+            return
         wait = model.addVar(vtype="C", lb=0.0, name=f"schedule_wait_{name}")
         square = model.addVar(vtype="C", lb=0.0, name=f"schedule_wait_square_{name}")
         model.addCons(wait == wait_expr, name=f"schedule_wait_def_{name}")
@@ -3830,7 +3862,90 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 f"{stage}_excess_{w}",
             )
 
-    stability_expr = scip.quicksum(wait_square_terms)
+    if use_legacy_wait_squares:
+        stability_expr = scip.quicksum(wait_square_terms)
+    else:
+        # One idle variable per physical module keeps the nonlinear auxiliary
+        # count constant as wafer count grows. Busy expressions contain only
+        # actual service/process intervals, so holding a wafer cannot improve
+        # utilization by masquerading as useful work.
+        resource_idle_square_terms = []
+
+        def add_resource_idle_square(resource_name: str, capacity: int, busy_expr) -> None:
+            idle = model.addVar(vtype="C", lb=0.0, name=f"resource_idle_total_{resource_name}")
+            square = model.addVar(vtype="C", lb=0.0, name=f"resource_idle_square_{resource_name}")
+            model.addCons(
+                idle == capacity * c_max - busy_expr,
+                name=f"resource_idle_total_def_{resource_name}",
+            )
+            model.addCons(
+                square >= idle * idle,
+                name=f"resource_idle_square_def_{resource_name}",
+            )
+            resource_idle_square_terms.append(square)
+
+        add_resource_idle_square(
+            "aligner",
+            1,
+            scip.quicksum(
+                prod_stage_end[(w, "al")] - prod_stage_start[(w, "al")]
+                for w in product_wafers
+            ),
+        )
+        add_resource_idle_square(
+            "llupper",
+            2,
+            scip.quicksum(
+                prod_stage_end[(w, "llupper")] - prod_stage_start[(w, "llupper")]
+                for w in product_wafers
+            ),
+        )
+        add_resource_idle_square(
+            "lllower",
+            2,
+            scip.quicksum(
+                prod_stage_end[(w, "lllower")] - prod_stage_start[(w, "lllower")]
+                for w in product_wafers
+            ),
+        )
+        for m in pm_ids:
+            chamber_busy_expr = (
+                scip.quicksum(
+                    cfg.full_process_time * full_batch_used[(m, b)]
+                    for b in full_batches
+                )
+                + scip.quicksum(
+                    mix_cycle_end[(m, c)] - mix_cycle_start[(m, c)]
+                    for c in mix_cycles
+                )
+                + scip.quicksum(
+                    clean_end[(m, clean_slot)] - clean_start[(m, clean_slot)]
+                    for clean_slot in clean_slots
+                )
+            )
+            add_resource_idle_square(f"chamber_{m}", 1, chamber_busy_expr)
+
+        compact_wait_terms = (
+            list(chamber_idle_total.values())
+            + list(llupper_wait.values())
+            + list(lllower_wait.values())
+            + list(full_pair_post_process_wait.values())
+            + list(mix_pair_post_process_wait.values())
+        )
+        for w in product_wafers:
+            compact_wait_terms.extend(
+                [
+                    prod_stage_start[(w, "pm")] - prod_stage_end[(w, "vtr_load")],
+                    prod_stage_start[(w, "vtr_unload")] - prod_stage_end[(w, "pm")],
+                    prod_stage_start[(w, "al")] - prod_stage_end[(w, "atr_lp_al")],
+                    prod_stage_start[(w, "atr_al_llupper")] - prod_stage_end[(w, "al")],
+                    prod_stage_end[(w, "atr_hold_before_al")]
+                    - prod_stage_start[(w, "atr_hold_before_al")],
+                    prod_stage_end[(w, "atr_hold_after_al")]
+                    - prod_stage_start[(w, "atr_hold_after_al")],
+                ]
+            )
+        stability_expr = scip.quicksum(resource_idle_square_terms) + scip.quicksum(compact_wait_terms)
     schedule_stability = model.addVar(vtype="C", lb=0.0, name="schedule_stability")
     model.addCons(
         schedule_stability == stability_expr,
@@ -3975,9 +4090,10 @@ Embedded PEC wafers forced by odd product counts: `{embedded_pec}`.
 - max module residency time: `{cfg.max_module_residency_time:.1f}`
 - max robot residency time: `{cfg.max_robot_residency_time:.1f}`
 - maximum individual avoidable schedule wait: `{cfg.max_schedule_wait_time:.1f}` (`0` disables the hard cap)
-- secondary stability score: normalized weighted sum of PM imbalance, avoidable chamber gaps,
-  squared CH non-process wafer residence, post-process wait, and excess LL wait
-  (evaluated after fixing either the optimal or incumbent WPH)
+- secondary stability mode: `{cfg.schedule_stability_objective}`. The default
+  `compact_resource_idle` squares five aggregate resource-idle totals (AL, both
+  load-lock groups, and both process chambers) and adds avoidable waits linearly;
+  `legacy_wait_square` retains the former per-wait square formulation
 
 ## Main Variable Families
 
@@ -4008,8 +4124,13 @@ Embedded PEC wafers forced by odd product counts: `{embedded_pec}`.
 - `wafer_completion_*`: auxiliary terminal timestamp linking each product wafer's LP return to the makespan; it is
   not separately summed in the objective
 - `c_max`: end-to-end makespan
-- `schedule_wait_*`, `schedule_wait_square_*`: chamber/module/ATR/VTR/LL waiting intervals and their squared values;
-- `schedule_stability`: sum of all chamber and robot waiting-time squares, minimized only after `c_max` is fixed;
+- `schedule_wait_*`, `schedule_wait_square_*`: legacy per-event waiting variables,
+  built only in `legacy_wait_square` mode;
+- `resource_idle_*`, `resource_idle_square_*`: aggregate capacity-adjusted
+  idle time for the five physical resources and its convex square epigraph,
+  built only in `compact_resource_idle` mode;
+- `schedule_stability`: the selected secondary score, minimized only after
+  `c_max` is fixed;
   it is optimized only after the optimal `c_max` is fixed
 
 ## Objective
@@ -4018,8 +4139,11 @@ The primary LP objective is `min c_max`; for a fixed wafer count, this is exactl
 `max WPH`. The runner then fixes `c_max` to the primary optimum when proven, or to
 the current feasible incumbent when a resource limit interrupts phase one, and
 minimizes `schedule_stability` only within the configured secondary time/node
-budget. Thus a visually smoother Gantt chart can never be bought by reducing the
-reported WPH. `wafer_completion_*` only defines lower bounds of `c_max`.
+budget. Aggregate idle squares retain the throughput effect without creating a
+quadratic auxiliary for every wafer wait, and a smoother Gantt chart can never be
+bought by reducing the reported WPH. When phase two fixes discrete decisions, it is
+incumbent polishing rather than proof of the globally best secondary schedule.
+`wafer_completion_*` only defines lower bounds of `c_max`.
 
 ## Output Files
 
@@ -4041,6 +4165,7 @@ def generate_petri_mip_instance(
     cfg: PetriMIPConfig,
     warm_start_time_limit: float = 180.0,
     require_warm_start: bool = True,
+    append_date: bool = True,
 ) -> str:
     """Generate an LP and, for mixed flows, its compatible primal warm start.
 
@@ -4049,7 +4174,9 @@ def generate_petri_mip_instance(
     """
     output_dir = str(resolve_path(output_dir))
     os.makedirs(output_dir, exist_ok=True)
-    dated_instance_name = append_date_to_filename(instance_name)
+    dated_instance_name = (
+        append_date_to_filename(instance_name) if append_date else instance_name
+    )
     lp_path = os.path.join(output_dir, dated_instance_name)
     model = build_petri_mip_model(cfg)
     model.writeProblem(lp_path)
@@ -4174,30 +4301,48 @@ def main() -> None:
         default=0.0,
         help="Hard cap for each avoidable LL, post-process, bridge, and chamber wait; 0 disables it.",
     )
+    parser.add_argument(
+        "--schedule_stability_objective",
+        choices=("compact_resource_idle", "legacy_wait_square"),
+        default="compact_resource_idle",
+        help="Compact constant-size resource-idle objective or legacy per-gap squares.",
+    )
     parser.add_argument("--pm_balance_penalty", type=float, default=0.01)
     parser.add_argument(
         "--chamber_idle_penalty",
         type=float,
         default=1e-4,
-        help="Secondary objective weight that compacts avoidable gaps between chamber processing groups.",
+        help=(
+            "Legacy compatibility field. It is validated and stored in metadata "
+            "but is not used by the current primary or schedule-stability objective."
+        ),
     )
     parser.add_argument(
         "--post_process_wait_penalty",
         type=float,
         default=0.05,
-        help="Secondary objective weight for product PW-pair waiting from PM process end to VTR unload start.",
+        help=(
+            "Legacy compatibility field; the current objectives do not use this "
+            "coefficient."
+        ),
     )
     parser.add_argument(
         "--ll_wait_penalty",
         type=float,
         default=1e-4,
-        help="Small secondary objective weight for excess waiting after the mandatory LL dwell time.",
+        help=(
+            "Legacy compatibility field; the current objectives do not use this "
+            "coefficient."
+        ),
     )
     parser.add_argument(
         "--chamber_nonprocess_wait_square_penalty",
         type=float,
         default=1e-2,
-        help="High-priority secondary objective weight for per-window squared non-process wafer residence in CH modules.",
+        help=(
+            "Legacy compatibility field; the current objectives do not use this "
+            "coefficient."
+        ),
     )
     parser.add_argument(
         "--process_mode",
@@ -4249,6 +4394,7 @@ def main() -> None:
         max_module_residency_time=args.max_module_residency_time,
         max_robot_residency_time=args.max_robot_residency_time,
         max_schedule_wait_time=args.max_schedule_wait_time,
+        schedule_stability_objective=args.schedule_stability_objective,
         pm_balance_penalty=args.pm_balance_penalty,
         chamber_idle_penalty=args.chamber_idle_penalty,
         post_process_wait_penalty=args.post_process_wait_penalty,

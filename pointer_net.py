@@ -11,7 +11,12 @@ import numpy as np
 
 from scip_imports import SCIP_RESULT, scip, scip_core
 
-from beam_search import Beam
+from beam_search import (
+    Beam,
+    gather_beam_embeddings,
+    probabilities_to_log_probs,
+    reorder_beam_tensor,
+)
 from utils import cut_feature_generator
 from logger import logger
 from global_const import GENERIC_ADVANCED_CUT_FEATURE_DIM
@@ -314,41 +319,91 @@ class Decoder(nn.Module):
             return (outputs, selections), hidden
         
         elif decode_type == "beam_search":
-            # Expand input tensors for beam search
-            decoder_input = Variable(decoder_input.data.repeat(self.beam_size, 1))
-            context = Variable(context.data.repeat(1, self.beam_size, 1))
+            beam_size = max(1, min(int(self.beam_size), int(embedded_inputs.size(0))))
+            decoder_input = decoder_input.repeat(beam_size, 1)
+            context = context.repeat(1, beam_size, 1)
             hidden = (
-                Variable(hidden[0].data.repeat(self.beam_size, 1)),
-                Variable(hidden[1].data.repeat(self.beam_size, 1)),
+                hidden[0].repeat(beam_size, 1),
+                hidden[1].repeat(beam_size, 1),
             )
-
-            beam = [
-                Beam(self.beam_size, max_length, cuda=self.use_cuda)
+            beams = [
+                Beam(
+                    beam_size,
+                    max_length,
+                    device=decoder_input.device,
+                    dtype=decoder_input.dtype,
+                )
                 for _ in range(batch_size)
             ]
+            probability_history = []
 
             for i in steps:
                 hx, cx, probs, mask = recurrence(decoder_input, hidden, mask, idxs, i)
-                hidden = (hx, cx)
-
-                probs = probs.view(self.beam_size, batch_size, -1).transpose(0, 1).contiguous()
-
-                n_best = 1
-                decoder_input, idxs, active = self.decode_beam(
-                    probs, embedded_inputs, beam, batch_size, n_best
+                probs_by_batch = (
+                    probs.reshape(beam_size, batch_size, -1)
+                    .transpose(0, 1)
+                    .contiguous()
                 )
+                log_probs_by_batch = probabilities_to_log_probs(probs_by_batch)
+                for batch_idx in range(batch_size):
+                    beams[batch_idx].advance(log_probs_by_batch[batch_idx])
 
-                inps.append(decoder_input)
-                if self.beam_size > 1:
-                    outputs.append(probs[:, 0, :])
-                else:
-                    outputs.append(probs.squeeze(0))
-                selections.append(idxs)
-                if len(active) == 0:
+                parent_rows = torch.stack(
+                    [item.get_current_origin() for item in beams],
+                    dim=0,
+                )
+                token_rows = torch.stack(
+                    [item.get_current_state() for item in beams],
+                    dim=0,
+                )
+                hidden = (
+                    reorder_beam_tensor(hx, parent_rows),
+                    reorder_beam_tensor(cx, parent_rows),
+                )
+                mask = reorder_beam_tensor(mask, parent_rows)
+                idxs = token_rows.transpose(0, 1).contiguous().reshape(-1)
+                decoder_input = gather_beam_embeddings(embedded_inputs, token_rows)
+                probability_history.append(probs_by_batch)
+                if all(item.done for item in beams):
                     break
-                decoder_input = Variable(decoder_input.data.repeat(self.beam_size, 1))
 
-            return (outputs, selections), hidden
+            best = [
+                item.get_best_hypothesis(prefer_finished=False)
+                for item in beams
+            ]
+            decoded_steps = len(best[0][0])
+            if any(len(item[0]) != decoded_steps for item in best):
+                raise RuntimeError("fixed-length beam hypotheses have inconsistent lengths")
+            selections = [
+                torch.stack([best[b][0][step] for b in range(batch_size)])
+                for step in range(decoded_steps)
+            ]
+            outputs = [
+                torch.stack(
+                    [
+                        probability_history[step][b, best[b][1][step], :]
+                        for b in range(batch_size)
+                    ],
+                    dim=0,
+                )
+                for step in range(decoded_steps)
+            ]
+            final_rows = torch.tensor(
+                [item[2] for item in best],
+                dtype=torch.long,
+                device=decoder_input.device,
+            )
+            batch_offsets = torch.arange(
+                batch_size,
+                dtype=torch.long,
+                device=decoder_input.device,
+            )
+            final_order = final_rows * batch_size + batch_offsets
+            final_hidden = (
+                hidden[0].index_select(0, final_order),
+                hidden[1].index_select(0, final_order),
+            )
+            return (outputs, selections), final_hidden
 
         else:
             # TODO: 实现每轮输出最大概率对应的index
@@ -393,41 +448,6 @@ class Decoder(nn.Module):
         sels = embedded_inputs[idxs.data, [i for i in range(batch_size)], :] 
         return sels, idxs
 
-
-    def decode_beam(self, probs, embedded_inputs, beam, batch_size, n_best):
-        active = []
-        for b in range(batch_size):
-            if beam[b].done:
-                continue
-            if not beam[b].advance(probs.data[b]):
-                active += [b]
-
-        selected_tokens = []
-        for b in range(batch_size):
-            _, ks = beam[b].sort_best()
-            batch_tokens = []
-            for k in ks[:n_best]:
-                hyp = beam[b].get_hyp(k)
-                last_token = hyp[-1] if len(hyp) > 0 else 0
-                if torch.is_tensor(last_token):
-                    last_token = int(last_token.item())
-                batch_tokens.append(int(last_token))
-            if not batch_tokens:
-                batch_tokens = [0] * n_best
-            while len(batch_tokens) < n_best:
-                batch_tokens.append(batch_tokens[-1])
-            selected_tokens.append(batch_tokens)
-
-        idxs = torch.tensor(selected_tokens, dtype=torch.long, device=self.pointer.v.device)
-        if n_best == 1:
-            idxs = idxs.squeeze(1)
-
-        if idxs.dim() > 1:
-            x = embedded_inputs[idxs.transpose(0, 1).contiguous().data,
-                    [x for x in range(batch_size)], :]
-        else:
-            x = embedded_inputs[idxs.data, [x for x in range(batch_size)], :]
-        return x.view(max(int(idxs.numel()), 1), embedded_inputs.size(2)), idxs, active
 
 class PointerNetwork(nn.Module):
     """The pointer network, which is the core seq2seq 

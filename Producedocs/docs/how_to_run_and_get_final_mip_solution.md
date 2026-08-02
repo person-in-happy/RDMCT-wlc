@@ -1,731 +1,633 @@
-# 双源混流半导体调度：从实例生成到训练、测试、消融和甘特图前端
+# RDMCT-A3C 完整运行与结果复现指南
 
-本文档给出一套可以直接在 PowerShell 中运行的完整流程，覆盖：
+> 面向第一次接触半导体组合设备调度、MIP、SCIP 或强化学习割选择的读者。
+> 本文按当前代码审计更新于 2026-07-31；命令默认在 Windows PowerShell、仓库根目录执行。
 
-1. 生成 Petri/MIP 调度实例
-2. 训练 cut selection 模型
-3. 在测试集上验证模型
-4. 运行消融实验
-5. 打开交互式甘特图前端
-6. 查看训练曲线和补充扩展功能
+## 1. 先选择你的目标
 
-所有命令默认从项目根目录运行：
+| 目标 | 从哪里开始 | 结果能否用于论文 |
+| --- | --- | --- |
+| 确认安装成功 | 本文“CPU 最小闭环” | 否 |
+| 学会生成、训练、测试和看甘特图 | 本文第 4–8 节 | 只能调试 |
+| 做一个公平的四方法消融 | 本文第 12 节 | 完整协议后才可 |
+| 得到 C&IE 投稿级完整实验包 | [`cie/README.md`](../../cie/README.md) | 通过全部门槛后可作为证据 |
 
-```powershell
-cd G:\git\RDMCT-A3C
-```
+“投稿级”表示实验设计、原始数据、可行性验证和统计口径可审计，不表示保证录用。论文是否达到 C&IE 要求还取决于创新性、一般性、效应大小和写作。
 
-下面的示例把路径和参数直接写在命令中，不再先用变量赋值命令保存路径。每条命令下方给出必要说明。
+## 2. 项目在解决什么问题
 
-## 1. 快速流程
+系统有两种产品工艺：
 
+- `4x1`：同一 PW 对在一个四口腔体内完成相应处理；
+- `2x2`：PW 对跨 CH2/CH3 形成混流加工。
 
-这一节给出小规模可跑通流程。先生成带日期后缀的 Petri/MIP 训练实例，再读取该实例训练 cut selection 模型，并把模型保存到 `data`。
-
-### 2.1 生成训练集
-使用warm——start初始解策略：
-```powershell
-python petri_mip_generator.py  --output_dir generated_instances\test  --instance_name wafer17_mix.lp  --num_batches 10  --num_pm 2  --process_mode mixed  --mode_4x1_wafers 17  --mode_2x2_wafers 17  --pec_pool_size 8  --chamber_idle_penalty 0 --full_process_time 180  --mix_boundary_process_time 130  --mix_internal_process_time 130  --cleaning_process_time 500  --warm_start_time_limit 7200
-```
-不使用初始解策略：
-```powershell
-python petri_mip_generator.py  --output_dir generated_instances\test  --instance_name wafer17_mix.lp  --num_batches 10  --num_pm 2  --process_mode mixed  --mode_4x1_wafers 17  --mode_2x2_wafers 17  --pec_pool_size 8  --chamber_idle_penalty 0 --full_process_time 180  --mix_boundary_process_time 130  --mix_internal_process_time 130  --cleaning_process_time 500  --allow_missing_warm_start
-```
-
-说明：
-- `--output_dir generated_instances\petri` 是训练集输出目录，与快速配置中的 `env.instance_file_path` 保持一致。
-- 生成器会给 `.lp` 文件名自动追加日期后缀，并在终端打印真实文件路径。
-- 下一步训练时，把终端输出的真实 `.lp` 文件名填到 `--single_instance_file`。
-
-### 2.2 训练模型
-
-python parallel_reinforce_algorithm.py  --config_file configs/petri_mip_formal_wafer18_config.json   --train_type train  --generate_petri_instance False  --single_instance_file mix_wafer18_20260710.lp  --sel_cuts_percent 0.2  --reward_type primaldualintegral  --baseline_type simple  --policy_type with_token  --use_cutsel_percent_policy True  --seed 1  --scip_seed 1  --instance_type petri_transfer --start_epoch 0
-
-```powershell
-python parallel_reinforce_algorithm.py  --config_file configs\petri_mip_test_config.json  --train_type train  --generate_petri_instance False  --single_instance_file mip_wafer11_41_train_20260611.lp --sel_cuts_percent 0.2  --reward_type primaldualintegral  --baseline_type simple  --policy_type with_token  --use_cutsel_percent_policy True  --seed 1  --scip_seed 1  --time_limit 1800  --instance_type petri_transfer
-```
-
-说明：
-训练路径为single_instance_file
-- `--reward_type solving_time` 关心求解速度，`--reward_type primaldualintegral` 关心求解质量。
-- `--config_file configs\petri_mip_quick_config.json` 使用快速配置：`num_epochs=5`、`samples_per_epoch=2`、`n_jobs=1`、训练日志根目录为 `data`。
-- `--generate_petri_instance False` 表示训练阶段不再自动生成实例，而是读取第 2.1 节已经生成的训练集。
-- `--single_instance_file batch10_fullflow_train_<date>.lp` 要替换为第 2.1 节终端输出的真实文件名。
-- 正式训练可把 `configs\petri_mip_quick_config.json` 中的 `algorithm.num_epochs`、`trainer.samples_per_epoch` 和 `env.scip_time_limit` 调大。
-
-训练输出目录形如：
-
-```text
-data/mip_rl_beam_<instance>_petri_transfer/<run_timestamp>/
-  params.pkl
-  itr_*.pkl
-  progress.csv
-  variant.json
-```
-
-### 2.3 绘制训练曲线
-
-```powershell
-python plot_progress_curves.py  --data_dir data  --output data\latest_convergence_curves.svg  --window 3  --title "Cut Selection Training"
-```
-
-说明：该命令从 `data` 中递归寻找最新的 `progress.csv`，并输出到 `data\latest_convergence_curves.svg`。
-
-## 3. 生成测试集并验证模型
-
-### 3.1 单实例封装求解
-
-python parallel_reinforce_algorithm.py  --config_file configs/petri_mip_formal_wafer18_config.json  --train_type test  --single_instance_file wafer17_mix_20260711.lp  --sel_cuts_percent 0.2  --policy_type with_token  --use_cutsel_percent_policy True  --seed 1  --scip_seed 1  --instance_type 1.1_wafer17_mix
-
-如果只想快速生成一个实例并立刻用训练好的模型测试，可使用封装脚本：
-
-```powershell
-python run_petri_a3c_beam.py   --config_file configs\petri_mip_test_config.json  --test_model_path latest   --instance_dir generated_instances\MIP_pipeline_demo_single_test   --instance_name mip_single_test.lp   --num_batches 10   --num_pm 2   --num_steps 13  --process_mode mixed  --mode_4x1_wafers 17  --mode_2x2_wafers 0  --pec_pool_size 8   --chamber_idle_penalty 0.0001  --test_decode_type beam_search   --time_limit 1800  --seed 1   --scip_seed 1  --instance_type petri_transfer
-```
-
-说明：
-
-- `--test_model_path latest` 会自动定位 `data` 目录下最新的 `params.pkl`。
-- `--instance_dir generated_instances\MIP_pipeline_demo_single_test` 是新测试实例和 runtime config 的输出目录。
-- 该封装脚本会生成实例、写出测试 runtime config、调用 `parallel_reinforce_algorithm.py --train_type test`，并自动尝试生成甘特图前端。
-
-测试输出目录通常形如：
-
-```text
-petri_transfer_use_hrl_Trueheuristics_cutsel/
-  seed_<seed>_model_params.pkl_RL_max_cuts_root_0.2.npy
-  seed_<seed>_model_params.pkl_RL_max_cuts_root_0.2_solutions_<date>.json
-  seed_<seed>_model_params.pkl_RL_max_cuts_root_0.2_solutions_<date>_gantt/
-```
-
-### 3.2 批量测试多个已有实例
-
-```powershell
-python parallel_reinforce_algorithm.py  --config_file configs\petri_mip_quick_config.json   --train_type test   --single_instance_file all  --sel_cuts_percent 0.2   --policy_type with_token   --use_cutsel_percent_policy True   --test_decode_type beam_search   --test_time_limit 1800  --seed 1   --scip_seed 1   --instance_type petri_transfer
-```
-
-说明：该命令读取 `configs\petri_mip_quick_config.json` 中的 `test_kwargs.test_instance_path=generated_instances/petri`，并测试该目录下全部 `.lp/.mps/.cip` 实例；配置中的 `test_model_path=latest` 会自动定位最新模型。
-
-## 4. 运行消融实验
-
-消融实验会对比四种方法：
-
-- `solver_only`：默认 SCIP cut selection
-- `a3c_only`：只用 A3C 策略
-- `beam_only`：只用启发式 Beam
-- `a3c_beam`：A3C + Beam
-
-### 4.1 带训练模型的消融实验
-
-```powershell
-python run_ablation_experiments.py --config_file configs\petri_mip_test_config.json --test_model_path latest --instance_dir generated_instances\test --single_instance_file wafer47_mix_20260712.lp --generate_petri_instance False --num_batches 10 --num_pm 2 --num_steps 13 --process_mode mixed --mode_4x1_wafers 47 --mode_2x2_wafers 47 --pec_pool_size 8 --chamber_idle_penalty 0.0001 --time_limit 3800 --sel_cuts_percent 0.2 --policy_type with_token --use_cutsel_percent_policy True --a3c_decode_type greedy --a3c_beam_decode_type greedy --a3c_max_candidates 128 --a3c_max_selected_cuts 30 --proposed_max_candidates 128 --proposed_max_selected_cuts 30 --heuristic_max_candidates 128 --heuristic_max_selected_cuts 30 --heuristic_beam_size 3 --heuristic_redundancy_weight 0.15 --evaluation_node_limit -1 --evaluation_stall_node_limit -1 --enforce_fair_ablation True --seed 1 --scip_seed 1 --instance_type 1.1_wafer47_mix --output_dir ablation_results
-```
-
-说明：`--test_model_path latest` 会自动使用最新训练模型；结果写入 `ablation_results`，并自动生成 `<结果文件名>_gantt\index.html`。
-
-### 4.2 无训练模型的消融实验
-
-如果没有 `params.pkl`，可以先比较默认 SCIP 和启发式 Beam；A3C 相关方法会被标记为 skipped：
-
-```powershell
-python run_ablation_experiments.py   --config_file configs\petri_mip_test_config.json  --instance_dir generated_instances\MIP_pipeline_demo_ablation_nomodel   --instance_name mip_ablation_nomodel.lp   --generate_petri_instance True   --process_mode mixed   --mode_4x1_wafers 8   --mode_2x2_wafers 6   --pec_pool_size 8   --chamber_idle_penalty 0.0001   --time_limit 1800   --seed 1   --scip_seed 1   --instance_type petri_transfer   --output_dir ablation_results
-```
-
-说明：不传 `--test_model_path` 时，A3C 相关方法跳过，默认 SCIP 和启发式 Beam 仍会运行。
-
-消融输出包括：
-
-```text
-ablation_results/ablation_<instance_type>_<timestamp>.json
-ablation_results/ablation_<instance_type>_<timestamp>.csv
-ablation_results/ablation_<instance_type>_<timestamp>.md
-ablation_results/ablation_<instance_type>_<timestamp>_comparison.svg
-ablation_results/ablation_<instance_type>_<timestamp>_gantt/
-  index.html
-  manifest.json
-  *.svg
-```
-
-即使没有任何方法得到可行解，`_gantt/index.html` 也会生成，用来展示 `_comparison.svg` 对比图和无甘特图提示。
-
-## 5. 甘特图前端
-
-### 5.1 生成并打开甘特图前端
-
-测试和消融会自动尝试生成甘特图。如果需要手动生成：
-
-```powershell
-python petri_gantt.py   --solution_json latest   --output_dir gantt_manual   --view all
-
-Start-Process "gantt_manual\index.html"
-```
-
-说明：`--solution_json latest` 会自动读取 `petri_transfer_use_hrl_Trueheuristics_cutsel` 下最新的 `*solutions*.json`；`--output_dir gantt_manual` 是前端输出目录。
-
-### 5.2 前端界面功能
-
-`index.html` 是静态前端，不需要启动服务器。页面包含：
-
-- 视图下拉框：`full`、`chambers`、`resources`
-- 算法下拉框：消融实验中不同算法的结果
-- 实例下拉框：多实例测试或消融中的不同 LP
-- 对比图区域：展示消融 `_comparison.svg`
-- SVG 打开按钮：单独打开当前甘特图
-- 鼠标悬停提示：条形对应的标签、泳道、开始时间、结束时间、持续时间
-
-三种甘特图视图：
-
-- `full`：按产品晶圆和 PEC job 展示全流程路径
-- `chambers`：只展示 `CH2/CH3` 四腔模块内部排程
-- `resources`：按 `ATR robot`、`AL`、`LLupper slot`、`VTR robot`、`CH2/CH3 PM`、`LLlower slot` 等物理资源分泳道
-
-## 6. 实例生成扩展功能
-
-### 6.1 工艺模式
-
-`--process_mode` 支持：
-
-| 模式 | 含义 |
-| --- | --- |
-| `auto` | 默认模式；若传 `mode_sequence` 则按序列，否则按 4x1/2x2 数量 |
-| `mixed` / `both` | 按 `--mode_4x1_wafers` 和 `--mode_2x2_wafers` 数量混跑 |
-| `4x1` | 所有产品晶圆只走 4x1 |
-| `2x2` | 所有产品晶圆只走 2x2 |
-| `custom` | 使用 wafer 级模式序列或稀疏覆盖 |
-
-只跑 4x1：
-
-```powershell
-python petri_mip_generator.py   --output_dir generated_instances\MIP   --instance_name mip_4x1_only.lp   --process_mode 4x1   --total_wafers 12   --pec_pool_size 8
-```
-
-只跑 2x2：
-
-```powershell
-python petri_mip_generator.py 
-  --output_dir generated_instances\MIP 
-  --instance_name mip_2x2_only.lp 
-  --process_mode 2x2 
-  --total_wafers 12 
-  --pec_pool_size 8
-```
-
-### 6.2 wafer 级模式序列
-
-完整指定每片产品晶圆的模式：
-
-```powershell
-python petri_mip_generator.py 
-  --output_dir generated_instances\MIP 
-  --instance_name mip_sequence_case.lp 
-  --process_mode custom 
-  --total_wafers 8 
-  --mode_sequence "4x1,4x1,4x1,2x2,2x2,4x1,2x2,2x2" 
-  --pec_pool_size 8
-```
-
-`--mode_sequence` 支持 `4x1`、`2x2`，也支持简单别名：`4`、`2`、`full`、`mix`。
-
-### 6.3 wafer 级稀疏覆盖
-
-只覆盖部分晶圆，其他晶圆使用默认模式：
-
-```powershell
-python petri_mip_generator.py 
-  --output_dir generated_instances\MIP 
-  --instance_name mip_wafer_map_case.lp 
-  --process_mode custom 
-  --total_wafers 8 
-  --default_wafer_mode 4x1 
-  --wafer_mode_map "W3:2x2,W7=2x2" 
-  --pec_pool_size 8
-```
-
-### 6.4 cleaning 扩展
-
-`--cleaning_interval` 控制每个 chamber 连续加工多少次后插入纯 PEC cleaning：
-
-- `--cleaning_interval 10`：每个清洗 epoch 最多 10 次 chamber process
-- `--cleaning_interval 0`：关闭 cleaning 约束
-- `--cleaning_process_time 0`：使用默认清洗时间，等于 `2 * full_process_time`
-- `--cleaning_process_time 60`：显式指定清洗时间
-
-示例：
-
-```powershell
-python petri_mip_generator.py 
-  --output_dir generated_instances\MIP 
-  --instance_name mip_cleaning_interval_case.lp 
-  --process_mode mixed 
-  --mode_4x1_wafers 8 
-  --mode_2x2_wafers 6 
-  --pec_pool_size 8 
-  --cleaning_interval 6 
-  --cleaning_process_time 60
-```
-
-### 6.5 驻留时间扩展
-
-`--max_module_residency_time` 限制晶圆在模块中的驻留窗口；`--max_robot_residency_time` 限制机械手动作相关的驻留窗口。
-
-```powershell
-python petri_mip_generator.py 
-  --output_dir generated_instances\MIP 
-  --instance_name mip_residency_case.lp 
-  --process_mode mixed 
-  --mode_4x1_wafers 8 
-  --mode_2x2_wafers 6 
-  --pec_pool_size 8 
-  --max_module_residency_time 100 
-  --max_robot_residency_time 100
-```
-
-如果时限过紧，模型可能变为 infeasible。
-
-### 6.6 PEC token 约束
-
-`--pec_pool_size` 必须满足：
-
-- 不超过 PEC storage 容量，当前为 10
-- 至少为 `4 * num_pm`，当前 `num_pm=2` 时至少为 8
-- 能被 `num_pm` 整除
-
-当前设备常用值为 `8` 或 `10`。不要使用消融脚本默认的 `40`。
-
-### 6.7 目标函数软惩罚
-
-实例生成器当前目标为：
+模型同时描述产品晶圆、PEC 晶圆、清洗作业和搬运资源，优化最后一片产品晶圆返回 LP 的时刻：
 
 ```text
 min c_max
-  + pm_balance_penalty * chamber_load_imbalance
-  + chamber_idle_penalty * sum(chamber_idle_slack)
-  + chamber_nonprocess_wait_square_penalty * sum(chamber_nonprocess_wait_square)
-  + post_process_wait_penalty * sum(pair_post_process_wait)
+throughput_wph = 3600 × completed_product_wafers / c_max
 ```
 
-相关参数：
+当前 LP 主目标只有 `c_max`。如果 runtime 开启词典序稳定化，才会在基本不恶化最优 `c_max` 的前提下做第二阶段排程紧凑化。
 
-- `--pm_balance_penalty`：鼓励 4x1/2x2 工作在两个 chamber 间更均衡
-- `--chamber_idle_penalty`：鼓励同一 CH 上相邻加工组更连续，压缩可避免的组间等待
-- `--chamber_nonprocess_wait_square_penalty`：按窗口惩罚 CH 内“有晶圆但未加工”的驻留时间平方，优先压缩 2x2 bridge/tail 前后的长等待
-- `--post_process_wait_penalty`：惩罚产品晶圆在 PM 加工完成后等待 VTR 卸载的时间
+### 2.1 初学者术语
 
-`chamber_idle_slack` 不是硬约束，而是二级目标中的软惩罚，主要覆盖：
-
-- `full_batch_idle_*`：同一 CH 上相邻 `4x1` 批次之间的空闲
-- `full_to_mix_idle_*`：尾部 `4x1` 批次到该 CH 后续 `2x2` 链之间的切换空闲
-- `mix_cycle_to_bridge_idle_*`、`mix_tail_idle_*`：`2x2` 链内部允许保留的资源等待；head 完成后立即进入第一个 cycle，bridge 完成后立即进入下一个 cycle
-
-`chamber_nonprocess_wait_square_*` 覆盖所有 CH 占腔但非加工窗口：`4x1` 的装入/旋转/卸出窗口，`2x2` 的 head、每次 bridge、tail，以及 cleaning 的装卸窗口；这些窗口按各自时长分别平方后求和。
-
-如果上游资源尚未就绪，例如 `VTR`、`LLupper`、`AL`、PEC token 或 cleaning 约束阻塞，模型仍允许等待；该惩罚只是在可行且不显著影响主目标的情况下，把甘特图上的空白往前压缩。
-
-## 7. 模型训练和测试扩展功能
-
-### 7.1 policy 类型
-
-常用设置：
-
-```powershell
---policy_type with_token
-```
-
-`with_token` 使用 end-token 版本 pointer network，适合 cut selection 序列决策。
-
-### 7.2 高层 cut 数量策略
-
-```powershell
---use_cutsel_percent_policy True
---sel_cuts_percent 0.2
-```
-
-含义：
-
-- `use_cutsel_percent_policy=True`：启用高层 cut selection percent policy
-- `sel_cuts_percent=0.2`：默认选择 cut 池中约 20% 的 cut，具体会和策略输出共同作用
-
-### 7.3 reward 类型
-
-推荐调度实验使用：
-
-```powershell
---reward_type solving_time
-```
-
-其他旧设置如 `lp_solution_value` 会把根节点 LP 目标改善作为 reward，且会改变部分环境参数，不建议作为当前 Petri 调度默认实验。
-
-### 7.4 测试解码方式
-
-测试和消融常用：
-
-```powershell
---test_decode_type beam_search
-```
-
-消融实验中：
-
-- `--a3c_decode_type greedy`：A3C-only 使用 greedy
-- `--a3c_beam_decode_type beam_search`：A3C+Beam 使用 beam search
-- `beam_only` 使用 `heuristic_beam_size`、`heuristic_redundancy_weight` 等启发式参数
-
-## 8. 消融实验输出解释
-
-消融 JSON 中主要字段：
-
-| 字段 | 含义 |
+| 术语 | 含义 |
 | --- | --- |
-| `summary` | 四种方法的均值指标 |
-| `results` | 每个方法每个实例的详细结果 |
-| `diagnostics` | 自动诊断提示，如无 incumbent、实例数量太少等 |
-| `artifacts.comparison_svg` | 消融对比图 |
-| `artifacts.gantt_outputs` | 甘特图和前端输出文件 |
+| LP / MIP | 生成的数学规划实例；文件扩展名为 `.lp` |
+| SCIP / PySCIPOpt | MIP 求解器及其 Python 接口 |
+| incumbent | 当前已找到的最好可行解；没有 incumbent 就不能画有效排程 |
+| optimal | 已证明当前解达到最优 |
+| gap | 最好可行解与对偶界之间的相对差距；越小越好 |
+| PDI | primal-dual integral，衡量整个求解过程中的 gap 质量；通常越小越好 |
+| `c_max` | 全流程 makespan，越小越好 |
+| WPH | 每小时完成晶圆数，越大越好 |
+| PW pair | 两片产品晶圆组成的搬运/加工对 |
+| PEC | 工艺环境控制晶圆；会循环复用并触发 cleaning |
+| ATR/VTR | 前端和真空侧搬运机器人 |
+| AL/LL | aligner 与 load lock |
+| CH2/CH3 | 两个四口工艺腔体 |
+| warm start / SPBS | 求解前提供的可行初解；不改变可行域和最优值定义 |
+| training seed | 训练网络的随机重复 |
+| solver seed | 同一模型上 SCIP 的随机重复 |
 
-常用指标：
+设备与逐晶圆约束的详细背景见[问题描述](sf3_ct_4x1_problem_description.md)和[逐晶圆 MIP](per_wafer_path_mip.md)。
 
-- `mean_solving_time`：平均求解时间
-- `mean_ntotal_nodes`：平均搜索节点数
-- `mean_best_obj`：有 incumbent 的平均目标值
-- `mean_primal_dual_gap`：有 incumbent 的平均 gap
-- `num_with_solution`：有可行解的实例数
+## 3. 安装
 
-当所有方法都没有 incumbent 时，不要用 best objective 或 gap 排名；此时只能比较时间、节点数和诊断信息。
+### 3.1 基本要求
 
-## 9. 续训和训练曲线扩展
+- Python 3.10 或更高；
+- SCIP 与 PySCIPOpt；
+- NumPy、SciPy、PyTorch 等 `requirements.txt` 中依赖；
+- 训练和学习策略推理需要 CUDA；实例生成、SCIP 默认求解和分析可用 CPU。
 
-### 9.1 续训
+当前机器已验证的一个快照是 Python 3.13.5、PySCIPOpt 6.1.0、PyTorch 2.11.0+cu130。它不是强制版本组合；正式实验应保存自己的环境。
 
-续训时把 runtime config 中：
+```powershell
+Set-Location <你的路径>\RDMCT-A3C
+python -m venv .venv
+Set-ExecutionPolicy -Scope Process Bypass
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+如果使用 NVIDIA GPU，先按本机驱动安装匹配的 CUDA PyTorch。配置写为 `cuda:0` 而 CUDA 不可用时程序会报错，不会自动回退。
+
+### 3.2 自检
+
+```powershell
+python -c "import sys,numpy,torch,pyscipopt,scipy; print(sys.version); print('numpy',numpy.__version__); print('torch',torch.__version__); print('cuda',torch.cuda.is_available()); print('pyscipopt',pyscipopt.__version__); print('scipy',scipy.__version__)"
+.\cie\run_cie_single.ps1 -Stage check -LogId cie_check
+```
+
+第二条命令还会检查全部 C&IE 脚本能否解析。若只做 CPU 流程，`cuda False` 可以接受；训练前必须为 `True`。
+
+## 4. CPU 最小闭环
+
+### 4.1 先跑维护好的端到端 smoke
+
+```powershell
+.\cie\run_cie_single.ps1 -Stage smoke -LogId cie_smoke
+```
+
+它执行“小 LP → SCIP → `.sol` → 独立 `checkSol` → 制造指标 → 实例级统计”。验收：
+
+- 命令退出码为 0；
+- raw 的 `error`、`solution_write_error` 为空；
+- `solutions/` 有 `.sol`；
+- `analysis/cie_manufacturing_metrics.json` 的 `invalid_count=0`。
+
+这个结果只证明环境和求解链路正常。
+
+### 4.2 手工生成一个小混流实例
+
+下面显式写出关键物理参数，避免不同入口的默认值漂移：
+
+```powershell
+python petri_mip_generator.py    --output_dir generated_instances\structure_smoke    --instance_name quick_fullflow.lp    --process_mode auto    --mode_4x1_wafers 4    --mode_2x2_wafers 4    --num_pm 2    --batch_size 4    --pec_pool_size 8    --full_process_time 80    --mix_boundary_process_time 30    --mix_internal_process_time 30    --cleaning_interval 10    --cleaning_process_time 160    --warm_start_time_limit 30    --allow_missing_warm_start
+```
+
+生成器会给文件名追加日期。检查：
+
+```powershell
+Get-ChildItem generated_instances\structure_smoke |
+    Select-Object Name,Length,LastWriteTime
+```
+
+至少应有 `.lp` 和对应 `_model.md`；若 30 秒内构造成功，还会有 `_warmstart.sol` 与 `_warmstart.meta.json`。`--allow_missing_warm_start` 只允许初解失败后保留 LP，并不关闭初解构造；完全关闭应同时使用：
+
+```powershell
+--warm_start_time_limit 0 --allow_missing_warm_start
+```
+
+## 5. 一轮 CPU 训练 smoke
+
+仓库的 `configs/petri_structure_smoke_config.json` 使用 CPU、1 epoch、1 sample、单次 SCIP 10 秒，只验证训练和 checkpoint 写盘：
+
+```powershell
+python parallel_reinforce_algorithm.py    --config_file configs\petri_structure_smoke_config.json    --generate_petri_instance False    --single_instance_file all    --instance_type structure_smoke    --train_type train   --reward_type primaldualintegral     --baseline_type simple    --policy_type with_token    --use_cutsel_percent_policy True    --seed 1    --scip_seed 1
+```
+
+检查：
+
+```powershell
+Get-ChildItem data\structure23_smoke -Recurse -File |
+    Sort-Object LastWriteTime |
+    Select-Object -Last 15 FullName,Length
+```
+
+应看到 `variant.json`、文本/表格日志和 `params.pkl` 或迭代 checkpoint。该模型只有一个样本和一轮更新，没有科研结论。
+
+## 6. 测试与甘特图 smoke
+
+```powershell
+python parallel_reinforce_algorithm.py    --config_file configs\petri_structure_smoke_config.json    --generate_petri_instance False    --single_instance_file all    --instance_type structure_smoke    --train_type test    --reward_type primaldualintegral     --policy_type with_token    --use_cutsel_percent_policy True    --test_time_limit 10    --seed 1    --scip_seed 1
+```
+
+程序会打印：
+
+```text
+saved final solutions: <实际JSON路径>
+saved gantt outputs under: <实际目录>
+```
+
+测试分支会自动从 solution JSON 生成甘特图。也可手工执行：
+
+```powershell
+python petri_gantt.py `
+    --solution_json <上一步打印的JSON路径> `
+    --output_dir gantt_smoke `
+    --view all
+```
+
+`latest` 只适合这类 smoke。正式实验必须冻结并记录明确的 checkpoint 路径与 SHA-256。
+
+## 7. 保存控制台日志
+
+`cie\run_cie_single.ps1` 已将标准输出和错误分别写到 `cie/results/logs/<LogId>/`。一般 Python 命令可用 transcript：
+
+```powershell
+New-Item -ItemType Directory -Force logs | Out-Null
+Start-Transcript -Path logs\manual_smoke.log
+try {
+    python petri_mip_generator.py --help
+} finally {
+    Stop-Transcript
+}
+```
+
+正式归档同时保存命令、退出码、commit、配置和产物，不能只截屏。
+
+## 8. 参数先后关系与默认值漂移
+
+### 8.1 参数在哪个阶段生效
+
+| 阶段 | 入口 | 作用 |
+| --- | --- | --- |
+| 生成实例 | `petri_mip_generator.py` | 把晶圆数、工艺时间、cleaning 和驻留约束固化进 `.lp` |
+| 训练/测试 | `parallel_reinforce_algorithm.py` | 从 JSON 读取求解、网络和训练参数 |
+| 一键测试 | `run_petri_a3c_beam.py` | 先重新生成实例，再构造 runtime config 并测试 |
+| 消融 | `run_ablation_experiments.py` | 在同一实例、初解和预算下比较四种方法 |
+| C&IE | `cie/code/*.py` | 使用冻结 LP、模型和正式协议 |
+
+必须记住：
+
+1. `.lp` 生成后，物理参数已经固定；读取已有 LP 时再传晶圆数或加工时间不会修改它。
+2. JSON 的 `env` 控制训练样本求解；测试时只有代码明确支持的 CLI 参数会覆盖。
+3. `run_petri_a3c_beam.py` 会重新生成实例，不适合复用冻结论文实例。
+4. 正式运行不要使用 `latest`，也不要只写“采用默认参数”。
+
+### 8.2 不同入口的时间默认值不同
+
+所有时间单位均为秒。
+
+| 参数 | 直接生成器 CLI | parallel 自动生成/一键测试/消融 | C&IE nominal |
+| --- | ---: | ---: | ---: |
+| `full_process_time` | 80 | 180 | 180 |
+| `mix_boundary_process_time` | 30 | 180 | 180 |
+| `mix_internal_process_time` | 30 | 180 | 180 |
+| `cleaning_interval` | 10 | 10 | 5 |
+| `cleaning_process_time` | 0 | 0 | 500 |
+| 0 对应的实际 cleaning 时长 | 160 | 360 | 不适用 |
+
+`cleaning_process_time=0` 不是零时长 cleaning，而是：
+
+```text
+effective_cleaning_process_time = 2 × full_process_time
+```
+
+正式实验至少显式记录：三类加工时间、搬运/旋转时间、AL/LL 时间、PEC 数、cleaning interval/time、模块和机器人驻留上限。
+
+### 8.3 当前固定结构
+
+| 参数 | 合法/建议值 | 说明 |
+| --- | --- | --- |
+| `num_pm` | 2 | 对应 CH2、CH3 |
+| `batch_size` | 4 | 当前四口模型固定 |
+| `pec_pool_size` | 8 或 10 | 至少 `4*num_pm`、不超过 storage 10、可被 `num_pm` 整除 |
+| `atr_capacity` | 2 | 当前物理结构固定；CLI 主要校验 |
+| `vtr_capacity` | 4 | 当前路径结构固定；CLI 不会重建机器人 |
+| 两个 `mix_*_process_time` | 必须相等 | 不相等会拒绝生成 |
+
+消融入口的默认 `pec_pool_size` 已更新为 8。
+
+### 8.4 产品与工艺模式
+
+| 参数 | 用法 |
+| --- | --- |
+| `total_wafers` | 0 表示从两种工艺数量或 wafer 配置推导 |
+| `mode_4x1_wafers` / `mode_2x2_wafers` | `auto/mixed` 下的两类数量 |
+| `process_mode=4x1/2x2` | 全部晶圆使用单一工艺 |
+| `process_mode=custom` | 配合完整 `mode_sequence` 或稀疏 `wafer_mode_map` |
+| `default_wafer_mode` | 给 map 中未列出的 wafer 指定模式 |
+
+奇数个同模式产品晶圆会形成末尾单产品 PW 对，其余槽位由 PEC 补足。
+
+## 9. `chamber_idle_penalty` 为什么改了没有效果
+
+### 9.1 当前真实语义
+
+生成器接收：
+
+```text
+--chamber_idle_penalty
+```
+
+训练入口自动生成实例时对应：
+
+```text
+--petri_chamber_idle_penalty
+```
+
+默认值是 `1e-4`。历史设计希望它给腔体加工组之间的秒级 idle slack 加权，例如相邻 `4x1` 组、`4x1→2x2` 切换、`2x2` cycle→bridge/tail 等。
+
+但当前代码中它是为了兼容旧命令、旧配置和 checkpoint 元数据保留的 **legacy/no-op 字段**：
+
+- 生成 LP 的主目标只有 `min c_max`；
+- 当前 `schedule_stability` 表达式不读取它；
+- 默认 PDI/solving-time reward 不读取它；
+- C&IE benchmark 不读取它。
+
+所以设为 0、`1e-4` 或更大非负值，都不会产生旧文档描述的加权效果。正确配置建议：
+
+- 保留默认值以兼容历史 schema；
+- 在实验表中标为 `legacy/no-op`；
+- 不把它作为论文敏感性变量；
+- 不声称它改善 chamber 连续性。
+
+若要让该权重重新生效，必须先修改目标构造、增加单元测试，并重新生成全部 LP；只改命令行数值无效。
+
+### 9.2 真正有效的词典序稳定化
+
+运行时两阶段逻辑是：
+
+1. 阶段 1 最小化 `c_max`；
+2. 阶段 2 固定阶段 1 的 `c_max`（允许数值容差），再改善等待/节拍。
+
+阶段 2只有开关为 true 且时间大于 0 才运行：
 
 ```json
-"experiment": {
-  "base_log_dir": "上一轮包含 params.pkl 的 run 目录"
-},
-"start_epoch": <下一轮起始 epoch>
+{
+  "env": {
+    "lexicographic_schedule_stability": true,
+    "lexicographic_stability_time_limit": 60.0,
+    "lexicographic_stability_node_limit": 5000,
+    "lexicographic_cmax_tolerance": 0.000001,
+    "lexicographic_fix_discrete_decisions": true,
+    "lexicographic_free_double_decisions": true
+  }
+}
 ```
 
-然后重新运行训练命令。注意不要把 `base_log_dir` 指向不存在的目录。
+该 60 秒包含在总 `scip_time_limit` 中，不是额外赠送的预算。当前所有
+Petri 配置都显式开启阶段 2、使用 `linear`，并设置非零预算：10 秒
+smoke 预留 2 秒、30 秒 C&IE 训练预留 5 秒，一般 45–300 秒配置预留
+10 秒，3600 秒正式单实例配置预留 60 秒。C&IE runner 的自动值为
+`min(60 s, 10% × 本实例总时限)`。最终仍应以 raw/meta 中记录的
+effective runtime config 为准。
 
-### 9.2 拼接多次训练曲线
+### 9.3 要压缩 chamber 组间空闲，用 linear 模式
+
+```json
+{
+  "env": {
+    "lexicographic_schedule_stability": true,
+    "schedule_stability_mode": "linear",
+    "lexicographic_stability_time_limit": 60.0,
+    "schedule_linear_wait_weight": 1.0,
+    "schedule_linear_max_wait_weight": 10.0,
+    "schedule_cadence_deviation_weight": 25.0,
+    "schedule_max_wait_time": 0.0,
+    "schedule_wait_cap_mode": "hard"
+  }
+}
+```
+
+线性第二阶段目标可理解为：
+
+```text
+wait_weight × sum(selected waits)
++ max_wait_weight × maximum individual wait
++ cadence_weight × sum(cadence deviations)
++ optional soft-cap excess penalty
+```
+
+`schedule_linear_wait_weight` 压缩总等待，`schedule_linear_max_wait_weight` 防止少数极长等待，`schedule_cadence_deviation_weight` 改善相邻批次节拍。权重只决定第二阶段内部取舍，不允许无界牺牲主目标。
+
+### 9.4 两种等待硬上限不要混淆
+
+生成 LP 时：
 
 ```powershell
-python stitch_progress_runs.py 
-  --runs data\RUN_1 data\RUN_2 
-  --output data\stitched_progress.csv 
-  --prefer later
+--max_schedule_wait_time 200
 ```
 
-再绘图：
+它把逐项等待上限写进 `.lp`，0 表示关闭。parallel 自动生成的对应参数是 `--petri_max_schedule_wait_time`。
 
-```powershell
-python plot_progress_curves.py 
-  --progress_csv data\stitched_progress.csv 
-  --output data\stitched_convergence_curves.svg 
-  --window 3
+加载 LP 后的 runtime 参数是：
+
+```json
+{
+  "schedule_max_wait_time": 200.0,
+  "schedule_wait_cap_mode": "hard"
+}
 ```
 
-## 10. 推荐正式规模参数
+- `hard`：增加硬约束；即使第二阶段关闭也可能生效；
+- `soft`：在线性第二阶段惩罚超出 target 的部分，并用 `schedule_wait_cap_excess_weight` 加权。
 
-快速流程用于打通链路。正式实验可逐步提高规模：
+硬上限过小会使模型 infeasible。先查看无上限解的 `schedule_max_wait`，再逐步收紧。正式实验只选择一种来源并记录，避免重复增加约束。
 
-```powershell
-python petri_mip_generator.py 
-  --output_dir generated_instances\MIP 
-  --instance_name mip_formal_mixed.lp 
-  --num_batches 16 
-  --num_pm 2 
-  --num_steps 13 
-  --process_mode mixed 
-  --mode_4x1_wafers 25 
-  --mode_2x2_wafers 15 
-  --pec_pool_size 8 
-  --cleaning_interval 10 
-  --cleaning_process_time 60 
-  --max_module_residency_time 120 
-  --max_robot_residency_time 120 
-  --pm_balance_penalty 0.01 
-  --chamber_idle_penalty 0.0001
+### 9.5 只用于报告的平方权重
+
+以下 runtime 参数只用于计算输出中的 `schedule_wait_penalty`，不改变当前第二阶段目标：
+
+```text
+schedule_chamber_idle_square_penalty
+schedule_pm_wait_square_penalty
+schedule_module_wait_square_penalty
+schedule_robot_wait_square_penalty
 ```
 
-训练配置建议：
+PDI 和 solving-time reward 也不会加入这个诊断 penalty；旧的 `lp_solution_value` 分支例外。
 
-- `env.scip_time_limit`: 800 或更高
-- `algorithm.num_epochs`: 20 或更高
-- `trainer.samples_per_epoch`: 4 或更高
-- `trainer.n_jobs`: 按 CPU/SCIP 资源设置
+### 9.6 其他兼容字段
 
-消融时间预算建议：
-
-```powershell
---time_limit 3000
-```
-
-正式消融至少准备 3 个以上测试实例，否则统计结论不稳定。
-
-## 11. 命令参数速查
-
-本节集中解释前文命令中出现的 PowerShell 参数、脚本参数和配置项。若同一个参数在多个脚本中反复出现，其语义保持一致；区别只在于该脚本是直接生成实例、训练/测试策略，还是做封装实验。
-
-### 11.1 PowerShell 命令写法
-
-| 写法或参数 | 含义 |
-| --- | --- |
-| `` | PowerShell/cmd 风格的换行续行符。复制多行命令时保留它；如果改成一行，可以去掉。 |
-| `latest` | 本项目部分入口支持的特殊路径值；`--test_model_path latest` 自动寻找 `data` 下最新 `params.pkl`，`--solution_json latest` 自动寻找最新测试 solution JSON。 |
-| `configs\petri_mip_quick_config.json` | 快速流程配置文件，避免在命令行里临时写 JSON 配置。 |
-| `Start-Process "gantt_manual\index.html"` | 用系统默认浏览器打开指定静态前端文件，路径直接写在命令中。 |
-
-### 11.2 `petri_mip_generator.py` 参数
-
-这些参数控制 MIP 实例如何生成，适用于直接运行 `petri_mip_generator.py`，也适用于 `run_petri_a3c_beam.py` 和 `run_ablation_experiments.py` 中同名的实例生成参数。
-
-| 参数 | 默认值 | 含义 |
+| 字段 | 当前行为 | 建议 |
 | --- | --- | --- |
-| `--output_dir` | `generated_instances/petri` | LP 实例和 `_model.md` 说明文件的输出目录。 |
-| `--instance_name` | `petri_batch10_fullflow_v7.lp` | 原始实例文件名；代码会自动追加日期后缀，生成实际 `.lp` 文件。 |
-| `--num_batches` | `10` | 兼容参数，表示候选批次数上界。当前 4x1/2x2 结构会结合产品 PW 对数量自动收紧。 |
-| `--num_pm` | `2` | 共享旋转腔数量。当前设备语义固定为 `2`，对应 `CH2` 和 `CH3`。 |
-| `--num_steps` | `13` | 兼容参数，保留给旧 Petri/MIP 流程；当前全流程路径主要由显式资源和 wafer 路径决定。 |
-| `--total_wafers` | `0` | 产品晶圆总数校验值。为 `0` 时由 `--mode_4x1_wafers`、`--mode_2x2_wafers` 或 `--mode_sequence` 推断。 |
-| `--process_mode` | `auto` | 工艺模式策略：`mixed/both` 按两类数量混跑，`4x1` 或 `2x2` 表示单一模式，`custom` 使用 wafer 级配置，`auto` 自动推断。 |
-| `--mode_4x1_wafers` / `--full_mode_wafers` | `10` | 走 4x1 工艺的产品晶圆数量；奇数尾片会自动与 PEC 组成 PW 对。 |
-| `--mode_2x2_wafers` / `--mix_mode_wafers` | `10` | 走 2x2 工艺的产品晶圆数量；奇数尾片会自动与 PEC 组成 PW 对。 |
-| `--mode_sequence` | 空字符串 | wafer 级完整模式序列，例如 `4x1,4x1,2x2`；优先级高于数量参数。 |
-| `--wafer_mode_map` / `--wafer_modes` | 空字符串 | wafer 级稀疏覆盖，例如 `W3:2x2,W7=4x1`；适合只改少数晶圆模式。 |
-| `--default_wafer_mode` | 空字符串 | `wafer_mode_map` 未覆盖晶圆的默认模式，常与 `--process_mode custom --total_wafers` 配合使用。 |
-| `--pec_pool_size` | `8` | 可循环复用的 PEC wafer 数。当前应为 `8` 或 `10`，且至少 `4*num_pm`、不超过 PEC storage 容量、能被 `num_pm` 整除。 |
-| `--batch_size` | `4` | 单个旋转腔槽位数；当前四槽 PM 固定为 `4`。 |
-| `--big_m` | `10000.0` | 大 M 线性化常数，用于条件约束和时间关系绑定。过小会误伤可行解，过大可能带来数值不稳定。 |
-| `--pm_transfer_gap` | `1.0` | 腔体换片间隔兼容参数；当前主要时序由 VTR、旋转、加工和资源互斥约束控制。 |
-| `--pm_rotation_time_180` | `2.0` | 旋转腔 180 度转动时间，用于 4x1 前后侧位和 cleaning 装卸衔接。 |
-| `--pair_transfer_time` | `4.0` | VTR 单次搬运时间；同时作为 ATR 在源模块取片和目标模块放片的单次时长。 |
-| `--atr_transfer_time` | `3.0` | ATR 单段路径移动时间，即 `LP -> AL` 或 `AL -> LL` 的移动时长。ATR 载片 `LP -> AL`、`AL -> LLupper` 总时长均为 `2 * pair_transfer_time + atr_transfer_time`。 |
-| `--atr_return_time` | `3.0` | ATR 载片 `LLlower -> LP` 的路径移动时间；该载片动作总时长为 `2 * pair_transfer_time + atr_return_time`。相邻 ATR 动作若需从 `LL` 空载回到 `LP`，还会额外插入 `2 * atr_transfer_time` 的回位时间。 |
-| `--aligner_time` | `20.0` | 产品晶圆占用 AL 校准器的最短时间。 |
-| `--llupper_time` | `30.0` | 产品晶圆在 `LLupper` 中的最短停留时间。 |
-| `--lllower_time` | `25.0` | 产品晶圆在 `LLlower` 中的最短停留时间。 |
-| `--full_process_time` | `80.0` | 4x1 满片加工工艺时间。 |
-| `--mix_boundary_process_time` | `30.0` | 2x2 边界 cycle 工艺时间，主要对应链首、链尾相关循环。 |
-| `--mix_internal_process_time` | `30.0` | 2x2 内部 cycle 工艺时间，主要对应中间产品链循环。 |
-| `--cleaning_interval` | `10` | 每个 chamber 连续完成多少次加工 cycle 后插入 cleaning；`0` 表示关闭 cleaning 约束。 |
-| `--cleaning_process_time` | `0.0` | cleaning 工艺时间；为 `0` 时使用 `2 * full_process_time`。 |
-| `--max_module_residency_time` | `10000.0` | 晶圆在 AL、LL、PM 等模块中的最大驻留时间。 |
-| `--max_robot_residency_time` | `10000.0` | 晶圆在 ATR/VTR 搬运动作相关阶段的最大驻留时间。 |
-| `--pm_balance_penalty` | `0.01` | 目标函数中的腔体负载均衡惩罚权重。主目标仍是最小化 `c_max`。 |
-| `--chamber_idle_penalty` | `1e-4` | 目标函数中的 CH 组间空闲软惩罚权重，用于压缩相邻 `4x1` 批次、`4x1 -> 2x2` 切换和 `2x2` 链内部可避免等待。 |
-| `--chamber_nonprocess_wait_square_penalty` | `1e-2` | 高优先级二级目标权重，按窗口惩罚 CH 内有晶圆但未加工的驻留时间平方。 |
-| `--post_process_wait_penalty` | `0.05` | 目标函数中的 PM 加工完成至 VTR 卸载开始之间的等待惩罚权重。 |
+| `pm_balance_penalty` | 不进入目标 | 保留默认，标注 no-op |
+| `post_process_wait_penalty` | 该权重不进入目标 | 保留默认，标注 no-op |
+| `ll_wait_penalty` | 该权重不进入目标 | 保留默认，标注 no-op |
+| `chamber_nonprocess_wait_square_penalty` | 系数不进入当前目标 | 保留默认，标注 no-op |
+| `num_batches` | 主要校验大于 0；槽位由实际 PW 对推导 | 不作为实验因素 |
+| `num_steps` | 当前全流程模型未使用 | 保持 13 |
+| `pm_transfer_gap` | 当前约束未读取 | 保持默认 |
 
-### 11.3 `parallel_reinforce_algorithm.py` 参数
+“能通过参数校验”不等于“进入优化目标”。
 
-这些参数控制 cut selection 策略的训练和测试。
+### 9.7 C&IE 的口径
 
-| 参数 | 默认值 | 含义 |
-| --- | --- | --- |
-| `--config_file` | `configs/petri_mip_test_config.json` | 训练/测试基础配置文件路径；命令行参数会覆盖其中部分字段。 |
-| `--train_type` | `train` | 运行模式：`train` 训练策略，`test` 加载模型并测试。 |
-| `--single_instance_file` | `all` | 指定单个实例文件名；`all` 表示读取实例目录下全部支持的 MIP 文件。 |
-| `--sel_cuts_percent` | `0.1` | cut 保留比例基础值，例如 `0.2` 表示约 20%。 |
-| `--reward_type` | `lp_solution_value` | 奖励类型；当前 Petri 调度实验推荐 `solving_time`。 |
-| `--baseline_type` | `simple` | 强化学习 baseline 类型；常用 `simple`，旧实验中也可能使用 value network。 |
-| `--policy_type` | `with_token` | 策略网络类型；`with_token` 表示带 end-token 的 pointer network，适合序列决策。 |
-| `--use_cutsel_percent_policy` | `False` | 是否启用高层 cut 数量/比例策略；当前 Petri 实验建议传 `True`。 |
-| `--test_decode_type` | `beam_search` | 测试阶段 cut 序列解码方式，常用 `beam_search` 或 `greedy`。 |
-| `--instance_type` | `item_placement` | 实例类型标识，用于日志和结果目录命名；Petri 流程建议 `petri_transfer`。 |
-| `--time_limit` | `10` | 兼容性时限参数。训练时若使用 `solving_time`，主要仍以配置文件 `env.scip_time_limit` 为准。 |
-| `--test_time_limit` | `-1.0` | 测试阶段 SCIP 时限覆盖值；大于 `0` 时覆盖配置文件中的测试时限。 |
-| `--seed` | `1` | Python、NumPy、PyTorch 等主随机种子。 |
-| `--scip_seed` | `1` | SCIP 求解器随机种子。 |
-| `--generate_petri_instance` | `False` | 是否在训练/测试前自动调用 Petri MIP 生成器。 |
-| `--petri_instance_dir` | `generated_instances/petri` | 自动生成实例时的输出目录。 |
-| `--petri_instance_name` | `petri_batch10_fullflow_v7.lp` | 自动生成实例时的原始文件名，会追加日期。 |
-| `--petri_batches` | `10` | 自动生成实例时传给生成器的 `num_batches`。 |
-| `--petri_num_pm` | `2` | 自动生成实例时传给生成器的 `num_pm`。 |
-| `--petri_num_steps` | `13` | 自动生成实例时传给生成器的 `num_steps`。 |
-| `--petri_total_wafers` | `0` | 自动生成实例时的产品晶圆总数校验值。 |
-| `--petri_process_mode` | `auto` | 自动生成实例时的工艺模式策略，取值同 `--process_mode`。 |
-| `--petri_4x1_wafers` | `20` | 自动生成实例时的 4x1 产品晶圆数量。 |
-| `--petri_2x2_wafers` | `20` | 自动生成实例时的 2x2 产品晶圆数量。 |
-| `--petri_pec_pool_size` | `8` | 自动生成实例时的 PEC wafer 数量。 |
-| `--petri_mode_sequence` | 空字符串 | 自动生成实例时的 wafer 级完整模式序列。 |
-| `--petri_wafer_mode_map` / `--petri_wafer_modes` | 空字符串 | 自动生成实例时按晶圆编号覆盖模式。 |
-| `--petri_default_wafer_mode` | 空字符串 | 自动生成实例时未覆盖晶圆的默认模式。 |
-| `--petri_chamber_idle_penalty` | `1e-4` | 自动生成实例时透传给 `PetriMIPConfig.chamber_idle_penalty`，用于压缩 CH 可避免组间空闲。 |
-| `--petri_chamber_nonprocess_wait_square_penalty` | `1e-2` | 自动生成实例时透传给 `PetriMIPConfig.chamber_nonprocess_wait_square_penalty`，用于高权重压缩 CH 非加工占腔等待。 |
+当前 C&IE runner 默认使用 `full`：所有算法共享
+`lexicographic_schedule_stability=true`、`schedule_stability_mode=linear`
+及相同的总时限、阶段 2 时间和节点预算。阶段 1 仍优化 `c_max`，阶段 2
+只允许在 `lexicographic_cmax_tolerance` 内改善等待与 cadence；Generic
+MILP 没有相应变量时会明确记录 `skipped_non_petri_model`。
 
-### 11.4 `run_petri_a3c_beam.py` 参数
+算法优势实验不得关闭这两个因素。其作用由独立的单因素实验说明：
 
-该脚本是“生成单个实例 + 写 runtime config + 调用测试 + 尝试画甘特图”的封装入口。
-
-| 参数 | 默认值 | 含义 |
-| --- | --- | --- |
-| `--config_file` | `configs/petri_mip_test_config.json` | 基础配置文件；脚本会基于它写出临时 runtime config。 |
-| `--test_model_path` | 必填 | 训练好的模型路径，通常是某个 run 目录下的 `params.pkl` 或 `itr_*.pkl`；也可传 `latest` 自动使用 `data` 下最新的 `params.pkl`。 |
-| `--instance_dir` | `generated_instances/petri` | 新实例输出目录，同时也是测试实例目录。 |
-| `--instance_name` | `petri_batch10_fullflow_v7.lp` | 新实例原始文件名，会自动追加日期。 |
-| `--sel_cuts_percent` | `0.2` | 测试时 cut 保留比例基础值。 |
-| `--policy_type` | `with_token` | 测试所用策略网络类型，应与训练模型保持一致。 |
-| `--use_cutsel_percent_policy` | `True` | 是否使用高层 cut 数量策略，应与训练设置保持一致。 |
-| `--test_decode_type` | `beam_search` | 测试解码方式；推荐 `beam_search`。 |
-| `--time_limit` | `-1.0` | 覆盖测试 SCIP 时限；大于 `0` 时生效。 |
-| `--seed` | `1` | 测试主随机种子。 |
-| `--scip_seed` | `1` | SCIP 随机种子。 |
-| `--instance_type` | `petri_transfer` | 结果目录命名标识。 |
-| `--num_batches`、`--num_pm`、`--num_steps` | 同生成器 | 透传给 `petri_mip_generator.py` 的结构参数。 |
-| `--total_wafers`、`--process_mode`、`--mode_4x1_wafers`、`--mode_2x2_wafers`、`--pec_pool_size` | 同生成器 | 透传给生成器的产品/工艺/PEC 参数。 |
-| `--mode_sequence`、`--wafer_mode_map`、`--default_wafer_mode`、`--chamber_idle_penalty`、`--chamber_nonprocess_wait_square_penalty` | 同生成器 | 透传给生成器的 wafer 级模式配置、CH 组间空闲软惩罚和 CH 非加工占腔平方惩罚权重。 |
-
-### 11.5 `run_ablation_experiments.py` 参数
-
-消融脚本会比较 `solver_only`、`a3c_only`、`beam_only`、`a3c_beam` 四类方法。
-
-| 参数 | 默认值 | 含义 |
-| --- | --- | --- |
-| `--config_file` | `configs/petri_mip_test_config.json` | 消融实验基础配置文件。 |
-| `--test_model_path` | 空字符串 | A3C 模型路径；可传 `latest` 自动使用最新模型；为空时 A3C 相关方法会跳过，默认 SCIP 和启发式 Beam 仍可运行。 |
-| `--instance_dir` | `generated_instances/petri` | 实例目录；生成实例和读取实例都使用它。 |
-| `--instance_name` | `petri_batch10_fullflow_v7.lp` | 待生成或待读取的实例名；生成时会追加日期。 |
-| `--generate_petri_instance` | `True` | 是否在消融前生成新实例；传 `False` 时读取已有实例。 |
-| `--single_instance_file` | 空字符串 | 指定已有实例文件名或路径；为空时使用生成后的实例或 `instance_name`。 |
-| `--output_dir` | `ablation_results` | 消融 JSON、CSV、Markdown、对比图和甘特图输出目录。 |
-| `--instance_type` | `petri_transfer` | 结果文件名前缀中的实例类型标识。 |
-| `--time_limit` | `-1.0` | 覆盖每种方法的 SCIP 求解时限；大于 `0` 时生效。 |
-| `--seed` | `1` | 消融主随机种子。 |
-| `--scip_seed` | `1` | SCIP 随机种子。 |
-| `--sel_cuts_percent` | `0.2` | A3C/Beam 方法中的 cut 保留比例基础值。 |
-| `--policy_type` | `with_token` | A3C 策略网络类型，应与训练模型一致。 |
-| `--use_cutsel_percent_policy` | `True` | 是否使用高层 cut 数量策略。 |
-| `--a3c_decode_type` | `greedy` | `a3c_only` 方法的解码方式。 |
-| `--a3c_beam_decode_type` | `beam_search` | `a3c_beam` 方法的解码方式。 |
-| `--heuristic_beam_size` | `3` | `beam_only` 启发式搜索的 beam 宽度；越大探索更多但更慢。 |
-| `--heuristic_redundancy_weight` | `0.15` | 启发式重排中的冗余惩罚权重，用来降低相似 cut 重复选择。 |
-| `--heuristic_max_candidates` | `256` | 启发式方法每轮最多考虑的候选 cut 数。 |
-| `--heuristic_max_selected_cuts` | `256` | 启发式方法最多选择并交给求解器的 cut 数。 |
-| `--num_batches`、`--num_pm`、`--num_steps` | 同生成器 | 生成消融实例时透传给 `petri_mip_generator.py`。 |
-| `--total_wafers`、`--process_mode`、`--mode_4x1_wafers`、`--mode_2x2_wafers`、`--pec_pool_size` | 同生成器 | 生成消融实例时透传给生成器。注意该脚本 `--pec_pool_size` 默认是旧值 `40`，当前设备应显式传 `8` 或 `10`。 |
-| `--mode_sequence`、`--wafer_mode_map`、`--default_wafer_mode`、`--chamber_idle_penalty`、`--chamber_nonprocess_wait_square_penalty` | 同生成器 | 生成消融实例时的 wafer 级模式配置、CH 组间空闲软惩罚和 CH 非加工占腔平方惩罚权重。 |
-
-### 11.6 可视化和训练曲线脚本参数
-
-| 脚本 | 参数 | 默认值 | 含义 |
+| profile | 阶段 2 | 模式 | 与 `full` 的唯一差异 |
 | --- | --- | --- | --- |
-| `petri_gantt.py` | `--solution_json` | 必填 | 求解结果 JSON 路径，可来自测试输出；也可传 `latest` 自动使用最新测试 solution JSON。 |
-| `petri_gantt.py` | `--output_dir` | 空字符串 | 甘特图前端输出目录；为空时自动使用 `<solution_stem>_gantt`。 |
-| `petri_gantt.py` | `--view` | `all` | 视图类型：`full` 全流程，`chambers` 只看 CH2/CH3，`resources` 按资源泳道，`all` 全部生成。 |
-| `petri_gantt.py` | `--comparison_svg` | 空字符串 | 可选的消融对比图 SVG；传入后会嵌入同一个前端页面。 |
-| `plot_progress_curves.py` | `--progress_csv` | 空字符串 | 要绘制的 `progress.csv`；若传目录，则使用该目录下的 `progress.csv`。 |
-| `plot_progress_curves.py` | `--data_dir` | `data` | 未指定 `--progress_csv` 时，从该目录递归寻找最新训练曲线。 |
-| `plot_progress_curves.py` | `--output` | 空字符串 | 输出 SVG 路径；为空时写到 `progress.csv` 所在目录。 |
-| `plot_progress_curves.py` | `--window` | `3` | 移动平均窗口，用于平滑曲线。 |
-| `plot_progress_curves.py` | `--width` | `1600` | 输出 SVG 宽度，单位像素。 |
-| `plot_progress_curves.py` | `--columns` | `2` | 曲线面板列数。 |
-| `plot_progress_curves.py` | `--title` | `Training Convergence Dashboard` | SVG 顶部主标题。 |
-| `plot_progress_curves.py` | `--subtitle` | 空字符串 | 副标题；为空时默认显示源 `progress.csv` 路径。 |
-| `plot_progress_curves.py` | `--hide_source_path` | `False` | 隐藏图表中的源文件路径。 |
-| `stitch_progress_runs.py` | `--runs` | 必填 | 多个训练 run 目录或 `progress.csv` 路径，按拼接顺序传入。 |
-| `stitch_progress_runs.py` | `--output` | 空字符串 | 拼接后的 CSV 输出路径；为空时写到第一个 run 目录。 |
-| `stitch_progress_runs.py` | `--prefer` | `later` | 重复 epoch 的保留策略：`later` 保留后面的 run，`earlier` 保留前面的 run。 |
+| `full` | 开 | `linear` | 参考组 |
+| `stage2_off` | 关 | `linear` | 只关闭阶段 2 |
+| `linear_off` | 开 | `quadratic` | 只移除 linear 目标 |
 
-### 11.7 `configs/petri_mip_test_config.json` 常用配置项
+三组必须使用同一个 Proposed checkpoint、LP、warm start、training/solver
+seed、总时限、内存和停止条件。不能拿 `stage2_off` 与另一个算法比较后把
+差异归因于第二阶段。
 
-| 配置路径 | 含义 |
+## 10. Warm start 怎么配
+
+warm start 只提供初始可行 incumbent，不改变可行域或最优解定义，但会影响有限时限内的求解轨迹。
+
+混流实例的优先级通常是：
+
+1. `--warm_start_solution_file` 指定的 `.sol`；
+2. 与当前 LP SHA-256 匹配的缓存；
+3. 在 `warm_start_time_limit` 内构造；
+4. 允许缺失时继续无初解求解。
+
+注意：
+
+- pure `4x1` 不需要 mixed SPBS；
+- `.meta.json` 的 `instance_sha256` 必须与 LP 一致；
+- 修改 LP 后旧 `.sol` 不能继续使用；
+- `allow_missing_warm_start` 不等于关闭构造；
+- warm-start 构造时间通常不包含在各方法 SCIP 求解时限内，报告端到端时间时要单独说明。
+
+公平比较必须让所有方法使用同一 `.sol` 或全部不用。不要允许每种方法各自构造不同初解。
+
+## 11. 训练参数、seed 和 checkpoint
+
+### 11.1 当前 reward
+
+CLI 默认和 C&IE 正式训练使用：
+
+```text
+reward_type = primaldualintegral
+```
+
+| reward | 用途 |
 | --- | --- |
-| `experiment.base_log_dir` | 日志和 checkpoint 根目录。首次训练通常设为 `data`；续训时指向包含 `params.pkl` 的旧 run 目录。 |
-| `experiment.exp_prefix` | 实验目录名前缀，训练时会和实例名、`instance_type` 组合成输出目录。 |
-| `experiment.seed` | 配置文件中的实验随机种子。 |
-| `start_epoch` | 起始 epoch。首次训练为 `0`，续训时设为下一轮起始 epoch。 |
-| `env.instance_file_path` | 训练环境读取 MIP 实例的目录。 |
-| `env.single_instance_file` | 配置文件中的默认实例名，会被命令行 `--single_instance_file` 覆盖。 |
-| `env.scip_time_limit` | SCIP 单次求解时限，单位秒；训练耗时主要由它和采样次数共同决定。 |
-| `env.presolving`、`env.separating`、`env.conflict`、`env.heuristics` | SCIP 预求解、cut 分离、冲突分析和内置启发式开关。 |
-| `env.max_rounds_root` | root 节点最大 cut 分离轮数。 |
-| `algorithm.num_epochs` | 总训练 epoch 数。 |
-| `algorithm.train_steps_per_epoch` | 每个 epoch 内策略网络更新步数。 |
-| `algorithm.batch_size` | 策略更新 batch 大小。 |
-| `algorithm.actor_net_lr`、`algorithm.critic_net_lr` | actor 和 critic/value 网络学习率。 |
-| `algorithm.reward_type`、`algorithm.baseline_type` | 配置文件中的奖励和 baseline 设置，可被命令行覆盖。 |
-| `algorithm.evaluate_freq`、`algorithm.evaluate_samples` | 训练中评估频率和每次评估样本数。 |
-| `trainer.samples_per_epoch` | 每个 epoch 采样多少次 SCIP 求解。 |
-| `trainer.n_jobs` | 并行采样 worker 数；通常需整除 `samples_per_epoch`。 |
-| `net_share.embedding_dim`、`net_share.hidden_dim` | cut 特征嵌入维度和策略网络隐藏维度。 |
-| `policy.beam_size` | beam search 宽度。 |
-| `cutsel_percent_policy.use_cutsel_percent_policy` | 是否启用高层 cut 数量策略。 |
-| `cutsel_percent_policy.train_freq` | 高层策略训练频率。 |
-| `devices.global_device`、`devices.multi_devices` | 主进程和 worker 设备设置；无 CUDA 时会回退 CPU。 |
-| `test_kwargs.test_instance_path` | 测试实例目录。 |
-| `test_kwargs.test_model_path` | 测试时加载的模型路径；快速配置中使用 `latest` 自动定位最新 `params.pkl`。 |
-| `test_kwargs.n_jobs` | 测试并行 worker 数。 |
+| `primaldualintegral` | 当前正式默认，评价整个求解轨迹 |
+| `solving_time` | 快速诊断，易受 timeout 和机器负载影响 |
+| `lp_solution_value` | 旧实验分支，不建议作为当前默认 |
 
-## 12. 故障排查
+### 11.2 时间限制
 
-### 12.1 没有生成甘特图
+- PDI/solving-time 训练样本的时限来自 JSON `env.scip_time_limit`；
+- 训练命令的 `--time_limit` 只在旧 `lp_solution_value` 分支覆盖它；
+- 测试时 `--test_time_limit > 0` 优先；
+- warm start 使用独立的 `--warm_start_time_limit`；
+- 词典序第二阶段预算包含在总 SCIP 时限中。
 
-常见原因：
+还要统一 node、stall-node、solution、relative-gap 和 absolute-gap 等停止条件。
 
-- solution JSON 中所有记录 `solution` 为空
-- SCIP 没有找到 incumbent
-- JSON 不是测试或消融输出，而是 runtime config
+### 11.3 两类 seed
 
-仍可打开消融 `_gantt/index.html` 查看 comparison SVG。
-
-### 12.2 `pec_pool_size` 报错
-
-当前设备约束下使用：
-
-```powershell
---pec_pool_size 8
-```
-
-或：
-
-```powershell
---pec_pool_size 10
-```
-
-不要使用 `40`。
-
-### 12.3 模型路径不存在
-
-直接检查是否有训练输出：
-
-```powershell
-Get-ChildItem data -Recurse -Filter params.pkl
-```
-
-说明：如果没有任何输出，先运行第 2.2 节训练命令；如果有输出，`--test_model_path latest` 会自动使用最新的 `params.pkl`。
-
-### 12.4 测试目录没有 LP
-
-确认：
-
-```powershell
-Get-ChildItem generated_instances\petri -Filter "*.lp"
-```
-
-说明：如果为空，先运行第 2.1 节生成训练集命令或第 3.1 节封装求解命令；这些命令都会生成 `.lp` 实例。
-
-### 12.5 页面打不开或看不到悬浮标签
-
-直接打开前文固定输出目录：
-
-```powershell
-Start-Process "gantt_manual\index.html"
-```
-
-说明：如果 `gantt_manual\index.html` 不存在，先运行第 5.1 节甘特图命令。若浏览器安全策略阻止本地 SVG 脚本，可点击页面中的 `Open SVG` 单独打开当前 SVG，或把 `_gantt` 目录放到任意静态文件服务器中访问。
-
-## 13. 文件索引
-
-| 文件或目录 | 用途 |
+| 参数 | 控制对象 |
 | --- | --- |
-| `petri_mip_generator.py` | 生成全流程 MIP |
-| `parallel_reinforce_algorithm.py` | 训练和测试 cut selection 策略 |
-| `run_petri_a3c_beam.py` | 单实例生成 + A3C+Beam 测试封装 |
-| `run_ablation_experiments.py` | 四类方法消融实验 |
-| `petri_gantt.py` | 甘特图 SVG 和交互式前端 |
-| `plot_progress_curves.py` | 训练曲线可视化 |
-| `stitch_progress_runs.py` | 多次训练曲线拼接 |
-| `generated_instances/MIP*` | LP 实例和模型说明 |
-| `data/` | 训练日志和模型 |
-| `petri_transfer_use_hrl_*` | 测试结果 |
-| `ablation_results/` | 消融结果 |
+| `--seed` | Python、NumPy、PyTorch/CUDA、策略采样 |
+| `--scip_seed` | SCIP 随机化和相关构造过程 |
+
+训练分支现在会先用 CLI seed 覆盖配置 seed。正式训练仍需同时传两个参数，并保存 `variant.json`；独立 checkpoint 不能只靠改目录名伪造。
+
+### 11.4 布尔值和模型选择
+
+部分 parallel CLI 仍用大小写敏感字符串判断，必须写：
+
+```text
+--generate_petri_instance True
+--use_cutsel_percent_policy True
+```
+
+小写 `true` 可能被当作 false。`latest` 按修改时间扫描目录，只用于 smoke；论文使用明确模型文件并保存 hash。
+
+### 11.5 训练/验证/测试隔离
+
+若 `algorithm.evaluate_freq > 0`，训练代码要求 `evaluate_kwargs.test_instance_path` 是存在且非空的独立目录，并拒绝训练/验证路径相同。正式实验还要冻结独立 test，不得根据 test 结果回头选模型或调参数。
+
+根 quick 配置当前实际是 8 epochs、每 epoch 4 samples、2 workers、单样本 SCIP 300 秒且使用 CUDA；它不是“几分钟完成”的 CPU smoke。真正最小训练请使用本文第 5 节的 structure smoke；正式 C&IE 训练请使用 [`cie/README.md`](../../cie/README.md) 的 `train-all`。
+
+## 12. 四方法消融
+
+当前脚本的显示名和内部键是：
+
+| 内部键 | 显示名 | 含义 |
+| --- | --- | --- |
+| `solver_only` | SCIP Default | 不用学习策略 |
+| `a3c_only` | A3C Only | 学习割选择，不做结构重排 |
+| `beam_only` | Structure Rerank Only | 结构启发式重排 |
+| `a3c_beam` | A3C + Structure Rerank | 学习策略加结构重排 |
+
+`beam_only` 是历史内部键，不应在论文中解释成“只做 beam search”。当前 `a3c_beam_decode_type` 默认也是 `greedy`。
+
+诊断模板：
+
+```powershell
+$Checkpoint = (Get-ChildItem data\structure23_smoke -Recurse -File -Include params.pkl,itr_1.pkl |   Sort-Object LastWriteTime | Select-Object -Last 1).FullName
+$Instance = (Get-ChildItem generated_instances\structure_smoke -File -Filter *.lp | Sort-Object LastWriteTime | Select-Object -Last 1).Name
+$WarmStart = (Get-ChildItem generated_instances\structure_smoke -File -Filter *_warmstart.sol |  Sort-Object LastWriteTime | Select-Object -Last 1).FullName
+
+if (-not (Test-Path -LiteralPath $Checkpoint)) { throw 'checkpoint missing' }
+if (-not (Test-Path -LiteralPath $WarmStart)) { throw 'warm start missing' }
+
+python run_ablation_experiments.py    --config_file configs\petri_structure_smoke_config.json    --test_model_path $Checkpoint    --instance_dir generated_instances\structure_smoke     --generate_petri_instance False    --single_instance_file $Instance    --methods solver_only,a3c_only,beam_only,a3c_beam    --stability_ablation_profile full    --output_dir ablation_results\structure_smoke    --device cpu    --time_limit 10    --warm_start_solution_file $WarmStart    --a3c_decode_type greedy    --a3c_beam_decode_type greedy    --a3c_max_candidates 64    --a3c_max_selected_cuts 8    --proposed_max_candidates 64     --proposed_max_selected_cuts 8     --heuristic_max_candidates 64    --heuristic_max_selected_cuts 8     --enforce_fair_ablation True     --seed 1     --scip_seed 1
+```
+
+这仍是单实例诊断。论文消融至少要求：
+
+- 冻结多个未见实例；
+- 所有方法共用 LP、warm start、solver seed、time/memory 和停止条件；
+- A3C-only 与 proposed 使用相同 decode 和候选/选择预算；
+- 保留 timeout、错误和无 incumbent；
+- 使用多个训练 seeds 与 solver seeds；
+- 先按制造实例聚合重复，再做配对统计。
+
+当前根消融默认候选/选择上限是 128/30，不是旧文档中的 256/256。
+
+上述四方法命令只回答“算法组件是否带来优势”，必须保持
+`--stability_ablation_profile full`。要回答两个排程因素的作用，使用正式
+C&IE 单因素入口：
+
+```powershell
+.\cie\run_cie_single.ps1 -Stage benchmark-stability `
+    -CampaignId cie_stability_600s_mem2048_repro_v1 `
+    -Seeds '1,2,3,4,5' -TrainingSeeds '1,2,3,4,5' `
+    -TimeLimit 600 -MemoryLimitMB 2048 -GpuDevice cuda:0 `
+    -LogId cie_stability_600s_mem2048_repro_v1
+```
+
+该阶段固定 `methods=proposed`，依次运行 `full`、`stage2_off`、
+`linear_off`；以 `proposed[full]` 为 reference，在制造实例内先聚合
+training/solver 重复，再做配对检验。若只做诊断，可用
+`run_ablation_experiments.py --methods a3c_beam` 分别运行三个 profile，
+但三条命令除 profile 与输出目录外必须完全相同。
+
+## 13. 怎样判断结果是否可信
+
+### 13.1 单次求解
+
+按顺序检查：
+
+1. `error` 和 `solution_write_error` 是否为空；
+2. 是否有 incumbent；
+3. `.sol` 能否重新加载并通过 SCIP `checkSol`；
+4. status 是 optimal、timelimit、memlimit 还是其他；
+5. gap、PDI、time、nodes；
+6. `cmax`、WPH、cycle time、资源利用率和物理可行性。
+
+没有 incumbent 时，gap/目标值和甘特图不能按正常可行排程解释。timelimit 并不等于失败，但必须保留并报告。
+
+### 13.2 不要只看求解时间
+
+- optimal rate：证明最优的比例；
+- incumbent rate：至少找到可行解的比例；
+- PDI：整个求解过程的质量；
+- final gap：到时限时的质量；
+- PAR-2 或预注册的 timeout 处理；
+- nodes：搜索工作量；
+- WPH、cycle time、设备利用率：工业意义。
+
+学习策略 GPU 推理只是 SCIP 回调的一部分，平均 GPU 利用率低是正常现象。
+
+### 13.3 正式统计
+
+solver seed 和 training seed 是同一制造实例上的重复，不可当作独立样本扩大样本量。C&IE 流程会先在实例内平均，再使用两侧配对 Wilcoxon 和 Holm 多重比较校正。
+
+## 14. C&IE 投稿级完整流程
+
+唯一入口是 [`cie/README.md`](../../cie/README.md)。顺序为：
+
+1. 环境清单、check、CPU smoke；
+2. 冻结策略训练集和 benchmark LP/hash；
+3. 从当前数据训练 HEM、feature-only、Proposed 各 5 seeds；
+4. validation-only ACS；
+5. core/sensitivity/OOD warm start；
+6. Validation、Main、稳定化单因素消融、DOE、SPBS、Sensitivity、OOD；
+7. 合并、独立验解、制造指标、实例级统计；
+8. 完整性门槛和研究数据归档。
+
+预期 raw 行数：
+
+| campaign | 行数 |
+| --- | ---: |
+| Validation | 4 |
+| Main | 2700 |
+| Stability | 1500 |
+| DOE | 300 |
+| SPBS | 960 |
+| Sensitivity | 80 |
+| OOD | 729 |
+
+当前仓库中的旧正式结果尚不完整，不能直接填 C&IE 最终性能表。真实状态见 [`cie/products/README.md`](../../cie/products/README.md)。
+
+投稿前按 [C&IE 官方作者指南](https://www.sciencedirect.com/journal/computers-and-industrial-engineering/publish/guide-for-authors) 再核对格式、匿名审稿和研究数据要求。当前官方要求研究数据 deposit/citation/linking；不能共享时解释原因，并在投稿时提交 data statement。
+
+## 15. 常见错误
+
+| 现象/错误 | 原因 | 处理 |
+| --- | --- | --- |
+| `No module named pyscipopt` | SCIP/PySCIPOpt 未安装或环境未激活 | 激活正确环境；按 PySCIPOpt/SCIP 安装方式重装 |
+| `CUDA ... required` | JSON 为 `cuda:0` 但 Torch 无 CUDA | 安装匹配 CUDA Torch，或只运行 CPU smoke 配置 |
+| 找不到 LP | 生成目录与 `env.instance_file_path` 不一致 | 统一目录；检查日期后缀后的真实文件名 |
+| 找不到 held-out validation | `evaluate_freq>0` 但验证目录不存在/为空 | 生成独立 validation，或仅在 smoke 中关闭 evaluate |
+| `pec_pool_size` 校验失败 | 当前只能为 8 或 10 | 使用 8；不要沿用旧默认 40 |
+| mixed LP 生成失败 | warm start 在时限内未成功且被要求 | 增大时限；诊断时用 `--allow_missing_warm_start` |
+| warm start 被拒绝 | `.sol` 对应旧 LP/hash | 为当前冻结 LP 重新生成 |
+| 改 penalty 结果不变 | `chamber_idle_penalty` 等是 no-op | 使用有效的 linear lexicographic 配置或硬上限 |
+| 收紧等待后 infeasible | hard cap 小于物理可行下限 | 从无上限诊断值逐步收紧 |
+| checkpoint schema/feature dim 不匹配 | 13D/23D 或 policy 配置混用 | 使用与训练 variant 一致的配置和方法 |
+| `latest` 选错模型 | 按 mtime 递归选到其他运行 | 正式命令传明确 checkpoint |
+| C&IE 找不到 5 组模型 | runner 拒绝旧或种子不一致 checkpoint | 执行 `train-all`；legacy 开关只用于 smoke |
+| ACS 被意外改变 | 依赖目录里最新 JSON | 正式 Main/OOD 传 `-AcsWeightsFile` |
+| PowerShell 多行命令解析失败 | 使用了 cmd 的 `^` 或漏写续行符 | PowerShell 使用反引号 `` ` ``，且其后不能有空格 |
+| 无甘特图 | 没有 incumbent/solution JSON | 先解决求解或初解问题，确认控制台打印 solution 路径 |
+
+## 16. 正式归档检查表
+
+- [ ] 记录 Git commit、未提交改动和环境版本。
+- [ ] 保存 OS/CPU/RAM/GPU/CUDA/SCIP 机器清单。
+- [ ] 冻结 train/validation/test 与所有 LP SHA-256。
+- [ ] 显式记录全部物理参数，不能只写“默认”。
+- [ ] checkpoint 的训练来源、三种 seed、feature schema 和 SHA-256 可审计。
+- [ ] ACS 只用 validation 调参并冻结明确 JSON/hash。
+- [ ] 所有方法共享预算、停止条件和 warm start。
+- [ ] timeout、memlimit、错误和无 incumbent 不删除。
+- [ ] 每个 incumbent 对应 `.sol`，独立验解 `invalid_count=0`。
+- [ ] 统计以制造实例为单位，报告效应量和多重比较校正。
+- [ ] 保存 raw CSV/JSON、断点、solution、分析、日志和表图生成代码。
+- [ ] 论文声明与实际代码一致，尤其是第二阶段稳定化和消融边界。
+
+如果只想确认“代码能跑”，完成第 4–6 节即可；如果目标是投稿证据，必须继续执行 `cie/README.md` 的完整冻结协议。

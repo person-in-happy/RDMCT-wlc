@@ -511,6 +511,25 @@ def create_stats_ordered_dict(
 
 # get average weight of multiple models
 def get_average_models(models_state_dict):
+    recorded_reward_types = {
+        state_dict.get('reward_type')
+        for state_dict in models_state_dict
+        if state_dict.get('reward_type') is not None
+    }
+    missing_reward_metadata = sum(
+        state_dict.get('reward_type') is None
+        for state_dict in models_state_dict
+    )
+    if len(recorded_reward_types) > 1:
+        raise ValueError(
+            "Cannot average checkpoints trained with different reward types: "
+            f"{sorted(recorded_reward_types)}"
+        )
+    if recorded_reward_types and missing_reward_metadata:
+        raise ValueError(
+            "Cannot average reward-tagged checkpoints with legacy checkpoints "
+            "whose reward_type is unknown."
+        )
     average_model_state_dict = OrderedDict()
     for key in models_state_dict[0].keys():
         if 'net' in key:

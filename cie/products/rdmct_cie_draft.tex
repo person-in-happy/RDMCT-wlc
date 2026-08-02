@@ -1,0 +1,651 @@
+\documentclass[preprint,12pt,authoryear]{elsarticle}
+
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs,multirow,array}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{lineno}
+\usepackage{microtype}
+\usepackage{url}
+
+\journal{Computers \& Industrial Engineering}
+\modulolinenumbers[5]
+
+\definecolor{tbdred}{RGB}{170,0,0}
+\newcommand{\TBD}[1]{\textcolor{tbdred}{[TBD: #1]}}
+\newcommand{\method}{SA-RLCS}
+\newcommand{\cmax}{C_{\max}}
+\newcommand{\pdi}{\mathrm{PDI}}
+\newcommand{\gap}{\mathrm{Gap}}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{Structure-Aware Reinforcement Learning for Cutting-Plane Selection in Dual-Source Mixed-Flow Semiconductor Scheduling}
+
+\author[inst1]{\TBD{First author}}
+\author[inst1]{\TBD{Co-author}}
+\author[inst2]{\TBD{Corresponding author}\corref{cor1}}
+\ead{\TBD{corresponding.author@email}}
+\cortext[cor1]{Corresponding author.}
+
+\affiliation[inst1]{organization={\TBD{Department and University}},
+                    city={\TBD{City}},
+                    postcode={\TBD{Postcode}},
+                    country={\TBD{Country}}}
+\affiliation[inst2]{organization={\TBD{Department and University}},
+                    city={\TBD{City}},
+                    postcode={\TBD{Postcode}},
+                    country={\TBD{Country}}}
+
+\begin{abstract}
+Dual-source mixed-flow semiconductor cluster tools couple robotic transport,
+load locks, shared rotating chambers, batching, reusable process-environment
+carriers, cleaning rules, and time-residency requirements. Their exact
+mixed-integer programming (MIP) models are consequently difficult to solve
+within operational time limits. This study develops a structure-aware
+reinforcement-learning cut selector (\method{}) for an exact compact
+formulation of this scheduling problem. The selector augments 13 generic cut
+descriptors with 10 formulation-role features that quantify how a cut couples
+binary decisions, general integers, objective variables, and physical
+auxiliaries. A hierarchical policy chooses a cardinality and an ordered set of
+policy anchors; a monotone role-submodular completion rule then balances cut
+quality, structural coverage, and representativeness. The callback only ranks
+solver-generated valid inequalities and returns every omitted cut in legal
+order, so it does not alter the feasible region or the exactness of
+branch-and-cut. Training minimizes a primal--dual integral aligned with
+anytime industrial performance. A frozen paired protocol compares solver
+defaults, hierarchical baselines, feature and search ablations, and the full
+method on nominal, factorial, sensitivity, selective pre-batching, and
+out-of-distribution instances. \TBD{Insert the validated main numerical
+result, statistical conclusion, and OOD result after all frozen campaigns
+finish.} The proposed framework provides a reproducible route for combining
+manufacturing structure with learning-assisted exact optimization.
+\end{abstract}
+
+\begin{highlights}
+\item An exact compact model preserves mixed-flow cluster-tool physics.
+\item A 23-dimensional role-aware representation characterizes candidate cuts.
+\item Policy anchors and submodular completion balance quality and diversity.
+\item The learned callback selects only solver-generated valid inequalities.
+\item A frozen paired protocol covers nominal, factorial, and OOD regimes.
+\end{highlights}
+
+\begin{keyword}
+semiconductor manufacturing \sep cluster tool scheduling \sep
+mixed-integer programming \sep cutting-plane selection \sep
+reinforcement learning \sep submodular optimization
+\end{keyword}
+
+\end{frontmatter}
+
+\linenumbers
+
+\section{Introduction}
+\label{sec:introduction}
+
+Cluster tools integrate several processing modules and robotic handlers around
+a tightly coupled transport system. They reduce footprint and contamination,
+but a schedule must coordinate processing, transfers, chambers, load locks,
+carrier availability, and recipe-dependent temporal restrictions. The
+difficulty is amplified in a dual-source mixed-flow setting: product wafers
+and reusable process-environment carriers enter through different sources,
+meet inside shared chambers, and follow different but interacting routes.
+Batch and paired processing modes further create discrete choices whose
+effects propagate through the entire schedule.
+
+Exact MIP is attractive because it can certify schedule quality and encode
+physical constraints transparently. Its practical limitation is the large
+branch-and-cut search induced by sequencing and resource-conflict
+disjunctions. General-purpose solvers generate many candidate cuts at a node,
+and adding all of them can strengthen the relaxation while also increasing
+linear-program size, numerical burden, and callback overhead. Cut selection
+is therefore a sequential decision problem in which local efficacy alone does
+not capture interactions among cuts.
+
+Recent work has shown that machine learning can support combinatorial
+optimization without replacing the underlying mathematical model
+\citep{bengio2021machine}. Reinforcement learning has been applied to cut
+selection \citep{tang2020cut}, look-ahead labels
+\citep{paulus2022looking}, and hierarchical sequence decisions
+\citep{wang2023hem}. However, generic cut features cannot explicitly identify
+whether a candidate mostly concerns manufacturing choices, timing
+auxiliaries, or the makespan. A policy trained only on generic statistics may
+therefore select individually attractive but structurally redundant cuts.
+
+This paper studies the following research question:
+\emph{Can formulation roles be incorporated into a learned cut selector to
+improve the anytime behavior of an exact cluster-tool scheduling model while
+preserving solver validity and reproducibility?} We answer the question with
+an exact compact model and a structure-aware selector, denoted \method{}. The
+model removes variables fixed by manufacturing equalities through continuous
+relaxation while preserving the same feasible schedules; genuine assignment
+and ordering choices remain integral. The selector uses a 23-dimensional
+representation, a hierarchical policy, and a role-submodular completion
+operator.
+
+The paper makes four contributions.
+
+\begin{enumerate}[leftmargin=*]
+  \item We formulate a dual-source mixed-flow cluster-tool scheduling problem
+  with shared robotic resources, two chamber modes, early cleaning,
+  carrier-residency constraints, and reusable carrier tokens in an exact
+  compact MIP.
+  \item We introduce 10 formulation-role descriptors in addition to 13
+  generic cut descriptors, providing a portable representation of how a cut
+  couples discrete decisions, objective variables, and continuous physical
+  auxiliaries.
+  \item We combine learned policy anchors with a monotone submodular
+  completion rule. The construction explicitly rewards quality, role
+  coverage, and representativeness while enforcing a fixed cut budget.
+  \item We define a frozen, instance-paired evaluation protocol covering
+  nominal comparison, controlled ablations, factorial conditions, selective
+  pre-batching, one-factor sensitivity, and size/recipe distribution shifts.
+\end{enumerate}
+
+The current document is an evidence-disciplined draft: numerical cells remain
+blank until every required paired campaign is complete. This prevents
+incomplete seeds or successfully solved instances from being reported
+selectively.
+
+\section{Related work}
+\label{sec:related}
+
+\subsection{Semiconductor cluster-tool scheduling}
+
+Cluster-tool scheduling combines machine scheduling with robotic transport and
+residency constraints. Exact and analytical methods have been developed for
+photolithography areas containing cluster tools
+\citep{madathil2018photolithography} and for time-constrained tools with purge
+operations \citep{yuan2023purge}. These studies demonstrate the value of
+representing tool physics explicitly. The present setting differs by
+simultaneously modeling two material sources, product and carrier flows,
+shared rotating chambers, two recipe modes, cleaning decisions, and reusable
+carrier tokens.
+
+\subsection{Learning within exact MIP}
+
+SCIP provides a modular branch-cut-and-price framework in which learning can
+act at controlled decision points \citep{achterberg2009scip,bestuzheva2023scip}.
+Learning-assisted exact optimization is most defensible when the learned
+component changes search priorities rather than mathematical validity. This
+principle motivates our callback: it receives only valid cuts generated by
+SCIP, selects a preferred subset, and leaves omitted cuts available to the
+solver. The learned model neither creates inequalities nor prunes nodes.
+
+\subsection{Learned cut selection}
+
+\citet{tang2020cut} formulate cut choice as reinforcement learning, while
+\citet{paulus2022looking} use look-ahead information to learn which cuts yield
+useful bound improvement. \citet{wang2023hem} model the number and order of
+selected cuts hierarchically, drawing on pointer-network ideas
+\citep{vinyals2015pointer}. We retain the hierarchical count/sequence
+principle but add formulation-role features and deterministic submodular
+completion. The distinction is important: a neural score can express a
+learned prior, whereas coverage and diversity have transparent diminishing
+returns and can be imposed directly.
+
+\section{Problem description and exact compact formulation}
+\label{sec:model}
+
+\subsection{Manufacturing topology}
+
+Product wafers follow the route
+\[
+ \mathrm{LP}\rightarrow\mathrm{ATR}\rightarrow\mathrm{AL}
+ \rightarrow\mathrm{ATR}\rightarrow\mathrm{LL_U}
+ \rightarrow\mathrm{VTR}\rightarrow\mathrm{CH}
+ \rightarrow\mathrm{VTR}\rightarrow\mathrm{LL_L}
+ \rightarrow\mathrm{ATR}\rightarrow\mathrm{LP},
+\]
+where LP is the load port, ATR and VTR are atmospheric and vacuum transfer
+robots, AL is the aligner, and $\mathrm{LL_U}$ and $\mathrm{LL_L}$ are the
+upper and lower load locks. Reusable process-environment carriers (PECs)
+travel between PEC storage and a shared chamber through the VTR. Chambers
+CH2 and CH3 rotate and share transfer/load resources.
+
+Two recipe modes are considered. In the $4\times1$ mode, four product wafers
+are processed as a batch using one of two reachable slot groups. In the
+$2\times2$ mode, a PEC and two product wafers form a physically ordered
+PEC--product--product--PEC chain. Cleaning can be triggered early subject to
+the cleaning interval; the selected PEC must remain resident for its required
+chain and is represented by a reusable token. Resource locks prevent
+simultaneous robot moves and incompatible loading operations.
+
+\subsection{Event and resource variables}
+
+Let $\mathcal{O}$ be the operations, $\mathcal{R}$ the physical resources,
+and $\mathcal{A}$ the precedence arcs induced by routes. Each operation
+$i\in\mathcal{O}$ has start time $s_i$, processing duration $p_i$, and
+completion time $c_i=s_i+p_i$. Binary variables $y_{ijr}$ orient two
+operations competing for unit-capacity resource $r$. Assignment and
+mode-selection variables are denoted by $x$, and PEC-token assignments by
+$u$. The model includes the precedence constraints
+\begin{equation}
+  s_j \ge c_i,\qquad (i,j)\in\mathcal{A},
+  \label{eq:precedence}
+\end{equation}
+and resource disjunctions
+\begin{align}
+  s_j &\ge c_i-M_{ijr}(1-y_{ijr}), \\
+  s_i &\ge c_j-M_{jir}y_{ijr},
+  \qquad \{i,j\}\subseteq\mathcal{O}_r,
+  \label{eq:disjunction}
+\end{align}
+with event-specific valid constants $M_{ijr}$. Capacity, chamber-rotation,
+slot-group, cleaning, residency, and token-conservation constraints link
+$x$, $u$, $y$, and $s$. The complete index-level formulation and parameter
+construction are provided in \TBD{the online supplement and repository link}.
+
+\subsection{Exact compactness}
+
+Some nominally binary membership, slot, and alias variables are already fixed
+to zero or one by equalities induced by a selected manufacturing mode. We
+declare these variables continuous in the compact formulation while retaining
+the fixing equalities. This operation changes neither their values nor the
+projection of the feasible region; it only removes unnecessary integrality
+declarations. All genuine assignments, orderings, mode choices, and cleaning
+choices remain integer. Accordingly, ``compact'' denotes an equivalent
+reformulation rather than a relaxation of manufacturing physics.
+
+\subsection{Lexicographic objective}
+
+The primary objective is the interval from the first product departure at LP
+to the last product return:
+\begin{equation}
+  \min \cmax .
+  \label{eq:makespan}
+\end{equation}
+For equal $\cmax$, the secondary objective reduces avoidable imbalance. If
+resource $r$ has capacity $k_r$ and fixed workload $W_r$, its total idle time
+is
+\begin{equation}
+  I_r=k_r\cmax-W_r.
+\end{equation}
+We minimize the lexicographic pair
+\begin{equation}
+ \min_{\mathrm{lex}}\left(
+   \cmax,\;
+   \sum_{r\in\mathcal{R}_{\mathrm{key}}} I_r^2
+   +\eta\sum_{g\in\mathcal{G}} w_g
+ \right),
+ \label{eq:lexicographic}
+\end{equation}
+where the five key physical resource groups are fixed before evaluation and
+$w_g$ measures avoidable waiting. The small linear term only breaks ties
+remaining after makespan and squared idle time.
+
+\section{Structure-aware learned cut selection}
+\label{sec:method}
+
+\subsection{Decision interface and learning objective}
+
+At a separation round, SCIP supplies a legal candidate pool
+$\mathcal{P}=\{1,\ldots,n\}$. Candidate $i$ represents a valid inequality
+$a_i^\top z\le b_i$. A low-cost efficacy prefilter retains at most 128
+candidates. The policy selects no more than 16 cuts; omitted candidates are
+returned in their original legal order.
+
+The state contains candidate features and solver context. An action consists
+of a selected cardinality and an ordered subset. Training uses the negative
+primal--dual integral as reward,
+\begin{equation}
+ R=-\pdi=-\int_0^T g(t)\,dt,
+ \label{eq:pdi}
+\end{equation}
+where $g(t)$ is the normalized primal--dual gap and $T$ is the time limit.
+Lower PDI means better anytime performance. With baseline $b$, the policy
+gradient estimator is
+\begin{equation}
+ \widehat{\nabla_\theta J}
+ =\frac{1}{B}\sum_{\ell=1}^{B}
+   (R_\ell-b_\ell)\nabla_\theta
+   \log\pi_\theta(a_\ell\mid s_\ell),
+ \label{eq:reinforce}
+\end{equation}
+following \citet{williams1992reinforce}. Independent training samples can be
+evaluated in parallel, but the estimator is reported as policy gradient
+rather than as an asynchronous actor--critic architecture.
+
+\subsection{Generic and formulation-role features}
+
+The generic 13-dimensional vector contains objective parallelism, efficacy,
+support, integral support, normalized violation, and the mean, maximum,
+minimum, and standard deviation of cut and objective coefficients.
+
+The structural extension partitions variables into five formulation roles:
+binary decisions, general integers, continuous objective variables,
+continuous physical auxiliaries, and other variables. For cut $i$ and role
+$k$, coefficient-mass share is
+\begin{equation}
+ m_{ik}=
+ \frac{\sum_{j\in\mathcal{V}_k}|a_{ij}|}
+      {\sum_j|a_{ij}|+\epsilon}.
+ \label{eq:mass}
+\end{equation}
+The five shares are augmented by bounded-variable ratio, positive-coefficient
+ratio, discrete--continuous coupling, dominant-role share, and normalized
+role entropy. The resulting 23-dimensional vector is scale-stable and relies
+on formulation roles rather than instance-specific variable names.
+
+\subsection{Hierarchical policy and beam search}
+
+A count policy first predicts the selected proportion. A pointer-style policy
+then scores an ordered sequence \citep{vinyals2015pointer}. The network uses a
+128-dimensional hidden representation and one glimpse. Training samples
+stochastically; evaluation uses either greedy decoding or beam width three.
+End-of-sequence handling, accumulated log probabilities, and backpointers are
+shared across learned baselines to ensure that a beam-search comparison does
+not change candidate pools or accounting.
+
+\subsection{Role-submodular completion}
+
+Let $A$ be a small set of policy anchors and $S\supseteq A$ the completed set.
+For normalized quality $q_i$, policy score $p_i$, role mass $m_{ik}$, feature
+embedding $h_i$, and candidate pool $\mathcal{P}$, completion maximizes
+\begin{align}
+F(S)=&\;w_q\sum_{i\in S}q_i+w_p\sum_{i\in S}p_i
+ +w_c\sum_k \sqrt{\sum_{i\in S}m_{ik}} \nonumber\\
+&+\frac{w_r}{|\mathcal{P}|}
+ \sum_{j\in\mathcal{P}}\max_{i\in S}
+ \operatorname{sim}(h_i,h_j),
+\label{eq:submodular}
+\end{align}
+subject to $|S|\le K$. Default normalized weights are
+$(w_q,w_p,w_c,w_r)=(0.35,0.20,0.25,0.20)$, the completion pool factor is
+2.0, and the anchor ratio is 0.25.
+
+With nonnegative modular terms, concave-over-modular role coverage, and
+facility-location representativeness, $F$ is monotone submodular. Greedy
+completion of the residual cardinality budget therefore inherits the
+classical $(1-1/e)$ guarantee for that fixed-anchor subproblem
+\citep{nemhauser1978analysis}. This is a guarantee for the set-completion
+objective, not for branch-and-cut runtime or final MIP quality.
+
+\subsection{Validity and overhead}
+
+\method{} never generates a constraint, changes a coefficient, or declares a
+node infeasible. Every selected inequality has already passed SCIP's legality
+checks. Unselected cuts remain available according to the callback contract.
+Thus the learned component can alter search trajectory and runtime but not
+the scheduling model's feasible set or the validity of an eventual proof.
+All callback inference, beam search, and postprocessing time is charged to
+the common wall-clock limit.
+
+\section{Experimental design}
+\label{sec:experiments}
+
+\subsection{Frozen benchmark suites}
+
+Table~\ref{tab:suites} summarizes the frozen suites. Nominal instances are
+used for the principal comparison. The factorial suite varies wafer count,
+recipe mix, and processing-time scale. Sensitivity conditions perturb one
+physical factor at a time. The OOD suite increases problem size and changes
+recipe balance. No test instance is used to tune hyperparameters.
+
+\begin{table}[htbp]
+\centering
+\caption{Frozen evaluation suites.}
+\label{tab:suites}
+\begin{tabular}{p{0.19\linewidth}p{0.51\linewidth}r}
+\toprule
+Suite & Design & Conditions/instances \\
+\midrule
+Nominal main & Frozen nominal manufacturing instances & 20 \\
+Factorial DOE & Wafers $\{8,16,24,32\}$, five recipe ratios,
+processing scale $\{0.9,1.0,1.1\}$ & 60 \\
+SPBS & Non-pure-$4{:}1$ conditions, none vs.\ automatic
+selective pre-batching & 48 pairs \\
+Sensitivity & Motion $\{0.8,1.2\}$, processing $\{0.8,1.2\}$,
+PEC capacity 10, cleaning interval $\{3,10\}$ & 8 \\
+OOD & Wafers $\{40,48,64\}$ and ratios
+$\{3{:}1,1{:}1,1{:}3\}$ & 9 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Compared methods}
+
+\begin{table}[htbp]
+\centering
+\caption{Methods in the frozen main comparison. All methods use the same
+compact formulation, warm start, SCIP configuration, candidate prefilter,
+time accounting, and solver seeds.}
+\label{tab:methods}
+\begin{tabular}{p{0.22\linewidth}p{0.69\linewidth}}
+\toprule
+Method & Description \\
+\midrule
+SCIP & Default SCIP cut selection. \\
+ACS & Deterministic adaptive cut-selection baseline tuned only on the frozen
+validation set. \\
+HEM & 13 generic features, hierarchical policy, greedy decoding, no
+role-aware completion. \\
+HEM+beam & HEM with beam width three. \\
+23D feature only & Generic plus role features, without role-submodular
+reranking. \\
+Structure+greedy & 23D policy with role-submodular completion and greedy
+decoding. \\
+\method{} & 23D policy, beam width three, policy anchors, and
+role-submodular completion. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Training and implementation}
+
+The frozen training configuration uses five independent training seeds,
+60 epochs, Adam learning rates $10^{-4}$ for actor and critic, batch size
+eight, maximum gradient norm 2, eight training samples per epoch, and two
+parallel sample jobs. The high-level selected-percentage policy uses learning
+rate $5\times10^{-4}$. Candidate and selection caps are 128 and 16,
+respectively. Checkpoints are selected by validation PDI, not test
+performance.
+
+Experiments use SCIP through PySCIPOpt. Main, DOE, SPBS, and sensitivity runs
+have a 600-s time limit; OOD runs have a 1200-s limit and a uniform 4096-MB
+SCIP memory limit. The final manuscript will report the SCIP, PySCIPOpt,
+Python, PyTorch, CUDA, GPU, CPU, operating system, thread count, and the
+stage-specific memory limits after all campaigns are completed consistently.
+\TBD{Insert the final reproducibility environment table and
+repository/archive DOI.}
+
+\subsection{Metrics and statistical analysis}
+
+The primary metric is PDI. Secondary measures are final primal bound, dual
+bound, relative gap, primal integral, time to first feasible solution, time
+to best incumbent, proof time, root gap, node count, LP iterations, accepted
+cuts, callback/inference overhead, timeout rate, memory-failure rate, and
+optimal-solution rate.
+
+Comparisons are paired by manufacturing instance and solver seed. Training
+seeds characterize learned-model variability but do not convert repeated
+solver runs on one manufacturing instance into independent instances. For
+each prespecified contrast, we report the paired median difference, a
+bootstrap confidence interval over manufacturing instances, the Wilcoxon
+signed-rank test where applicable, and Holm-adjusted $p$-values. Timeouts and
+failures remain in the dataset and are summarized explicitly; they are never
+deleted to improve a method's apparent performance.
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Nominal main comparison}
+
+\begin{table}[htbp]
+\centering
+\caption{Nominal main results. Entries will be computed from 20 instances,
+five solver seeds, and, for learned methods, five training seeds. Lower is
+better for PDI, gap, and time; higher is better for optimal rate.}
+\label{tab:main}
+\begin{tabular}{lrrrrr}
+\toprule
+Method & PDI & Final gap (\%) & First feasible (s) & Nodes & Optimal (\%)\\
+\midrule
+SCIP & -- & -- & -- & -- & -- \\
+ACS & -- & -- & -- & -- & -- \\
+HEM & -- & -- & -- & -- & -- \\
+HEM+beam & -- & -- & -- & -- & -- \\
+23D feature only & -- & -- & -- & -- & -- \\
+Structure+greedy & -- & -- & -- & -- & -- \\
+\method{} & -- & -- & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\TBD{Report the complete paired nominal comparison, effect sizes, confidence
+intervals, adjusted tests, and failure counts. Do not fill from the currently
+partial shards.}
+
+\subsection{Ablation and mechanism analysis}
+
+\begin{table}[htbp]
+\centering
+\caption{Prespecified mechanism contrasts.}
+\label{tab:ablation}
+\begin{tabular}{p{0.31\linewidth}p{0.38\linewidth}rr}
+\toprule
+Contrast & Isolated mechanism & $\Delta$PDI & Holm $p$ \\
+\midrule
+HEM+beam vs.\ HEM & Search width & -- & -- \\
+23D feature only vs.\ HEM+beam & Role features & -- & -- \\
+Structure+greedy vs.\ 23D feature only & Submodular completion & -- & -- \\
+\method{} vs.\ Structure+greedy & Beam with fixed structural rule & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\TBD{Add cut-pool size, selected-cut role coverage, redundancy,
+callback-overhead, and root-bound analyses to connect solver outcomes to the
+proposed mechanism.}
+
+\subsection{Factorial, SPBS, and sensitivity results}
+
+\begin{table}[htbp]
+\centering
+\caption{Robustness summary over designed manufacturing conditions.}
+\label{tab:robustness}
+\begin{tabular}{lrrrr}
+\toprule
+Study & Conditions & Main effect/contrast & $\Delta$PDI & Adjusted $p$\\
+\midrule
+Factorial DOE & 60 & \TBD{Specify prespecified model term} & -- & -- \\
+SPBS & 48 pairs & Automatic vs.\ none & -- & -- \\
+Sensitivity & 8 & Worst one-factor degradation & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\TBD{Report factorial interactions only if prespecified and estimable; report
+SPBS separately from the cut-selector comparison because it changes the
+manufacturing preprocessing policy.}
+
+\subsection{Out-of-distribution generalization}
+
+\begin{table}[htbp]
+\centering
+\caption{OOD results by wafer count. All compared methods share the 4096-MB
+memory limit and the 1200-s wall-clock limit.}
+\label{tab:ood}
+\begin{tabular}{lrrrrrr}
+\toprule
+\multirow{2}{*}{Method} &
+\multicolumn{2}{c}{40 wafers} &
+\multicolumn{2}{c}{48 wafers} &
+\multicolumn{2}{c}{64 wafers} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+& PDI & Fail (\%) & PDI & Fail (\%) & PDI & Fail (\%)\\
+\midrule
+SCIP & -- & -- & -- & -- & -- & -- \\
+ACS & -- & -- & -- & -- & -- & -- \\
+HEM & -- & -- & -- & -- & -- & -- \\
+HEM+beam & -- & -- & -- & -- & -- & -- \\
+23D feature only & -- & -- & -- & -- & -- & -- \\
+Structure+greedy & -- & -- & -- & -- & -- & -- \\
+\method{} & -- & -- & -- & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+At the 27 July 2026 draft audit, 63 of the planned 729 OOD evaluations had
+completed under the revised 4096-MB protocol with no recorded run error. This
+execution preflight is not used to estimate method performance; the remaining
+666 evaluations were running in three memory-budgeted shards. Existing
+2048-MB observations are excluded from this campaign. \TBD{After all 729
+evaluations finish, report paired outcomes including timeout and
+memory-failure incidence.}
+
+\section{Industrial implications}
+\label{sec:implications}
+
+The framework separates three responsibilities. Manufacturing engineers
+define auditable physical constraints; SCIP retains responsibility for valid
+inequalities and proof; the learned component allocates a limited cut budget.
+This separation is relevant when an optimizer must be improved without
+turning feasibility into a black-box prediction. PDI also reflects the
+operational value of obtaining good schedules early, even when a proof of
+optimality is not reached within the dispatching horizon.
+
+\TBD{After the complete experiments, translate the observed PDI and
+time-to-incumbent improvements into operational implications for the tested
+wafer volumes. Avoid extrapolating throughput or cost beyond the modeled
+system.}
+
+\section{Limitations and threats to validity}
+\label{sec:limitations}
+
+First, the role representation depends on a correct mapping from model
+variables to formulation roles. It is portable across instances of the same
+model family but has not yet been validated across unrelated MIPs. Second,
+the submodular guarantee applies to residual set completion, not solver
+runtime. Third, a wall-clock comparison can be hardware- and implementation-
+sensitive; hence inference is included in the time limit and the final
+environment must be fixed. Fourth, OOD instances create substantial memory
+pressure, which must be treated as an outcome rather than censored. Finally,
+the study evaluates a simulated deterministic scheduling model; deployment
+would additionally require uncertainty, rescheduling, equipment faults, and
+fab-level integration.
+
+\section{Conclusions}
+\label{sec:conclusion}
+
+This paper presents \method{}, a structure-aware learned cut selector for an
+exact dual-source mixed-flow semiconductor scheduling model. The method
+combines a 23-dimensional generic-and-role representation, hierarchical
+policy anchors, and monotone submodular completion. Its callback operates
+only on solver-generated valid cuts and therefore preserves model validity
+and exact-solver semantics. A frozen paired protocol has been established to
+test nominal performance, mechanisms, designed manufacturing factors, and
+distribution shifts. \TBD{Insert the final evidence-based conclusion after
+all campaigns and robustness checks are complete.}
+
+\section*{CRediT authorship contribution statement}
+
+\TBD{Insert author-specific CRediT roles.}
+
+\section*{Funding}
+
+\TBD{Insert funding information or state that no specific funding was
+received.}
+
+\section*{Declaration of competing interest}
+
+\TBD{Insert the authors' approved declaration.}
+
+\section*{Data and code availability}
+
+The frozen configurations, instance generators, model implementation,
+training code, and analysis scripts will be archived at
+\TBD{repository URL and immutable DOI}. Raw campaign outputs and a machine-
+readable manifest of software/hardware versions will accompany the archive.
+
+\section*{Acknowledgements}
+
+\TBD{Insert acknowledgements or remove this section.}
+
+\bibliographystyle{elsarticle-harv}
+\bibliography{rdmct_cie_references}
+
+\end{document}

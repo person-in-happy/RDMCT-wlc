@@ -5,9 +5,12 @@ import subprocess
 import sys
 import threading
 import time
+from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
+
+from tqdm.auto import tqdm
 
 from path_utils import PROJECT_ROOT, is_latest_keyword, latest_matching_file, resolve_path
 from petri_mip_generator import (
@@ -15,6 +18,7 @@ from petri_mip_generator import (
     generate_petri_mip_instance,
     get_petri_model_description_path,
 )
+from logger import logger
 from petri_warm_start import find_compatible_mixed_warm_start, write_mixed_warm_start
 
 
@@ -102,9 +106,12 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--use_learned_cutsel",
-        choices=("auto", "true", "false"),
-        default="auto",
-        help="Use the learned cut selector; auto disables it for dense large mixed/2x2 instances.",
+        choices=("on", "off", "auto", "true", "false"),
+        default="on",
+        help=(
+            "Use the learned cut selector. Formal A3C runs should use on/off explicitly; "
+            "auto is a separately reported deployment safeguard."
+        ),
     )
     parser.add_argument(
         "--cutsel_max_candidates",
@@ -127,6 +134,21 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--scip_seed", type=int, default=1)
     parser.add_argument("--instance_type", type=str, default="petri_transfer")
+    parser.add_argument(
+        "--console_mode",
+        choices=("progress", "full"),
+        default="progress",
+        help=(
+            "progress shows only the child-solve progress bar; full restores "
+            "legacy console logs."
+        ),
+    )
+    parser.add_argument(
+        "--detailed_log_file",
+        type=str,
+        default="",
+        help="Wrapper log path; child solver output remains in runtime_*_solver.log.",
+    )
     parser.add_argument("--num_batches", type=int, default=10)
     parser.add_argument("--num_pm", type=int, default=2)
     parser.add_argument("--num_steps", type=int, default=13)
@@ -222,6 +244,8 @@ def _write_runtime_config(
     cfg["env"]["cutsel_max_candidates"] = cutsel_max_candidates
     cfg["env"]["cutsel_max_selected_cuts"] = cutsel_max_selected_cuts
     cfg["env"]["warm_start_solution_file"] = warm_start_solution_file
+    cfg["env"]["lexicographic_schedule_stability"] = True
+    cfg["env"]["schedule_stability_mode"] = "linear"
     cfg["env"]["lexicographic_stability_time_limit"] = lexicographic_stability_time_limit
     cfg["env"]["lexicographic_stability_node_limit"] = lexicographic_stability_node_limit
     if time_limit > 0:
@@ -243,6 +267,8 @@ def _write_runtime_config(
             section_env["cutsel_max_candidates"] = cutsel_max_candidates
             section_env["cutsel_max_selected_cuts"] = cutsel_max_selected_cuts
             section_env["warm_start_solution_file"] = warm_start_solution_file
+            section_env["lexicographic_schedule_stability"] = True
+            section_env["schedule_stability_mode"] = "linear"
             section_env["lexicographic_stability_time_limit"] = lexicographic_stability_time_limit
             section_env["lexicographic_stability_node_limit"] = lexicographic_stability_node_limit
     experiment_cfg = cfg.setdefault("experiment", {})
@@ -273,8 +299,10 @@ def _run(
     heartbeat_seconds: float = 30.0,
     max_wall_seconds: Optional[float] = None,
     log_file: Optional[str] = None,
+    console_mode: str = "progress",
+    progress_file=None,
 ) -> None:
-    """Run the solver visibly and leave an inspectable heartbeat/status file."""
+    """Run the solver with a progress-only console and inspectable log/status files."""
     payload = dict(status_payload or {})
     payload.update(
         {
@@ -288,7 +316,8 @@ def _run(
     if status_file:
         _write_json_atomic(status_file, payload)
 
-    print(" ".join(cmd), flush=True)
+    if console_mode == "full":
+        print(" ".join(cmd), flush=True)
     env = os.environ.copy()
     env["PYTHONUNBUFFERED"] = "1"
     env["PYTHONIOENCODING"] = "utf-8:replace"
@@ -309,18 +338,29 @@ def _run(
             bufsize=1,
         )
     process = subprocess.Popen(cmd, cwd=str(PROJECT_ROOT), env=env, **popen_kwargs)
+    progress = None
+    if console_mode == "progress":
+        progress = tqdm(
+            total=max_wall_seconds,
+            desc="Petri A3C+Beam",
+            unit="s",
+            dynamic_ncols=True,
+            file=progress_file or sys.stderr,
+            leave=True,
+        )
     if process.stdout is not None:
         def relay_output():
             try:
                 for line in process.stdout:
                     if log_handle is not None:
                         log_handle.write(line)
-                    try:
-                        print(line, end="", flush=True)
-                    except UnicodeEncodeError:
-                        console_encoding = sys.stdout.encoding or "utf-8"
-                        safe_line = line.encode(console_encoding, errors="replace").decode(console_encoding)
-                        print(safe_line, end="", flush=True)
+                    if console_mode == "full":
+                        try:
+                            print(line, end="", flush=True)
+                        except UnicodeEncodeError:
+                            console_encoding = sys.stdout.encoding or "utf-8"
+                            safe_line = line.encode(console_encoding, errors="replace").decode(console_encoding)
+                            print(safe_line, end="", flush=True)
             finally:
                 process.stdout.close()
 
@@ -334,6 +374,14 @@ def _run(
     try:
         while True:
             elapsed = time.monotonic() - started
+            if progress is not None:
+                progress.n = (
+                    min(elapsed, progress.total)
+                    if progress.total is not None
+                    else elapsed
+                )
+                progress.set_postfix_str(f"pid={process.pid} | running", refresh=False)
+                progress.refresh()
             if max_wall_seconds is not None and elapsed >= max_wall_seconds:
                 process.terminate()
                 try:
@@ -355,9 +403,14 @@ def _run(
                 )
                 if status_file:
                     _write_json_atomic(status_file, payload)
+                if progress is not None:
+                    progress.set_postfix_str("wall timeout")
+                    progress.close()
                 raise subprocess.TimeoutExpired(cmd, max_wall_seconds)
 
             wait_seconds = heartbeat if heartbeat > 0 else None
+            if progress is not None:
+                wait_seconds = min(wait_seconds or 1.0, 1.0)
             if max_wall_seconds is not None:
                 remaining = max(0.05, max_wall_seconds - elapsed)
                 wait_seconds = min(wait_seconds or 1.0, remaining)
@@ -375,11 +428,12 @@ def _run(
                 )
                 if status_file:
                     _write_json_atomic(status_file, payload)
-                print(
-                    f"[heartbeat] solver pid={process.pid} is running; "
-                    f"elapsed={elapsed:.0f}s; status_file={status_file}",
-                    flush=True,
-                )
+                if console_mode == "full":
+                    print(
+                        f"[heartbeat] solver pid={process.pid} is running; "
+                        f"elapsed={elapsed:.0f}s; status_file={status_file}",
+                        flush=True,
+                    )
     except KeyboardInterrupt:
         payload.update(
             {
@@ -390,6 +444,9 @@ def _run(
         )
         if status_file:
             _write_json_atomic(status_file, payload)
+        if progress is not None:
+            progress.set_postfix_str("interrupted")
+            progress.close()
         raise
 
     elapsed = time.monotonic() - started
@@ -397,6 +454,19 @@ def _run(
         reader_thread.join(timeout=5.0)
     if log_handle is not None:
         log_handle.close()
+    if progress is not None:
+        progress.n = (
+            progress.total
+            if return_code == 0 and progress.total is not None
+            else min(elapsed, progress.total)
+            if progress.total is not None
+            else elapsed
+        )
+        progress.set_postfix_str(
+            "completed" if return_code == 0 else f"failed rc={return_code}"
+        )
+        progress.refresh()
+        progress.close()
     payload.update(
         {
             "status": "completed" if return_code == 0 else "failed",
@@ -411,8 +481,7 @@ def _run(
         raise subprocess.CalledProcessError(return_code, cmd)
 
 
-def main() -> None:
-    args = _parse_args()
+def _execute(args, progress_file) -> None:
     args.config_file = str(resolve_path(args.config_file))
     if is_latest_keyword(args.test_model_path):
         args.test_model_path = str(latest_matching_file("data", "params.pkl", "trained params.pkl"))
@@ -473,7 +542,7 @@ def main() -> None:
     )
     use_learned_cutsel = (
         not (pure_2x2 or dense_mixed) if args.use_learned_cutsel == "auto" else
-        args.use_learned_cutsel == "true"
+        args.use_learned_cutsel in {"on", "true"}
     )
     scip_heuristics_profile = (
         "fast" if args.scip_heuristics_profile == "auto" and dense_mixed else
@@ -485,13 +554,14 @@ def main() -> None:
         f"pure_2x2={pure_2x2}, dense_mixed={dense_mixed}, "
         f"scip_emphasis={scip_emphasis}, "
         f"scip_heuristics_profile={scip_heuristics_profile}, "
-        f"use_learned_cutsel={use_learned_cutsel}, "
+        f"use_learned_cutsel_requested={args.use_learned_cutsel}, "
+        f"use_learned_cutsel_effective={use_learned_cutsel}, "
         f"stall_node_limit={scip_stall_node_limit}"
     )
-    if dense_mixed and args.use_learned_cutsel == "auto":
+    if args.use_learned_cutsel == "auto" and not use_learned_cutsel:
         print(
-            "large mixed-instance safeguard: learned cut selection is disabled in auto mode; "
-            "pass --use_learned_cutsel true only for a controlled comparison run."
+            "deployment safeguard: learned cut selection is disabled in auto mode for this "
+            "instance; formal ablations must pass --use_learned_cutsel on or off explicitly."
         )
     warm_start_solution_file = ""
     if args.warm_start_solution_file:
@@ -664,6 +734,7 @@ def main() -> None:
         status_payload={
             "instance_file": str(lp_path),
             "runtime_config": runtime_config,
+            "wrapper_log_file": args.detailed_log_file,
             "warm_start_solution_file": warm_start_solution_file,
             "scip_time_limit": args.time_limit,
             "scip_node_limit": args.scip_node_limit,
@@ -671,6 +742,7 @@ def main() -> None:
             "scip_solution_limit": args.scip_solution_limit,
             "scip_memory_limit_mb": args.scip_memory_limit_mb,
             "scip_heuristics_profile": scip_heuristics_profile,
+            "use_learned_cutsel_requested": args.use_learned_cutsel,
             "use_learned_cutsel": use_learned_cutsel,
             "process_mode": args.process_mode,
             "mode_4x1_wafers": len(petri_cfg.full_wafer_ids),
@@ -685,7 +757,52 @@ def main() -> None:
             else None
         ),
         log_file=solver_log_file,
+        console_mode=args.console_mode,
+        progress_file=progress_file,
     )
+
+
+def _resolve_wrapper_log_path(args):
+    if args.detailed_log_file:
+        path = Path(args.detailed_log_file).expanduser()
+        if not path.is_absolute():
+            path = Path(args.instance_dir) / path
+    else:
+        path = Path(args.instance_dir) / (
+            f"runtime_{Path(args.instance_name).stem}_wrapper.log"
+        )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path.resolve()
+
+
+def main() -> None:
+    args = _parse_args()
+    args.instance_dir = str(resolve_path(args.instance_dir))
+    os.makedirs(args.instance_dir, exist_ok=True)
+    detailed_log_path = _resolve_wrapper_log_path(args)
+    args.detailed_log_file = str(detailed_log_path)
+    console_progress_stream = sys.stderr
+    previous_console_output = logger.get_console_output_enabled()
+    logger.add_text_output(str(detailed_log_path))
+    try:
+        if args.console_mode == "progress":
+            logger.set_console_output_enabled(False)
+            with open(
+                detailed_log_path,
+                "a",
+                encoding="utf-8",
+                buffering=1,
+            ) as detailed_stream:
+                with redirect_stdout(detailed_stream), redirect_stderr(detailed_stream):
+                    print("argv: " + json.dumps(sys.argv, ensure_ascii=False))
+                    print(f"wrapper_log_file: {detailed_log_path}")
+                    _execute(args, console_progress_stream)
+        else:
+            logger.set_console_output_enabled(True)
+            _execute(args, console_progress_stream)
+    finally:
+        logger.set_console_output_enabled(previous_console_output)
+        logger.remove_text_output(str(detailed_log_path))
 
 
 if __name__ == "__main__":

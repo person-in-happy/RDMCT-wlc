@@ -67,6 +67,8 @@ class CutSelectAgent(CutselBase):
         self._callback_input_cuts = 0
         self._callback_max_input_cuts = 0
         self._callback_forced_cuts = 0
+        self._callback_root_calls = 0
+        self._callback_nonroot_calls = 0
         self._phase_time_seconds = {
             "feature_extraction": 0.0,
             "device_transfer": 0.0,
@@ -194,6 +196,10 @@ class CutSelectAgent(CutselBase):
                 self._callback_max_input_cuts, len(cuts)
             )
             self._callback_forced_cuts += len(forcedcuts)
+            if bool(root):
+                self._callback_root_calls += 1
+            else:
+                self._callback_nonroot_calls += 1
 
     def _record_phase_times(
         self,
@@ -241,6 +247,8 @@ class CutSelectAgent(CutselBase):
             "mean_input_cuts": self._callback_input_cuts / calls if calls else 0.0,
             "max_input_cuts": int(self._callback_max_input_cuts),
             "total_forced_cuts": int(self._callback_forced_cuts),
+            "root_calls": int(self._callback_root_calls),
+            "nonroot_calls": int(self._callback_nonroot_calls),
             "phase_time_seconds": dict(self._phase_time_seconds),
             "effective_max_candidates": self.max_candidates,
             "effective_max_selected_cuts": self.max_selected_cuts,
@@ -1054,6 +1062,8 @@ class HeuristicBeamCutSelectAgent(CutselBase):
         self._callback_time_seconds = 0.0
         self._callback_input_cuts = 0
         self._callback_max_input_cuts = 0
+        self._callback_root_calls = 0
+        self._callback_nonroot_calls = 0
 
     def _minmax(self, values):
         values = np.asarray(values, dtype=np.float64)
@@ -1090,6 +1100,22 @@ class HeuristicBeamCutSelectAgent(CutselBase):
             raw_pool_size = min(raw_pool_size, int(self.max_candidates))
         candidate_pool_size = min(len(base_scores), max(target_count, raw_pool_size))
         return np.argsort(-base_scores)[:candidate_pool_size]
+
+    def _cheap_candidate_indices(self, cuts):
+        """Apply the same efficacy-first budget used by learned selectors."""
+        num_cuts = len(cuts)
+        if self.max_candidates is None or int(self.max_candidates) <= 0:
+            return np.arange(num_cuts, dtype=np.int64)
+        limit = min(num_cuts, int(self.max_candidates))
+        if limit >= num_cuts:
+            return np.arange(num_cuts, dtype=np.int64)
+        efficacy = np.fromiter(
+            (float(self.scip_model.getCutEfficacy(cut)) for cut in cuts),
+            dtype=np.float64,
+            count=num_cuts,
+        )
+        candidate = np.argpartition(-efficacy, limit - 1)[:limit]
+        return candidate[np.lexsort((candidate, -efficacy[candidate]))]
 
     def _compute_similarity(self, cut_features):
         core_features = np.concatenate(
@@ -1148,6 +1174,10 @@ class HeuristicBeamCutSelectAgent(CutselBase):
             self._callback_max_input_cuts = max(
                 self._callback_max_input_cuts, len(cuts)
             )
+            if bool(root):
+                self._callback_root_calls += 1
+            else:
+                self._callback_nonroot_calls += 1
 
     def _cutselselect_impl(self, cuts, forcedcuts, root, maxnselectedcuts):
         logger.log("heuristic beam cut selection policy")
@@ -1176,14 +1206,26 @@ class HeuristicBeamCutSelectAgent(CutselBase):
         if self.max_candidates is not None and self.max_candidates > 0:
             sel_cuts_num = min(sel_cuts_num, int(self.max_candidates))
 
-        cut_features = advanced_cut_feature_generator(self.scip_model, cuts)
+        candidate_indices = self._cheap_candidate_indices(cuts)
+        candidate_cuts = [cuts[int(idx)] for idx in candidate_indices]
+        cut_features = advanced_cut_feature_generator(
+            self.scip_model,
+            candidate_cuts,
+        )
         base_scores = self._compute_base_scores(cut_features)
         candidate_pool = self._candidate_pool_indices(base_scores, sel_cuts_num)
         candidate_features = cut_features[candidate_pool]
         candidate_scores = base_scores[candidate_pool]
         similarity = self._compute_similarity(candidate_features)
         selected_local_idxes = self._beam_select(candidate_scores, similarity, min(sel_cuts_num, len(candidate_pool)))
-        true_idxes = [int(candidate_pool[idx]) for idx in selected_local_idxes]
+        selected_candidate_idxes = [
+            int(candidate_pool[idx])
+            for idx in selected_local_idxes
+        ]
+        true_idxes = [
+            int(candidate_indices[idx])
+            for idx in selected_candidate_idxes
+        ]
 
         all_idxes = list(range(num_cuts))
         not_sel_idxes = [idx for idx in all_idxes if idx not in set(true_idxes)]
@@ -1193,7 +1235,9 @@ class HeuristicBeamCutSelectAgent(CutselBase):
         if not self.data:
             self.data = {
                 "state": cut_features,
-                "action": true_idxes,
+                "action": selected_candidate_idxes,
+                "selected_action": true_idxes,
+                "candidate_indices": candidate_indices.tolist(),
                 "sel_cuts_num": len(true_idxes),
                 "candidate_pool_size": int(len(candidate_pool)),
                 "base_scores": base_scores.tolist(),
@@ -1236,6 +1280,8 @@ class HeuristicBeamCutSelectAgent(CutselBase):
             "mean_callback_time_seconds": total_time / calls if calls else 0.0,
             "mean_input_cuts": self._callback_input_cuts / calls if calls else 0.0,
             "max_input_cuts": int(self._callback_max_input_cuts),
+            "root_calls": int(self._callback_root_calls),
+            "nonroot_calls": int(self._callback_nonroot_calls),
             "effective_max_candidates": self.max_candidates,
             "effective_max_selected_cuts": self.max_selected_cuts,
             "decode_type": "heuristic_beam",

@@ -80,6 +80,8 @@ def find_compatible_mixed_warm_start(output_dir, instance_name):
             metadata = json.load(handle)
         if metadata.get("instance_sha256") != _sha256_file(instance_path):
             return None
+        if metadata.get("solution_scope") != "full_quadratic_model":
+            return None
     except (OSError, ValueError, TypeError):
         return None
     return str(solution_path)
@@ -206,6 +208,7 @@ def _strip_secondary_stability_constraints(model):
         "schedule_wait_def_",
         "schedule_wait_square_def_",
         "chamber_nonprocess_wait_",
+        "resource_idle_",
     )
     removable = [
         constraint
@@ -218,6 +221,97 @@ def _strip_secondary_stability_constraints(model):
     return len(removable)
 
 
+SECONDARY_STABILITY_VARIABLE_PREFIXES = ("schedule_wait_", "chamber_nonprocess_wait_", "resource_idle_")
+
+
+def _is_secondary_stability_variable(variable_name):
+    return variable_name == "schedule_stability" or variable_name.startswith(SECONDARY_STABILITY_VARIABLE_PREFIXES)
+
+
+def _write_solution_high_precision(model, solution, output_path):
+    """Write a SCIP solution without losing quadratic feasibility to rounding."""
+    objective = float(model.getSolObjVal(solution))
+    with Path(output_path).open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(f"objective value: {objective:.17g}\n")
+        for variable in model.getVars():
+            value = float(model.getSolVal(solution, variable))
+            if abs(value) <= 1e-15:
+                continue
+            handle.write(f"{variable.name} {value:.17g}\n")
+
+
+
+def _complete_secondary_stability_solution(cfg, source_model, source_solution, time_limit, memory_limit_mb=None, random_seed=0):
+    """Complete a stripped SPBS schedule in the full quadratic model."""
+    completion_model = build_petri_mip_model(cfg)
+    completion_info = {
+        "status": "not_run", "solving_time": 0.0, "nodes": 0,
+        "solutions": 0, "fixed_primary_variables": 0,
+        "free_secondary_variables": 0, "fully_feasible": False,
+    }
+    try:
+        source_variables = {variable.name: variable for variable in source_model.getVars()}
+        fixed_primary_variables = 0
+        free_secondary_variables = 0
+        for variable in completion_model.getVars():
+            if _is_secondary_stability_variable(variable.name):
+                free_secondary_variables += 1
+                continue
+            source_variable = source_variables.get(variable.name)
+            if source_variable is None:
+                continue
+            value = float(source_model.getSolVal(source_solution, source_variable))
+            if variable.vtype() in {"BINARY", "INTEGER", "IMPLINT"}:
+                value = round(value)
+                lower = upper = value
+            else:
+                tolerance = 1e-7 * max(1.0, abs(value))
+                lower = max(float(variable.getLbGlobal()), value - tolerance)
+                upper = min(float(variable.getUbGlobal()), value + tolerance)
+                if lower > upper:
+                    lower = upper = min(max(value, float(variable.getLbGlobal())), float(variable.getUbGlobal()))
+            completion_model.chgVarLb(variable, lower)
+            completion_model.chgVarUb(variable, upper)
+            fixed_primary_variables += 1
+
+        completion_info["fixed_primary_variables"] = fixed_primary_variables
+        completion_info["free_secondary_variables"] = free_secondary_variables
+        completion_model.setObjective(0.0, "minimize")
+        completion_model.hideOutput(True)
+        completion_model.setEmphasis(scip.SCIP_PARAMEMPHASIS.FEASIBILITY)
+        completion_model.setHeuristics(scip.SCIP_PARAMSETTING.AGGRESSIVE)
+        completion_model.setPresolve(scip.SCIP_PARAMSETTING.FAST)
+        completion_model.setIntParam("presolving/maxrounds", 30)
+        completion_model.setIntParam("propagating/probing/maxprerounds", 0)
+        completion_model.setIntParam("misc/usesymmetry", 0)
+        completion_model.setIntParam("separating/maxroundsroot", 0)
+        completion_model.setIntParam("limits/solutions", 1)
+        completion_model.setRealParam("limits/time", max(1.0, float(time_limit)))
+        if memory_limit_mb is not None and float(memory_limit_mb) > 0:
+            completion_model.setRealParam("limits/memory", float(memory_limit_mb))
+        if int(random_seed) > 0:
+            completion_model.setBoolParam("randomization/permutevars", True)
+            completion_model.setIntParam("randomization/permutationseed", int(random_seed))
+            completion_model.setIntParam("randomization/randomseedshift", int(random_seed))
+        completion_model.optimize()
+        completed_solution = completion_model.getBestSol()
+        completion_info.update({
+            "status": str(completion_model.getStatus()),
+            "solving_time": float(completion_model.getSolvingTime()),
+            "nodes": int(completion_model.getNNodes()),
+            "solutions": int(completion_model.getNSols()),
+        })
+        if completed_solution is None:
+            return completion_model, None, completion_info
+        completion_info["fully_feasible"] = bool(completion_model.checkSol(
+            completed_solution, printreason=False, completely=True, original=False,
+        ))
+        if not completion_info["fully_feasible"]:
+            return completion_model, None, completion_info
+        return completion_model, completed_solution, completion_info
+    except Exception:
+        completion_model.freeProb()
+        raise
 def _pair_members(cfg, mode, pair_id):
     wafer_ids = cfg.full_wafer_ids if mode == "full" else cfg.mix_wafer_ids
     start = 2 * (pair_id - 1)
@@ -858,7 +952,10 @@ def _fix_conservative_mixed_resource_order(model, cfg, profile_name="spbs_full")
     return _spbs_binary_structure_summary(variables, profile_name)
 
 
-def write_mixed_warm_start(output_dir, instance_name, cfg, time_limit=30.0):
+def write_mixed_warm_start(
+    output_dir, instance_name, cfg, time_limit=30.0, memory_limit_mb=None,
+    random_seed=0,
+):
     """Write a structure-preserving binary-skeleton primal start.
 
     SPBS first fixes assignment, activation, cleaning, slot, ATR/AL/LL order,
@@ -935,6 +1032,12 @@ def write_mixed_warm_start(output_dir, instance_name, cfg, time_limit=30.0):
             model.setEmphasis(scip.SCIP_PARAMEMPHASIS.FEASIBILITY)
             model.setHeuristics(scip.SCIP_PARAMSETTING.AGGRESSIVE)
             model.setRealParam("limits/time", float(attempt_time_limit))
+            if memory_limit_mb is not None and float(memory_limit_mb) > 0:
+                model.setRealParam("limits/memory", float(memory_limit_mb))
+            if int(random_seed) > 0:
+                model.setBoolParam("randomization/permutevars", True)
+                model.setIntParam("randomization/permutationseed", int(random_seed))
+                model.setIntParam("randomization/randomseedshift", int(random_seed))
             model.setIntParam("limits/solutions", 1)
             # The temporary model has its important discrete choices fixed above.
             # Deep exhaustive presolve and symmetry detection can otherwise consume
@@ -964,12 +1067,48 @@ def write_mixed_warm_start(output_dir, instance_name, cfg, time_limit=30.0):
                 )
                 continue
 
-            output_path = Path(output_dir)
-            output_path.mkdir(parents=True, exist_ok=True)
-            warm_start_path, metadata_path, instance_path = _warm_start_paths(
-                output_dir, instance_name
-            )
-            model.writeSol(solution, str(warm_start_path))
+            completion_remaining = deadline - time.time()
+            if completion_remaining <= 1.0:
+                attempt["secondary_completion"] = {
+                    "status": "skipped_no_time_budget",
+                    "fully_feasible": False,
+                }
+                print(
+                    "warning: SPBS found a physical schedule but no time remained "
+                    "to complete the quadratic secondary variables"
+                )
+                continue
+            completion_model = None
+            try:
+                completion_model, completed_solution, completion_info = (
+                    _complete_secondary_stability_solution(
+                        cfg,
+                        model,
+                        solution,
+                        time_limit=completion_remaining,
+                        memory_limit_mb=memory_limit_mb,
+                        random_seed=random_seed,
+                    )
+                )
+                attempt["secondary_completion"] = completion_info
+                if completed_solution is None:
+                    print(
+                        "warning: SPBS physical schedule could not be completed "
+                        "in the full quadratic model: "
+                        f"profile={profile_name}, status={completion_info['status']}, "
+                        f"time={completion_info['solving_time']:.3f}s"
+                    )
+                    continue
+
+                output_path = Path(output_dir)
+                output_path.mkdir(parents=True, exist_ok=True)
+                warm_start_path, metadata_path, instance_path = _warm_start_paths(
+                    output_dir, instance_name
+                )
+                _write_solution_high_precision(completion_model, completed_solution, warm_start_path)
+            finally:
+                if completion_model is not None:
+                    completion_model.freeProb()
             if instance_path.is_file():
                 with metadata_path.open("w", encoding="utf-8") as handle:
                     json.dump(
@@ -977,7 +1116,9 @@ def write_mixed_warm_start(output_dir, instance_name, cfg, time_limit=30.0):
                             "instance_file": Path(instance_name).name,
                             "instance_sha256": _sha256_file(instance_path),
                             "warm_start_strategy": "SPBS",
+                            "solution_scope": "full_quadratic_model",
                             "accepted_profile": profile_name,
+                            "random_seed": int(random_seed),
                             "profile_attempts": profile_attempts,
                         },
                         handle,
@@ -1046,7 +1187,8 @@ def polish_mixed_warm_start(output_dir, instance_name, cfg, time_limit=1800.0):
         final_solution = phase1_solution
         linear_wait_value = None
         remaining = deadline - time.time()
-        if remaining > 1.0:
+        completion_reserve = min(30.0, max(2.0, 0.10 * float(time_limit)))
+        if remaining > completion_reserve + 1.0:
             model.freeTransform()
             variables = {variable.name: variable for variable in model.getVars()}
             cmax_var = variables["c_max"]
@@ -1068,7 +1210,7 @@ def polish_mixed_warm_start(output_dir, instance_name, cfg, time_limit=1800.0):
             ]
             linear_wait_expr = scip.quicksum(wait_variables)
             model.setObjective(linear_wait_expr, "minimize")
-            model.setRealParam("limits/time", max(1.0, remaining))
+            model.setRealParam("limits/time", max(1.0, remaining - completion_reserve))
             model.optimize()
             if model.getBestSol() is not None:
                 final_solution = model.getBestSol()
@@ -1076,7 +1218,29 @@ def polish_mixed_warm_start(output_dir, instance_name, cfg, time_limit=1800.0):
                     sum(model.getSolVal(final_solution, variable) for variable in wait_variables)
                 )
 
-        model.writeSol(final_solution, str(warm_start_path))
+        completion_model = None
+        try:
+            completion_model, completed_solution, completion_info = (
+                _complete_secondary_stability_solution(
+                    cfg,
+                    model,
+                    final_solution,
+                    time_limit=max(1.0, deadline - time.time()),
+                )
+            )
+            if completed_solution is None:
+                raise RuntimeError(
+                    "polished physical warm start could not be completed in "
+                    f"the full quadratic model: {completion_info}"
+                )
+            _write_solution_high_precision(
+                completion_model,
+                completed_solution,
+                warm_start_path,
+            )
+        finally:
+            if completion_model is not None:
+                completion_model.freeProb()
         _, metadata_path, instance_path = _warm_start_paths(output_dir, instance_name)
         metadata = {}
         if metadata_path.is_file():
@@ -1086,6 +1250,8 @@ def polish_mixed_warm_start(output_dir, instance_name, cfg, time_limit=1800.0):
             {
                 "instance_file": Path(instance_name).name,
                 "instance_sha256": _sha256_file(instance_path),
+                "solution_scope": "full_quadratic_model",
+                "secondary_completion": completion_info,
                 "polishing": {
                     "fixed_discrete_variables": len(discrete_values),
                     "stripped_stability_constraints": stripped_count,

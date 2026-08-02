@@ -1,6 +1,5 @@
 import argparse
 import os
-from sqlalchemy import all_
 from tqdm import tqdm 
 import torch
 import numpy as np
@@ -50,7 +49,7 @@ class ReinforceBaselineAlg():
         batch_size=32,
         train_decode_type='stochastic',
         evaluate_decode_type='greedy',
-        reward_type='solving_time',
+        reward_type='primaldualintegral',
         baseline_type="no_baseline", # ['no_baseline', 'simple', 'net']
         critic_beta=0.9,
         train_steps_per_epoch=1,
@@ -157,6 +156,12 @@ class ReinforceBaselineAlg():
     def _checkpoint_state_dict(self, epoch=None):
         state_dict = {}
         state_dict['pointer_net'] = self.pointer_net.state_dict()
+        state_dict['checkpoint_metadata_version'] = 1
+        state_dict['reward_type'] = self.reward_type
+        state_dict['train_decode_type'] = self.train_decode_type
+        state_dict['evaluate_decode_type'] = self.evaluate_decode_type
+        state_dict['baseline_type'] = self.baseline_type
+        state_dict['sel_cuts_percent'] = float(self.sel_cuts_percent)
         state_dict['cut_feature_schema'] = cut_feature_schema_for_dim(
             self.pointer_net.embedding_dim
         )
@@ -534,6 +539,12 @@ class HRLReinforceAlg(ReinforceBaselineAlg):
         state_dict = {
             "pointer_net": model_state_dict,
             "cutsel_percent_net": cutsel_percent_state_dict,
+            "checkpoint_metadata_version": 1,
+            "reward_type": self.reward_type,
+            "train_decode_type": self.train_decode_type,
+            "evaluate_decode_type": self.evaluate_decode_type,
+            "baseline_type": self.baseline_type,
+            "sel_cuts_percent": float(self.sel_cuts_percent),
             "cut_feature_schema": cut_feature_schema_for_dim(
                 self.pointer_net.embedding_dim
             ),

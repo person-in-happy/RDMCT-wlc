@@ -1,0 +1,539 @@
+\documentclass[preprint,12pt,authoryear]{elsarticle}
+
+\usepackage[UTF8,scheme=plain]{ctex}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs,multirow,array}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{lineno}
+\usepackage{url}
+
+\journal{Computers \& Industrial Engineering（中文审查版）}
+\modulolinenumbers[5]
+
+\definecolor{tbdred}{RGB}{170,0,0}
+\newcommand{\TBD}[1]{\textcolor{tbdred}{[待补：#1]}}
+\newcommand{\method}{SA-RLCS}
+\newcommand{\cmax}{C_{\max}}
+\newcommand{\pdi}{\mathrm{PDI}}
+\newcommand{\gap}{\mathrm{Gap}}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{面向双源混流半导体调度的结构感知强化学习割平面选择方法}
+
+\author[inst1]{\TBD{第一作者}}
+\author[inst1]{\TBD{共同作者}}
+\author[inst2]{\TBD{通信作者}\corref{cor1}}
+\ead{\TBD{通信作者邮箱}}
+\cortext[cor1]{通信作者。}
+
+\affiliation[inst1]{organization={\TBD{院系和学校}},
+                    city={\TBD{城市}},
+                    postcode={\TBD{邮编}},
+                    country={\TBD{国家}}}
+\affiliation[inst2]{organization={\TBD{院系和学校}},
+                    city={\TBD{城市}},
+                    postcode={\TBD{邮编}},
+                    country={\TBD{国家}}}
+
+\begin{abstract}
+双源混流半导体集群设备同时耦合机械手搬运、装载锁、共享旋转腔室、批处理、
+可复用工艺环境载具、清洗规则以及时间驻留约束，因此其精确混合整数规划模型
+往往难以在生产所需的时间范围内求解。本文针对该调度问题的等价紧凑模型，
+提出结构感知强化学习割选择器（\method{}）。该方法在13个通用割描述量之外，
+增加10个模型角色特征，用于刻画割如何耦合二元决策、一般整数、目标变量和
+物理辅助变量。层次策略先选择割数量及有序的策略锚点，随后通过单调的角色
+次模补全规则平衡割质量、结构覆盖和代表性。回调仅对求解器产生的合法不等式
+排序，并按合法顺序归还所有未选择的割，因而不改变可行域，也不破坏分支割
+算法的精确性。训练目标采用与工业随时性能一致的原始--对偶积分。冻结的配对
+实验协议将求解器默认策略、层次基线、特征和搜索消融以及完整方法，在标称、
+析因、敏感性、选择性预组批和分布外实例上进行比较。\TBD{待所有冻结实验完成
+后，填入经过验证的主要数值结果、统计结论和分布外结果。} 本框架为制造结构
+知识与学习辅助精确优化的可复现结合提供了一条路径。
+\end{abstract}
+
+\begin{highlights}
+\item 等价紧凑模型完整保留混流集群设备的物理约束。
+\item 23维角色感知表示刻画候选割的质量与结构。
+\item 策略锚点与次模补全兼顾质量、结构覆盖和多样性。
+\item 学习回调仅选择求解器生成的合法不等式。
+\item 冻结的配对协议覆盖标称、析因和分布外场景。
+\end{highlights}
+
+\begin{keyword}
+半导体制造 \sep 集群设备调度 \sep 混合整数规划 \sep
+割平面选择 \sep 强化学习 \sep 次模优化
+\end{keyword}
+
+\end{frontmatter}
+
+\linenumbers
+
+\section{引言}
+\label{sec:introduction-zh}
+
+集群设备将多个工艺模块和机械手集成在一个紧密耦合的搬运系统周围。它能够
+减少占地面积和污染，但其调度必须同时协调加工、搬运、腔室、装载锁、载具
+可用性及配方相关的时间限制。双源混流场景进一步增加了难度：产品晶圆和可复用
+工艺环境载具从不同源头进入设备，在共享腔室中汇合，并沿相互作用但不同的
+路径流动。批处理和成对处理模式还会形成影响整个调度的离散决策。
+
+精确混合整数规划具有能够证明调度质量、透明表达物理约束等优点，但排序和
+资源冲突析取会产生巨大的分支割搜索空间。通用求解器在一个节点可能生成大量
+候选割。全部加入虽然可能强化松弛，却也会增大线性规划规模、数值负担和回调
+开销。因此，割选择是一个序贯决策问题，局部割效能无法充分描述割之间的相互
+作用。
+
+已有研究表明，机器学习可以在不替代数学模型的前提下辅助组合优化
+\citep{bengio2021machine}。强化学习已被用于割选择
+\citep{tang2020cut}、前瞻标签学习\citep{paulus2022looking}和层次序列
+决策\citep{wang2023hem}。然而，通用割特征不能直接识别候选割主要涉及
+制造选择、时间辅助变量还是最大完工时间。仅依靠通用统计量训练的策略可能
+选择单个看来有效、但结构上高度冗余的割。
+
+本文研究如下问题：\emph{能否把模型变量角色融入学习式割选择器，在保持
+求解器合法性和实验可复现性的同时，改善精确集群设备调度模型的随时性能？}
+为此，我们提出等价紧凑模型和结构感知选择器 \method{}。紧凑模型将已被制造
+等式固定的0--1变量连续化，同时保持真正的分配和排序变量为整数。选择器采用
+23维表示、层次策略和角色次模补全算子。
+
+本文主要贡献如下。
+
+\begin{enumerate}[leftmargin=*]
+  \item 建立双源混流集群设备的精确紧凑MIP，统一描述共享机械手、两种腔室
+  模式、提前清洗、载具驻留约束和可复用载具令牌。
+  \item 在13个通用割特征之外，引入10个模型角色描述量，形成能够刻画割如何
+  耦合离散决策、目标变量和连续物理辅助变量的可移植表示。
+  \item 将学习得到的策略锚点与单调次模补全相结合，在固定割预算下显式平衡
+  质量、角色覆盖和代表性。
+  \item 建立冻结的实例配对评估协议，覆盖标称比较、受控消融、析因条件、
+  选择性预组批、单因素敏感性以及规模和配方分布偏移。
+\end{enumerate}
+
+当前文档是一份遵循证据纪律的初稿：在所有配对实验完成之前，数值单元格保持
+为空，以避免选择性报告不完整种子或仅报告成功求解实例。
+
+\section{相关研究}
+\label{sec:related-zh}
+
+\subsection{半导体集群设备调度}
+
+集群设备调度把机器调度与机械手搬运、驻留时间约束相结合。已有研究针对包含
+集群设备的光刻区域\citep{madathil2018photolithography}以及带清洗操作的
+时间受限设备\citep{yuan2023purge}提出了精确或解析方法，说明显式表达设备
+物理过程具有重要价值。本文场景的区别在于，同时考虑两个物料源、产品和载具
+两类流、共享旋转腔室、两种配方模式、清洗决策以及可复用载具令牌。
+
+\subsection{精确MIP中的机器学习}
+
+SCIP提供模块化分支--割--定价框架，使学习组件能够在受控决策点介入
+\citep{achterberg2009scip,bestuzheva2023scip}。当学习组件只改变搜索优先级
+而不改变数学有效性时，学习辅助精确优化更容易审查和部署。基于这一原则，
+本文回调只接收SCIP生成的合法割，选择其中的优先子集，并让未选割继续供求解器
+使用；学习模型既不生成不等式，也不剪枝。
+
+\subsection{学习式割选择}
+
+\citet{tang2020cut}将割选择构造为强化学习问题，\citet{paulus2022looking}
+利用前瞻信息学习能带来有效界改进的割，\citet{wang2023hem}则借鉴指针网络
+\citep{vinyals2015pointer}对割数量和顺序进行层次建模。本文保留层次数量/
+序列思想，并增加模型角色特征和确定性次模补全。神经评分可以表达学习先验，
+而结构覆盖和多样性具有透明的边际收益递减性质，适合直接纳入集合目标。
+
+\section{问题描述与精确紧凑模型}
+\label{sec:model-zh}
+
+\subsection{制造系统拓扑}
+
+产品晶圆的路径为
+\[
+ \mathrm{LP}\rightarrow\mathrm{ATR}\rightarrow\mathrm{AL}
+ \rightarrow\mathrm{ATR}\rightarrow\mathrm{LL_U}
+ \rightarrow\mathrm{VTR}\rightarrow\mathrm{CH}
+ \rightarrow\mathrm{VTR}\rightarrow\mathrm{LL_L}
+ \rightarrow\mathrm{ATR}\rightarrow\mathrm{LP},
+\]
+其中，LP为装载端口，ATR和VTR分别为大气机械手和真空机械手，AL为校准器，
+$\mathrm{LL_U}$与$\mathrm{LL_L}$分别为上、下装载锁。可复用工艺环境载具
+（PEC）经VTR在PEC存储区和共享腔室之间流动。CH2和CH3为共享搬运和装载资源
+的旋转腔室。
+
+系统包含两种配方模式。在$4\times1$模式中，四片产品晶圆使用两个可达槽位组
+之一进行批处理；在$2\times2$模式中，一个PEC和两片产品晶圆构成物理有序的
+PEC--产品--产品--PEC链。清洗可在满足清洗间隔约束时提前触发；所选PEC必须
+在相应链持续期间保持驻留，并通过可复用令牌建模。资源锁禁止机械手动作和
+不相容装载操作并发执行。
+
+\subsection{事件和资源变量}
+
+设$\mathcal{O}$为操作集合，$\mathcal{R}$为物理资源集合，$\mathcal{A}$为
+工艺路径产生的优先弧集合。操作$i\in\mathcal{O}$的开始时间、加工时间和完成
+时间分别为$s_i$、$p_i$和$c_i=s_i+p_i$。二元变量$y_{ijr}$确定在单位容量
+资源$r$上相互冲突的两个操作的先后顺序；$x$表示分配及模式选择变量，$u$
+表示PEC令牌分配变量。模型包含优先约束
+\begin{equation}
+  s_j \ge c_i,\qquad (i,j)\in\mathcal{A},
+  \label{eq:precedence-zh}
+\end{equation}
+以及资源析取约束
+\begin{align}
+  s_j &\ge c_i-M_{ijr}(1-y_{ijr}), \\
+  s_i &\ge c_j-M_{jir}y_{ijr},
+  \qquad \{i,j\}\subseteq\mathcal{O}_r,
+  \label{eq:disjunction-zh}
+\end{align}
+其中$M_{ijr}$为事件相关的有效常数。容量、腔室旋转、槽位组、清洗、驻留和
+令牌守恒约束将$x$、$u$、$y$与$s$连接起来。完整的索引级模型和参数构造将在
+\TBD{在线补充材料及代码仓库链接}中给出。
+
+\subsection{等价紧凑化}
+
+部分名义上的二元成员、槽位和别名变量已经被所选制造模式产生的等式固定为
+0或1。紧凑模型在保留这些固定等式的前提下，将相应变量声明为连续变量。这一
+操作既不改变变量取值，也不改变可行域的投影，只是去除多余的整数声明。所有
+真正的分配、排序、模式和清洗决策仍保持为整数。因此，本文的“紧凑”表示等价
+重构，而不是对制造物理约束的松弛。
+
+\subsection{字典序目标}
+
+主目标为第一片产品晶圆离开LP到最后一片产品晶圆返回LP的时间区间：
+\begin{equation}
+  \min \cmax .
+  \label{eq:makespan-zh}
+\end{equation}
+在$\cmax$相同的情况下，次目标减少可避免的不平衡。若资源$r$的容量为$k_r$，
+固定工作量为$W_r$，则其总空闲时间为
+\begin{equation}
+  I_r=k_r\cmax-W_r.
+\end{equation}
+模型最小化如下字典序目标：
+\begin{equation}
+ \min_{\mathrm{lex}}\left(
+   \cmax,\;
+   \sum_{r\in\mathcal{R}_{\mathrm{key}}} I_r^2
+   +\eta\sum_{g\in\mathcal{G}} w_g
+ \right),
+ \label{eq:lexicographic-zh}
+\end{equation}
+其中五类关键物理资源在评估前固定，$w_g$表示可避免等待。线性小项只在最大
+完工时间和空闲时间平方和均相同时用于打破平局。
+
+\section{结构感知学习式割选择}
+\label{sec:method-zh}
+
+\subsection{决策接口与学习目标}
+
+在一次分离轮次中，SCIP提供合法候选池
+$\mathcal{P}=\{1,\ldots,n\}$，候选$i$表示有效不等式
+$a_i^\top z\le b_i$。低成本效能预筛选最多保留128个候选，策略最多选择16个
+割，未选候选按原合法顺序归还。
+
+状态包含候选特征和求解器上下文，动作由选择数量和有序子集组成。训练奖励为
+原始--对偶积分的负值：
+\begin{equation}
+ R=-\pdi=-\int_0^T g(t)\,dt,
+ \label{eq:pdi-zh}
+\end{equation}
+其中$g(t)$为归一化原始--对偶间隙，$T$为时间上限。PDI越低，随时性能越好。
+对于基线$b$，策略梯度估计为
+\begin{equation}
+ \widehat{\nabla_\theta J}
+ =\frac{1}{B}\sum_{\ell=1}^{B}
+   (R_\ell-b_\ell)\nabla_\theta
+   \log\pi_\theta(a_\ell\mid s_\ell),
+ \label{eq:reinforce-zh}
+\end{equation}
+该估计遵循\citet{williams1992reinforce}。不同训练样本可以并行计算，但本文
+将实现准确表述为策略梯度，而不是异步演员--评论家架构。
+
+\subsection{通用特征与模型角色特征}
+
+13维通用向量包含目标平行度、效能、支撑度、整数支撑度、归一化违反程度，
+以及割系数和目标系数的均值、最大值、最小值与标准差。
+
+结构扩展把变量划分为五种模型角色：二元决策、一般整数、连续目标变量、连续
+物理辅助变量和其他变量。对割$i$和角色$k$，其系数质量占比为
+\begin{equation}
+ m_{ik}=
+ \frac{\sum_{j\in\mathcal{V}_k}|a_{ij}|}
+      {\sum_j|a_{ij}|+\epsilon}.
+ \label{eq:mass-zh}
+\end{equation}
+五个占比再加上有界变量比例、正系数比例、离散--连续耦合度、主导角色占比和
+归一化角色熵，形成23维向量。该表示对尺度稳定，依赖模型角色而非具体实例的
+变量名称。
+
+\subsection{层次策略与束搜索}
+
+数量策略首先预测选择比例，随后指针式策略对有序序列评分
+\citep{vinyals2015pointer}。网络使用128维隐藏表示和一次glimpse。训练时
+采用随机采样，评估时采用贪心解码或宽度为3的束搜索。各学习基线共享序列结束
+处理、累计对数概率、回溯指针和候选池，确保束搜索比较不会改变候选范围或
+计时口径。
+
+\subsection{角色次模补全}
+
+设$A$为少量策略锚点，$S\supseteq A$为补全后的集合。对归一化质量$q_i$、
+策略分数$p_i$、角色质量$m_{ik}$、特征嵌入$h_i$和候选池$\mathcal{P}$，
+补全过程求解
+\begin{align}
+F(S)=&\;w_q\sum_{i\in S}q_i+w_p\sum_{i\in S}p_i
+ +w_c\sum_k \sqrt{\sum_{i\in S}m_{ik}} \nonumber\\
+&+\frac{w_r}{|\mathcal{P}|}
+ \sum_{j\in\mathcal{P}}\max_{i\in S}
+ \operatorname{sim}(h_i,h_j),
+\label{eq:submodular-zh}
+\end{align}
+且满足$|S|\le K$。归一化默认权重为
+$(w_q,w_p,w_c,w_r)=(0.35,0.20,0.25,0.20)$，补全池系数为2.0，锚点比例为
+0.25。
+
+在非负模函数项、模函数上的凹角色覆盖项以及设施选址代表性项下，$F$为单调
+次模函数。因此，对固定锚点后的剩余基数预算进行贪心补全，可以继承经典的
+$(1-1/e)$保证\citep{nemhauser1978analysis}。该保证只针对集合补全目标，
+并非对分支割运行时间或最终MIP质量的保证。
+
+\subsection{合法性与开销}
+
+\method{}不生成约束、不修改系数，也不宣布节点不可行。每个被选不等式均已
+通过SCIP的合法性检查，未选割仍按回调契约供求解器使用。因此，学习组件能够
+改变搜索轨迹和运行时间，但不改变调度模型的可行集，也不影响最终证明的有效
+性。所有回调推理、束搜索和后处理时间均计入统一的墙钟时间上限。
+
+\section{实验设计}
+\label{sec:experiments-zh}
+
+\subsection{冻结测试集}
+
+表~\ref{tab:suites-zh}汇总冻结测试集。标称实例用于主要比较；析因测试集改变
+晶圆数、配方构成和加工时间尺度；敏感性测试一次改变一个物理因素；OOD测试
+同时增大规模并改变配方平衡。测试实例不用于超参数调优。
+
+\begin{table}[htbp]
+\centering
+\caption{冻结评估测试集。}
+\label{tab:suites-zh}
+\begin{tabular}{p{0.18\linewidth}p{0.55\linewidth}r}
+\toprule
+测试集 & 设计 & 条件/实例数 \\
+\midrule
+标称主实验 & 冻结的标称制造实例 & 20 \\
+析因DOE & 晶圆数$\{8,16,24,32\}$、五种配方比例、
+加工尺度$\{0.9,1.0,1.1\}$ & 60 \\
+SPBS & 非纯$4{:}1$条件，无预组批与自动选择性预组批 & 48对 \\
+敏感性 & 搬运$\{0.8,1.2\}$、加工$\{0.8,1.2\}$、
+PEC容量10、清洗间隔$\{3,10\}$ & 8 \\
+OOD & 晶圆数$\{40,48,64\}$，配方比例
+$\{3{:}1,1{:}1,1{:}3\}$ & 9 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{比较方法}
+
+\begin{table}[htbp]
+\centering
+\caption{冻结主实验中的方法。所有方法使用相同的紧凑模型、热启动、SCIP
+配置、候选预筛选、计时口径和求解器种子。}
+\label{tab:methods-zh}
+\begin{tabular}{p{0.22\linewidth}p{0.69\linewidth}}
+\toprule
+方法 & 说明 \\
+\midrule
+SCIP & SCIP默认割选择。 \\
+ACS & 仅在冻结验证集上调参的确定性自适应割选择基线。 \\
+HEM & 13维通用特征、层次策略、贪心解码，无角色感知补全。 \\
+HEM+beam & 使用宽度3束搜索的HEM。 \\
+23D feature only & 通用特征加角色特征，不使用角色次模重排。 \\
+Structure+greedy & 23维策略、角色次模补全和贪心解码。 \\
+\method{} & 23维策略、宽度3束搜索、策略锚点和角色次模补全。 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{训练与实现}
+
+冻结训练配置采用5个独立训练种子、60个epoch、演员和评论家均为$10^{-4}$的
+Adam学习率、批量大小8、最大梯度范数2、每个epoch 8个训练样本和2个并行样本
+任务。高层选择百分比策略的学习率为$5\times10^{-4}$。候选数和选择数上限
+分别为128和16。检查点依据验证集PDI选择，不依据测试性能选择。
+
+实验通过PySCIPOpt调用SCIP。主实验、DOE、SPBS和敏感性实验的时间上限为
+600秒，OOD实验的时间上限为1200秒，并统一采用4096 MB的SCIP内存上限。
+所有实验完成后，最终稿将报告SCIP、PySCIPOpt、Python、PyTorch、CUDA、GPU、
+CPU、操作系统、线程数和分阶段内存上限。\TBD{补充最终复现环境表以及代码
+仓库/归档DOI。}
+
+\subsection{指标与统计分析}
+
+主要指标为PDI。次要指标包括最终原始界、对偶界、相对间隙、原始积分、首次
+可行解时间、最佳可行解时间、证明时间、根节点间隙、节点数、LP迭代次数、
+接受割数量、回调/推理开销、超时率、内存失败率和最优求解率。
+
+比较按制造实例和求解器种子配对。训练种子用于表征学习模型的变异性，但同一
+制造实例上的重复求解器运行不能被当作相互独立的新实例。对每个预先指定的
+对比，报告配对中位数差、以制造实例为抽样单元的bootstrap置信区间、适用时的
+Wilcoxon符号秩检验以及Holm校正$p$值。超时和失败必须保留并单独汇总，不得
+为了改善表面性能而删除。
+
+\section{实验结果}
+\label{sec:results-zh}
+
+\subsection{标称主实验}
+
+\begin{table}[htbp]
+\centering
+\caption{标称主实验结果。结果应由20个实例、5个求解器种子以及学习方法的
+5个训练种子计算。PDI、间隙和时间越低越好，最优率越高越好。}
+\label{tab:main-zh}
+\begin{tabular}{lrrrrr}
+\toprule
+方法 & PDI & 最终间隙（\%） & 首次可行解（秒） & 节点数 & 最优率（\%）\\
+\midrule
+SCIP & -- & -- & -- & -- & -- \\
+ACS & -- & -- & -- & -- & -- \\
+HEM & -- & -- & -- & -- & -- \\
+HEM+beam & -- & -- & -- & -- & -- \\
+23D feature only & -- & -- & -- & -- & -- \\
+Structure+greedy & -- & -- & -- & -- & -- \\
+\method{} & -- & -- & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\TBD{报告完整配对的标称比较、效应量、置信区间、校正检验和失败数量。不得
+使用当前不完整分片填表。}
+
+\subsection{消融与机理分析}
+
+\begin{table}[htbp]
+\centering
+\caption{预先指定的机理对比。}
+\label{tab:ablation-zh}
+\begin{tabular}{p{0.31\linewidth}p{0.38\linewidth}rr}
+\toprule
+对比 & 隔离的机制 & $\Delta$PDI & Holm $p$ \\
+\midrule
+HEM+beam vs.\ HEM & 搜索宽度 & -- & -- \\
+23D feature only vs.\ HEM+beam & 角色特征 & -- & -- \\
+Structure+greedy vs.\ 23D feature only & 次模补全 & -- & -- \\
+\method{} vs.\ Structure+greedy & 固定结构规则下的束搜索 & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\TBD{增加割池大小、所选割角色覆盖、冗余度、回调开销和根节点界分析，将求解
+表现与所提机理联系起来。}
+
+\subsection{析因、SPBS和敏感性结果}
+
+\begin{table}[htbp]
+\centering
+\caption{设计制造条件下的稳健性汇总。}
+\label{tab:robustness-zh}
+\begin{tabular}{lrrrr}
+\toprule
+研究 & 条件数 & 主效应/对比 & $\Delta$PDI & 校正$p$\\
+\midrule
+析因DOE & 60 & \TBD{指定预设模型项} & -- & -- \\
+SPBS & 48对 & 自动方式 vs.\ 无预组批 & -- & -- \\
+敏感性 & 8 & 最大单因素退化 & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\TBD{只有在交互项已预设且可估计时才报告析因交互；SPBS改变了制造预处理
+策略，应与割选择器比较分开报告。}
+
+\subsection{分布外泛化}
+
+\begin{table}[htbp]
+\centering
+\caption{按晶圆数划分的OOD结果。所有比较方法共享4096 MB内存上限和1200秒
+墙钟时间上限。}
+\label{tab:ood-zh}
+\begin{tabular}{lrrrrrr}
+\toprule
+\multirow{2}{*}{方法} &
+\multicolumn{2}{c}{40片} &
+\multicolumn{2}{c}{48片} &
+\multicolumn{2}{c}{64片} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+& PDI & 失败率（\%） & PDI & 失败率（\%） & PDI & 失败率（\%）\\
+\midrule
+SCIP & -- & -- & -- & -- & -- & -- \\
+ACS & -- & -- & -- & -- & -- & -- \\
+HEM & -- & -- & -- & -- & -- & -- \\
+HEM+beam & -- & -- & -- & -- & -- & -- \\
+23D feature only & -- & -- & -- & -- & -- & -- \\
+Structure+greedy & -- & -- & -- & -- & -- & -- \\
+\method{} & -- & -- & -- & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+截至2026年7月27日的初稿审计，计划的729次OOD评估中已有63次在修订后的
+4096 MB协议下完成，且未记录运行错误。该执行预检不用于估计方法性能；剩余
+666次评估已按内存预算分为三路运行。现有2048 MB观测不纳入该活动。
+\TBD{全部729次评估完成后，报告包含超时率和内存失败率的配对结果。}
+
+\section{工业管理启示}
+\label{sec:implications-zh}
+
+本框架把三类责任分开：制造工程师定义可审计的物理约束，SCIP负责有效不等式
+和最优性证明，学习组件负责分配有限的割预算。当优化器需要得到改进、但可行性
+不能交由黑箱预测时，这种职责划分具有实际意义。PDI还刻画了尽早获得高质量
+调度的运行价值，即使在派工时限内尚未完成最优性证明。
+
+\TBD{完整实验结束后，将观测到的PDI和可行解时间改善转化为测试晶圆规模下的
+生产含义；不得把吞吐量或成本结论外推到未建模系统。}
+
+\section{局限性与有效性威胁}
+\label{sec:limitations-zh}
+
+第一，角色表示依赖模型变量到模型角色的正确映射。它可以跨同一模型族的不同
+实例复用，但尚未在无关MIP上验证。第二，次模保证只适用于剩余集合补全，不是
+运行时间保证。第三，墙钟比较对硬件和实现敏感，因此推理必须计入时间上限，
+最终运行环境也必须固定。第四，OOD实例会产生显著内存压力，该现象应作为实验
+结果报告而不能删失。最后，本文评估的是确定性仿真调度模型；实际部署还需考虑
+不确定性、重调度、设备故障和晶圆厂级集成。
+
+\section{结论}
+\label{sec:conclusion-zh}
+
+本文针对双源混流半导体精确调度模型提出结构感知学习式割选择器\method{}。
+该方法组合23维通用及角色表示、层次策略锚点和单调次模补全。回调只作用于
+求解器生成的合法割，因此保持模型有效性和精确求解语义。本文建立了冻结的
+配对协议，用于检验标称性能、作用机理、设计制造因素和分布偏移。
+\TBD{全部实验和稳健性检查完成后，填入严格基于证据的最终结论。}
+
+\section*{CRediT作者贡献声明}
+
+\TBD{填写每位作者的CRediT角色。}
+
+\section*{经费}
+
+\TBD{填写经费信息，或声明未获得专项经费。}
+
+\section*{利益冲突声明}
+
+\TBD{填写经所有作者确认的声明。}
+
+\section*{数据与代码可用性}
+
+冻结配置、实例生成器、模型实现、训练代码和分析脚本将在
+\TBD{代码仓库URL和不可变DOI}归档。原始实验输出及软硬件版本的机器可读清单
+将随归档一同提供。
+
+\section*{致谢}
+
+\TBD{填写致谢或删除本节。}
+
+\bibliographystyle{elsarticle-harv}
+\bibliography{rdmct_cie_references}
+
+\end{document}

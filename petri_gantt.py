@@ -65,6 +65,7 @@ BAR_HEIGHT = 42
 LABEL_ROW_HEIGHT = 24
 LABEL_ROW_GAP = 6.0
 SECONDS_PER_HOUR = 3600.0
+PATH_TIME_TOLERANCE = 1e-3
 
 NEW_PRODUCT_STAGE_ORDER = [
     "atr_lp_al",
@@ -158,6 +159,46 @@ def _lane_y(index: int) -> int:
 def _time_to_x(value: float, horizon: float) -> float:
     plot_width = SVG_WIDTH - LEFT_MARGIN - RIGHT_MARGIN
     return LEFT_MARGIN + (value / max(horizon, 1e-9)) * plot_width
+
+
+def _validate_continuous_entity_lanes(
+    lanes: List[str],
+    tasks: List[Dict[str, object]],
+    tolerance: float = PATH_TIME_TOLERANCE,
+) -> None:
+    """Reject a path chart that cannot represent one physical wafer per lane."""
+    tasks_by_lane: Dict[str, List[Dict[str, object]]] = {}
+    for task in tasks:
+        tasks_by_lane.setdefault(str(task["lane"]), []).append(task)
+
+    errors = []
+    for lane in lanes:
+        lane_tasks = sorted(
+            tasks_by_lane.get(lane, []),
+            key=lambda task: (float(task["start"]), float(task["end"])),
+        )
+        for previous, current in zip(lane_tasks, lane_tasks[1:]):
+            previous_end = float(previous["end"])
+            current_start = float(current["start"])
+            delta = current_start - previous_end
+            if delta > tolerance:
+                errors.append(
+                    f"{lane}: uncovered interval {previous_end:.6f}..{current_start:.6f} "
+                    f"between {previous['label']!r} and {current['label']!r}"
+                )
+            elif delta < -tolerance:
+                errors.append(
+                    f"{lane}: overlapping interval {current_start:.6f}..{previous_end:.6f} "
+                    f"between {previous['label']!r} and {current['label']!r}"
+                )
+
+    if errors:
+        preview = "\n".join(errors[:12])
+        extra = "" if len(errors) <= 12 else f"\n... and {len(errors) - 12} more"
+        raise ValueError(
+            "Invalid wafer path schedule: each product/PEC lane must be continuous "
+            f"and non-overlapping.\n{preview}{extra}"
+        )
 
 
 def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
@@ -352,6 +393,19 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                 abs(product_start(first, stage_name) - product_start(second, stage_name)) <= 1e-6
                 and abs(product_end(first, stage_name) - product_end(second, stage_name)) <= 1e-6
             )
+        def paired_stage_interval(wafer_id: int, stage_name: str) -> Tuple[float, float]:
+            """Return a shared pair action even when the solution exports it once."""
+            start = product_start(wafer_id, stage_name)
+            end = product_end(wafer_id, stage_name)
+            if end > start + 1e-9:
+                return start, end
+            for member_id in pair_members_for_wafer(wafer_id):
+                member_start = product_start(member_id, stage_name)
+                member_end = product_end(member_id, stage_name)
+                if member_end > member_start + 1e-9:
+                    return member_start, member_end
+            return start, end
+
         full_pair_location = {
             pair_id: (pm_id, batch_id, side_id)
             for (pm_id, batch_id, side_id), pair_id in full_assignment.items()
@@ -388,28 +442,59 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
         def add_pm_path_tasks(lane_name: str, wafer_id: int, entity: str) -> None:
             mix_pair = mix_pair_by_wafer.get(wafer_id)
             location = mix_pair_location.get(mix_pair) if mix_pair is not None else None
+            pm_window_start = product_start(wafer_id, "pm")
+            pm_window_end = product_end(wafer_id, "pm")
             if location is not None:
-                pm_id, pos_id = location
-                first_start = _float(solution.get(f"mix_cycle_start_{pm_id}_{pos_id}", 0.0))
-                first_end = _float(solution.get(f"mix_cycle_end_{pm_id}_{pos_id}", 0.0))
-                second_start = _float(solution.get(f"mix_cycle_start_{pm_id}_{pos_id + 1}", 0.0))
-                second_end = _float(solution.get(f"mix_cycle_end_{pm_id}_{pos_id + 1}", 0.0))
-                if first_end > first_start + 1e-9 and second_end > second_start + 1e-9:
-                    add_path_task(lane_name, first_start, first_end, "2x2 PM process #1", entity, "#E45756")
-                    add_path_task(
-                        lane_name,
-                        first_end,
-                        second_start,
-                        "2x2 in-chamber bridge/wait",
-                        entity,
-                        "#BAB0AC",
-                    )
-                    add_path_task(lane_name, second_start, second_end, "2x2 PM process #2", entity, "#E45756")
+                pm_id, _ = location
+                cycle_pattern = re.compile(rf"mix_cycle_start_{pm_id}_(\d+)$")
+                matching_cycles = []
+                for variable_name in solution:
+                    match = cycle_pattern.match(variable_name)
+                    if not match:
+                        continue
+                    cycle_id = int(match.group(1))
+                    cycle_start = _float(solution.get(variable_name, 0.0))
+                    cycle_end = _float(solution.get(f"mix_cycle_end_{pm_id}_{cycle_id}", cycle_start))
+                    if (
+                        cycle_end > cycle_start + 1e-9
+                        and cycle_start >= pm_window_start - PATH_TIME_TOLERANCE
+                        and cycle_end <= pm_window_end + PATH_TIME_TOLERANCE
+                    ):
+                        matching_cycles.append((cycle_start, cycle_end, cycle_id))
+                matching_cycles.sort()
+                if (
+                    len(matching_cycles) >= 2
+                    and abs(matching_cycles[0][0] - pm_window_start) <= PATH_TIME_TOLERANCE
+                    and abs(matching_cycles[-1][1] - pm_window_end) <= PATH_TIME_TOLERANCE
+                ):
+                    for cycle_index, (cycle_start, cycle_end, _) in enumerate(matching_cycles, start=1):
+                        if cycle_index == 1:
+                            cycle_start = pm_window_start
+                        if cycle_index == len(matching_cycles):
+                            cycle_end = pm_window_end
+                        if cycle_index > 1:
+                            previous_end = matching_cycles[cycle_index - 2][1]
+                            add_path_task(
+                                lane_name,
+                                previous_end,
+                                cycle_start,
+                                "2x2 in-chamber bridge/wait",
+                                entity,
+                                "#BAB0AC",
+                            )
+                        add_path_task(
+                            lane_name,
+                            cycle_start,
+                            cycle_end,
+                            f"2x2 PM process #{cycle_index}",
+                            entity,
+                            "#E45756",
+                        )
                     return
             add_path_task(
                 lane_name,
-                product_start(wafer_id, "pm"),
-                product_end(wafer_id, "pm"),
+                pm_window_start,
+                pm_window_end,
                 pm_process_label(wafer_id),
                 entity,
                 "#E45756",
@@ -441,17 +526,23 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                 entity,
                 "#B07AA1",
             )
+            exchange_start, exchange_end = paired_stage_interval(wafer_id, "atr_al_exchange")
             add_path_task(
                 lane_name,
-                product_start(wafer_id, "atr_al_exchange"),
-                product_end(wafer_id, "atr_al_exchange"),
-                "ATR single-wafer exchange at AL",
+                exchange_start,
+                exchange_end,
+                (
+                    "ATR single-wafer exchange at AL"
+                    if product_end(wafer_id, "atr_al_exchange")
+                    > product_start(wafer_id, "atr_al_exchange") + 1e-9
+                    else "ATR holding calibrated wafer during AL exchange"
+                ),
                 entity,
                 "#D37295",
             )
             add_path_task(
                 lane_name,
-                max(lp_al_end, hold_before_al_end, product_end(wafer_id, "atr_al_exchange")),
+                max(lp_al_end, hold_before_al_end, exchange_end),
                 product_start(wafer_id, "al"),
                 "AL wait",
                 entity,
@@ -573,35 +664,113 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                 pec_id,
             ),
         )
-        for pec_id in pec_ids:
-            has_activity = any(
-                pec_stage_end.get((pec_id, stage_name), 0.0) > pec_stage_start.get((pec_id, stage_name), 0.0) + 1e-9
+        active_pec_ids = [
+            pec_id
+            for pec_id in pec_ids
+            if any(
+                pec_stage_end.get((pec_id, stage_name), 0.0)
+                > pec_stage_start.get((pec_id, stage_name), 0.0) + 1e-9
                 for stage_name in NEW_PEC_STAGE_ORDER
             )
-            if not has_activity:
-                continue
-            assignment = assign_pec_by_pec.get(pec_id)
-            lane_name = f"PEC E{pec_id}"
-            if assignment is not None:
-                lane_name += f" | PM{assignment[0]}-B{assignment[1]}"
-            lanes.append(lane_name)
-            token_id = pec_token_by_job.get(pec_id)
-            entity = f"PEC{token_id}" if token_id is not None else f"E{pec_id}"
-            load_start = pec_stage_start.get((pec_id, "vtr_load"), 0.0)
-            load_end = pec_stage_end.get((pec_id, "vtr_load"), load_start)
-            pm_start = pec_stage_start.get((pec_id, "pm"), load_end)
-            pm_end = pec_stage_end.get((pec_id, "pm"), pm_start)
-            unload_start = pec_stage_start.get((pec_id, "vtr_unload"), pm_end)
-            unload_end = pec_stage_end.get((pec_id, "vtr_unload"), unload_start)
-            add_path_task(lane_name, load_start, load_end, "VTR PEC->PM", entity, "#72B7B2")
-            add_path_task(lane_name, load_end, pm_start, "PM wait", entity, "#F2A09A")
-            add_path_task(lane_name, pm_start, pm_end, "PM process", entity, "#E45756")
-            add_path_task(lane_name, pm_end, unload_start, "PM wait", entity, "#F2A09A")
-            add_path_task(lane_name, unload_start, unload_end, "VTR PM->PEC", entity, "#B279A2")
+        ]
 
+        # PEC identity is intentionally anonymous in the scheduling model.
+        # Create deterministic display-only token identities in chronological
+        # round-robin order. A busy token is skipped, so the coloring remains
+        # physically feasible while producing PEC1..PECN, then wrapping.
+        configured_pool_size = int(_float(solution.get("_gantt_pec_pool_size", 0.0)))
+        inferred_pool_size = max(pec_token_by_job.values(), default=0)
+        pec_pool_size = max(configured_pool_size, inferred_pool_size)
+        if active_pec_ids and pec_pool_size <= 0:
+            raise ValueError(
+                "Cannot assign anonymous PEC display lanes: pec_pool_size is missing."
+            )
+
+        display_token_by_job: Dict[int, int] = {}
+        token_available = {token_id: -math.inf for token_id in range(1, pec_pool_size + 1)}
+        next_token = 1
+        chronological_jobs = sorted(
+            active_pec_ids,
+            key=lambda job_id: (
+                pec_stage_start.get((job_id, "vtr_load"), 0.0),
+                job_id,
+            ),
+        )
+        for pec_id in chronological_jobs:
+            load_start = pec_stage_start.get((pec_id, "vtr_load"), 0.0)
+            unload_end = pec_stage_end.get((pec_id, "vtr_unload"), load_start)
+            selected_token = None
+            for offset in range(pec_pool_size):
+                token_id = ((next_token - 1 + offset) % pec_pool_size) + 1
+                if token_available[token_id] <= load_start + PATH_TIME_TOLERANCE:
+                    selected_token = token_id
+                    break
+            if selected_token is None:
+                raise ValueError(
+                    f"Anonymous PEC capacity violation at t={load_start:.6f}: "
+                    f"all {pec_pool_size} display tokens are still occupied."
+                )
+            display_token_by_job[pec_id] = selected_token
+            token_available[selected_token] = unload_end
+            next_token = selected_token % pec_pool_size + 1
+
+        pec_jobs_by_lane: Dict[int, List[int]] = {}
+        for pec_id, token_id in display_token_by_job.items():
+            pec_jobs_by_lane.setdefault(token_id, []).append(pec_id)
+
+        ordered_pec_lanes = sorted(
+            pec_jobs_by_lane.items(),
+            key=lambda item: (
+                min(pec_stage_start.get((job_id, "vtr_load"), 0.0) for job_id in item[1]),
+                item[0],
+            ),
+        )
+        for token_id, job_ids in ordered_pec_lanes:
+            job_ids = sorted(
+                job_ids,
+                key=lambda job_id: (
+                    pec_stage_start.get((job_id, "vtr_load"), 0.0),
+                    job_id,
+                ),
+            )
+            lane_name = f"PEC P{token_id} | jobs " + ",".join(f"E{job_id}" for job_id in job_ids)
+            physical_entity = f"PEC{token_id}"
+            lanes.append(lane_name)
+
+            previous_return = None
+            for pec_id in job_ids:
+                entity = f"{physical_entity}/E{pec_id}"
+                load_start = pec_stage_start.get((pec_id, "vtr_load"), 0.0)
+                load_end = pec_stage_end.get((pec_id, "vtr_load"), load_start)
+                pm_start = pec_stage_start.get((pec_id, "pm"), load_end)
+                pm_end = pec_stage_end.get((pec_id, "pm"), pm_start)
+                unload_start = pec_stage_start.get((pec_id, "vtr_unload"), pm_end)
+                unload_end = pec_stage_end.get((pec_id, "vtr_unload"), unload_start)
+                if abs(pm_start - load_end) <= PATH_TIME_TOLERANCE:
+                    pm_start = load_end
+                if abs(unload_start - pm_end) <= PATH_TIME_TOLERANCE:
+                    unload_start = pm_end
+                if previous_return is not None:
+                    if abs(load_start - previous_return) <= PATH_TIME_TOLERANCE:
+                        load_start = previous_return
+                    add_path_task(
+                        lane_name,
+                        previous_return,
+                        load_start,
+                        "PEC storage wait",
+                        physical_entity,
+                        "#BAB0AC",
+                    )
+                add_path_task(lane_name, load_start, load_end, "VTR PEC storage->CH", entity, "#72B7B2")
+                add_path_task(lane_name, load_end, pm_start, "CH wait", entity, "#F2A09A")
+                add_path_task(lane_name, pm_start, pm_end, "CH process", entity, "#E45756")
+                add_path_task(lane_name, pm_end, unload_start, "CH wait", entity, "#F2A09A")
+                add_path_task(lane_name, unload_start, unload_end, "VTR CH->PEC storage", entity, "#B279A2")
+                previous_return = unload_end
         if not lanes:
             return {}
 
+        _validate_continuous_entity_lanes(lanes, tasks)
         horizon = max(time_candidates) if time_candidates else 0.0
         return {
             "is_petri": True,
@@ -3022,15 +3191,50 @@ def _write_interactive_gantt_frontend(
     out_dir: Path,
     chart_entries: List[Dict[str, str]],
     comparison_svg: str = "",
+    metric_svgs: List[str] = None,
 ) -> List[str]:
     comparison_rel = ""
     if comparison_svg:
         comparison_path = resolve_path(comparison_svg)
         comparison_rel = _html_relpath(comparison_path, out_dir)
 
+    metric_titles = {
+        "feasibility": "Incumbent Availability",
+        "objective": "Mean Best Cmax",
+        "gap": "Primary Cmax Primal-Dual Gap",
+        "pdi": "Primary Cmax Primal-Dual Integral",
+        "time": "Mean Primary Cmax Optimize Time",
+        "two_stage_time": "Mean Total Two-Stage Optimize Time",
+        "wall_time": "Mean End-to-End Wall Time",
+        "callback": "Mean Cut-Selection Callback Time",
+        "nodes": "Mean Primary Cmax Search Nodes",
+    }
+    metric_entries = []
+    ordered_suffixes = sorted(metric_titles, key=len, reverse=True)
+    for metric_svg in metric_svgs or []:
+        metric_path = resolve_path(metric_svg)
+        metric_name = next(
+            (
+                suffix
+                for suffix in ordered_suffixes
+                if metric_path.stem.endswith(f"_{suffix}")
+            ),
+            metric_path.stem,
+        )
+        metric_entries.append(
+            {
+                "name": metric_name,
+                "title": metric_titles.get(
+                    metric_name, metric_name.replace("_", " ").title()
+                ),
+                "path": _html_relpath(metric_path, out_dir),
+            }
+        )
+
     manifest = {
         "charts": chart_entries,
         "comparison_svg": comparison_rel,
+        "metric_svgs": metric_entries,
     }
     manifest_path = out_dir / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -3038,6 +3242,7 @@ def _write_interactive_gantt_frontend(
     chart_json = _json_script_payload(chart_entries)
     view_label_json = _json_script_payload(VIEW_DISPLAY_NAMES)
     comparison_json = _json_script_payload(comparison_rel)
+    metric_json = _json_script_payload(metric_entries)
 
     index_html = out_dir / "index.html"
     index_html.write_text(
@@ -3082,6 +3287,11 @@ def _write_interactive_gantt_frontend(
                 "object { display: block; width: 100%; border: 0; background: #ffffff; }",
                 ".chart-object { width: 100%; height: 100%; min-height: 100%; }",
                 ".comparison-object { height: 520px; min-height: 420px; }",
+                ".metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 14px; padding: 14px; }",
+                ".metric-card { margin: 0; min-width: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #ffffff; }",
+                ".metric-card figcaption { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 13px; font-weight: 700; }",
+                ".metric-card a { color: var(--accent); text-decoration: none; white-space: nowrap; }",
+                ".metric-card img { display: block; width: 100%; height: auto; min-height: 250px; object-fit: contain; background: #ffffff; }",
                 ".empty { padding: 36px 16px; color: var(--muted); font-weight: 700; text-align: center; }",
                 "[hidden] { display: none !important; }",
                 "@media (max-width: 860px) { .toolbar { grid-template-columns: 1fr; } .topbar { align-items: flex-start; flex-direction: column; } .button { width: 100%; } .chart-viewport { height: 68vh; min-height: 420px; } .section-head { align-items: flex-start; flex-direction: column; } }",
@@ -3110,12 +3320,17 @@ def _write_interactive_gantt_frontend(
                 '<div class="section-head"><h2>Ablation Comparison</h2><a id="comparisonLink" class="button" href="#" target="_blank" rel="noopener">Open SVG</a></div>',
                 '<div class="viewport"><object id="comparisonObject" class="comparison-object" type="image/svg+xml"></object></div>',
                 "</section>",
+                '<section id="metricsSection" class="section" hidden>',
+                '<div class="section-head"><h2>Ablation Metrics</h2><span>Raw values, valid-run counts, and change versus SCIP</span></div>',
+                '<div id="metricGrid" class="metric-grid"></div>',
+                "</section>",
                 "</main>",
                 "</div>",
                 "<script>",
                 "var CHARTS = " + chart_json + ";",
                 "var VIEW_LABELS = " + view_label_json + ";",
                 "var COMPARISON_SVG = " + comparison_json + ";",
+                "var METRIC_SVGS = " + metric_json + ";",
                 "(function () {",
                 "  var charts = CHARTS || [];",
                 "  var viewSelect = document.getElementById('viewSelect');",
@@ -3263,6 +3478,31 @@ def _write_interactive_gantt_frontend(
                 "    document.getElementById('comparisonObject').data = COMPARISON_SVG;",
                 "    document.getElementById('comparisonLink').href = COMPARISON_SVG;",
                 "  }",
+                "  if (METRIC_SVGS && METRIC_SVGS.length) {",
+                "    var metricsSection = document.getElementById('metricsSection');",
+                "    var metricGrid = document.getElementById('metricGrid');",
+                "    metricsSection.hidden = false;",
+                "    METRIC_SVGS.forEach(function (entry) {",
+                "      var card = document.createElement('figure');",
+                "      var caption = document.createElement('figcaption');",
+                "      var title = document.createElement('span');",
+                "      var link = document.createElement('a');",
+                "      var image = document.createElement('img');",
+                "      card.className = 'metric-card';",
+                "      title.textContent = entry.title;",
+                "      link.textContent = 'Open SVG';",
+                "      link.href = entry.path;",
+                "      link.target = '_blank';",
+                "      link.rel = 'noopener';",
+                "      image.src = entry.path;",
+                "      image.alt = entry.title;",
+                "      caption.appendChild(title);",
+                "      caption.appendChild(link);",
+                "      card.appendChild(caption);",
+                "      card.appendChild(image);",
+                "      metricGrid.appendChild(card);",
+                "    });",
+                "  }",
                 "}());",
                 "</script>",
                 "</body>",
@@ -3279,6 +3519,7 @@ def generate_gantt_charts_from_records(
     output_dir: str,
     view: str = "all",
     comparison_svg: str = "",
+    metric_svgs: List[str] = None,
 ) -> List[str]:
     out_dir = resolve_path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -3287,7 +3528,10 @@ def generate_gantt_charts_from_records(
     seen_stems: Dict[str, int] = {}
 
     for record in records:
-        solution = record.get("solution", {}) or {}
+        solution = dict(record.get("solution", {}) or {})
+        hyperparameters = record.get("hyperparameters", {}) or {}
+        if isinstance(hyperparameters, dict) and hyperparameters.get("pec_pool_size") is not None:
+            solution["_gantt_pec_pool_size"] = hyperparameters["pec_pool_size"]
         instance_name = Path(str(record.get("instance", "instance"))).stem
         method_name = _safe_file_part(str(record.get("method", "")).strip())
         base_file_stem = instance_name if not method_name or method_name == "result" else f"{instance_name}_{method_name}"
@@ -3301,8 +3545,15 @@ def generate_gantt_charts_from_records(
             generated.append(str(output_file))
             chart_entries.append(_chart_entry(record, schedule, view_name, output_file, out_dir))
 
-    if chart_entries or comparison_svg:
-        generated.extend(_write_interactive_gantt_frontend(out_dir, chart_entries, comparison_svg=comparison_svg))
+    if chart_entries or comparison_svg or metric_svgs:
+        generated.extend(
+            _write_interactive_gantt_frontend(
+                out_dir,
+                chart_entries,
+                comparison_svg=comparison_svg,
+                metric_svgs=metric_svgs,
+            )
+        )
     return generated
 
 

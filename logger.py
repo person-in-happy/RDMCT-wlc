@@ -102,6 +102,7 @@ class Logger(object):
 
         self._log_tabular_only = False
         self._header_printed = False
+        self._console_output_enabled = True
         self.table_printer = TerminalTablePrinter()
 
         # Text logs are intentionally independent from progress.csv.  The
@@ -119,8 +120,6 @@ class Logger(object):
         )
         self._compact_log_patterns = (
             "sampling worker",
-            "forcedcuts length:",
-            "len cuts:",
             "epoch:",
             "training...",
             "evaluating...",
@@ -203,7 +202,7 @@ class Logger(object):
         if file_name not in arr:
             mkdir_p(os.path.dirname(file_name))
             arr.append(file_name)
-            fds[file_name] = open(file_name, mode)
+            fds[file_name] = open(file_name, mode, encoding="utf-8")
 
     def _remove_output(self, file_name, arr, fds):
         if file_name in arr:
@@ -265,6 +264,13 @@ class Logger(object):
     def get_log_tabular_only(self, ):
         return self._log_tabular_only
 
+    def set_console_output_enabled(self, enabled):
+        """Enable/disable terminal text while preserving configured log files."""
+        self._console_output_enabled = bool(enabled)
+
+    def get_console_output_enabled(self):
+        return self._console_output_enabled
+
     def log(self, s, with_prefix=True, with_timestamp=True):
         if not self._should_emit_text(s):
             return
@@ -276,15 +282,16 @@ class Logger(object):
             timestamp = now.strftime('%Y-%m-%d %H:%M:%S.%f %Z')
             out = "%s | %s" % (timestamp, out)
         if not self._log_tabular_only:
-            # Also log to stdout
-            print(out)
+            if self._console_output_enabled:
+                print(out)
             pending_text = out + '\n'
             for file_name in list(self._text_fds):
                 self._rotate_text_output_if_needed(file_name, pending_text)
                 fd = self._text_fds[file_name]
                 fd.write(pending_text)
                 fd.flush()
-            sys.stdout.flush()
+            if self._console_output_enabled:
+                sys.stdout.flush()
 
     def record_tabular(self, key, val):
         self._tabular.append((self._tabular_prefix_str + str(key), str(val)))

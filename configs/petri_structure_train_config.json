@@ -18,8 +18,10 @@
     "cutsel_max_candidates": 128,
     "cutsel_max_selected_cuts": 16,
     "warm_start_solution_file": "auto",
-    "lexicographic_schedule_stability": false,
-    "lexicographic_stability_time_limit": 0,
+    "lexicographic_schedule_stability": true,
+    "schedule_stability_mode": "linear",
+    "lexicographic_stability_time_limit": 10,
+    "lexicographic_stability_node_limit": 5000,
     "schedule_chamber_idle_square_penalty": 0.00001,
     "schedule_pm_wait_square_penalty": 0.001,
     "schedule_module_wait_square_penalty": 0.00001,
@@ -95,7 +97,10 @@
       "cutsel_max_candidates": 128,
       "cutsel_max_selected_cuts": 16,
       "warm_start_solution_file": "auto",
-      "lexicographic_schedule_stability": false
+      "lexicographic_schedule_stability": true,
+      "schedule_stability_mode": "linear",
+      "lexicographic_stability_time_limit": 10,
+      "lexicographic_stability_node_limit": 5000
     }
   },
   "online_test_kwargs": {
@@ -113,7 +118,10 @@
       "cutsel_max_candidates": 128,
       "cutsel_max_selected_cuts": 16,
       "warm_start_solution_file": "auto",
-      "lexicographic_schedule_stability": false
+      "lexicographic_schedule_stability": true,
+      "schedule_stability_mode": "linear",
+      "lexicographic_stability_time_limit": 10,
+      "lexicographic_stability_node_limit": 5000
     }
   },
   "start_epoch": 0

@@ -1,6 +1,7 @@
 import os
 import re
 import threading
+import time
 from pathlib import Path
 import numpy as np
 from scip_imports import scip
@@ -36,7 +37,7 @@ class SCIPCutSelEnv():
         scip_interrupt_grace_seconds=30.0,
         warm_start_solution_file=None,
         lexicographic_schedule_stability=True,
-        schedule_stability_mode="quadratic",
+        schedule_stability_mode="linear",
         lexicographic_fix_discrete_decisions=True,
         lexicographic_free_double_decisions=True,
         lexicographic_cmax_tolerance=1e-6,
@@ -88,7 +89,7 @@ class SCIPCutSelEnv():
         self.scip_interrupt_grace_seconds = scip_interrupt_grace_seconds
         self.warm_start_solution_file = warm_start_solution_file
         self.lexicographic_schedule_stability = lexicographic_schedule_stability
-        self.schedule_stability_mode = str(schedule_stability_mode or "quadratic").strip().lower()
+        self.schedule_stability_mode = str(schedule_stability_mode or "linear").strip().lower()
         self.lexicographic_fix_discrete_decisions = lexicographic_fix_discrete_decisions
         self.lexicographic_free_double_decisions = lexicographic_free_double_decisions
         self.lexicographic_cmax_tolerance = lexicographic_cmax_tolerance
@@ -334,6 +335,7 @@ class SCIPCutSelEnv():
         secondary_prefixes = [
             "schedule_wait_square_def_",
             "chamber_nonprocess_wait_",
+            "resource_idle_",
         ]
         if (
             float(self.schedule_max_wait_time or 0.0) <= 0
@@ -547,10 +549,24 @@ class SCIPCutSelEnv():
             if warm_start_path.is_file():
                 try:
                     warm_start = self.m.readSolFile(str(warm_start_path))
-                    stored = self.m.addSol(warm_start, free=True)
-                    logger.log(
-                        f"loaded Petri warm start: {warm_start_path} (stored={stored})"
+                    fully_feasible = bool(
+                        self.m.checkSol(
+                            warm_start,
+                            printreason=False,
+                            completely=True,
+                            original=True,
+                        )
                     )
+                    if fully_feasible:
+                        stored = self.m.addSol(warm_start, free=True)
+                        logger.log(
+                            f"loaded feasible Petri warm start: {warm_start_path} (stored={stored})"
+                        )
+                    else:
+                        self.m.freeSol(warm_start)
+                        logger.log(
+                            f"warning: rejected incomplete or infeasible Petri warm start: {warm_start_path}"
+                        )
                 except Exception as exc:
                     logger.log(f"warning: failed to load Petri warm start {warm_start_path}: {exc}")
             else:
@@ -674,7 +690,7 @@ class SCIPCutSelEnv():
             )
         logger.log(f"applied SCIP heuristics profile: {profile_name}")
 
-    def step(self, CutSel):
+    def step(self, CutSel, solution_file=None):
         if CutSel is not None:
             # Keep this safeguard in the environment configuration so test,
             # evaluation, and training use the same bounded callback path.
@@ -716,6 +732,14 @@ class SCIPCutSelEnv():
         try:
             self._optimize_with_lexicographic_stability()
             stats = self._collect_stats()
+            if solution_file and int(stats.get("n_solutions", 0) or 0) > 0:
+                try:
+                    self.m.writeSol(self.m.getBestSol(), str(solution_file))
+                    stats["solution_file"] = str(solution_file)
+                    stats["solution_write_error"] = None
+                except Exception as exc:
+                    stats["solution_file"] = None
+                    stats["solution_write_error"] = f"{type(exc).__name__}: {exc}"
             if CutSel is not None:
                 stats["cutsel_effective_max_candidates"] = getattr(
                     CutSel, "max_candidates", None
@@ -731,10 +755,19 @@ class SCIPCutSelEnv():
         finally:
             self.m.freeProb()
 
-    def solve_default(self):
+    def solve_default(self, solution_file=None):
         try:
             self._optimize_with_lexicographic_stability()
-            return self._collect_stats()
+            stats = self._collect_stats()
+            if solution_file and int(stats.get("n_solutions", 0) or 0) > 0:
+                try:
+                    self.m.writeSol(self.m.getBestSol(), str(solution_file))
+                    stats["solution_file"] = str(solution_file)
+                    stats["solution_write_error"] = None
+                except Exception as exc:
+                    stats["solution_file"] = None
+                    stats["solution_write_error"] = f"{type(exc).__name__}: {exc}"
+            return stats
         finally:
             self.m.freeProb()
 
@@ -747,7 +780,16 @@ class SCIPCutSelEnv():
     def _optimize_with_lexicographic_stability(self):
         """Maximize WPH first, then stabilize only an equally fast schedule."""
         stability_time_limit = float(self.lexicographic_stability_time_limit)
-        if self.lexicographic_schedule_stability and stability_time_limit > 0:
+        cmax_var = self._var_by_name("c_max")
+        stability_var = self._var_by_name("schedule_stability")
+        supports_schedule_stability = (
+            cmax_var is not None and stability_var is not None
+        )
+        if (
+            self.lexicographic_schedule_stability
+            and stability_time_limit > 0
+            and supports_schedule_stability
+        ):
             primary_time_limit = max(
                 1.0,
                 float(self.scip_time_limit) - stability_time_limit,
@@ -757,11 +799,11 @@ class SCIPCutSelEnv():
                 "reserved lexicographic stability budget: "
                 f"primary={primary_time_limit:.1f}s, stability={stability_time_limit:.1f}s"
             )
+        primary_timer_start = time.perf_counter()
         self._optimize_with_watchdog("primary")
+        primary_elapsed_time = time.perf_counter() - primary_timer_start
         primary_status = str(self.m.getStatus())
         primary_solution = self.m.getBestSol()
-        cmax_var = self._var_by_name("c_max")
-        stability_var = self._var_by_name("schedule_stability")
         primary_cmax = None
         if primary_solution is not None and cmax_var is not None:
             primary_cmax = float(self.m.getSolVal(primary_solution, cmax_var))
@@ -769,8 +811,15 @@ class SCIPCutSelEnv():
         self._lexicographic_info = {
             "primary_status": primary_status,
             "primary_cmax": primary_cmax,
-            "primary_solving_time": float(self.m.getSolvingTime()),
+            "primary_solving_time": float(primary_elapsed_time),
+            "primary_scip_solving_time": float(self.m.getSolvingTime()),
+            "primary_ntotal_nodes": float(self.m.getNTotalNodes()),
+            "primary_primal_dual_gap": float(self.m.getGap()),
+            "primary_primaldualintegral": self._safe_get_primal_dual_integral(),
             "stability_status": "not_run",
+            "stability_solving_time": 0.0,
+            "stability_scip_solving_time": 0.0,
+            "stability_ntotal_nodes": 0.0,
         }
         logger.log(
             "lexicographic phase 1 (WPH): "
@@ -799,7 +848,7 @@ class SCIPCutSelEnv():
                         float(self.m.getSolVal(primary_solution, var))
                     )
 
-        primary_solving_time = float(self.m.getSolvingTime())
+        primary_solving_time = float(primary_elapsed_time)
         remaining_time = max(0.0, float(self.scip_time_limit) - primary_solving_time)
         if remaining_time <= 1e-6:
             self._lexicographic_info["stability_status"] = "skipped_no_time_budget"
@@ -847,8 +896,21 @@ class SCIPCutSelEnv():
         if stability_node_limit >= 0:
             self.m.setLongintParam("limits/nodes", stability_node_limit)
 
+        stability_timer_start = time.perf_counter()
         self._optimize_with_watchdog("stability")
+        stability_elapsed_time = time.perf_counter() - stability_timer_start
         stability_status = str(self.m.getStatus())
+        self._lexicographic_info.update(
+            {
+                "stability_solving_time": float(stability_elapsed_time),
+                "stability_scip_solving_time": float(self.m.getSolvingTime()),
+                "stability_ntotal_nodes": float(self.m.getNTotalNodes()),
+                "stability_primal_dual_gap": float(self.m.getGap()),
+                "stability_primaldualintegral": (
+                    self._safe_get_primal_dual_integral()
+                ),
+            }
+        )
         if primary_status != "optimal":
             stability_status = f"incumbent_{primary_status}_{stability_status}"
         self._lexicographic_info["stability_status"] = stability_status
@@ -902,10 +964,57 @@ class SCIPCutSelEnv():
                 final_cmax = float(self.m.getSolVal(best_sol, cmax_var))
             if stability_var is not None:
                 final_stability = float(self.m.getSolVal(best_sol, stability_var))
-        stats['solving_time'] = self.m.getSolvingTime()
-        stats['ntotal_nodes'] = self.m.getNTotalNodes()
-        stats['primal_dual_gap'] = self.m.getGap()
-        stats['primaldualintegral'] = self._safe_get_primal_dual_integral()
+        current_solving_time = float(self.m.getSolvingTime())
+        current_nodes = float(self.m.getNTotalNodes())
+        current_gap = float(self.m.getGap())
+        current_pdi = self._safe_get_primal_dual_integral()
+        primary_time = self._lexicographic_info.get("primary_solving_time")
+        stability_time = float(
+            self._lexicographic_info.get("stability_solving_time", 0.0) or 0.0
+        )
+        primary_nodes = self._lexicographic_info.get("primary_ntotal_nodes")
+        stability_nodes = float(
+            self._lexicographic_info.get("stability_ntotal_nodes", 0.0) or 0.0
+        )
+        primary_gap = self._lexicographic_info.get("primary_primal_dual_gap")
+        primary_pdi = self._lexicographic_info.get("primary_primaldualintegral")
+
+        # SCIP resets several counters when freeTransform() starts the
+        # lexicographic schedule-compaction phase. Ablation metrics must use
+        # phase-one gap/PDI (the Cmax objective being compared) and cumulative
+        # two-stage time; otherwise a fast phase two appears as a blank 0 s.
+        stats['primary_solving_time'] = (
+            current_solving_time if primary_time is None else float(primary_time)
+        )
+        stats['primary_scip_solving_time'] = self._lexicographic_info.get(
+            "primary_scip_solving_time", current_solving_time
+        )
+        stats['stability_solving_time'] = stability_time
+        stats['stability_scip_solving_time'] = self._lexicographic_info.get(
+            "stability_scip_solving_time", 0.0
+        )
+        stats['solving_time'] = stats['primary_solving_time'] + stability_time
+        stats['scip_solving_time_raw'] = current_solving_time
+        stats['primary_ntotal_nodes'] = (
+            current_nodes if primary_nodes is None else float(primary_nodes)
+        )
+        stats['stability_ntotal_nodes'] = stability_nodes
+        stats['ntotal_nodes'] = stats['primary_ntotal_nodes']
+        stats['total_ntotal_nodes'] = stats['primary_ntotal_nodes'] + stability_nodes
+        stats['primal_dual_gap'] = (
+            current_gap if primary_gap is None else float(primary_gap)
+        )
+        stats['primaldualintegral'] = (
+            current_pdi if primary_pdi is None else primary_pdi
+        )
+        stats['primary_primal_dual_gap'] = stats['primal_dual_gap']
+        stats['primary_primaldualintegral'] = stats['primaldualintegral']
+        stats['stability_primal_dual_gap'] = self._lexicographic_info.get(
+            "stability_primal_dual_gap"
+        )
+        stats['stability_primaldualintegral'] = self._lexicographic_info.get(
+            "stability_primaldualintegral"
+        )
         primary_status = self._lexicographic_info.get("primary_status")
         stats['status'] = primary_status or str(self.m.getStatus())
         stats['primary_status'] = primary_status
@@ -1091,7 +1200,9 @@ class SCIPCutSelEnv():
                 return float(self.m.getPrimalDualIntegral())
             except Exception:
                 pass
-        return 0.0
+        # Missing API support is not a perfect score. Keep it unavailable so
+        # the ablation report can render n/a instead of a misleading zero.
+        return None
 
     def _extract_best_solution(self):
         best_sol = self.m.getBestSol()

@@ -24,8 +24,9 @@
     "conflict": true,
     "heuristics": true,
     "max_rounds_root": 2,
-    "lexicographic_schedule_stability": false,
-    "lexicographic_stability_time_limit": 0,
+    "lexicographic_schedule_stability": true,
+    "schedule_stability_mode": "linear",
+    "lexicographic_stability_time_limit": 10,
     "lexicographic_stability_node_limit": 5000,
     "schedule_chamber_idle_square_penalty": 0.00001,
     "schedule_pm_wait_square_penalty": 0.001,
@@ -110,11 +111,11 @@
       "conflict": true,
       "heuristics": true,
       "max_rounds_root": 2,
-      "lexicographic_schedule_stability": false,
+      "lexicographic_schedule_stability": true,
       "schedule_stability_mode": "linear",
       "lexicographic_fix_discrete_decisions": true,
       "lexicographic_free_double_decisions": false,
-      "lexicographic_stability_time_limit": 0,
+      "lexicographic_stability_time_limit": 60,
       "lexicographic_stability_node_limit": 5000,
       "schedule_linear_wait_weight": 1.0,
       "schedule_linear_max_wait_weight": 10.0,
@@ -144,8 +145,10 @@
       "conflict": true,
       "heuristics": true,
       "max_rounds_root": 2,
-      "lexicographic_schedule_stability": false,
-      "lexicographic_stability_time_limit": 0
+      "lexicographic_schedule_stability": true,
+      "schedule_stability_mode": "linear",
+      "lexicographic_stability_time_limit": 10,
+      "lexicographic_stability_node_limit": 5000
     }
   },
   "online_test_kwargs": {
@@ -155,7 +158,10 @@
     "test_env_kwargs": {
       "scip_time_limit": 45,
       "single_instance_file": "mix_wafer18_20260710.lp",
-      "lexicographic_stability_time_limit": 0
+      "lexicographic_schedule_stability": true,
+      "schedule_stability_mode": "linear",
+      "lexicographic_stability_time_limit": 10,
+      "lexicographic_stability_node_limit": 5000
     }
   }
 }
