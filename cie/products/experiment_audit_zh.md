@@ -12,7 +12,7 @@
 - 2026-08-02续跑协议已补强：新训练检查点保存完整训练状态并按epoch恢复；ACS逐求解写入带资产签名的JSONL；benchmark沿用逐评估JSONL；warm start按LP哈希复用。统一通过`run_cie_single.ps1`中断和原命令恢复，最多重做当前未提交的原子单元。
 - 四个归档零gap单例及一个四方法旧单例只作为“非验证性模型健全性检查”写入初稿；完整归档状态清单仍需生成，不能只引用89秒的有利行。
 
-model-evidence已完成81/81个LP，模型规模raw/summary/manifest均已生成，CIE相关测试51/51通过。当前下一步是最终评估commit、15模型manifest再冻结，然后先跑Validation。Gu（2024）BS/HTS是不同稳态固定序列模型的可选边界验证，不再作为等价性阻塞；HEM/Proposed的SPBS none-vs-auto交互只在保留协同主张时补做；strict A3C对照只在坚持该算法命名时必需。
+model-evidence已完成81/81个LP，模型规模raw/summary/manifest均已生成，CIE相关测试59/59通过。最终评估代码与可移植15模型manifest已提交并推送；Validation 4/4、独立验解和投稿审计PASS。benchmark前门槛已全部通过，当前下一步是按执行手册第6.2节启动Main三队列。
 
 ---
 

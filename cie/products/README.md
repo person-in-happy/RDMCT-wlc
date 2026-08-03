@@ -13,7 +13,7 @@
 | 项目 | 投稿目标 | 当前正式有效 | 状态 |
 | --- | ---: | ---: | --- |
 | 完整epoch-60训练候选 | 15 | 15 | HEM、feature-only、Proposed各5/5；冻结manifest已完成并由runner强制消费 |
-| Validation | 4 | 0 | 待运行 |
+| Validation | 4 | 4 | 4个incumbent均独立验解通过，提交审计PASS |
 | Main | 2700 | 0 | 待运行 |
 | Stability | 1500 | 0 | 待运行 |
 | DOE | 300 | 0 | 待运行 |
@@ -21,7 +21,7 @@
 | Sensitivity | 80 | 0 | 待运行 |
 | OOD | 729 | 0 | 待运行 |
 
-现有正式benchmark核心矩阵为**0/6273**。15模型冻结清单、ACS validation 720/720、全部65个warm starts及81/81个LP的model-evidence均已完成；CIE相关测试51/51通过。Gu BS/HTS因模型不等价改为可选文献边界验证；学习策略×SPBS仅在声称协同时才增加约1100条实验。下一步是最终评估commit/manifest再冻结、Validation、6273行核心矩阵、全部incumbent独立验解、制造指标和预注册统计。
+正式确认性性能矩阵仍为**0/6273**，其benchmark前门槛已全部通过：15模型冻结清单、ACS validation 720/720、全部65个warm starts、81/81个LP的model-evidence、CIE测试59/59以及Validation 4/4独立验解/审计均完成。下一步按执行手册启动Main三队列。
 
 ## 2. 历史工程结果（不得填入最终论文表）
 

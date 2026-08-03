@@ -49,7 +49,7 @@
 | 选定检查点清单 | 1 | 已完成 | 15/15路径、variant/hash和三处seed已冻结，runner强制消费 |
 | ACS validation网格 | 720 solves | 720 | 调参完整并已冻结`selected_acs.json`及hash |
 | Warm starts | 65 | 已完成 | core 48、sensitivity 8、OOD 9均通过；OOD报告 failures=0 |
-| Validation | 4行 | 0 | 求解、写解和独立验解sanity |
+| Validation | 4行 | 4 | 4/4均有incumbent，独立验解、精确矩阵和投稿审计全部PASS |
 | 建模证据 | 1套 | 已完成 | compact测试通过；81/81个LP的变量、约束、文件大小和解析时间表已生成 |
 | Main | 2700行 | 0 | 标称实例主比较与算法消融 |
 | Stability | 1500行 | 0 | `full/stage2_off/linear_off`控制变量实验 |
@@ -219,11 +219,11 @@ $src=(Get-ChildItem cie\results\acs_tuning -Filter 'acs_grid_*.json' | Sort-Obje
 Set-Location D:\git\git\RDMCT-A3C; .\cie\run_cie_single.ps1 -Stage warmstarts-ood -WarmStartTimeLimit 1800 -MemoryLimitMB 4096 -LogId warm_ood_repro_v1
 ```
 
-model-evidence已完成81/81个LP并生成raw、summary与manifest；CIE相关测试51/51通过。**现在从这里继续：** 重新冻结checkpoint清单，建立最终评估commit，最后先跑第6.1节Validation。上述步骤通过才进入Main。
+model-evidence已完成81/81个LP并生成raw、summary与manifest；CIE相关测试59/59通过；最终评估commit与可移植manifest已推送；Validation 4/4及独立验解/投稿审计PASS。**现在从这里继续：** 第6.2节Main三队列已获准启动。
 
 ## 6. 正式benchmark：最多三路
 
-**本节不是永久禁止。当前尚未到Main启动点。** OOD warm-start、model-evidence和CIE测试已经通过；剩余门槛是最终评估commit/manifest再冻结和Validation。M3不是等价模型的强制实验，A2仅在声称协同时必需。依次完成上一节“现在从这里继续”的步骤后，先执行Validation；Validation的求解、写解与独立验解全部PASS后即可执行Main及后续6273行队列。
+**benchmark前置门槛已全部通过，Main可以启动。** OOD warm-start 9/9、model-evidence 81/81、CIE测试59/59、15模型可移植manifest、GitHub冻结提交以及Validation 4/4独立验解/投稿审计均已完成。M3不是等价模型的强制实验，A2仅在声称协同时必需。现在按第6.2节A/B/C三终端队列启动Main。
 
 三个终端分别执行标记为A/B/C的队列，同一终端中的命令按出现顺序逐条执行，任意时刻最多三条。矩阵按solver seed和training seed拆开以均衡负载；一个阶段全部完成并验收后再进入下一阶段。Main/OOD显式使用冻结ACS；Main/OOD/Stability还通过默认参数`cie\results\repro_manifest\selected_checkpoint_manifest.csv`强制使用冻结模型。需要停机时在各终端各按一次`Ctrl+C`并等待提示符返回；启动器会清理该实验的子进程树。第二天原样重跑当时尚未完成的同一条命令；完成行从`.checkpoints/*.jsonl`恢复，中断时正在求解且尚未写入的一个原子项会自动重做。不得用新的CampaignId或ShardTag“续跑”，否则会建立另一套断点。
 
