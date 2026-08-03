@@ -7,13 +7,13 @@ import csv
 import hashlib
 import json
 import os
-from datetime import datetime
 from pathlib import Path
 
 import torch
 
 
 CIE_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = CIE_ROOT.parent
 FAMILIES = {
     'hem': 13,
     'feature_only': 23,
@@ -47,6 +47,10 @@ def _sha256(path):
 def _metadata_seed(payload, section, key):
     value = payload.get(section, {}).get(key)
     return None if value is None else int(value)
+
+
+def _portable_path(path):
+    return Path(path).resolve().relative_to(PROJECT_ROOT).as_posix()
 
 
 def _is_training_path(path):
@@ -85,15 +89,15 @@ def _candidate(variant_path, family, seed, epoch):
         return {
             'family': family,
             'training_seed': seed,
-            'checkpoint': str(checkpoint_path.resolve()),
+            'checkpoint': _portable_path(checkpoint_path),
             'checkpoint_sha256': _sha256(checkpoint_path),
             'checkpoint_size': checkpoint_path.stat().st_size,
-            'variant': str(variant_path.resolve()),
+            'variant': _portable_path(variant_path),
             'variant_sha256': _sha256(variant_path),
             'experiment_seed': experiment_seed,
             'parser_seed': parser_seed,
             'scip_seed': scip_seed,
-            'training_path': str(training_path),
+            'training_path': 'cie/data/policy_training/train',
             'epoch': epoch,
             'reward_type': checkpoint.get('reward_type'),
             'feature_dim': FAMILIES[family],
@@ -124,7 +128,6 @@ def freeze(models_root, output_path, seeds, epoch):
             )
             selected = candidates[-1]
             selected['candidate_count'] = len(candidates)
-            selected['selected_at'] = datetime.now().isoformat(timespec='seconds')
             selected.pop('modified_ns', None)
             rows.append(selected)
     output_path = Path(output_path).resolve()

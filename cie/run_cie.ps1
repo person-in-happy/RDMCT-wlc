@@ -137,8 +137,8 @@ function Get-FrozenCheckpointsBySeed {
     foreach ($row in $rows) {
         $seed = [int]$row.training_seed
         if ($map.ContainsKey($seed)) { throw ('Duplicate checkpoint manifest seed: ' + $Family + '/' + $seed) }
-        $checkpoint = [string]$row.checkpoint
-        $variant = [string]$row.variant
+        $checkpoint = [IO.Path]::GetFullPath([string]$row.checkpoint, (Get-Location).Path)
+        $variant = [IO.Path]::GetFullPath([string]$row.variant, (Get-Location).Path)
         if ([IO.Path]::GetFileName($checkpoint) -ne 'itr_60.pkl') { throw ('Formal checkpoint must be itr_60.pkl: ' + $checkpoint) }
         if (-not (Test-Path -LiteralPath $checkpoint -PathType Leaf)) { throw ('Missing checkpoint: ' + $checkpoint) }
         if (-not (Test-Path -LiteralPath $variant -PathType Leaf)) { throw ('Missing variant: ' + $variant) }
