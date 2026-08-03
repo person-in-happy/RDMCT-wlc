@@ -1,8 +1,10 @@
 # C&IE 论文包与当前证据状态
 
-> 审计时间：2026-08-01 23:42（Asia/Shanghai）。本目录中的稿件、表格和图只能在正式 campaign、独立验解和统计门槛全部通过后填写；空白或 `[TBD]` 不是结果。
+> 审计时间：2026-08-02（Asia/Shanghai）。本目录中的正式结果表只能在新campaign、独立验解和统计门槛全部通过后填写；归档单例只作非验证性模型健全性检查，空白或`[TBD]`不是结果。
 
 完整协议见 [`../README.md`](../README.md)，从暂停、恢复到投稿的唯一执行入口见 [`../docs/cie_submission_runbook_zh.md`](../docs/cie_submission_runbook_zh.md)。
+
+当前长任务已统一为可恢复入口：训练按完整epoch恢复，ACS与benchmark按单次求解恢复，warm start按实例复用；中断后必须保持参数不变并原样重跑同一条`run_cie_single.ps1`命令。不要直接运行底层Python或删除`.checkpoints`。
 
 ## 1. 投稿有效进度
 
@@ -10,7 +12,7 @@
 
 | 项目 | 投稿目标 | 当前正式有效 | 状态 |
 | --- | ---: | ---: | --- |
-| 可审计训练模型 | 15 | 0 | HEM、feature-only、Proposed 各 5 个独立 training seeds 待重训 |
+| 完整epoch-60训练候选 | 15 | 15 | HEM、feature-only、Proposed各5/5；冻结manifest已完成并由runner强制消费 |
 | Validation | 4 | 0 | 待运行 |
 | Main | 2700 | 0 | 待运行 |
 | Stability | 1500 | 0 | 待运行 |
@@ -19,32 +21,33 @@
 | Sensitivity | 80 | 0 | 待运行 |
 | OOD | 729 | 0 | 待运行 |
 
-正式 benchmark 合计为 **0/6273**。还需要 720 次 ACS validation 网格求解、65 个 warm starts、全部 incumbent 独立验解、制造指标、实例级统计、效应量、置信区间、双侧配对 Wilcoxon 与 Holm 校正。
+现有正式benchmark核心矩阵为**0/6273**。15模型冻结清单、ACS validation 720/720、全部65个warm starts及81/81个LP的model-evidence均已完成；CIE相关测试51/51通过。Gu BS/HTS因模型不等价改为可选文献边界验证；学习策略×SPBS仅在声称协同时才增加约1100条实验。下一步是最终评估commit/manifest再冻结、Validation、6273行核心矩阵、全部incumbent独立验解、制造指标和预注册统计。
 
 ## 2. 历史工程结果（不得填入最终论文表）
 
 | 实验 | 工程目标 | 审计快照 | 问题 |
 | --- | ---: | ---: | --- |
 | Main | 2700 | 880 | campaign 不完整且不属于冻结的投稿协议 |
-| OOD | 729 | 674 | 旧模型、跨代码版本；正在补齐的仅是工程 campaign |
+| OOD | 729 | 729 | 0 runner error、全部timelimit；旧模型seed来源错误且跨代码版本 |
 | SPBS | 960 | 336 | campaign 不完整且含 1 个 runner error |
 | Stability | 1500 | 0 | 未运行 |
 | DOE | 300 | 0 | 未运行 |
 | Sensitivity | 80 | 0 | 未运行 |
 | Validation | 4 | 0 | 未运行 |
 
-当前 `cie_ood_1200s_mem4096_final_v1` 即使补到 729/729，也只能证明断点机制和运行链路可用。它混用了旧 AAAI provenance checkpoint，且 training seed 1--4 的部分结果早于 `run_cie_benchmarks.py` 和 `environments.py` 的最近修改，不能作为同一冻结版本的投稿证据。
+`cie_ood_1200s_mem4096_final_v1`已经729/729完成。SCIP/ACS各27/27有incumbent，每个学习方法族仅27/135；旧15个`variant.json`的`experiment.seed`均为1，且活动跨代码修改。它只能作为运行链路和大实例困难度诊断，不能进入正式性能表。`timelimit`本身不是无效观测；这里被排除的根因是checkpoint provenance。
 
-## 3. 正式运行前必须先解决
+## 3. 从当前进度继续
 
-1. 补齐或删去机制声明所依赖的遥测：cut-pool size、accepted cut count、角色覆盖、冗余、callback/fallback 开销、dual bound、root gap、LP iterations、首次解/最佳解/证明时间。
-2. 固定 checkpoint 规则。稿件写的是按 validation PDI 选模，但当前训练配置为 `evaluate_freq=0`，协议又固定 `itr_60.pkl`；必须在正式重训前选择“预先固定末轮”或“启用独立 validation 选模”，并同步论文与协议。
-3. 冻结代码、LP、训练数据、模型、ACS、环境和 commit 的 hash。冻结后不得修改签名代码或数据生成器。
-4. 统一 `RDMCT-A3C` 与稿件算法名 `SA-RLCS`，或在摘要、方法、代码和数据元数据中明确二者关系。
+1. 补齐或删去机制声明所依赖的遥测：cut-pool size、accepted cut count、变量角色覆盖、冗余、callback/fallback开销、dual bound、root gap、LP iterations、首次解/最佳解/证明时间。
+2. 等当前OOD warm-start结束；若不是9/9且`failures=0`，按执行手册用1800秒命令重试。成功实例会复用。
+3. 执行`model-evidence`，完成测试和最终评估commit，再运行`freeze-checkpoints`复核15/15，随后先跑Validation。
+4. 冻结代码、LP、训练数据、模型、ACS、环境、训练commit和评估commit的hash。冻结后不得修改签名代码或数据生成器。
+5. Validation全部PASS后，按执行手册最多三路进入Main、Stability、DOE、SPBS、Sensitivity、OOD；仓库名保留`RDMCT-A3C`，稿件算法暂名`RDMCT-HPS`，只有完成演员--评论家对照后才主张strict A3C。
 
 ## 4. 论文与投稿包缺口
 
-现有英文稿使用 Elsevier 官方 `elsarticle` class，摘要约 202 词、6 个关键词和 5 条 highlights 的数量/长度当前合规，但仍有 27 个 `TBD`、6 张未完成表和 0 张图。本机尚无可用的 LaTeX 编译工具链。
+现有英文稿使用Elsevier官方`elsarticle` class，有6个关键词和5条highlights，但仍有32个`TBD`、8张表和0张图。本机尚无可用的LaTeX编译工具链；摘要还缺正式结果，最终再验收250词上限。
 
 正式上传前按“官方要求 + 本项目内部完整性门槛”准备：
 
@@ -62,11 +65,11 @@
 
 ## 5. 最终填表门槛
 
-- 所有正式阶段达到 4/2700/1500/300/960/80/729，且无重复主键；
+- 核心正式阶段达到4/2700/1500/300/960/80/729，model-evidence通过且无重复主键；只有声称协同时才要求A2约1100条增量；
 - `error` 和 `solution_write_error` 为空，timeout、memlimit 和无 incumbent 行不得删除；
 - 每个 incumbent 有唯一 `.sol`，独立验解 `invalid_count=0`；
 - 七个campaign的 `run_cie_postprocess.ps1` 均显示PASS，并保存精确矩阵审计、实例级bootstrap/效应量/Wilcoxon/Holm；DOE还须有主效应、预设交互、置信区间、诊断数据和程序生成图；
-- 15 个模型 provenance 通过默认门禁，正式命令不含 `-AllowLegacyCheckpoints`；
+- runner强制消费冻结manifest，15个模型路径/hash与每行结果一致，正式命令不含`-AllowLegacyCheckpoints`；
 - 模型、LP、ACS、commit 和环境 hash 完整，所有数字可追溯到冻结分析产物；
 - 正文没有 `[TBD]`、无来源的 `--` 或人工外推结果；
 - 双匿名、声明、数据、补充材料和 LaTeX 源包均通过投稿清单。

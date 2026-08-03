@@ -13,7 +13,11 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from petri_mip_generator import PetriMIPConfig, generate_petri_mip_instance
-from petri_warm_start import find_compatible_mixed_warm_start, write_mixed_warm_start
+from petri_warm_start import (
+    find_compatible_mixed_warm_start,
+    repair_incompatible_mixed_warm_start,
+    write_mixed_warm_start,
+)
 
 
 RATIOS = {
@@ -170,6 +174,22 @@ def main():
                 status, warm_start = "not_applicable_pure41", ""
             else:
                 warm_start = find_compatible_mixed_warm_start(str(folder), name) or ""
+                if not warm_start:
+                    warm_start = repair_incompatible_mixed_warm_start(
+                        str(folder),
+                        name,
+                        cfg,
+                        time_limit=min(
+                            600.0,
+                            float(args.warm_start_time_limit),
+                        ),
+                        memory_limit_mb=float(args.memory_limit_mb),
+                    ) or ''
+                    if warm_start:
+                        print(
+                            f'repaired compatible SPBS start: {warm_start}',
+                            flush=True,
+                        )
                 if warm_start:
                     print(f"reusing compatible SPBS start: {warm_start}", flush=True)
                 else:

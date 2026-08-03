@@ -952,6 +952,215 @@ def _fix_conservative_mixed_resource_order(model, cfg, profile_name="spbs_full")
     return _spbs_binary_structure_summary(variables, profile_name)
 
 
+def repair_incompatible_mixed_warm_start(
+    output_dir, instance_name, cfg, time_limit=600.0, memory_limit_mb=None,
+):
+    '''Revalidate a stale SPBS physical schedule and complete current auxiliaries.'''
+    solution_path, metadata_path, instance_path = _warm_start_paths(
+        output_dir, instance_name
+    )
+    if not solution_path.is_file() or not instance_path.is_file():
+        return None
+    prior_metadata = {}
+    if metadata_path.is_file():
+        try:
+            with metadata_path.open('r', encoding='utf-8') as handle:
+                prior_metadata = json.load(handle)
+        except (OSError, ValueError, TypeError):
+            prior_metadata = {}
+    current_hash = _sha256_file(instance_path)
+    if (
+        prior_metadata.get('instance_sha256') == current_hash
+        and prior_metadata.get('solution_scope') == 'full_quadratic_model'
+    ):
+        return str(solution_path)
+
+    physical_model = build_petri_mip_model(cfg)
+    completion_model = None
+    try:
+        stripped_count = _strip_secondary_stability_constraints(physical_model)
+        stale_solution = physical_model.readSolFile(str(solution_path))
+        if not physical_model.checkSol(
+            stale_solution,
+            printreason=False,
+            completely=True,
+            original=True,
+        ):
+            return None
+        completion_model, completed_solution, completion_info = (
+            _complete_secondary_stability_solution(
+                cfg,
+                physical_model,
+                stale_solution,
+                time_limit=float(time_limit),
+                memory_limit_mb=memory_limit_mb,
+            )
+        )
+        if completed_solution is None:
+            return None
+        if not completion_model.checkSol(
+            completed_solution,
+            printreason=False,
+            completely=True,
+            original=True,
+        ):
+            return None
+        _write_solution_high_precision(
+            completion_model,
+            completed_solution,
+            solution_path,
+        )
+        with metadata_path.open('w', encoding='utf-8') as handle:
+            json.dump(
+                {
+                    'instance_file': Path(instance_name).name,
+                    'instance_sha256': current_hash,
+                    'warm_start_strategy': 'SPBS',
+                    'solution_scope': 'full_quadratic_model',
+                    'accepted_profile': prior_metadata.get(
+                        'accepted_profile', 'revalidated_physical_schedule'
+                    ),
+                    'random_seed': int(prior_metadata.get('random_seed', 0)),
+                    'profile_attempts': prior_metadata.get('profile_attempts', []),
+                    'current_model_repair': {
+                        'source_instance_sha256': prior_metadata.get(
+                            'instance_sha256', ''
+                        ),
+                        'stripped_secondary_constraints': stripped_count,
+                        'physical_schedule_revalidated': True,
+                        'secondary_completion': completion_info,
+                    },
+                },
+                handle,
+                ensure_ascii=False,
+                indent=2,
+            )
+        return str(solution_path)
+    except (OSError, ValueError, TypeError):
+        return None
+    finally:
+        if completion_model is not None:
+            completion_model.freeProb()
+        physical_model.freeProb()
+
+
+def repair_incompatible_mixed_warm_start(
+    output_dir, instance_name, cfg, time_limit=600.0, memory_limit_mb=None,
+):
+    '''Revalidate a stale SPBS physical schedule and complete current auxiliaries.'''
+    solution_path, metadata_path, instance_path = _warm_start_paths(
+        output_dir, instance_name
+    )
+    if not solution_path.is_file() or not instance_path.is_file():
+        return None
+    prior_metadata = {}
+    if metadata_path.is_file():
+        try:
+            with metadata_path.open('r', encoding='utf-8') as handle:
+                prior_metadata = json.load(handle)
+        except (OSError, ValueError, TypeError):
+            prior_metadata = {}
+    current_hash = _sha256_file(instance_path)
+    if (
+        prior_metadata.get('instance_sha256') == current_hash
+        and prior_metadata.get('solution_scope') == 'full_quadratic_model'
+    ):
+        return str(solution_path)
+
+    physical_model = build_petri_mip_model(cfg)
+    completion_model = None
+    try:
+        stripped_count = _strip_secondary_stability_constraints(physical_model)
+        stale_solution = physical_model.readSolFile(str(solution_path))
+        if not physical_model.checkSol(
+            stale_solution,
+            printreason=False,
+            completely=True,
+            original=True,
+        ):
+            return None
+        completion_model, completed_solution, completion_info = (
+            _complete_secondary_stability_solution(
+                cfg,
+                physical_model,
+                stale_solution,
+                time_limit=float(time_limit),
+                memory_limit_mb=memory_limit_mb,
+            )
+        )
+        if completed_solution is None:
+            return None
+        if not completion_model.checkSol(
+            completed_solution,
+            printreason=False,
+            completely=True,
+            original=True,
+        ):
+            return None
+        _write_solution_high_precision(
+            completion_model,
+            completed_solution,
+            solution_path,
+        )
+        with metadata_path.open('w', encoding='utf-8') as handle:
+            json.dump(
+                {
+                    'instance_file': Path(instance_name).name,
+                    'instance_sha256': current_hash,
+                    'warm_start_strategy': 'SPBS',
+                    'solution_scope': 'full_quadratic_model',
+                    'accepted_profile': prior_metadata.get(
+                        'accepted_profile', 'revalidated_physical_schedule'
+                    ),
+                    'random_seed': int(prior_metadata.get('random_seed', 0)),
+                    'profile_attempts': prior_metadata.get('profile_attempts', []),
+                    'current_model_repair': {
+                        'source_instance_sha256': prior_metadata.get(
+                            'instance_sha256', ''
+                        ),
+                        'stripped_secondary_constraints': stripped_count,
+                        'physical_schedule_revalidated': True,
+                        'secondary_completion': completion_info,
+                    },
+                },
+                handle,
+                ensure_ascii=False,
+                indent=2,
+            )
+        return str(solution_path)
+    except (OSError, ValueError, TypeError):
+        return None
+    finally:
+        if completion_model is not None:
+            completion_model.freeProb()
+        physical_model.freeProb()
+
+
+def _warm_start_profiles(cfg):
+    '''Return deterministic SPBS relaxation profiles and budget fractions.'''
+    if cfg.total_product_wafers >= 32 and cfg.max_schedule_wait_time > 0:
+        return (
+            ('spbs_structure_only', 0.60),
+            ('spbs_unrestricted', None),
+        )
+    if cfg.total_product_wafers >= 32:
+        # Reserve a final quarter for a genuinely unrestricted feasibility
+        # search. The previous 80/20 split exhausted the deadline in two
+        # still-structured profiles and repeatedly timed out on balanced OOD.
+        return (
+            ('spbs_fixed_slots', 0.50),
+            ('spbs_structure_only', 0.25),
+            ('spbs_unrestricted', None),
+        )
+    return (
+        ('spbs_full', 0.10),
+        ('spbs_relaxed_vtr', 0.15),
+        ('spbs_relaxed_ll', 0.45),
+        ('spbs_fixed_slots', 0.15),
+        ('spbs_structure_only', None),
+    )
+
+
 def write_mixed_warm_start(
     output_dir, instance_name, cfg, time_limit=30.0, memory_limit_mb=None,
     random_seed=0,
@@ -968,6 +1177,8 @@ def write_mixed_warm_start(
         return None
 
     deadline = time.time() + float(time_limit)
+    profiles = _warm_start_profiles(cfg)
+    '''
     if cfg.total_product_wafers >= 32 and cfg.max_schedule_wait_time > 0:
         # A tight wait cap couples LL-slot choices and resource orders. The
         # legacy fixed-slot skeleton can be infeasible even when another
@@ -993,6 +1204,7 @@ def write_mixed_warm_start(
             ("spbs_fixed_slots", 0.15),
             ("spbs_structure_only", None),
         )
+    '''
     total_time_limit = float(time_limit)
     profile_attempts = []
     for profile_name, budget_fraction in profiles:

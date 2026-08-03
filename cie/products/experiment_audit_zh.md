@@ -1,8 +1,24 @@
 # C&IE 实验完成度与续跑审计
 
-> **历史快照，已过期。** 本文保留 2026-07-28 的现场记录，不再代表当前完成度，也不定义新的续跑协议。2026-08-01 的暂停/恢复、投稿缺口和单行命令见 [`../docs/cie_submission_runbook_zh.md`](../docs/cie_submission_runbook_zh.md)，正式协议见 [`../README.md`](../README.md)。不要把本文的旧状态或命令与 `*_repro_v1` 合并。
+> **当前结论更新于2026-08-02。** 本文下半部保留的2026-07-28命令仅为故障历史，严禁再次执行。当前正式顺序和单行命令只以[`../docs/cie_submission_runbook_zh.md`](../docs/cie_submission_runbook_zh.md)为准，协议定义以[`../README.md`](../README.md)为准。
 
-审计时间：2026-07-28（Asia/Shanghai）。本文档用于内部复核，不作为论文最终结果表。
+## 2026-08-02 当前快照
+
+- 旧`cie_ood_1200s_mem4096_final_v1`已完成729/729，三分片各243条，无重复、无runner/solution-write error，但729条全部`timelimit`。SCIP与ACS各27/27有incumbent；每个学习方法族只有27/135，且旧training seeds 2--5均无incumbent。
+- 旧15个checkpoint的`experiment.seed`均为1，且活动跨代码修改；旧OOD只能作为工程诊断，不能进正式性能表。`timelimit`本身并非无效，排除根因是checkpoint provenance。
+- 旧Main为880/2700且claim-ready门禁未通过；旧SPBS只有none组336条并含一条SCIP phase error；它们均不能通过挑选有利行支持算法优势。
+- 正式冻结准备已建立：commit`08f3d5959ca49dc836c0ad9d3b957bdbed7ab181`、运行前clean记录、90个LP hash，数据生成81/81成功。
+- 新HEM、feature-only与Proposed检查点均为5/5，共15/15；冻结清单已逐项记录路径、checkpoint/variant hash和三处seed，runner已强制消费。ACS validation 720/720已完成并冻结。core 48、sensitivity 8和OOD 9个warm starts均完成；OOD最终9/9、failures=0，最后一个修复解已在当前完整LP上独立验解通过。正式benchmark当前为0/6273。
+- 2026-08-02续跑协议已补强：新训练检查点保存完整训练状态并按epoch恢复；ACS逐求解写入带资产签名的JSONL；benchmark沿用逐评估JSONL；warm start按LP哈希复用。统一通过`run_cie_single.ps1`中断和原命令恢复，最多重做当前未提交的原子单元。
+- 四个归档零gap单例及一个四方法旧单例只作为“非验证性模型健全性检查”写入初稿；完整归档状态清单仍需生成，不能只引用89秒的有利行。
+
+model-evidence已完成81/81个LP，模型规模raw/summary/manifest均已生成，CIE相关测试51/51通过。当前下一步是最终评估commit、15模型manifest再冻结，然后先跑Validation。Gu（2024）BS/HTS是不同稳态固定序列模型的可选边界验证，不再作为等价性阻塞；HEM/Proposed的SPBS none-vs-auto交互只在保留协同主张时补做；strict A3C对照只在坚持该算法命名时必需。
+
+---
+
+## 以下为2026-07-28故障历史（命令已禁用）
+
+审计时间：2026-07-28（Asia/Shanghai）。以下内容不代表当前完成度，也不作为论文最终结果表。
 
 ## 1. 当前结论
 

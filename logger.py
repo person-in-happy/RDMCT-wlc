@@ -396,24 +396,38 @@ class Logger(object):
             del self._tabular[:]
 
     def save_itr_params(self, itr, params):
+        def atomic_torch_save(payload, file_name):
+            # A Ctrl+C or power loss must never leave a half-written checkpoint
+            # at the canonical path. A stale .tmp file is harmless and ignored.
+            temporary = file_name + '.tmp'
+            try:
+                torch.save(payload, temporary)
+                os.replace(temporary, file_name)
+            finally:
+                if osp.exists(temporary):
+                    try:
+                        os.remove(temporary)
+                    except OSError:
+                        pass
+
         if self._snapshot_dir:
             if self._snapshot_mode == 'all':
                 file_name = osp.join(self._snapshot_dir, 'itr_%d.pkl' % itr)
-                torch.save(params, file_name)
+                atomic_torch_save(params, file_name)
             elif self._snapshot_mode == 'last':
                 # override previous params
                 file_name = osp.join(self._snapshot_dir, 'params.pkl')
-                torch.save(params, file_name)
+                atomic_torch_save(params, file_name)
             elif self._snapshot_mode == "gap":
                 if itr % self._snapshot_gap == 0:
                     file_name = osp.join(self._snapshot_dir, 'itr_%d.pkl' % itr)
-                    torch.save(params, file_name)
+                    atomic_torch_save(params, file_name)
             elif self._snapshot_mode == "gap_and_last":
                 if itr % self._snapshot_gap == 0:
                     file_name = osp.join(self._snapshot_dir, 'itr_%d.pkl' % itr)
-                    torch.save(params, file_name)
+                    atomic_torch_save(params, file_name)
                 file_name = osp.join(self._snapshot_dir, 'params.pkl')
-                torch.save(params, file_name)
+                atomic_torch_save(params, file_name)
             elif self._snapshot_mode == 'none':
                 pass
             else:

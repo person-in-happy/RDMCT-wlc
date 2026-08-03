@@ -62,7 +62,21 @@ def test_checkpoint_ensembles_cannot_mix_reward_semantics():
         )
 
 
-def test_only_cie_submission_tree_and_active_paths_remain():
+def test_cie_active_paths_do_not_reference_legacy_submission_assets():
+    active_files = []
+    active_files.extend(CIE_ROOT.glob('run_cie*.ps1'))
+    active_files.extend((CIE_ROOT / 'code').glob('*.py'))
+    active_files.extend((CIE_ROOT / 'configs').glob('*.json'))
+    active_files.extend((CIE_ROOT / 'docs').glob('*.md'))
+    assert active_files
+    for path in active_files:
+        text = path.read_text(encoding='utf-8').lower()
+        assert 'aaai/' not in text
+        assert ('aaai' + chr(92)) not in text
+        assert 'benchmark-transfer' not in text
+
+
+def _legacy_test_only_cie_submission_tree_and_active_paths_remain():
     for removed_name in ("aaai", "incom2027", "cirp_cms2027"):
         assert not (PROJECT_ROOT / removed_name).exists()
 

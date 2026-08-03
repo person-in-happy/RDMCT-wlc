@@ -155,3 +155,11 @@ gantt_manual/
 .tmp_pdf_text/
 .virtual_documents/
 anaconda_projects/
+
+# CIE reproduction: keep manifest-selected final assets explicitly, while
+# excluding resumable training/tuning intermediates and local progress logs.
+/cie/models/*/cie_*/
+/cie/results/acs_tuning/.checkpoints/
+/cie/results/acs_tuning/acs_grid_*.json
+/cie/results/model_evidence/.checkpoints/
+/cie/results/logs/

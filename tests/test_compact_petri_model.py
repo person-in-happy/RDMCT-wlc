@@ -6,6 +6,7 @@ pytest.importorskip("pyscipopt")
 
 from petri_mip_generator import PetriMIPConfig, build_petri_mip_model
 from petri_warm_start import (
+    _warm_start_profiles,
     _sha256_file,
     find_compatible_mixed_warm_start,
     write_mixed_warm_start,
@@ -41,6 +42,21 @@ def _solve_primary(config):
     model.optimize()
     assert str(model.getStatus()).lower() == "optimal"
     return model, float(model.getObjVal())
+
+
+def test_large_ood_warm_start_reserves_unrestricted_fallback():
+    config = PetriMIPConfig(
+        num_batches=14,
+        total_wafers=48,
+        full_mode_wafers=24,
+        mix_mode_wafers=24,
+        process_mode='mixed',
+    )
+    assert _warm_start_profiles(config) == (
+        ('spbs_fixed_slots', 0.50),
+        ('spbs_structure_only', 0.25),
+        ('spbs_unrestricted', None),
+    )
 
 
 def test_programmatic_defaults_cover_complete_2x2_residence():

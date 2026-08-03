@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('check','smoke','gpu-smoke','generate-validation','generate-core','generate-sensitivity','generate-ood','generate-all','warmstarts-core','warmstarts-sensitivity','warmstarts-ood','train-hem','train-feature-only','train-proposed','train-all','tune-acs','benchmark-validation','benchmark-main','benchmark-stability','benchmark-doe','benchmark-spbs','benchmark-sensitivity','benchmark-ood','analyze')]
+    [ValidateSet('check','smoke','gpu-smoke','model-evidence','generate-validation','generate-core','generate-sensitivity','generate-ood','generate-all','warmstarts-core','warmstarts-sensitivity','warmstarts-ood','train-hem','train-feature-only','train-proposed','train-all','freeze-checkpoints','tune-acs','benchmark-validation','benchmark-main','benchmark-stability','benchmark-doe','benchmark-spbs','benchmark-sensitivity','benchmark-ood','analyze')]
     [string]$Stage,
     [string]$Seeds = '1,2,3,4,5,6,7,8,9,10',
     [int]$TimeLimit = 600,
@@ -23,6 +23,7 @@ param(
     [string]$AnalysisOutput = 'cie/results/analysis',
     [string]$ReferenceMethod = 'proposed',
     [string]$AcsWeightsFile = '',
+    [string]$CheckpointManifest = 'cie/results/repro_manifest/selected_checkpoint_manifest.csv',
     [switch]$AllowLegacyCheckpoints
 )
 
@@ -49,6 +50,7 @@ try { $availableMB = [math]::Floor((Get-Counter '\Memory\Available MBytes' -Erro
 if ($availableMB -ge 0 -and $availableMB -lt ($MemoryLimitMB + 1024)) { Write-Warning "Low available RAM: ${availableMB}MB. Close memory-heavy applications if the run becomes slow or reaches a memory limit." }
 
 $arguments = @('-NoProfile','-ExecutionPolicy','Bypass','-File',$Runner,'-Stage',$Stage,'-Seeds',$Seeds,'-TimeLimit',$TimeLimit.ToString(),'-WarmStartTimeLimit',$WarmStartTimeLimit.ToString(),'-GpuDevice',$GpuDevice,'-MaxInstances',$MaxInstances.ToString(),'-MemoryLimitMB',$MemoryLimitMB.ToString(),'-SpbsWarmStarts',$SpbsWarmStarts,'-AnalysisInput',$AnalysisInput,'-AnalysisOutput',$AnalysisOutput,'-ReferenceMethod',$ReferenceMethod)
+$arguments += @('-CheckpointManifest', $CheckpointManifest)
 if ($CampaignId) { $arguments += @('-CampaignId', $CampaignId) }
 if ($ShardTag) { $arguments += @('-ShardTag', $ShardTag) }
 if ($TrainingSeeds) { $arguments += @('-TrainingSeeds', $TrainingSeeds) }
@@ -97,6 +99,32 @@ function Get-Percent {
     return [math]::Max($Previous, [math]::Min(99, [math]::Floor(100.0 * $done / [math]::Max(1, $expected))))
 }
 
+function Stop-CieProcessTree {
+    param([int]$RootProcessId)
+    $allProcesses = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue)
+    $pending = @($RootProcessId)
+    $descendants = @()
+    while ($pending.Count -gt 0) {
+        $parents = @($pending)
+        $pending = @()
+        foreach ($candidate in $allProcesses) {
+            if ($parents -contains [int]$candidate.ParentProcessId) {
+                $childId = [int]$candidate.ProcessId
+                if ($descendants -notcontains $childId) {
+                    $descendants += $childId
+                    $pending += $childId
+                }
+            }
+        }
+    }
+    [array]::Reverse($descendants)
+    foreach ($childId in $descendants) {
+        Stop-Process -Id $childId -Force -ErrorAction SilentlyContinue
+    }
+    Stop-Process -Id $RootProcessId -Force -ErrorAction SilentlyContinue
+}
+
+try {
 while (-not $process.HasExited) {
     $process.Refresh()
     $lastPercent = Get-Percent -Path $stdout -JobStage $Stage -Exited $false -Previous $lastPercent -SelectedTrainingSeeds $TrainingSeeds -SelectedSpbsWarmStarts $SpbsWarmStarts
@@ -108,6 +136,14 @@ while (-not $process.HasExited) {
     }
     Write-Progress -Activity "$Stage ($LogId)" -Status "$lastPercent% | elapsed $($elapsed.ToString('hh\:mm\:ss')) | ETA $etaText" -PercentComplete $lastPercent
     Start-Sleep -Seconds 5
+}
+} finally {
+    if (-not $process.HasExited) {
+        Write-Warning 'Interrupt received; stopping only this launcher process tree. The active atomic unit will be retried on resume.'
+        Stop-CieProcessTree -RootProcessId $process.Id
+        $null = $process.WaitForExit(10000)
+    }
+    Write-Progress -Activity $Stage -Completed
 }
 $process.WaitForExit()
 $process.Refresh()

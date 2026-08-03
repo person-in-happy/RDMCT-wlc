@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import os
 import sys
 from random import random
@@ -373,6 +374,163 @@ def _resolve_runtime_paths(all_kwargs, resolve_latest_model=False):
                 section['test_model_path'] = section['test_model_path']
             else:
                 section['test_model_path'] = str(resolve_path(section['test_model_path']))
+
+
+def _training_resume_identity(payload):
+    experiment = payload.get('experiment', {})
+    parser_args = payload.get('parser_args', {})
+    return {
+        'experiment': {
+            'seed': experiment.get('seed'),
+            'exp_prefix': experiment.get('exp_prefix'),
+        },
+        'parser': {
+            'seed': parser_args.get('seed'),
+            'scip_seed': parser_args.get('scip_seed'),
+            'reward_type': parser_args.get('reward_type'),
+            'baseline_type': parser_args.get('baseline_type'),
+            'policy_type': parser_args.get('policy_type'),
+            'use_cutsel_percent_policy': parser_args.get(
+                'use_cutsel_percent_policy'
+            ),
+        },
+        'env': payload.get('env'),
+        'algorithm': payload.get('algorithm'),
+        'trainer': payload.get('trainer'),
+        'net_share': payload.get('net_share'),
+        'policy': payload.get('policy'),
+        'value': payload.get('value'),
+        'cutsel_percent_policy': payload.get('cutsel_percent_policy'),
+        'devices': payload.get('devices'),
+        'policy_type': payload.get('policy_type'),
+        'training_resume_signature': payload.get('training_resume_signature'),
+    }
+
+
+def _sha256_training_file(path):
+    digest = hashlib.sha256()
+    with open(path, 'rb') as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _build_training_resume_signature(all_kwargs, args):
+    assets = [
+        args.config_file,
+        __file__,
+        osp.join(osp.dirname(__file__), 'algorithms.py'),
+        osp.join(osp.dirname(__file__), 'environments.py'),
+        osp.join(osp.dirname(__file__), 'cutsel_agent_parallel.py'),
+        osp.join(osp.dirname(__file__), 'pointer_net.py'),
+        osp.join(osp.dirname(__file__), 'pointer_net_end_token.py'),
+        osp.join(osp.dirname(__file__), 'global_const.py'),
+        osp.join(osp.dirname(__file__), 'logger.py'),
+    ]
+    training_dir = all_kwargs.get('env', {}).get('instance_file_path')
+    if training_dir and os.path.isdir(training_dir):
+        for filename in sorted(os.listdir(training_dir)):
+            if filename.lower().endswith(('.lp', '.mps', '.cip')):
+                assets.append(os.path.join(training_dir, filename))
+    records = []
+    for asset in assets:
+        resolved = os.path.realpath(asset)
+        records.append(
+            {
+                'path': resolved,
+                'size': os.path.getsize(resolved),
+                'sha256': _sha256_training_file(resolved),
+            }
+        )
+    encoded = json.dumps(
+        records, ensure_ascii=False, sort_keys=True, separators=(',', ':')
+    ).encode('utf-8')
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _find_matching_training_resume(all_kwargs, args):
+    root = all_kwargs.get('experiment', {}).get('base_log_dir')
+    if not root or not os.path.isdir(root):
+        return None
+    expected = copy.deepcopy(all_kwargs)
+    expected['parser_args'] = dict(vars(args))
+    expected_identity = _training_resume_identity(expected)
+    target_epoch = int(all_kwargs['algorithm']['num_epochs'])
+    candidates = []
+    for directory, _, filenames in os.walk(root):
+        if 'variant.json' not in filenames:
+            continue
+        variant_path = os.path.join(directory, 'variant.json')
+        try:
+            with open(variant_path, 'r', encoding='utf-8') as stream:
+                variant = json.load(stream)
+        except (OSError, ValueError, TypeError) as error:
+            warnings.warn(
+                f'Ignoring unreadable training variant {variant_path}: {error}',
+                RuntimeWarning,
+            )
+            continue
+        variant_identity = _training_resume_identity(variant)
+        exact_identity = variant_identity == expected_identity
+        variant_without_signature = dict(variant_identity)
+        expected_without_signature = dict(expected_identity)
+        variant_without_signature.pop('training_resume_signature', None)
+        expected_without_signature.pop('training_resume_signature', None)
+        if variant_without_signature != expected_without_signature:
+            continue
+        checkpoint_names = [
+            name
+            for name in filenames
+            if name == 'params.pkl'
+            or (name.startswith('itr_') and name.endswith('.pkl'))
+        ]
+        for checkpoint_name in checkpoint_names:
+            checkpoint_path = os.path.join(directory, checkpoint_name)
+            try:
+                checkpoint = torch.load(
+                    checkpoint_path, map_location='cpu', weights_only=False
+                )
+                epoch = int(checkpoint.get('epoch', -1))
+                if epoch < 0:
+                    warnings.warn(
+                        f'Ignoring resume checkpoint without epoch metadata: '
+                        f'{checkpoint_path}',
+                        RuntimeWarning,
+                    )
+                    continue
+                if not exact_identity:
+                    warnings.warn(
+                        f'Ignoring pre-signature checkpoint for exact resume: '
+                        f'{checkpoint_path}. Restarting this seed from epoch 0.',
+                        RuntimeWarning,
+                    )
+                    continue
+                if epoch < target_epoch and int(
+                    checkpoint.get('training_state_version', 0)
+                ) < 1:
+                    warnings.warn(
+                        f'Ignoring weights-only checkpoint for exact resume: '
+                        f'{checkpoint_path}. Restarting this seed from epoch 0.',
+                        RuntimeWarning,
+                    )
+                    continue
+                candidates.append(
+                    (epoch, os.path.getmtime(checkpoint_path), checkpoint_path)
+                )
+            except (OSError, ValueError, TypeError, KeyError, RuntimeError) as error:
+                warnings.warn(
+                    f'Ignoring unreadable training resume candidate '
+                    f'{checkpoint_path}: {error}',
+                    RuntimeWarning,
+                )
+    if not candidates:
+        return None
+    epoch, _, checkpoint_path = max(candidates)
+    return {
+        'checkpoint': checkpoint_path,
+        'epoch': epoch,
+        'log_dir': os.path.dirname(checkpoint_path),
+    }
 
 
 def _a3c_reward_with_schedule_penalty(env_step_info, reward_type):
@@ -1155,6 +1313,14 @@ def main():
     parser.add_argument('--scip_seed', type=int, default=1)
     parser.add_argument('--resume_model', type=str, default='')
     parser.add_argument('--start_epoch', type=int, default=-1)
+    parser.add_argument(
+        '--auto_resume',
+        action='store_true',
+        help=(
+            'Resume the newest exactly matching training run from params.pkl; '
+            'skip the run when its recorded epoch already reaches num_epochs.'
+        ),
+    )
     parser.add_argument('--test_decode_type', type=str, default='beam_search')
     parser.add_argument('--generate_petri_instance', type=str, default='False')
     parser.add_argument('--petri_instance_dir', type=str, default='generated_instances/petri')
@@ -1492,6 +1658,33 @@ def main():
                     f"instances: {validation_instance_path}."
                 )
         
+        all_kwargs['training_resume_signature'] = (
+            _build_training_resume_signature(all_kwargs, args)
+        )
+        resume_log_dir = None
+        if args.auto_resume and not args.resume_model:
+            resume = _find_matching_training_resume(all_kwargs, args)
+            if resume is not None:
+                completed_epoch = int(resume['epoch'])
+                target_epoch = int(all_kwargs['algorithm']['num_epochs'])
+                if completed_epoch >= target_epoch:
+                    completed_checkpoint = resume['checkpoint']
+                    print(
+                        f'training already complete: seed={args.seed}, '
+                        f'epoch={completed_epoch}, checkpoint='
+                        f'{completed_checkpoint}',
+                        flush=True,
+                    )
+                    return
+                args.resume_model = resume['checkpoint']
+                all_kwargs['start_epoch'] = completed_epoch
+                resume_log_dir = resume['log_dir']
+                print(
+                    f'auto-resume: seed={args.seed}, completed_epoch='
+                    f'{completed_epoch}, checkpoint={args.resume_model}',
+                    flush=True,
+                )
+
         all_kwargs['parser_args'] = dict(vars(args))
         experiment_kwargs = all_kwargs['experiment']
         seed = set_global_seed(experiment_kwargs['seed'])
@@ -1503,6 +1696,7 @@ def main():
         variant = copy.deepcopy(all_kwargs)
         actual_log_dir = setup_logger(
             variant=variant,
+            log_dir=resume_log_dir,
             **experiment_kwargs
         )
 
@@ -1565,6 +1759,7 @@ def main():
             # .to(device)
 
         # preload model for retraining
+        resume_state_dict = None
         resume_model_path = args.resume_model
         if not resume_model_path and (
             experiment_kwargs['base_log_dir'] is not None
@@ -1582,24 +1777,24 @@ def main():
                 f"resuming model weights from {resume_model_path}; "
                 f"start_epoch={all_kwargs['start_epoch']}"
             )
-            state_dict = torch.load(
+            resume_state_dict = torch.load(
                 resume_model_path,
                 map_location=device,
                 weights_only=False,
             )
             _validate_checkpoint_reward_type(
-                state_dict,
+                resume_state_dict,
                 all_kwargs['algorithm']['reward_type'],
                 resume_model_path,
                 strict=True,
             )
             validate_checkpoint_feature_schema(
-                state_dict,
+                resume_state_dict,
                 net_share_kwargs['embedding_dim'],
                 resume_model_path,
             )
             validate_checkpoint_postprocessor_schema(
-                state_dict,
+                resume_state_dict,
                 net_share_kwargs['embedding_dim'],
                 resume_model_path,
                 cut_postprocessor_schema_for_dim(
@@ -1607,9 +1802,11 @@ def main():
                     all_kwargs['env'].get('cutsel_use_structure_rerank'),
                 ),
             )
-            pointer_net.load_state_dict(state_dict['pointer_net'])
+            pointer_net.load_state_dict(resume_state_dict['pointer_net'])
             if cutsel_percent_policy_kwargs['use_cutsel_percent_policy']:
-                cutsel_percent_policy.load_state_dict(state_dict['cutsel_percent_net'])
+                cutsel_percent_policy.load_state_dict(
+                    resume_state_dict['cutsel_percent_net']
+                )
         # train 函数
         alg_kwargs = all_kwargs['algorithm']
         if cutsel_percent_policy_kwargs['use_cutsel_percent_policy']:
@@ -1634,6 +1831,21 @@ def main():
                 device,
                 **alg_kwargs
             )
+        if resume_state_dict is not None:
+            missing_resume_state = algorithm.restore_training_state(
+                resume_state_dict
+            )
+            if args.auto_resume and missing_resume_state:
+                raise RuntimeError(
+                    'Automatic training resume is missing required state: '
+                    + ', '.join(sorted(set(missing_resume_state)))
+                )
+            if missing_resume_state:
+                warnings.warn(
+                    'Manual resume restored weights but not all training state: '
+                    + ', '.join(sorted(set(missing_resume_state))),
+                    RuntimeWarning,
+                )
         if alg_kwargs['normalize']:
             mean_std = algorithm.mean_std
         else:

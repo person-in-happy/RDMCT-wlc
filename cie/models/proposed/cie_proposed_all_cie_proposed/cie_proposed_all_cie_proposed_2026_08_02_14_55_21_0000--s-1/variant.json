@@ -1,0 +1,158 @@
+{
+  "algorithm": {
+    "actor_net_lr": 0.0001,
+    "baseline_type": "simple",
+    "batch_size": 8,
+    "critic_beta": 0.9,
+    "critic_net_lr": 0.0001,
+    "evaluate_decode_type": "greedy",
+    "evaluate_freq": 0,
+    "evaluate_samples": 8,
+    "lr_decay": true,
+    "lr_decay_rate": 0.96,
+    "lr_decay_step": 10,
+    "max_grad_norm": 2.0,
+    "normalize": false,
+    "normalize_reward": false,
+    "num_epochs": 60,
+    "optimizer_class": "Adam",
+    "reward_scale": 1,
+    "reward_type": "primaldualintegral",
+    "train_decode_type": "stochastic",
+    "train_steps_per_epoch": 4
+  },
+  "cutsel_percent_policy": {
+    "highlevel_actor_lr": 0.0005,
+    "train_freq": 2,
+    "train_highlevel_batch_size": 8,
+    "use_cutsel_percent_policy": true
+  },
+  "devices": {
+    "global_device": "cuda:0",
+    "multi_devices": [
+      "cuda:0"
+    ]
+  },
+  "env": {
+    "conflict": true,
+    "cutsel_max_candidates": 128,
+    "cutsel_max_selected_cuts": 16,
+    "cutsel_use_structure_rerank": true,
+    "heuristics": true,
+    "instance_file_path": "D:\\git\\git\\RDMCT-A3C\\cie\\data\\policy_training\\train",
+    "lexicographic_schedule_stability": true,
+    "lexicographic_stability_node_limit": 5000,
+    "lexicographic_stability_time_limit": 5,
+    "max_rounds_root": 1,
+    "presolving": true,
+    "schedule_stability_mode": "linear",
+    "scip_disable_expensive_heuristics": true,
+    "scip_heuristics_profile": "fast",
+    "scip_memory_limit_mb": 1024,
+    "scip_time_limit": 30,
+    "separating": true,
+    "single_instance_file": "all"
+  },
+  "experiment": {
+    "base_log_dir": "D:\\git\\git\\RDMCT-A3C\\cie\\models\\proposed",
+    "compact_text_log": true,
+    "exp_prefix": "cie_proposed_all_cie_proposed",
+    "seed": 1,
+    "snapshot_gap": 5,
+    "snapshot_mode": "gap_and_last",
+    "text_log_backup_count": 2,
+    "text_log_max_mb": 8
+  },
+  "net_share": {
+    "embedding_dim": 23,
+    "hidden_dim": 128,
+    "tanh_exploration": 5,
+    "use_tanh": true
+  },
+  "online_test_kwargs": {
+    "test_env_kwargs": {
+      "conflict": true,
+      "heuristics": true,
+      "lexicographic_schedule_stability": true,
+      "lexicographic_stability_node_limit": 5000,
+      "lexicographic_stability_time_limit": 5,
+      "max_rounds_root": 1,
+      "presolving": true,
+      "schedule_stability_mode": "linear",
+      "scip_disable_expensive_heuristics": true,
+      "scip_heuristics_profile": "fast",
+      "scip_memory_limit_mb": 1024,
+      "scip_time_limit": 30,
+      "separating": true,
+      "single_instance_file": "all"
+    },
+    "test_freq": 0,
+    "test_instance_path": "D:\\git\\git\\RDMCT-A3C\\cie\\data\\policy_training\\test",
+    "test_n_jobs": 1
+  },
+  "parser_args": {
+    "baseline_type": "simple",
+    "config_file": "D:\\git\\git\\RDMCT-A3C\\cie\\configs\\cie_proposed_train.json",
+    "generate_petri_instance": "False",
+    "instance_type": "cie_proposed",
+    "petri_2x2_wafers": 20,
+    "petri_4x1_wafers": 20,
+    "petri_allow_missing_warm_start": false,
+    "petri_atr_capacity": 2,
+    "petri_batches": 10,
+    "petri_chamber_idle_penalty": 0.0001,
+    "petri_chamber_nonprocess_wait_square_penalty": 0.01,
+    "petri_cleaning_interval": 10,
+    "petri_cleaning_process_time": 0.0,
+    "petri_default_wafer_mode": "",
+    "petri_instance_dir": "D:\\git\\git\\RDMCT-A3C\\generated_instances\\petri",
+    "petri_instance_name": "petri_batch10_fullflow_v7.lp",
+    "petri_ll_wait_penalty": 0.0001,
+    "petri_max_schedule_wait_time": 0.0,
+    "petri_mode_sequence": "",
+    "petri_num_pm": 2,
+    "petri_num_steps": 13,
+    "petri_pec_pool_size": 8,
+    "petri_post_process_wait_penalty": 0.05,
+    "petri_process_mode": "auto",
+    "petri_total_wafers": 0,
+    "petri_vtr_capacity": 4,
+    "petri_wafer_mode_map": "",
+    "petri_warm_start_time_limit": 180.0,
+    "policy_type": "with_token",
+    "resume_model": "",
+    "reward_type": "primaldualintegral",
+    "scip_seed": 1,
+    "seed": 1,
+    "sel_cuts_percent": 0.1,
+    "single_instance_file": "all",
+    "start_epoch": -1,
+    "test_decode_type": "beam_search",
+    "test_gap_limit": -1.0,
+    "test_solution_limit": -1,
+    "test_time_limit": -1.0,
+    "time_limit": 10,
+    "train_type": "train",
+    "use_cutsel_percent_policy": "True"
+  },
+  "policy": {
+    "beam_size": 3,
+    "n_glimpses": 1
+  },
+  "policy_type": "with_token",
+  "start_epoch": 0,
+  "test_kwargs": {
+    "n_jobs": 1,
+    "test_instance_path": "D:\\git\\git\\RDMCT-A3C\\cie\\data\\policy_training\\test",
+    "test_model_path": "D:\\git\\git\\RDMCT-A3C\\cie\\models\\proposed\\seed_1\\itr_60.pkl"
+  },
+  "trainer": {
+    "n_jobs": 2,
+    "samples_per_epoch": 8,
+    "worker_restart_limit": 2,
+    "worker_stall_grace_seconds": 30
+  },
+  "value": {
+    "n_process_block_iters": 3
+  }
+}

@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('check','smoke','gpu-smoke','generate-validation','generate-core','generate-sensitivity','generate-ood','generate-all','warmstarts-core','warmstarts-sensitivity','warmstarts-ood','train-hem','train-feature-only','train-proposed','train-all','tune-acs','benchmark-validation','benchmark-main','benchmark-stability','benchmark-doe','benchmark-spbs','benchmark-sensitivity','benchmark-ood','analyze')]
+    [ValidateSet('check','smoke','gpu-smoke','model-evidence','generate-validation','generate-core','generate-sensitivity','generate-ood','generate-all','warmstarts-core','warmstarts-sensitivity','warmstarts-ood','train-hem','train-feature-only','train-proposed','train-all','freeze-checkpoints','tune-acs','benchmark-validation','benchmark-main','benchmark-stability','benchmark-doe','benchmark-spbs','benchmark-sensitivity','benchmark-ood','analyze')]
     [string]$Stage,
     [string]$Seeds = '1,2,3,4,5,6,7,8,9,10',
     [int]$TimeLimit = 600,
@@ -21,6 +21,7 @@ param(
     [string]$AnalysisOutput = 'cie/results/analysis',
     [string]$ReferenceMethod = 'proposed',
     [string]$AcsWeightsFile = '',
+    [string]$CheckpointManifest = 'cie/results/repro_manifest/selected_checkpoint_manifest.csv',
     [switch]$AllowLegacyCheckpoints
 )
 
@@ -123,12 +124,48 @@ function Get-AcsWeights {
     ) -join ','
 }
 
+function Get-FrozenCheckpointsBySeed {
+    param([Parameter(Mandatory = $true)][string]$Family)
+    if (-not (Test-Path -LiteralPath $CheckpointManifest -PathType Leaf)) {
+        throw ('Frozen checkpoint manifest not found: ' + $CheckpointManifest + '. Run -Stage freeze-checkpoints first.')
+    }
+    $rows = @(Import-Csv -LiteralPath $CheckpointManifest | Where-Object { $_.family -eq $Family })
+    if ($rows.Count -ne 5) {
+        throw ('Checkpoint manifest requires exactly five rows for ' + $Family + '; found ' + $rows.Count)
+    }
+    $map = @{}
+    foreach ($row in $rows) {
+        $seed = [int]$row.training_seed
+        if ($map.ContainsKey($seed)) { throw ('Duplicate checkpoint manifest seed: ' + $Family + '/' + $seed) }
+        $checkpoint = [string]$row.checkpoint
+        $variant = [string]$row.variant
+        if ([IO.Path]::GetFileName($checkpoint) -ne 'itr_60.pkl') { throw ('Formal checkpoint must be itr_60.pkl: ' + $checkpoint) }
+        if (-not (Test-Path -LiteralPath $checkpoint -PathType Leaf)) { throw ('Missing checkpoint: ' + $checkpoint) }
+        if (-not (Test-Path -LiteralPath $variant -PathType Leaf)) { throw ('Missing variant: ' + $variant) }
+        $checkpointHash = (Get-FileHash -LiteralPath $checkpoint -Algorithm SHA256).Hash
+        $variantHash = (Get-FileHash -LiteralPath $variant -Algorithm SHA256).Hash
+        if ($checkpointHash -ne [string]$row.checkpoint_sha256) { throw ('Checkpoint hash mismatch: ' + $checkpoint) }
+        if ($variantHash -ne [string]$row.variant_sha256) { throw ('Variant hash mismatch: ' + $variant) }
+        $metadata = Get-Content -LiteralPath $variant -Raw | ConvertFrom-Json
+        $trainingPath = [string]$metadata.env.instance_file_path
+        $validPath = $trainingPath.Replace('/',[string][char]92).ToLowerInvariant().EndsWith('cie\data\policy_training\train')
+        if ([int]$metadata.experiment.seed -ne $seed -or [int]$metadata.parser_args.seed -ne $seed -or [int]$metadata.parser_args.scip_seed -ne $seed -or -not $validPath) {
+            throw ('Checkpoint metadata mismatch: ' + $Family + '/' + $seed)
+        }
+        $map[$seed] = $checkpoint
+    }
+    if ((@($map.Keys | Sort-Object) -join ',') -ne '1,2,3,4,5') {
+        throw ('Checkpoint manifest seeds for ' + $Family + ' must be exactly 1,2,3,4,5.')
+    }
+    return $map
+}
+
 function Run-LearnedCampaign {
     param([string]$Suite, [string]$Campaign, [int]$Limit)
     Require-Cuda
-    $hem = Get-CheckpointsBySeed @('cie/models/hem')
-    $feature = Get-CheckpointsBySeed @('cie/models/feature_only')
-    $proposed = Get-CheckpointsBySeed @('cie/models/proposed')
+    $hem = Get-FrozenCheckpointsBySeed -Family 'hem'
+    $feature = Get-FrozenCheckpointsBySeed -Family 'feature_only'
+    $proposed = Get-FrozenCheckpointsBySeed -Family 'proposed'
     $availableTrainingSeeds = @($hem.Keys | Where-Object { $feature.ContainsKey($_) -and $proposed.ContainsKey($_) } | Sort-Object)
     if ($availableTrainingSeeds.Count -lt 5) {
         throw "C&IE requires five matched, auditable HEM/feature-only/Proposed checkpoints; found $($availableTrainingSeeds.Count). Run train-all. Use -AllowLegacyCheckpoints only for non-paper smoke/diagnostics."
@@ -173,7 +210,7 @@ function Run-LearnedCampaign {
 
 function Run-StabilityCampaign {
     Require-Cuda
-    $proposed = Get-CheckpointsBySeed @('cie/models/proposed')
+    $proposed = Get-FrozenCheckpointsBySeed -Family 'proposed'
     $availableTrainingSeeds = @($proposed.Keys | Sort-Object)
     if ($availableTrainingSeeds.Count -lt 5) {
         throw "C&IE stability ablation requires five auditable Proposed checkpoints; found $($availableTrainingSeeds.Count). Run train-all first."
@@ -238,6 +275,12 @@ if ($Stage -eq 'smoke') {
     exit 0
 }
 
+if ($Stage -eq 'model-evidence') {
+    Run-Python @('-m','pytest','tests/test_compact_petri_model.py','-q')
+    Run-Python @('cie/code/analyze_cie_model_scale.py','--manifest',$Manifest,'--output-dir','cie/results/model_evidence')
+    exit 0
+}
+
 if ($Stage -eq 'gpu-smoke') {
     Require-Cuda
     $hem = Get-CheckpointsBySeed @('cie/models/hem')
@@ -291,11 +334,17 @@ if ($Stage -in @('train-hem','train-feature-only','train-proposed','train-all'))
                 '--baseline_type','simple',
                 '--policy_type','with_token',
                 '--use_cutsel_percent_policy','True',
+                '--auto_resume',
                 '--seed',$seed,
                 '--scip_seed',$seed
             )
         }
     }
+    exit 0
+}
+
+if ($Stage -eq 'freeze-checkpoints') {
+    Run-Python @('cie/code/freeze_cie_checkpoints.py','--output',$CheckpointManifest,'--seeds','1,2,3,4,5','--epoch','60')
     exit 0
 }
 

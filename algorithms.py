@@ -7,6 +7,7 @@ import json
 import copy 
 import os.path as osp
 import math
+import random as python_random
 
 import torch.optim as optim
 from torch.optim import lr_scheduler
@@ -169,13 +170,88 @@ class ReinforceBaselineAlg():
             self.pointer_net.embedding_dim,
             getattr(self.env, 'cutsel_use_structure_rerank', None),
         )
+        state_dict['training_state_version'] = 1
+        state_dict['policy_optimizer'] = self.policy_optimizer.state_dict()
+        if self.baseline_type == 'net':
+            state_dict['value_net'] = self.value_net.state_dict()
+            state_dict['value_optimizer'] = self.value_optimizer.state_dict()
+        elif self.baseline_type == 'simple':
+            state_dict['critic_exp_mvg_avg'] = self.critic_exp_mvg_avg
+        if self.lr_decay:
+            state_dict['policy_lr_scheduler'] = self.policy_lr_scheduler.state_dict()
+        state_dict['python_random_state'] = python_random.getstate()
+        state_dict['numpy_random_state'] = np.random.get_state()
+        state_dict['torch_random_state'] = torch.get_rng_state()
+        if torch.cuda.is_available():
+            state_dict['torch_cuda_random_state_all'] = torch.cuda.get_rng_state_all()
         if self.normalize:
             state_dict['mean'] = self.mean_std.mean
             state_dict['std'] = self.mean_std.std
             state_dict['epsilon'] = self.mean_std.epsilon
+            state_dict['normalizer_var'] = self.mean_std.var
+            state_dict['normalizer_count'] = self.mean_std.count
         if epoch is not None:
             state_dict['epoch'] = int(epoch)
         return state_dict
+
+    def restore_training_state(self, state_dict):
+        missing = []
+        if 'policy_optimizer' in state_dict:
+            self.policy_optimizer.load_state_dict(state_dict['policy_optimizer'])
+        else:
+            missing.append('policy_optimizer')
+        if self.baseline_type == 'net':
+            if 'value_net' in state_dict:
+                self.value_net.load_state_dict(state_dict['value_net'])
+            else:
+                missing.append('value_net')
+            if 'value_optimizer' in state_dict:
+                self.value_optimizer.load_state_dict(state_dict['value_optimizer'])
+            else:
+                missing.append('value_optimizer')
+        elif self.baseline_type == 'simple':
+            if 'critic_exp_mvg_avg' in state_dict:
+                self.critic_exp_mvg_avg = state_dict['critic_exp_mvg_avg']
+            else:
+                missing.append('critic_exp_mvg_avg')
+        if self.lr_decay:
+            if 'policy_lr_scheduler' in state_dict:
+                self.policy_lr_scheduler.load_state_dict(
+                    state_dict['policy_lr_scheduler']
+                )
+            else:
+                missing.append('policy_lr_scheduler')
+        if self.normalize:
+            for key in ('mean', 'std', 'epsilon'):
+                if key not in state_dict:
+                    missing.append(key)
+            if not any(key in missing for key in ('mean', 'std', 'epsilon')):
+                self.mean_std.mean = state_dict['mean']
+                self.mean_std.std = state_dict['std']
+                self.mean_std.epsilon = state_dict['epsilon']
+                self.mean_std.var = state_dict.get(
+                    'normalizer_var', self.mean_std.std ** 2
+                )
+                self.mean_std.count = state_dict.get(
+                    'normalizer_count', self.mean_std.epsilon
+                )
+        if 'python_random_state' in state_dict:
+            python_random.setstate(state_dict['python_random_state'])
+        else:
+            missing.append('python_random_state')
+        if 'numpy_random_state' in state_dict:
+            np.random.set_state(state_dict['numpy_random_state'])
+        else:
+            missing.append('numpy_random_state')
+        if 'torch_random_state' in state_dict:
+            torch.set_rng_state(state_dict['torch_random_state'].cpu())
+        else:
+            missing.append('torch_random_state')
+        if torch.cuda.is_available() and 'torch_cuda_random_state_all' in state_dict:
+            torch.cuda.set_rng_state_all(
+                [value.cpu() for value in state_dict['torch_cuda_random_state_all']]
+            )
+        return missing
 
     def save_checkpoint(self, epoch):
         state_dict = self._checkpoint_state_dict(epoch)
@@ -553,10 +629,36 @@ class HRLReinforceAlg(ReinforceBaselineAlg):
                 getattr(self.env, 'cutsel_use_structure_rerank', None),
             ),
         }
+        state_dict['training_state_version'] = 1
+        state_dict['policy_optimizer'] = self.policy_optimizer.state_dict()
+        state_dict['cutsel_percent_policy_optimizer'] = (
+            self.cutsel_percent_policy_optimizer.state_dict()
+        )
+        state_dict['critic_exp_mvg_avg_high_level'] = (
+            self.critic_exp_mvg_avg_high_level
+        )
+        state_dict['train_highlevel_epoch'] = int(self.train_highlevel_epoch)
+        if self.baseline_type == 'net':
+            state_dict['value_net'] = self.value_net.state_dict()
+            state_dict['value_optimizer'] = self.value_optimizer.state_dict()
+        elif self.baseline_type == 'simple':
+            state_dict['critic_exp_mvg_avg'] = self.critic_exp_mvg_avg
+        if self.lr_decay:
+            state_dict['policy_lr_scheduler'] = self.policy_lr_scheduler.state_dict()
+            state_dict['cutsel_percent_policy_lr_scheduler'] = (
+                self.cutsel_percent_policy_lr_scheduler.state_dict()
+            )
+        state_dict['python_random_state'] = python_random.getstate()
+        state_dict['numpy_random_state'] = np.random.get_state()
+        state_dict['torch_random_state'] = torch.get_rng_state()
+        if torch.cuda.is_available():
+            state_dict['torch_cuda_random_state_all'] = torch.cuda.get_rng_state_all()
         if self.normalize:
             state_dict['mean'] = self.mean_std.mean
             state_dict['std'] = self.mean_std.std
             state_dict['epsilon'] = self.mean_std.epsilon
+            state_dict['normalizer_var'] = self.mean_std.var
+            state_dict['normalizer_count'] = self.mean_std.count
         if epoch is not None:
             state_dict['epoch'] = int(epoch)
         return state_dict
@@ -564,6 +666,34 @@ class HRLReinforceAlg(ReinforceBaselineAlg):
     def save_checkpoint(self, epoch):
         state_dict = self._checkpoint_state_dict(epoch)
         logger.save_itr_params(epoch, state_dict)
+
+    def restore_training_state(self, state_dict):
+        missing = super().restore_training_state(state_dict)
+        if 'cutsel_percent_policy_optimizer' in state_dict:
+            self.cutsel_percent_policy_optimizer.load_state_dict(
+                state_dict['cutsel_percent_policy_optimizer']
+            )
+        else:
+            missing.append('cutsel_percent_policy_optimizer')
+        if 'critic_exp_mvg_avg_high_level' in state_dict:
+            self.critic_exp_mvg_avg_high_level = (
+                state_dict['critic_exp_mvg_avg_high_level']
+            )
+        else:
+            missing.append('critic_exp_mvg_avg_high_level')
+        if 'train_highlevel_epoch' in state_dict:
+            self.train_highlevel_epoch = int(state_dict['train_highlevel_epoch'])
+        else:
+            missing.append('train_highlevel_epoch')
+        if self.lr_decay:
+            key = 'cutsel_percent_policy_lr_scheduler'
+            if key in state_dict:
+                self.cutsel_percent_policy_lr_scheduler.load_state_dict(
+                    state_dict[key]
+                )
+            else:
+                missing.append(key)
+        return missing
 
     def _train_highlevel(self):
         # get data
