@@ -124,6 +124,14 @@ function Get-AcsWeights {
     ) -join ','
 }
 
+function Resolve-ManifestAssetPath {
+    param([Parameter(Mandatory = $true)][string]$Path)
+    if ([IO.Path]::IsPathRooted($Path)) {
+        return [IO.Path]::GetFullPath($Path)
+    }
+    return [IO.Path]::GetFullPath((Join-Path -Path (Get-Location).Path -ChildPath $Path))
+}
+
 function Get-FrozenCheckpointsBySeed {
     param([Parameter(Mandatory = $true)][string]$Family)
     if (-not (Test-Path -LiteralPath $CheckpointManifest -PathType Leaf)) {
@@ -137,8 +145,8 @@ function Get-FrozenCheckpointsBySeed {
     foreach ($row in $rows) {
         $seed = [int]$row.training_seed
         if ($map.ContainsKey($seed)) { throw ('Duplicate checkpoint manifest seed: ' + $Family + '/' + $seed) }
-        $checkpoint = [IO.Path]::GetFullPath([string]$row.checkpoint, (Get-Location).Path)
-        $variant = [IO.Path]::GetFullPath([string]$row.variant, (Get-Location).Path)
+        $checkpoint = Resolve-ManifestAssetPath -Path ([string]$row.checkpoint)
+        $variant = Resolve-ManifestAssetPath -Path ([string]$row.variant)
         if ([IO.Path]::GetFileName($checkpoint) -ne 'itr_60.pkl') { throw ('Formal checkpoint must be itr_60.pkl: ' + $checkpoint) }
         if (-not (Test-Path -LiteralPath $checkpoint -PathType Leaf)) { throw ('Missing checkpoint: ' + $checkpoint) }
         if (-not (Test-Path -LiteralPath $variant -PathType Leaf)) { throw ('Missing variant: ' + $variant) }
@@ -345,6 +353,10 @@ if ($Stage -in @('train-hem','train-feature-only','train-proposed','train-all'))
 
 if ($Stage -eq 'freeze-checkpoints') {
     Run-Python @('cie/code/freeze_cie_checkpoints.py','--output',$CheckpointManifest,'--seeds','1,2,3,4,5','--epoch','60')
+    foreach ($family in @('hem','feature_only','proposed')) {
+        [void](Get-FrozenCheckpointsBySeed -Family $family)
+    }
+    Write-Host 'Frozen checkpoint preflight passed: 15 models and variants verified.' -ForegroundColor Green
     exit 0
 }
 

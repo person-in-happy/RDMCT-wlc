@@ -22,6 +22,15 @@ if str(CIE_CODE) not in sys.path:
 import tune_cie_acs
 
 
+def test_checkpoint_manifest_paths_support_windows_powershell_51():
+    script = (PROJECT_ROOT / 'cie' / 'run_cie.ps1').read_text(encoding='utf-8')
+    assert 'function Resolve-ManifestAssetPath' in script
+    assert 'GetFullPath([string]$row.checkpoint,' not in script
+    assert 'GetFullPath([string]$row.variant,' not in script
+    assert 'Resolve-ManifestAssetPath -Path ([string]$row.checkpoint)' in script
+    assert 'Resolve-ManifestAssetPath -Path ([string]$row.variant)' in script
+
+
 class _DummyEnv:
     cutsel_use_structure_rerank = False
 
