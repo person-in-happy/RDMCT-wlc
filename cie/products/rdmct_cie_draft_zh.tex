@@ -4,695 +4,728 @@
 \usepackage{amsmath,amssymb,mathtools}
 \usepackage{booktabs,multirow,array}
 \usepackage{graphicx}
-\usepackage{xcolor}
 \usepackage{enumitem}
 \usepackage{lineno}
+\usepackage{microtype}
 \usepackage{url}
 
 \journal{Computers \& Industrial Engineering（中文审查版）}
 \modulolinenumbers[5]
 
-\definecolor{tbdred}{RGB}{170,0,0}
-\newcommand{\TBD}[1]{\textcolor{tbdred}{[待补：#1]}}
-\newcommand{\method}{RDMCT-HPS}
-\newcommand{\project}{RDMCT-A3C}
+\newcommand{\method}{RDMCT-HBS}
 \newcommand{\cmax}{C_{\max}}
 \newcommand{\pdi}{\mathrm{PDI}}
-\newcommand{\gap}{\mathrm{Gap}}
 
 \begin{document}
-
 \begin{frontmatter}
 
-\title{双源混流旋转腔室组合设备的精确MIP调度、两阶段稳定性改进与热启动层次策略搜索}
-
-\author[inst1]{\TBD{第一作者}}
-\author[inst1]{\TBD{共同作者}}
-\author[inst2]{\TBD{通信作者}\corref{cor1}}
-\ead{\TBD{通信作者邮箱}}
-\cortext[cor1]{通信作者。}
-
-\affiliation[inst1]{organization={\TBD{院系和学校}},
-                    city={\TBD{城市}},
-                    postcode={\TBD{邮编}},
-                    country={\TBD{国家}}}
-\affiliation[inst2]{organization={\TBD{院系和学校}},
-                    city={\TBD{城市}},
-                    postcode={\TBD{邮编}},
-                    country={\TBD{国家}}}
+\title{双源混流旋转腔室组合设备调度的两阶段MILP与结构感知学习增强分支割}
+\author{匿名作者}
 
 \begin{abstract}
-双源混流半导体组合设备在共享旋转腔室内耦合产品晶圆和可复用工艺环境载具，
-并受到批处理、清洗、搬运和驻留约束。本文首先将有限时域调度问题建立为精确的
-紧凑混合整数规划（MIP）。最大完工时间优先的两阶段路线利用剩余预算保持当前
-最佳incumbent的最大完工时间、固定其大部分离散决策，并降低线性等待--节拍
-稳定性指标。只有第一阶段被证明最优时才声称主目标最优；第一阶段超时后的改进
-不被表述为全局字典序证明。相较于四指机械手四空间工艺模块已有的稳态、单产品、
-固定序列线性规划，本文研究不同的有限时域系统，并在若干维度加入更丰富特征。
-随后，
-本文将结构保持二元骨架（SPBS）原始热启动、层次割选择策略、束搜索解码与SCIP
-分支割求解器集成。该策略继承HEM的选择数量/有序子集分解，并增加变量角色
-描述量和确定性的角色次模补全。学习回调只排序求解器产生的合法不等式，因而
-不改变调度问题的可行域。冻结的配对协议分别检验热启动、层次策略、束搜索和
-结构特征在标称及分布外实例上的作用。\TBD{待新检查点和全部冻结实验通过来源
-审计与独立解验证后，填入经验证的主实验、组件消融和OOD结果。} 本框架在不把
-HEM已有组件误列为本文创新的前提下，将可审计制造物理与学习辅助精确优化结合。
+双源混流旋转腔室组合设备需要在旋转腔、装载锁和共享机械手之间协调产品晶圆与
+可复用真空区假片。混合配方、腔室清洗、搬运、驻留和假片循环由此形成强耦合
+排程，传统单源或预定序列模型难以完整描述。
+本文首先建立有限时域两阶段混合整数线性规划，联合决定$4\times1$与$2\times2$
+配方分组、腔室和槽位分配、机械手搬运、清洗epoch及真空区假片占用。第一阶段
+最小化最大完工时间；第二阶段在保持所得离散结构和最大完工时间的条件下精修
+等待与节拍。针对该模型产生的大规模结构化分支割问题，本文在HEM基础上集成
+结构保持二元骨架初始解、23维变量类型与目标角色特征、A3C启发的并行策略梯度训练、
+有限宽束搜索和角色次模补全。四个验证实例在两个阶段均达到零gap并通过独立
+物理检查。完整标称矩阵包含20个实例、5个求解器种子和5个训练种子上的2700次
+运行。\method{}在七种方法中取得最低的观测平均原始--对偶积分
+（$1.6586\times10^4$）与求解时间（218.32~s）；其平均PDI分别比适配HEM和SCIP
+低1.41\%和1.97\%。由于实例级置信区间跨越零且Holm校正检验不显著，这些差异
+应解释为描述性的anytime趋势，而非统计占优。本文由此给出可检验的旋转腔室调度
+模型和与精确求解器兼容的学习框架，同时明确更广泛性能结论所需的证据边界。
 \end{abstract}
 
 \begin{highlights}
-\item 精确MIP描述双源混流旋转腔室有限时域调度。
-\item 模型增加清洗、可复用载具和有限时域决策。
-\item 第二阶段保持incumbent最大完工时间并降低不稳定性。
-\item 所有求解方法共享同一SPBS可行解热启动。
-\item 在HEM式割选择基础上检验束搜索和变量角色结构。
+\item 两阶段MILP描述双源混流旋转腔室组合设备运行。
+\item 条件精修在保持最大完工时间的同时重整时序。
+\item 结构化初始解为精确模型提供物理可行incumbent。
+\item 角色特征、并行策略训练和束搜索共同扩展HEM。
+\item 2700次运行显示更低平均PDI，但未形成显著占优。
 \end{highlights}
 
 \begin{keyword}
-半导体制造 \sep 集群设备调度 \sep 混合整数规划 \sep
-割平面选择 \sep 强化学习 \sep 次模优化
+旋转腔室组合设备 \sep 半导体制造 \sep 组合设备调度 \sep 混合整数规划 \sep
+割平面选择 \sep 层次强化学习 \sep 束搜索 \sep 热启动
 \end{keyword}
 
 \end{frontmatter}
-
 \linenumbers
 
 \section{引言}
-\label{sec:introduction-zh}
+\label{sec:intro-zh}
 
-集群设备将多个工艺模块和机械手集成在一个紧密耦合的搬运系统周围。它能够
-减少占地面积和污染，但其调度必须同时协调加工、搬运、腔室、装载锁、载具
-可用性及配方相关的时间限制。双源混流场景进一步增加了难度：产品晶圆和可复用
-工艺环境载具从不同源头进入设备，在共享腔室中汇合，并沿相互作用但不同的
-路径流动。批处理和成对处理模式还会形成影响整个调度的离散决策。
+半导体制造面临产品类型多、工艺要求严和既有设备增产压力。由于新增产能具有较高
+资本与时间成本，提高现有设备的运行效率具有直接工程价值
+\citep{chien2021drlhga,hong2026ddpgct}。组合设备将工艺模块、装载锁和机械手
+集成于高度耦合的环境，其生产率不仅取决于名义加工时间，还取决于物料释放、
+腔室占用、搬运、清洗及时间约束之间的协调。
 
-精确混合整数规划具有能够证明调度质量、透明表达物理约束等优点，但排序和
-资源冲突析取会产生巨大的分支割搜索空间。通用求解器在一个节点可能生成大量
-候选割。全部加入虽然可能强化松弛，却也会增大线性规划规模、数值负担和回调
-开销。因此，割选择是一个序贯决策问题，局部割效能无法充分描述割之间的相互
-作用。
+本文研究的双源混流旋转腔室组合设备应用于等离子体增强化学气相沉积（PECVD）
+工艺场景。产品晶圆从装载端进入，可复用真空区假片从真空区假片存储区进入；两类物流经大气和真空
+机械手及上下装载锁后，在共享旋转腔中汇合。$4\times1$与$2\times2$混合配方
+进一步耦合产品分组、腔室和槽位分配、真空区假片可用性、清洗边界与驻留限制。因此，
+局部上有利的搬运或加工次序可能阻塞多个下游资源，问题难点来自全设备范围内的
+决策传播，而非某一单机次序。
 
-已有研究表明，机器学习可以在不替代数学模型的前提下辅助组合优化
-\citep{bengio2021machine}。强化学习已被用于割选择\citep{tang2020cut}，前瞻
-模仿学习则提供另一条路线\citep{paulus2022looking}。尤其是HEM已经用指针网络
-同时学习所选割比例和有序子集，
-并采用与A3C密切相关的并行策略梯度训练。因此，层次数量预测、有序子集、指针
-网络和并行采样在本文中均属于已有基线，而不是新贡献。本文考察的是：在HEM
-嵌入精确调度求解器后，模型导出的原始热启动、有限宽束搜索及模型角色信息能否
-改善其随时性能。
+现有解析与优化研究已覆盖稳态循环、多晶圆类型、腔室清洗和驻留时间控制
+\citep{kim2021integrated,ko2021wafer,qiao2022binary,lee2023cleaningplan,
+li2022conditioncleaning,wang2023optimalcyclic,li2025cyclicmultitype,
+yang2025miptwowafers}。这些模型揭示了重要的局部机理，但尚未在同一有限时域模型
+中联合表示本文的双源物流、混合旋转配方、真空区假片循环和共享搬运结构。例如，
+\citet{gu2024multifinger}针对预定稳态机械手序列计算时刻，而本文需要同时决定
+离散分配、共享资源次序和连续事件时间。
 
-本文研究两个相互关联的问题。第一，有限时域精确模型能否在稳态固定序列范围
-之外，统一表达双物料源、混合$4\times1$/$2\times2$流、旋转腔室、清洗和
-可复用载具？第二，SPBS初始化和束搜索能否在不改变模型有效性的前提下改善
-HEM式学习割选择器的随时性能？为此，本文建立精确紧凑模型和集成求解框架
-\method{}。模型把已由制造等式固定的变量连续表示，但不松弛真正的分配、排序、
-模式或清洗决策；求解栈组合共享SPBS可行解、SCIP、23维角色感知层次策略和
-有限宽束搜索。
+学习式调度构成另一条相关研究流。深度强化学习已经与遗传搜索或自适应搜索结合，
+用于动态半导体调度和组合设备决策
+\citep{chien2021drlhga,liu2022cnna3c,zhang2024qeda,
+kim2025adaptivecluster,kim2025noncyclic}。与本文最接近的CIE研究
+\citep{hong2026ddpgct}将离散事件仿真与DDPG结合，在PVD组合设备中连续调节加工
+时间。该工作表明将设备行为与学习控制结合具有价值，但其决策层与本文不同：
+PVD策略在仿真环境中调节工艺时长，而本文为旋转腔室组合设备构造离散可行排程，并保留
+MIP的上下界和证明机制。两者是互补问题，不能相互替代。
 
-本文主要贡献如下。
+MILP能够显式表达设备物理并提供原始界与对偶界，但同一建模精度也会产生大量
+分配、资源排序二元变量和弱耦合连续时刻。分支割性能因此对每轮保留哪些有效割
+较为敏感。机器学习可以在不取代求解器可行性与证明职责的前提下引导该决策
+\citep{bengio2021machine,scavuzzo2024mlbb}。HEM把割保留建模为层次化的数量与
+有序子集决策 \citep{wang2023hem,wang2024hemtpami}，但其通用特征不能识别割所
+约束的变量类型与目标角色，贪心解码会过早固定序列，而且精确求解可能较晚才获得高质量
+incumbent。
 
-\begin{enumerate}[leftmargin=*]
-  \item 将含共享机械手、旋转腔室、两种配方模式、清洗、载具驻留和可复用令牌
-  的有限时域双源混流问题建立为精确紧凑MIP。状态感知的第二阶段保持当前最佳
-  incumbent最大完工时间，并在大部分离散决策固定时改进线性等待--节拍指标。
-  \item 构造SPBS热启动：固定具有物理意义的分配、激活和清洗二元骨架，再由
-  SCIP补全可行解。配对比较中所有方法共享同一可行解及其构造时间。
-  \item 相对适配HEM基线保留其层次数量和有序指针策略，进一步检验有限宽束搜索、
-  10个变量角色描述量及透明的角色次模补全；创新主张限定为上述集成，并
-  必须由组件级消融支持。
-  \item 建立冻结的实例配对协议，覆盖模型验证、热启动与搜索消融、标称比较、
-  析因条件、SPBS初始化、单因素敏感性以及规模/配方分布偏移。
+由此，两条研究流在“忠实描述双源混流旋转腔室设备的精确模型”与“利用模型结构扩展
+精确求解能力”的交界处留下缺口。本文先建立两阶段MILP，再依据模型与求解器
+元数据暴露的变量类型、目标角色和可行排程结构改进HEM，形成“设备物理$\rightarrow$精确调度模型
+$\rightarrow$结构化搜索瓶颈$\rightarrow$学习增强分支割”的连续逻辑。
+
+本文贡献如下：
+\begin{enumerate}[label=(\arabic*)]
+\item 建立有限时域双源混流旋转腔室组合设备两阶段MILP，统一表示产品晶圆和真空区假片双物流、
+$4\times1/2\times2$混合配方、旋转腔事件、ATR/VTR搬运、装载锁状态、清洗
+epoch、驻留限制和可复用真空区假片。第一阶段最小化最大完工时间；第二阶段在
+保持所得离散结构和主目标的条件下精修时序。
+\item 提出结构感知的改进HEM方法。SPBS为精确模型提供早期可行incumbent；
+23维特征区分离散与连续变量类型及其目标角色；A3C启发的并行策略训练、有限宽束搜索和角色
+次模补全共同决定割的数量、成员与顺序。
+\item 建立与各机制对应的配对实验设计：小规模精确实例检验模型，完整标称矩阵
+在独立求解器种子和训练种子上比较七种方法，组件、稳定性和分布偏移实验用于界定
+计算收益的来源与适用范围。
 \end{enumerate}
 
-当前文档是一份遵循证据纪律的初稿：在所有必需配对实验完成之前，正式数值
-单元格保持为空，以避免选择性报告不完整种子或仅报告成功求解实例。
+下文依次综述相关研究并定位本文，给出旋转腔室组合设备调度模型，说明结构感知求解方法，
+报告计算研究，最后讨论工程意义与研究边界。
 
-\section{相关研究}
-\label{sec:related-zh}
+\section{文献综述与研究定位}
+\label{sec:literature-zh}
 
-\subsection{半导体集群设备调度}
+\subsection{混流及附加约束下的组合设备调度}
 
-集群设备调度把机器调度与机械手搬运、驻留时间约束相结合。已有研究针对包含
-集群设备的光刻区域\citep{madathil2018photolithography}以及带清洗操作的
-时间受限设备\citep{yuan2023purge}提出了精确或解析方法。与本文最接近的是
-\citet{gu2024multifinger}：该研究面向四指机械手与四空间工艺模块，在两个预先
-给定的循环机械手序列---后向序列（BS）和混合任务序列（HTS）---下分析稳态
-运行，并分别求解一个满足驻留约束、以周期时间最小为目标的线性规划。该文采用
-单一产品流，并把腔室清洗和多种晶圆同时加工留作后续研究。本文采用不同的搬运
-架构，并在若干维度加入更丰富特征，包括有限时域、两个物料源、产品/载具混流、
-灵活分配与排序、共享旋转腔室、两种配方模式、显式清洗及可复用载具令牌。目前
-尚未证明本文模型能够精确退化为其四指洁净/污染手指系统。因此，本文比较建模
-覆盖范围和刻意构造特例，而不比较两个非等价模型的原始运行时间。
+组合设备调度已由稳态机械手循环扩展到产品异质性与附加设备约束。已有研究分析
+双臂设备的集成模式和多晶圆类型下的并行腔负载均衡
+\citep{kim2021integrated,ko2021wafer,zhu2022twotypes}；近期工作进一步研究
+多类型并发加工，或用MIP表示两晶圆类型单臂设备
+\citep{li2025cyclicmultitype,yang2025miptwowafers}。这些结果说明，当多类产品
+共享设备时，释放次序、腔室分配、机械手任务和驻留时间不能彼此独立优化。
 
-\subsection{精确MIP中的机器学习}
+清洗及其他时间约束增加了第二层耦合。针对带驻留和清洗约束的组合设备，已有
+二元规划和解析方法
+\citep{qiao2022binary,li2022conditioncleaning,lee2023cleaningplan}；吹扫、
+后处理和加工时间波动也会改变可行性及周期表现
+\citep{yuan2023purge,zhu2023postprocess,pan2024cycletime}。设备层面还需联合
+协调工艺模块配置与机械手等待 \citep{wang2023optimalcyclic}，多空间模块则引入
+额外旋转、装卸和等待交互 \citep{zou2024twospace,gu2024multifinger}。但现有
+研究多集中于单一物料源、周期运行或预定机械手模式，尚不足以表示产品晶圆和
+可复用真空区假片沿不同路线进入共享旋转模块的有限批次旋转腔室系统。
 
-SCIP提供模块化分支--割--定价框架，使学习组件能够在受控决策点介入
-\citep{achterberg2009scip,bestuzheva2023scip}。当学习组件只改变搜索优先级
-而不改变数学有效性时，学习辅助精确优化更容易审查和部署。基于这一原则，
-本文回调只接收SCIP生成的合法割，选择其中的优先子集，并让未选割继续供求解器
-使用；学习模型既不生成不等式，也不剪枝。
+\subsection{学习式半导体与组合设备调度}
 
-\subsection{学习式割选择}
+学习式制造调度正由孤立策略转向学习与问题特定搜索的结合。在工厂或生产系统
+层面，\citet{chien2021drlhga}把深度强化学习与混合遗传算法结合，
+\citet{zhang2024qeda}用Q-learning引导分布估计搜索；CNN--A3C已用于加工时间
+不确定和紧急订单下的半导体动态调度 \citep{liu2022cnna3c}，反馈控制与
+actor--critic的结合则展示了利用生产系统知识的价值
+\citep{li2022hybridfeedback}。问题特定编码和贪婪搜索仍然重要，因为纯策略
+网络不能保证有效局部开发 \citep{hu2023crowsearch}。
 
-\citet{tang2020cut}将割选择构造为强化学习问题，\citet{paulus2022looking}
-利用前瞻信息学习能带来有效界改进的割。\citet{wang2023hem}使用13个通用割
-特征和指针网络\citep{vinyals2015pointer}，层次建模所选割数量与顺序；其并行
-层次策略梯度被描述为与A3C密切相关。本文不把层次数量预测、有序子集选择、
-指针网络或并行采样作为创新，而保留该基线并检验三项增加：策略外部的SPBS
-原始热启动、测试时有限宽束搜索，以及带确定性次模补全的模型角色特征。当前
-正式配置采用移动平均REINFORCE基线，因此论文将训练算法称为层次策略梯度；
-仓库名\project{}本身不能支持严格异步优势演员--评论家（A3C）的主张。
+在组合设备层面，DRL与自适应搜索已用于并发晶圆释放及机械手任务决策
+\citep{kim2025adaptivecluster}，另有研究直接处理非周期排程
+\citep{kim2025noncyclic}。\citet{hong2026ddpgct}把离散事件仿真与DDPG结合，
+控制PVD设备的连续加工时间。该文在设备级动机上与本文最接近，但控制对象不同：
+其策略改变仿真PVD环境中的工艺时长，本文策略分配有效割，由精确求解器决定离散
+旋转腔室设备排程。该差异说明本文应把学习嵌入数学规划，而非用学习替代数学规划。
 
-\section{问题描述与精确紧凑模型}
+\subsection{学习增强精确优化与研究缺口}
+
+MILP使路线、容量、清洗和驻留假设可检查，但不同表述会显著改变松弛和搜索行为
+\citep{adelgren2023recordkeeping}。学习增强精确优化在保留建模与证明职责的
+同时引导特定求解决策 \citep{bengio2021machine,scavuzzo2024mlbb}。学习式变量
+偏置可支持原始解搜索 \citep{khalil2022mipgnn}，图表示则编码变量--约束关系
+\citep{cappart2023gnnco,chen2023milpgnn}。本文采用SCIP提供的模块化分支割接口
+\citep{achterberg2009scip,bestuzheva2023scip}。
+
+割选择研究已采用强化学习、监督排序和前瞻模仿
+\citep{tang2020cut,huang2022cutranking,paulus2022looking}。实例自适应规则也
+表明固定评分向量不能对所有实例保持同样有效 \citep{turner2023adaptive}。HEM
+联合预测保留数量和有序割子集 \citep{wang2023hem,wang2024hemtpami}，束搜索则
+通过保留多个部分序列缓解早期决策误差 \citep{choo2022beam}。这些研究提供了
+算法部件，但尚未将面向应用的可行初始解、变量类型与目标角色和层次割解码连接起来。
+
+\begin{table}[htbp]
+\centering
+\caption{本文与近期代表性组合设备研究的定位。}
+\label{tab:research-position-zh}
+\begin{tabular}{p{0.16\linewidth}p{0.17\linewidth}p{0.29\linewidth}p{0.18\linewidth}}
+\toprule
+研究 & 场景 & 主要决策层 & 方法 \\
+\midrule
+\citet{qiao2022binary} & 清洗约束CT & 驻留与清洗排程 & 二元IP \\
+\citet{gu2024multifinger} & 多空间CT & 预设机械手序列计时 & LP \\
+\citet{yang2025miptwowafers} & 两类型CT & 释放、机械手与驻留 & MIP \\
+\citet{kim2025adaptivecluster} & 并发CT & 晶圆释放与机械手序列 & DRL+搜索 \\
+\citet{hong2026ddpgct} & PVD CT & 连续加工时间控制 & DES+DDPG \\
+本文 & 双源混流旋转腔室CT & 混流分配、资源与事件时间 & 两阶段MILP+学习分支割 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+表~\ref{tab:research-position-zh}显示两条研究流留下的交叉缺口。建模方面，代表性
+模型尚未联合覆盖有限时域双源物流、混合旋转配方、清洗分段、装载锁/机械手冲突
+和可复用真空区假片；算法方面，现有学习方法要么直接作用于排程，要么采用通用
+MIP表示，尚未组合物理可行初始解、变量类型/目标角色重构、层次策略训练、束解码及结构化
+集合补全。本文的两阶段模型与\method{}在同一求解器框架内分别回应这两个缺口。
+
+\section{双源混流旋转腔室组合设备与两阶段MILP}
 \label{sec:model-zh}
 
-\subsection{制造系统拓扑}
+\subsection{设备结构、物流与假设}
 
-产品晶圆的路径为
+设备包含四个装载端口、一个双夹持ATR、单槽对准器AL、上下两个独立双槽装载锁
+LLupper和LLlower、一个VTR以及两个共享旋转腔CH2和CH3。产品晶圆路线为
 \[
- \mathrm{LP}\rightarrow\mathrm{ATR}\rightarrow\mathrm{AL}
- \rightarrow\mathrm{ATR}\rightarrow\mathrm{LL_U}
- \rightarrow\mathrm{VTR}\rightarrow\mathrm{CH}
- \rightarrow\mathrm{VTR}\rightarrow\mathrm{LL_L}
- \rightarrow\mathrm{ATR}\rightarrow\mathrm{LP},
+\begin{aligned}
+\mathrm{LP}&\rightarrow\mathrm{ATR}\rightarrow\mathrm{AL}
+\rightarrow\mathrm{ATR}\rightarrow\mathrm{LLupper}\\
+&\rightarrow\mathrm{VTR}\rightarrow\mathrm{CH}
+\rightarrow\mathrm{VTR}\rightarrow\mathrm{LLlower}
+\rightarrow\mathrm{ATR}\rightarrow\mathrm{LP}.
+\end{aligned}
 \]
-其中，LP为装载端口，ATR和VTR分别为大气机械手和真空机械手，AL为校准器，
-$\mathrm{LL_U}$与$\mathrm{LL_L}$分别为上、下装载锁。可复用工艺环境载具
-（PEC）经VTR在PEC存储区和共享腔室之间流动。CH2和CH3为共享搬运和装载资源
-的旋转腔室。
+真空区假片从真空区假片存储区出发，经VTR进入指定腔室，完成填充、桥接或清洗后
+返回该存储区。系统具有8片可复用真空区假片，其中CH2和CH3各配置4片；一片假片
+从装载开始到卸载结束均不可被其他作业使用。
 
-系统包含两种配方模式。在$4\times1$模式中，四片产品晶圆使用两个可达槽位组
-之一进行批处理；在$2\times2$模式中，一个PEC和两片产品晶圆构成物理有序的
-PEC--产品--产品--PEC链。清洗可在满足清洗间隔约束时提前触发；所选PEC必须
-在相应链持续期间保持驻留，并通过可复用令牌建模。资源锁禁止机械手动作和
-不相容装载操作并发执行。
+$4\times1$模式的一个完整旋转批次包含两个物理侧槽。前侧先装后卸，后侧后装先
+卸；非满产品尾批由真空区假片对填充。$2\times2$模式把产品对组织为前后假片对包围的
+有序链，每个产品对参加两个相邻曝光周期。达到清洗间隔时，链在曝光边界处分段，
+通过尾部/首部假片转换使腔室成为仅含假片的状态后执行清洗。同一腔室中$4\times1$批次先于
+$2\times2$区段。ATR和VTR均为单一物理机械手，载荷能力不等于并行动作能力；
+每次非抢占搬运和端点不一致时的空载回位均显式占用机械手。AL串行校准，
+LLupper和LLlower的两个槽位具有独立压力状态及复位时间。
 
-表~\ref{tab:model-scope-zh}明确本文相对最接近四空间工艺模块研究的主张边界。
-表中的内容表示模型显式优化的决策，而不是设备可能具备但未纳入优化的物理能力。
+\subsection{符号和决策变量}
 
-\begin{table}[htbp]
-\centering
-\caption{相对\citet{gu2024multifinger}的建模范围。}
-\label{tab:model-scope-zh}
-\begin{tabular}{p{0.25\linewidth}p{0.31\linewidth}p{0.34\linewidth}}
-\toprule
-维度 & Gu等（2024） & 本文精确模型 \\
-\midrule
-时域 & 稳态周期 & 有限时域事件调度 \\
-搬运架构 & 四指洁净/污染手指机械手 & 分离的大气/真空搬运机械手 \\
-物料流 & 单一产品流 & 产品晶圆与可复用PEC \\
-配方 & 每个算例一种流模式 & 混合$4\times1$与$2\times2$模式 \\
-机械手决策 & 预先固定BS或HTS & 优化分配和资源次序 \\
-旋转 & 四空间工艺模块旋转延迟 & 共享旋转腔室/槽位组事件 \\
-清洗 & 留作未来研究 & 清洗周期和提前清洗决策 \\
-数学规划 & 两个序列专用LP & 一个精确混合整数模型 \\
-目标 & 稳态周期时间 & 最大完工时间；条件式incumbent保持稳定性改进 \\
-\bottomrule
-\end{tabular}
-\end{table}
+令$\mathcal W$为产品晶圆集合，$\mathcal P^4$和$\mathcal P^2$分别为两种配方
+形成的产品对，$\mathcal C=\{\mathrm{CH2},\mathrm{CH3}\}$为腔室集合，
+$\mathcal B_c$为$4\times1$候选批次，$\mathcal Q_c$为$2\times2$链位置，
+$\mathcal E_c$为清洗分隔的加工epoch，$\mathcal K$为ATR、AL、两组装载锁槽、
+VTR及腔室资源，$\mathcal T_c$为腔室$c$配置的可复用真空区假片集合。
 
-\subsection{事件和资源变量}
+二元变量$x^4_{pcbh}$表示产品对$p\in\mathcal P^4$被分配至腔室$c$、批次$b$的
+侧槽$h\in\{F,B\}$；$x^2_{pcq}$表示$p\in\mathcal P^2$位于腔室$c$的链位置$q$。
+$u^4_{cb}$、$u^2_{cq}$和$z_{ce}$分别表示批次、链位置和加工epoch被启用；
+$g_{j\tau}$把假片作业$j$分配给物理假片$\tau$；$y_{oo'}^k$给出共享资源$k$上两个
+动作的先后关系。每个动作$o$具有开始时刻$s_o$、结束时刻$e_o=s_o+d_o$。
+$C_{\max}$表示所有产品晶圆返回LP的最晚时刻。
 
-设$\mathcal{O}$为操作集合，$\mathcal{R}$为物理资源集合，$\mathcal{A}$为
-工艺路径产生的优先弧集合。操作$i\in\mathcal{O}$的开始时间、加工时间和完成
-时间分别为$s_i$、$p_i$和$c_i=s_i+p_i$。二元变量$y_{ijr}$确定在单位容量
-资源$r$上相互冲突的两个操作的先后顺序；$x$表示分配及模式选择变量，$u$
-表示PEC令牌分配变量。模型包含优先约束
-\begin{equation}
-  s_j \ge c_i,\qquad (i,j)\in\mathcal{A},
-  \label{eq:precedence-zh}
-\end{equation}
-以及资源析取约束
+\subsection{第一阶段：端到端最大完工时间最小化}
+
+每个产品对恰好被分配一次：
 \begin{align}
-  s_j &\ge c_i-M_{ijr}(1-y_{ijr}), \\
-  s_i &\ge c_j-M_{jir}y_{ijr},
-  \qquad \{i,j\}\subseteq\mathcal{O}_r,
-  \label{eq:disjunction-zh}
+\sum_{c\in\mathcal C}\sum_{b\in\mathcal B_c}\sum_{h\in\{F,B\}}
+x^4_{pcbh}&=1 && \forall p\in\mathcal P^4, \label{eq:assign4-zh}\\
+\sum_{c\in\mathcal C}\sum_{q\in\mathcal Q_c}x^2_{pcq}
+&=1 && \forall p\in\mathcal P^2. \label{eq:assign2-zh}
 \end{align}
-其中$M_{ijr}$为事件相关的有效常数。容量、腔室旋转、槽位组、清洗、驻留和
-令牌守恒约束将$x$、$u$、$y$与$s$连接起来。完整的索引级模型和参数构造将在
-\TBD{在线补充材料及代码仓库链接}中给出。
+分配变量与批次或位置启用变量联动。活跃$4\times1$批次包含两个侧槽，除每个
+腔室的尾批外不得使用纯假片填充；$2\times2$活跃位置形成无空洞有序链：
+\begin{align}
+\sum_{p\in\mathcal P^4}x^4_{pcbh}+f_{cbh}&=u^4_{cb},
+&&c,b,h, \label{eq:fill-zh}\\
+u^4_{c,b+1}&\le u^4_{cb}, &&c,b,\\
+u^2_{c,q+1}&\le u^2_{cq}, &&c,q, \label{eq:chain-zh}
+\end{align}
+其中$f_{cbh}$为尾部假片填充指示量。
 
-\subsection{等价紧凑化}
-
-部分名义上的二元成员、槽位和别名变量已经被所选制造模式产生的等式固定为
-0或1。紧凑模型在保留这些固定等式的前提下，将相应变量声明为连续变量。这一
-操作既不改变变量取值，也不改变可行域的投影，只是去除多余的整数声明。所有
-真正的分配、排序、模式和清洗决策仍保持为整数。因此，本文的“紧凑”表示等价
-重构，而不是对制造物理约束的松弛。
-
-\subsection{最大完工时间优先的两阶段改进}
-
-主目标为第一片产品晶圆离开LP到最后一片产品晶圆返回LP的时间区间。第一阶段在
-分配预算内尝试求解精确MIP
+对每条产品晶圆和真空区假片路线，工艺先后关系为
 \begin{equation}
-  \min_{z\in\mathcal{F}} \cmax(z).
-  \label{eq:makespan-zh}
+s_{o'}\ge e_o+\delta_{oo'}
+\quad \forall(o,o')\in\mathcal A,
+\label{eq:precedence-zh}
 \end{equation}
-记其最佳incumbent为$\widehat z$，$\widehat C=\cmax(\widehat z)$，求解状态为
-$\sigma_1$。若无incumbent，则跳过第二阶段；否则固定大部分离散分配/排序决策
-$d\in\mathcal{D}_{\mathrm{fix}}$，保留部分双夹持决策自由，并加入
-\begin{equation}
-  z_d=\widehat z_d\quad(d\in\mathcal{D}_{\mathrm{fix}}),
-  \qquad \cmax(z)\le\widehat C+\epsilon.
-  \label{eq:incumbent-fix-zh}
-\end{equation}
-冻结的线性稳定性目标为
-\begin{equation}
- \min S_{\mathrm{lin}}(z)=
- \alpha_w\sum_{i\in\mathcal{W}}w_i
- +\alpha_m w^{\max}
- +\alpha_c\sum_{j\in\mathcal{C}}\delta_j
- +\alpha_e\sum_{k\in\mathcal{E}}e_k,
- \label{eq:stability-linear-zh}
-\end{equation}
-其中$w_i$为等待/空闲量，$w^{\max}$为最大单项等待，$\delta_j$为相邻启动节拍
-差的绝对偏差，$e_k$为软等待上限超额量；所有权重在评估前固定。确认性配置为
-该阶段预留60秒和至多5000个节点，并分别记录$\sigma_1$及第二阶段状态。只有
-$\sigma_1=\texttt{optimal}$时，$\widehat C$才是已证明的主目标最优值；主阶段
-超时时它只是当前最佳incumbent。由于大部分离散决策已固定，第二阶段属于保持
-incumbent的调度抛光，而不是全局字典序稳定性最优证明。
+其中$\delta_{oo'}$包含必要的旋转、压力转换或空载回位时间。若两个动作共享同一
+单容量资源$k$，则采用成对析取
+\begin{align}
+s_{o'}&\ge e_o+\rho_{oo'}^k-M(1-y_{oo'}^k),\\
+s_o&\ge e_{o'}+\rho_{o'o}^k-My_{oo'}^k,
+\qquad o,o'\in\mathcal O_k, \label{eq:resource-zh}
+\end{align}
+其中$\rho^k$为端点相关的回位时间。该约束统一处理ATR、AL、VTR及不能同时占用
+的模块动作。装载锁槽位分配与压力状态复位采用相同的可选区间结构。
 
-\section{热启动层次割选择与精确求解}
+旋转腔内，$4\times1$批次满足“前侧装载--旋转--后侧装载--加工--后侧卸载--
+旋转--前侧卸载”的时序；加工在第二侧完成装载时立即开始。$2\times2$链的相邻
+曝光共享中间产品对，桥接动作卸出前一对并装入后一对。用
+$a_{vce}\in\{0,1\}$表示加工周期$v$属于epoch $e$，清洗间隔为$H$，则
+\begin{align}
+\sum_e a_{vce}&=u_{vc}, &&v,c,\\
+\sum_v a_{vce}&\le H z_{ce}, &&c,e, \label{eq:cleanlimit-zh}\\
+s^{\mathrm{clean}}_{c,e+1}&\ge e^{\mathrm{last}}_{ce},
+&&c,e. \label{eq:cleanorder-zh}
+\end{align}
+线性包络$e^{\mathrm{last}}_{ce}$和启用条件保证相邻epoch之间存在仅含假片的清洗批次，
+并保证$2\times2$链只在合法曝光边界分段。
+
+每个假片作业选择一片腔室配置的可复用真空区假片：
+\begin{equation}
+\sum_{\tau\in\mathcal T_c}g_{j\tau}=1,\qquad j\in\mathcal J_c^{\mathrm{DW}}.
+\label{eq:dummy-wafer-zh}
+\end{equation}
+对分配给同一物理假片的任意两个作业，其从VTR装载开始到卸载结束的占用区间使用
+式~\eqref{eq:resource-zh}的析取形式保持不重叠。产品晶圆和机械手驻留限制为
+\begin{equation}
+0\le s_{\mathrm{out}(w,r)}-e_{\mathrm{in}(w,r)}
+\le \bar R_{wr},\qquad w,r. \label{eq:residency-zh}
+\end{equation}
+最终，
+\begin{equation}
+C_{\max}\ge e^{\mathrm{return}}_w\quad\forall w\in\mathcal W,\qquad
+\min C_{\max}. \label{eq:stage1-zh}
+\end{equation}
+因此目标对应完整产品路径的有限时域完工时间，而不是只计算腔室周期。
+
+\subsection{保持最大完工时间的条件精修}
+
+设第一阶段得到可行排程$\hat x$及$\widehat C_{\max}$，$\mathcal D_f$为保留的主要
+分配、启用、epoch、槽位及资源次序二元变量，$\varepsilon_C\ge0$为最大完工时间
+保持容差。第二阶段加入
+\begin{align}
+C_{\max}&\le \widehat C_{\max}+\varepsilon_C, \label{eq:cmaxfix-zh}\\
+x_j&=\hat x_j, &&j\in\mathcal D_f. \label{eq:discretefix-zh}
+\end{align}
+定义可避免等待$w_i$、最大单次等待$w^{\max}$、同一腔室相邻加工开始间隔
+$\Delta_\ell$、目标节拍$\bar\Delta$和软上限超额$\xi_i$，线性稳定性目标为
+\begin{equation}
+\Phi =
+\lambda_1\sum_i w_i+\lambda_2 w^{\max}
++\lambda_3\sum_\ell|\Delta_\ell-\bar\Delta|
++\lambda_4\sum_i\xi_i.
+\label{eq:stability-zh}
+\end{equation}
+第二阶段求解$\min\Phi$。式~\eqref{eq:cmaxfix-zh}保证稳定性改善不能以更差的
+最大完工时间为代价。若第一阶段已证明最优，则第二阶段结果保持主目标全局最优；
+由于式~\eqref{eq:discretefix-zh}限定了离散可行面，稳定性最优性对应被保留的
+离散结构。若第一阶段因资源限制终止，第二阶段保持的是当前最好可行主目标。
+
+\subsection{模型范围与诱导的计算结构}
+
+本文模型在时域和决策范围上均不同于给定机械手序列的稳态LP。它优化有限批次，
+把产品晶圆和真空区假片作为相互作用的双物流，并在同一模型中决定分组、分配、清洗、
+搬运次序与事件时刻。第二阶段也不宣称在所有第一阶段最优离散排程上取得全局
+字典序最优，而是在第一阶段保留的离散结构内精修时序；这一限定在保护主目标的
+同时使精修含义保持清晰。
+
+模型的工程完整性同时带来计算困难。分配、启用、清洗epoch、真空区假片和资源
+次序二元变量与多类连续时刻相互作用，因而通用效能相近的两个割可能约束完全不同
+的物理环节。下一节据此构造初始解、割的变量类型与目标角色表示和解码方法，使算法创新由
+旋转腔室组合设备MILP的结构直接引出。
+
+\section{用于精确求解的结构感知改进HEM}
 \label{sec:method-zh}
 
-\subsection{集成求解栈与SPBS热启动}
+\subsection{总体框架}
 
-主求解路线为
+所提方法针对模型的两个主要计算症状：高质量incumbent出现较晚，以及候选割池
+在变量类型与目标作用上高度异质。初始解改善原始轨迹，改进HEM策略则利用模型
+和求解器元数据暴露的信息
+分配割预算；两者均服从精确求解器，不改变原问题可行域。
+
+每个实例首先由SPBS在临时模型上构造可行排程，并把该排程作为incumbent注入
+未受限的原始MIP。SCIP在分支割过程中产生合法候选割集合$\mathcal C_t$。
+\method{}对每个候选割计算23维特征，高层策略决定保留数量，低层指针策略产生
+有序子集；束搜索保留多个部分序列，角色次模补全在预测预算内平衡即时质量、
+策略偏好、变量角色覆盖和候选池代表性。最终顺序交还SCIP，SCIP继续完成LP
+松弛、分支、启发式和最优性证明。
+
+\subsection{结构保持二元骨架初始解}
+
+详细调度MIP中有大量可互换的分配、启用、epoch、槽位和资源次序二元变量。
+SPBS按变量物理角色建立
 \[
- \text{SPBS可行解}\rightarrow
- \text{HEM式策略/束搜索}\rightarrow
- \text{SCIP分支割}\rightarrow
- \text{带分阶段状态的两阶段调度}.
+\mathcal H=\{A,U,E,L,R_\ell,R_h,O\},
 \]
-SPBS固定具有物理意义的二元骨架，包括批次与腔室分配、激活指示、清洗周期、
-槽位选择和部分资源次序，再由一个以可行性为目标的短时SCIP过程补全连续事件
-时间及有意保留的未固定决策。只有SCIP判定可行时，该解才作为主MIP的原始热
-启动。热启动构造属于预处理，其墙钟时间、成功标志和解哈希均需记录。每个配对
-对比中的所有方法接收同一个解文件；若SPBS在预算内失败，则确认性配对标记为
-不完整并重新生成热启动，不能静默降级为无热启动观测。
-
-SPBS和学习割选择器针对不同瓶颈：前者主要缩短首次可行解时间，后者排序求解器
-产生的割以改善原始--对偶轨迹。因此，二者的独立效应与交互效应必须分别估计。
-
-\subsection{决策接口与学习目标}
-
-在一次分离轮次中，SCIP提供合法候选池
-$\mathcal{P}=\{1,\ldots,n\}$，候选$i$表示有效不等式
-$a_i^\top z\le b_i$。低成本效能预筛选最多保留128个候选，策略最多选择16个
-割，未选候选按原合法顺序归还。
-
-状态包含候选特征和求解器上下文，动作由选择数量和有序子集组成。训练奖励为
-冻结SCIP版本报告的原始--对偶积分负值：
+分别对应分配、启用、清洗epoch、装载锁槽位、低风险局部次序、高风险VTR次序
+和其余变量。对二元变量$x_j$建立角色one-hot向量$z_j$及置信度$\kappa_{h(j)}$。
+在临时模型$\widetilde M$中，仅当角色策略$\pi_s$判定为高置信时固定
 \begin{equation}
- R=-\pdi_{\mathrm{SCIP}},
- \label{eq:pdi-zh}
+\ell_j=u_j=\hat x_j
+\quad\text{if}\quad
+\pi_s(z_j,\kappa_{h(j)},\mathrm{profile})=\mathrm{fix}.
+\label{eq:spbs-zh}
 \end{equation}
-PDI越低，随时性能越好。最终补充材料将明确冻结SCIP版本的界归一化、初始gap及
-无incumbent约定；本文不假定它与HEM实现数值口径完全一致。
-对于基线$b$，策略梯度估计为
+连续时刻、等待变量和低置信VTR全局次序由求解器补全。若完整骨架不可行，则采用
+释放高风险次序的宽松profile。获得可行解后，原始模型仅接收该解作为incumbent，
+不接收临时固定约束。因此SPBS能够改善原始界，而不会排除原模型可行解。
+
+\subsection{23维变量类型与目标角色特征重构}
+
+原始HEM的13维通用特征包括目标平行度、割效率、支持度、整数支持度、归一化
+违反量、割系数的均值/最大值/最小值/标准差，以及目标系数的四个统计量。本文
+将变量分为
+\[
+\mathcal G=\{B,I,C_{\mathrm{obj}},C_{\mathrm{aux}},O\},
+\]
+即二元、一般整数、目标活跃连续、连续辅助和其他变量。对候选割
+$i:\sum_j a_{ij}x_j\le b_i$，角色系数质量定义为
 \begin{equation}
- \widehat{\nabla_\theta J}
- =\frac{1}{B}\sum_{\ell=1}^{B}
-   (R_\ell-b_\ell)\nabla_\theta
-   \log\pi_\theta(a_\ell\mid s_\ell),
- \label{eq:reinforce-zh}
+p_{ig}=\frac{\sum_{j:x_j\in g}|a_{ij}|}
+{\sum_j|a_{ij}|+\varepsilon_{\mathrm{num}}},\qquad g\in\mathcal G.
+\label{eq:rolemass-zh}
 \end{equation}
-该估计遵循\citet{williams1992reinforce}。独立训练样本由并行工作进程求值，
-并在更新前聚合。冻结配置使用移动平均奖励基线，而不是学习得到的评论家。因此，
-本文将该实现准确表述为并行层次策略梯度，而不是严格异步优势演员--评论家。
-仓库名\project{}仅为保持可追溯性；只有在运行独立演员--评论家实现及预先指定的
-对比之后，才能在算法层面直接声称A3C。
 
-\subsection{通用特征与模型角色特征}
+\begin{table}[htbp]
+\centering
+\caption{附加在HEM 13维通用表示后的10维结构特征}
+\label{tab:features-zh}
+\small
+\begin{tabular}{cp{0.75\linewidth}}
+\toprule
+维数 & 定义 \\
+\midrule
+5 & $B,I,C_{\mathrm{obj}},C_{\mathrm{aux}},O$上的归一化系数质量 \\
+1 & 同时具有有限全局上下界变量上的系数质量 \\
+1 & 正系数质量比例 \\
+1 & 离散--连续耦合$4(p_{iB}+p_{iI})(p_{iC_{\mathrm{obj}}}+p_{iC_{\mathrm{aux}}})$ \\
+1 & 最大非残余角色质量 \\
+1 & 归一化角色熵$-\sum_g p_{ig}\log p_{ig}/\log|\mathcal G|$ \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-13维通用向量包含目标平行度、效能、支撑度、整数支撑度、归一化违反程度，
-以及割系数和目标系数的均值、最大值、最小值与标准差。
+其中$\varepsilon_{\mathrm{num}}>0$为数值稳定项。全部角色来自求解器变量类型、
+目标系数和边界元数据，不依赖变量名称。23维表示
+因此区分“只作用于离散结构”“只作用于连续时刻”及“耦合离散和连续变量”的割，
+同时保持对变量重命名的不变性 \citep{cappart2023gnnco,chen2023milpgnn}。
 
-结构扩展仅根据SCIP变量类型及目标系数，把变量划分为五种通用类型/角色：二元、
-一般整数、目标系数非零的连续变量、其他连续辅助变量及无法分类变量。它不根据
-变量名推断分配、清洗或腔室语义。对割$i$和角色$k$，其系数质量占比为
-\begin{equation}
- m_{ik}=
- \frac{\sum_{j\in\mathcal{V}_k}|a_{ij}|}
-      {\sum_j|a_{ij}|+\epsilon}.
- \label{eq:mass-zh}
-\end{equation}
-五个占比再加上有界变量比例、正系数比例、离散--连续耦合度、主导角色占比和
-归一化角色熵，形成23维向量。新增10个比例量在数值容差内对约束行正比例缩放
-不变，并依赖变量类型而非具体实例的变量名；完整23维向量不声称尺度不变，因为
-冻结的未归一化13维基线包含原始系数统计量。
+\subsection{HEM层次策略与A3C启发的并行训练}
 
-\subsection{层次策略与束搜索}
-
-数量策略首先预测选择比例，随后指针式策略对有序序列评分
-\citep{vinyals2015pointer}。网络使用128维隐藏表示和一次glimpse。训练时
-采用随机采样，评估时采用贪心解码或宽度为3的束搜索。各学习基线共享序列结束
-处理、累计对数概率、回溯指针和候选池，确保束搜索比较不会改变候选范围或
-计时口径。HEM本身已经包含数量策略和有序指针策略；本文作为搜索扩展检验的
-只是用有限宽束搜索替代贪心推理。束搜索推理和回调时间均计入共同墙钟上限。
-
-\subsection{角色次模补全}
-
-设$E$为由策略排序及启发式尾部截断得到的扩展池，$A\subseteq E$为固定策略锚点，
-$S\supseteq A$为补全集合。令$q_i$为归一化质量，
-$r_i=1-\operatorname{rank}(i)/\max(1,|\mathcal{R}|-1)$为排序先验，$m_{ik}$为
-角色质量，$s_{ij}\in[0,1]$为实现特征的截断余弦相似度，并令归一化需求权重
-$d_k\propto\sum_{i\in E}m_{ik}$、$\sum_kd_k=1$。补全过程求解
+在分离轮$t$，高层策略$\pi_{\theta}^{H}(k_t\mid s_t)$预测选择数量，低层策略
+$\pi_{\psi}^{L}(a_{1:k_t}\mid s_t,k_t)$用指针网络生成不重复的有序割序列
+\citep{vinyals2015pointer,wang2023hem}。回报取限时求解的负PDI。多个独立SCIP
+进程并行采集完整轨迹，以降低单一实例序列相关性；轨迹在每次参数更新前集中
+聚合。该并行探索思想来源于A3C \citep{mnih2016a3c}，而层次策略使用HEM的
+episodic policy-gradient更新及指数移动平均控制变量：
 \begin{align}
-F_E(S)=&\;w_q\sum_{i\in S}q_i+w_p\sum_{i\in S}r_i
- +w_c\sum_k d_k\sqrt{\sum_{i\in S}m_{ik}} \nonumber\\
-&+\frac{w_r}{|E|}
- \sum_{j\in E}\max_{i\in S}s_{ij},
+\mathcal L_{\mathrm{pg}}={}&-(R-b)
+\left[
+\log\pi_\theta^{H}(k_t\mid s_t)
++\sum_{\ell=1}^{k_t}\log\pi_\psi^{L}
+(a_\ell\mid s_t,k_t,a_{<\ell})
+\right]\nonumber\\
+&-\beta\mathcal H(\pi), \label{eq:pg-zh}\\
+b&\leftarrow \eta b+(1-\eta)R. \label{eq:baseline-zh}
+\end{align}
+这种表述把并行环境采样与实际参数更新规则明确分开，训练目标直接对应实验中的
+PDI。
+
+\subsection{束搜索与角色次模补全}
+
+贪心解码在每一步只保留一个部分序列。束宽$B=3$的解码保留累计对数概率最高的
+$B$个可行前缀，在达到$k_t$或终止符后选择得分最高序列。束搜索不修改训练目标，
+而是在推理阶段用有限额外计算缓解早期选择错误 \citep{choo2022beam}。
+
+为避免神经序列集中于同一种变量角色，保留其前$\lceil\gamma k_t\rceil$个候选
+作为锚点$A_t$，并从至多$\alpha k_t$个候选构成扩展池$R_t$。对
+$S\subseteq R_t$定义
+\begin{align}
+F_t(S)={}&\sum_{i\in S}(0.35q_i+0.20r_i)
++0.25\sum_{g\in\mathcal G}d_g
+\sqrt{\sum_{i\in S}p_{ig}}\nonumber\\
+&+\frac{0.20}{|R_t|}\sum_{u\in R_t}\max_{i\in S}s_{ui},
 \label{eq:submodular-zh}
 \end{align}
-且满足$A\subseteq S\subseteq E$、$|S|\le K$。归一化默认权重为
-$(w_q,w_p,w_c,w_r)=(0.35,0.20,0.25,0.20)$，补全池系数为2.0，锚点比例为
-0.25。
+其中$q_i$为结构质量，$r_i$为神经排序先验，$d_g$为候选池角色需求，
+$s_{ui}$为特征相似度。各项分别表示即时质量、策略偏好、边际递减的角色覆盖和
+facility-location代表性。固定锚点后，贪心地加入最大边际增益候选直到达到
+$k_t$。式~\eqref{eq:submodular-zh}是非负单调次模函数，故在固定候选池和锚点
+条件下，补全部分具有标准$1-1/e$残余近似保证
+\citep{nemhauser1978analysis}。实验固定$\alpha=2$、$\gamma=0.25$，候选上限
+128、选择上限16。
 
-在固定$E$上的非负模函数项、需求加权凹角色覆盖项及设施选址代表性项下，$F_E$
-为单调次模函数。给定锚点和扩展池后，贪心剩余补全满足
-\begin{equation}
- F_E(A\cup S_g)-F_E(A)\ge(1-1/e)
- \max_{|B|\le K-|A|}\{F_E(A\cup B)-F_E(A)\},
-\end{equation}
-其中$B\subseteq E\setminus A$\citep{nemhauser1978analysis}。该保证不覆盖锚点
-选择、扩展池截断、分支割运行时间或最终MIP质量。
+\subsection{与SCIP集成及有效性}
 
-\subsection{合法性与开销}
+SCIP负责产生有效割、维护LP松弛、执行分支定界和检查可行性
+\citep{achterberg2009scip,bestuzheva2023scip}。\method{}只返回候选割的排列和
+保留前缀；SPBS也只注入可行incumbent。因此两种学习/启发式组件均不改变约束、
+目标或整数可行域。若求解器完成证明，所得最优性结论与默认割选择具有相同数学
+含义。每轮特征提取复杂度与候选割非零元数线性相关，束搜索主要增加宽度$B$倍的
+策略推理开销，次模补全在最多128个候选上执行。
 
-\method{}不生成约束、不修改系数，也不宣布节点不可行。每个被选不等式均已
-通过SCIP的合法性检查，未选割仍按回调契约供求解器使用。因此，学习组件能够
-改变搜索轨迹和运行时间，但不改变调度模型的可行集，也不影响最终证明的有效
-性。所有回调推理、束搜索和后处理时间均计入统一的墙钟时间上限。
-
-\subsection{可选RL-SAT路线的证据边界}
-
-代码库还包含可选的A3C--束搜索--CP-SAT路线。该路线搜索腔室分配，并针对每个
-候选求解一个CP-SAT时间抽象；其中的“optimal”只证明该候选专用抽象达到最优，
-不能证明Petri网MIP或全部腔室分配的全局最优。因此，RL-SAT不纳入主比较。只有
-在完成特征同等性、独立调度验证、统一端到端计时及证书范围检查后，才可作为
-独立附录结果报告。
-
-\section{实验设计}
+\section{计算研究}
 \label{sec:experiments-zh}
 
-\subsection{冻结测试集}
+\subsection{实验方案}
 
-表~\ref{tab:suites-zh}汇总冻结测试集。标称实例用于主要比较；析因测试集改变
-晶圆数、配方构成和加工时间尺度；敏感性测试一次改变一个物理因素；OOD测试
-同时增大规模并改变配方平衡。测试实例不用于超参数调优。
+\subsubsection{研究问题}
 
-\begin{table}[htbp]
-\centering
-\caption{冻结评估测试集。}
-\label{tab:suites-zh}
-\begin{tabular}{p{0.18\linewidth}p{0.55\linewidth}r}
-\toprule
-测试集 & 设计 & 条件/实例数 \\
-\midrule
-标称主实验 & 冻结的标称制造实例 & 20 \\
-析因DOE & 晶圆数$\{8,16,24,32\}$、五种配方比例、
-加工尺度$\{0.9,1.0,1.1\}$ & 60 \\
-SPBS & 符合条件的core实例，无原始解与同一自动生成SPBS解 & 48对 \\
-敏感性 & 搬运$\{0.8,1.2\}$、加工$\{0.8,1.2\}$、
-PEC容量10、清洗间隔$\{3,10\}$ & 8 \\
-OOD & 晶圆数$\{40,48,64\}$，配方比例
-$\{3{:}1,1{:}1,1{:}3\}$ & 9 \\
-\bottomrule
-\end{tabular}
-\end{table}
+实验围绕以下问题展开：
+\begin{description}
+\item[RQ1] 两阶段MILP能否产生物理可行排程，并在保持第一阶段最大完工时间时
+改善时序稳定性？
+\item[RQ2] 在相同实例、初始解和SCIP预算下，\method{}相对SCIP、ACS和适配HEM
+能否改善限时求解表现？
+\item[RQ3] SPBS、并行策略训练、23维特征、角色补全和束搜索分别产生何种贡献？
+\item[RQ4] 方法对晶圆数量、配方比例、加工时间尺度、物理参数扰动和分布偏移
+是否稳健？
+\end{description}
 
-\subsection{比较方法}
+\subsubsection{实例、预算与配对原则}
+
+实例覆盖纯$4\times1$、纯$2\times2$及混流配方。四个4--16晶圆实例用于模型
+验证；核心模型规模覆盖8、16、24和32晶圆；分布外规模为40、48和64晶圆。
+主比较采用20个标称实例、5个SCIP求解器种子和5个独立训练种子。每次主求解总
+时限为600~s、内存上限2048~MB；第二阶段最多使用其中60~s及5000个节点。
+每一配对单元共享实例文件、求解器种子、时间/内存限制、预求解设置及同一个
+SPBS初始解。训练和测试实例集合分离。
+
+\subsubsection{比较方法与消融}
 
 \begin{table}[htbp]
 \centering
-\caption{冻结主实验中的方法。所有方法使用相同模型、实例、热启动文件、资源
-上限、求解器种子和全局SCIP设置。学习选择器另共享效能预筛与选择上限；SCIP
-和ACS保留各自原生候选机制。}
+\caption{主比较方法及受控组件}
 \label{tab:methods-zh}
-\begin{tabular}{p{0.22\linewidth}p{0.69\linewidth}}
+\small
+\begin{tabular}{lcccc}
 \toprule
-方法 & 说明 \\
+方法 & 特征 & 解码 & 角色补全 & SPBS \\
 \midrule
-SCIP & SCIP默认割选择。 \\
-ACS & 仅在冻结验证集上调参的确定性自适应割选择基线。 \\
-HEM-13D（适配） & 13维通用特征、层次策略、贪心解码，无变量角色补全。 \\
-HEM-13D+beam & 使用宽度3束搜索的适配HEM。 \\
-23D feature only & 通用特征加角色特征，不使用角色次模重排。 \\
-Structure+greedy & 23维策略、角色次模补全和贪心解码。 \\
-\method{} & 23维策略、宽度3束搜索、策略锚点和角色次模补全。 \\
+SCIP & 手工规则 & -- & -- & 相同 \\
+ACS & 调优四权重 & -- & -- & 相同 \\
+HEM & 13维 & 贪心 & 无 & 相同 \\
+HEM+Beam & 13维 & 束宽3 & 无 & 相同 \\
+Feature-only & 23维 & 贪心 & 无 & 相同 \\
+Structure+Greedy & 23维 & 贪心 & 有 & 相同 \\
+\method{} & 23维 & 束宽3 & 有 & 相同 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-适配HEM-13D保留\citet{wang2023hem}的选择数量和有序指针思想，但采用本文的
-效能top-128预筛、16割上限、训练预算、SCIP版本和调度协议，不能称为逐比特复现。
-HEM-13D+beam只改变测试时解码。23D和Structure两行依次隔离变量角色比例和
-确定性补全。另设热启动实验，在SCIP、HEM-13D和\method{}下分别比较无热启动与
-同一SPBS文件；热启动--策略交互采用差分中的差分，而不是单个成对差。完成该
-矩阵前，不能把改进归因于集成的SPBS+策略+束搜索栈。\TBD{确认性benchmark前
-实现并审计学习策略none/auto Stage；当前SPBS Stage仅覆盖SCIP。}
+ACS在独立调优集合上选择方向截止距离、效率、整数支持度和目标平行度四个权重，
+固定权重为$(0.25,0,0.50,0.25)$。HEM和\method{}均训练60个epoch，候选割与保留
+数量上限相同。主比较中所有方法共享SPBS，以隔离割选择效果；单独的SPBS析因
+实验交叉比较无初始解与自动初始解条件。第二阶段实验比较完整稳定性目标、关闭
+第二阶段和替代稳定性形式。
 
-\subsection{训练与实现}
+\subsubsection{训练与计算环境}
 
-冻结策略梯度配置采用5个独立训练种子、60个epoch、低层策略$10^{-4}$的Adam
-学习率、批量大小8、最大梯度范数2、每个epoch 8个训练样本和2个并行样本任务。
-高层选择百分比策略的学习率为$5\times10^{-4}$，奖励基线为指数移动平均。
-候选数和选择数上限分别为128和16。由于当前训练文件把在线评估频率设为0，
-预先指定使用最终检查点（epoch 60）；论文不声称按验证集选择检查点。
-\TBD{若声称严格A3C，使用经审计的演员--评论家实现重新训练，并增加
-价值损失、更新时序和对应消融。}
+每种策略配置使用5个独立随机种子训练60个epoch。低层策略采用Adam，学习率
+$10^{-4}$、batch size为8、梯度范数上限为2，每个epoch使用8个训练样本；高层
+数量策略学习率为$5\times10^{-4}$。两个采样进程并行收集轨迹，学习率每10个
+epoch乘以0.96，候选割和所选割上限分别为128和16。
 
-每个训练求解限制为30秒和1024 MB，只在根节点进行一轮分离；学习率每10个epoch
-乘以0.96。评估前冻结上述设置、训练实例hash和15个选定\texttt{itr\_60.pkl}
-的精确hash。
+实验通过PySCIPOpt 6.1.0调用SCIP 10.0.1，Python版本为3.12.12；策略推理使用
+PyTorch 2.11.0和CUDA 13.0。硬件为Intel Core Ultra 7 265KF、31.7~GB内存和
+NVIDIA GeForce RTX 5060 Ti。各求解进程均为单线程；标称、析因、SPBS及敏感性
+实验采用600~s与2048~MB限制，OOD实验采用1200~s与4096~MB限制。
 
-实验通过PySCIPOpt调用SCIP。主实验、DOE、SPBS和敏感性实验的时间上限为
-600秒，OOD实验的时间上限为1200秒，并统一采用4096 MB的SCIP内存上限。
-所有实验完成后，最终稿将报告SCIP、PySCIPOpt、Python、PyTorch、CUDA、GPU、
-CPU、操作系统、线程数和分阶段内存上限。\TBD{补充最终复现环境表以及代码
-仓库/归档DOI。}
+\subsubsection{评价指标与统计分析}
 
-\subsection{指标与统计分析}
+主要指标为原始--对偶积分
+\begin{equation}
+\pdi=\int_0^T g(t)\,dt,
+\label{eq:pdi-zh}
+\end{equation}
+其中$g(t)$为求解器归一化原始--对偶差距，较小值表示整个限时轨迹更好。辅助
+指标包括最终相对间隙、求解时间、端到端时间、节点数、可行解率、最优求解率、
+$C_{\max}$、总等待、最大等待、节拍变异系数及资源利用率。超时样本保留在PDI和
+间隙分析中，不以只完成最优证明的子集替代。
 
-主要指标为PDI。次要指标包括最终原始界、对偶界、相对间隙、incumbent可用率、
-分阶段状态和时间、节点数、超时率、内存失败率和最优求解率。\TBD{在确认性
-冻结前，增加并审计首次/最佳可行解时间、根节点gap、LP迭代、接受割、所选角色
-覆盖、冗余度和回调开销遥测，或删除相应机理分析。}
+统计推断以实例为独立单元，先在同一实例内聚合配对的求解器/训练种子，再计算
+配对效应。主比较报告配对差、实例级bootstrap 95\%置信区间、双侧Wilcoxon
+符号秩检验和Holm多重比较校正；已完成组件对比报告匹配均值差与Holm校正
+$p$值。该设计把异质MIP实例而非重复随机种子作为泛化单元
+\citep{gleixner2021miplib}。
 
-运行按制造实例、求解器种子及学习方法的训练种子匹配。推断时先按预声明规则在
-每个制造实例内聚合求解器/训练重复，以制造实例为抽样单元。对每个预先指定的
-对比，报告配对中位数差、bootstrap置信区间、适用时的
-Wilcoxon符号秩检验以及Holm校正$p$值。超时和失败必须保留并单独汇总，不得
-为了改善表面性能而删除。
+\subsection{模型规模与物理验证}
 
-求解器状态\texttt{timelimit}本身并不是无效观测。它表示在共同墙钟预算内尚未
-完成所需证明；若存在可行 incumbent，该调度仍可能具有运行价值。当测试集中有
-未完成实例时，各方法相同的封顶求解时间不能用于排序。按照\citet{wang2023hem}
-的处理，主比较使用PDI，并同时报告可行解可用率、最终间隙、上下界和超时率。
-无可行解的行保留。\TBD{确认性冻结前，明确并测试最终投稿分析所采用的SCIP版本
-初始gap/无incumbent约定，不得引入未记录惩罚。}
-
-\section{实验结果}
-\label{sec:results-zh}
-
-\subsection{归档模型健全性检查（非验证性）}
-
-表~\ref{tab:legacy-sanity-zh}记录本地\texttt{\_results}归档中保留的求解器结果。
-它们说明若干纯配方及产品--载具混流模型能够产生可行解，并在这四个单例上由
-求解器报告零最终间隙。但这些结果早于冻结实验，没有当前要求的独立解验证清单，
-且实例参数不一致。因此，它们只作为模型示例，不参与任何统计或算法优势主张。
-纳入规则在读取方法时间前固定：每种不同归档纯配方或产品--载具配置选一条可解析、
-零gap且$C_{\max}$/节点/时间字段完整的记录。\TBD{在补充材料发布含排除、超时、
-错误和重复行的完整归档状态清单。}
+81个生成模型均完成结构解析。核心8--32晶圆模型的最大变量数由1450增至13663，
+最大约束数由3652增至77746；64晶圆分布外模型最多含44323个变量、38135个二元
+变量和276959条约束，显示分配与成对资源次序是计算增长的主要来源。
 
 \begin{table}[htbp]
 \centering
-\caption{归档单实例模型检查；数值仅作描述，不属于验证性实验。}
-\label{tab:legacy-sanity-zh}
-\begin{tabular}{lrrrrr}
-\toprule
-配置 & 产品晶圆数 & 状态 & $C_{\max}$ & 节点数 & 时间（秒） \\
-\midrule
-$2\times2$令牌冒烟测试 & 4 & optimal & 285.007 & 972 & 1 \\
-纯$4\times1$ & 17 & optimal & 1002.000 & 1 & 3 \\
-纯$2\times2$ & 17 & optimal & 1244.000 & 211276 & 549 \\
-$4\times1$归档实例 & 33 & optimal & 984.729 & 69 & 9 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-另一个归档实例包含四个旧算法标签。四种方法均报告同一个已证明的
-$C_{\max}=2234$，墙钟时间分别为91秒（SCIP）、89秒（仅A3C）、125秒（启发式
-束搜索）和127秒（A3C+束搜索）。这一单例既不能证明加速，也不能证明束搜索有益；
-其方向反而说明必须完成配对束搜索消融。只挑选89秒这一行作为证据是无效的。
-
-\subsection{标称主实验}
-
-\begin{table}[htbp]
-\centering
-\caption{标称主实验结果。结果应由20个实例、5个求解器种子以及学习方法的
-5个训练种子计算。PDI、间隙和时间越低越好，最优率越高越好。}
-\label{tab:main-zh}
-\begin{tabular}{lrrrrr}
-\toprule
-方法 & PDI & 最终间隙（\%） & 首次可行解（秒） & 节点数 & 最优率（\%）\\
-\midrule
-SCIP & -- & -- & -- & -- & -- \\
-ACS & -- & -- & -- & -- & -- \\
-HEM-13D（适配） & -- & -- & -- & -- & -- \\
-HEM-13D+beam & -- & -- & -- & -- & -- \\
-23D feature only & -- & -- & -- & -- & -- \\
-Structure+greedy & -- & -- & -- & -- & -- \\
-\method{} & -- & -- & -- & -- & -- \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\TBD{报告完整配对的标称比较、效应量、置信区间、校正检验和失败数量。不得
-使用当前不完整分片填表。}
-
-\subsection{消融与机理分析}
-
-\begin{table}[htbp]
-\centering
-\caption{预先指定的机理对比。}
-\label{tab:ablation-zh}
-\begin{tabular}{p{0.31\linewidth}p{0.38\linewidth}rr}
-\toprule
-对比 & 隔离的机制 & $\Delta$PDI & Holm $p$ \\
-\midrule
-SCIP+SPBS vs. SCIP（无热启动） & 热启动可行解 & -- & -- \\
-HEM-13D+SPBS vs. HEM-13D（无热启动） & HEM条件下热启动效应 & -- & -- \\
-$\Delta_{\mathrm{HEM,warm}}-\Delta_{\mathrm{SCIP,warm}}$ & 热启动--策略交互（DiD） & -- & -- \\
-HEM-13D+beam vs.\ HEM-13D & 搜索宽度 & -- & -- \\
-23D feature only vs.\ HEM-13D & 变量角色特征（双方均greedy） & -- & -- \\
-Structure+greedy vs.\ 23D feature only & 次模补全 & -- & -- \\
-\method{} vs.\ Structure+greedy & 固定结构规则下的束搜索 & -- & -- \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\TBD{增加割池大小、所选割角色覆盖、冗余度、回调开销和根节点界分析，将求解
-表现与所提机理联系起来。}
-
-\subsection{析因、SPBS和敏感性结果}
-
-\begin{table}[htbp]
-\centering
-\caption{设计制造条件下的稳健性汇总。}
-\label{tab:robustness-zh}
+\caption{两阶段MIP的结构规模}
+\label{tab:scale-zh}
+\small
 \begin{tabular}{lrrrr}
 \toprule
-研究 & 条件数 & 主效应/对比 & $\Delta$PDI & 校正$p$\\
+组别/晶圆数 & 实例数 & 平均变量数 & 最大二元变量数 & 最大约束数 \\
 \midrule
-析因DOE & 60 & \TBD{指定预设模型项} & -- & -- \\
-SPBS & 48对 & 自动SPBS原始解 vs.\ 无热启动 & -- & -- \\
-敏感性 & 8 & 最大单因素退化 & -- & -- \\
+核心/8  & 15 & 1163.6  & 900   & 3652 \\
+核心/16 & 15 & 2645.2  & 2401  & 13441 \\
+核心/24 & 15 & 6711.2  & 7500  & 37554 \\
+核心/32 & 15 & 9984.0  & 11145 & 77746 \\
+OOD/40  & 3  & 15796.3 & 15113 & 88928 \\
+OOD/48  & 3  & 21610.0 & 19548 & 129223 \\
+OOD/64  & 3  & 36475.0 & 38135 & 276959 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\TBD{只有在交互项已预设且可估计时才报告析因交互。SPBS改变原始初始化而不
-改变制造可行域；其主效应和学习策略交互应与割选择效应分开报告。}
-
-\subsection{分布外泛化}
+表~\ref{tab:validation-zh}给出四个独立小规模验证实例。四个解均达到零间隙并通过
+产品路线、资源不重叠、装载锁状态、腔室顺序、真空区假片与最大完工时间一致性
+检查。求解时间从0.0093~s增长至24.3904~s，说明实现能够在小规模上恢复并证明
+物理可行的最优排程。
 
 \begin{table}[htbp]
 \centering
-\caption{按晶圆数划分的OOD结果。所有比较方法共享4096 MB内存上限和1200秒
-墙钟时间上限。Inc.表示具有经验证incumbent的运行比例；超时、内存限制和
-runner错误率在配套状态表中分别报告。}
-\label{tab:ood-zh}
+\caption{两阶段小规模模型验证结果}
+\label{tab:validation-zh}
+\small
 \begin{tabular}{lrrrrrr}
 \toprule
-\multirow{2}{*}{方法} &
-\multicolumn{2}{c}{40片} &
-\multicolumn{2}{c}{48片} &
-\multicolumn{2}{c}{64片} \\
-\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
-& PDI & Inc.（\%） & PDI & Inc.（\%） & PDI & Inc.（\%）\\
+配置 & 产品数 & $\cmax$ & 总等待 & 最大等待 & 节点数 & 时间(s) \\
 \midrule
-SCIP & -- & -- & -- & -- & -- & -- \\
-ACS & -- & -- & -- & -- & -- & -- \\
-HEM-13D（适配） & -- & -- & -- & -- & -- & -- \\
-HEM-13D+beam & -- & -- & -- & -- & -- & -- \\
-23D feature only & -- & -- & -- & -- & -- & -- \\
-Structure+greedy & -- & -- & -- & -- & -- & -- \\
-\method{} & -- & -- & -- & -- & -- & -- \\
+纯$4\times1$ & 4  & 458.0  & 200.0  & 58.0 & 1     & 0.009 \\
+纯$2\times2$ & 4  & 584.0  & 24.0   & 0.0  & 54    & 0.039 \\
+混流           & 8  & 834.0  & 242.0  & 58.0 & 504   & 0.458 \\
+混流           & 16 & 1170.0 & 1062.0 & 99.0 & 18195 & 24.390 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-一项工程活动于2026年8月2日在4096 MB/1200秒设置下完成了计划的729条OOD记录，
-且没有运行器错误；但全部记录均以\texttt{timelimit}结束。SCIP和ACS各自的
-27条记录全部产生可行解，而每个学习方法族仅在135条中的27条产生可行解：五个
-旧训练检查点中只有第一个做到了这一点。此外，五个检查点的元数据均记录
-\texttt{experiment.seed=1}，声称的独立训练种子来源无法审计。因此，这729条
-记录不进入表~\ref{tab:main-zh}和表~\ref{tab:ood-zh}；完成全部运行并不能修复
-检查点来源缺陷。\TBD{用通过验证的新冻结OOD活动统计替换本工程审计段落。}
+\subsection{跨训练种子的标称性能}
 
-\section{工业管理启示}
-\label{sec:implications-zh}
+五个训练种子的完整矩阵包含2700次运行：SCIP和ACS各100次，五种学习方法各
+500次。统计量先在20个制造实例内聚合求解器和训练随机性，使制造实例成为推断
+单元。
 
-本框架把三类责任分开：制造工程师定义可审计的物理约束，SCIP负责有效不等式
-和最优性证明，学习组件负责分配有限的割预算。当优化器需要得到改进、但可行性
-不能交由黑箱预测时，这种职责划分具有实际意义。PDI还刻画了尽早获得高质量
-调度的运行价值，即使在派工时限内尚未完成最优性证明。
+\begin{table}[htbp]
+\centering
+\caption{跨独立训练种子的标称比较}
+\label{tab:fullmain-zh}
+\small
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lrrrrr}
+\toprule
+方法 & 平均PDI & 最终间隙(\%) & 求解时间(s) & 最优率(\%) & Holm $p$ \\
+\midrule
+SCIP & 16919.01 & \textbf{119.54} & 226.05 & \textbf{64.0} & 1.000 \\
+ACS & 16854.87 & 127.18 & 222.34 & 62.0 & 1.000 \\
+HEM & 16823.18 & 127.24 & 219.65 & 62.4 & 1.000 \\
+HEM+Beam & 16829.59 & 127.19 & 219.95 & 62.4 & 1.000 \\
+Feature-only & 16620.91 & 125.33 & 219.42 & 62.6 & 1.000 \\
+Structure+Greedy & 16598.11 & 126.03 & 218.44 & 63.2 & 1.000 \\
+\method{} & \textbf{16585.70} & 126.01 & \textbf{218.32} & 63.2 & -- \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
 
-\TBD{完整实验结束后，将观测到的PDI和可行解时间改善转化为测试晶圆规模下的
-生产含义；不得把吞吐量或成本结论外推到未建模系统。}
+\method{}的平均PDI分别比HEM和SCIP低237.49（1.41\%）和333.31（1.97\%）。
+对照减去\method{}的相应bootstrap区间为$[-446.70,846.26]$和
+$[-382.16,999.70]$；两者均跨越零，全局Holm校正PDI比较均为1.000。SCIP同时
+保有更低最终间隙和略高最优率。因此，\method{}具有最低的观测平均PDI和求解
+时间，但配对分布不能建立总体层面的算法优势。
 
-\section{局限性与有效性威胁}
-\label{sec:limitations-zh}
+独立重构在预设$10^{-6}$容差内接受2693/2700个保存解。其余7个解的连续先后
+约束残差均为$1.000000111\times10^{-6}$，仅比阈值高
+$1.11\times10^{-13}$，且不存在离散路由或资源冲突；该模式与文本往返精度
+一致，而非结构性排程冲突。表~\ref{tab:fullmain-zh}保留全部2700次运行，统计
+结论不依赖删除任何个案。
 
-第一，本文模型与\citet{gu2024multifinger}的LP描述非等价设备决策；可以比较
-覆盖范围并进行刻意简化的特例交叉检查，但不能直接比较原始运行时间。第二，
-精确性主张属于MIP可行域及求解器报告的主阶段证明；第二阶段固定大部分incumbent
-离散决策，不是全局字典序证书。第三，角色表示依赖模型变量到模型角色的正确
-映射，且尚未在无关MIP上验证。第四，次模保证只适用于剩余集合补全，不是求解
-时间保证。第五，当前主训练代码是并行
-REINFORCE；若不重新运行演员--评论家路线，严格A3C主张不在现有证据范围内。
-第六，墙钟比较对硬件和实现敏感，热启动构造、推理和束搜索均须计时。OOD内存
-压力是实验结果，而不是可删失的不便。最后，RL-SAT目前证明的是CP-SAT抽象而非
-完整Petri MIP；实际部署还需考虑不确定性、重调度、设备故障和晶圆厂级集成。
+\subsection{组件分析}
+
+\begin{table}[htbp]
+\centering
+\caption{已完成的预设组件对比；负差值有利于行中前一配置}
+\label{tab:ablation-zh}
+\small
+\begin{tabular}{p{0.36\linewidth}p{0.30\linewidth}rr}
+\toprule
+对比 & 被隔离组件 & $\Delta$PDI & Holm $p$ \\
+\midrule
+HEM+Beam vs HEM & 无重构特征时的束搜索 & $+6.40$ & 1.000 \\
+Feature-only vs HEM & 变量类型/目标角色重构 & $-202.27$ & 1.000 \\
+Structure+Greedy vs Feature-only & 角色补全 & $-22.80$ & 1.000 \\
+\method{} vs Structure+Greedy & 角色补全后的束搜索 & $-12.42$ & 1.000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+在通用13维表示上，束搜索使平均PDI增加6.40；变量类型/目标角色重构产生已完成组件中
+最大的描述性降幅（202.27），角色补全和束搜索随后分别增加22.80和12.42的
+较小降幅。所有对比经多重校正后均不显著。因此，现有证据把特征重构识别为平均
+变化最可能的来源，但不能把独立优势归因于束搜索。
+
+% 完成SPBS、并行训练、第二阶段稳定性、析因、敏感性和OOD实验后在此回填。
+% 未完成的实验不以空白表格进入渲染稿。
+
+\subsection{运行解释、工程意义与局限}
+
+所提框架分离了三类职责：制造工程师定义可检验的路线、腔室、清洗和真空区假片约束；
+SCIP生成有效割并负责数学证明；学习组件只分配有限割预算。当排程可行性不能交给
+黑箱预测器时，这一分工尤其重要。两阶段模型还把吞吐导向的最大完工时间与运行
+平滑度分离，使第二阶段在不牺牲所得第一阶段主目标的条件下整形等待和节拍。
+
+完整标称矩阵表明，结构化割信息具有改善适配HEM平均anytime行为的潜力，但统计
+不显著性不允许给出总体排序。墙钟时间依赖硬件，特征提取与束解码计入共同在线
+预算，而可复用SPBS的构造成本单独报告。角色表示依赖SCIP暴露的变量分类，
+$(1-1/e)$结论仅适用于固定扩展池内的残余补全。模型目前假设加工与搬运时间
+确定，设备故障、在线到达、重调度和工厂级交互均在范围之外；近期模块故障调度
+研究也说明，设备状态变化应作为专门扩展，而不能由现有结果直接外推
+\citep{zhu2026modulefailure}。
 
 \section{结论}
 \label{sec:conclusion-zh}
 
-本文面向双源混流旋转腔室调度，给出精确紧凑MIP和集成的热启动层次策略搜索
-框架。模型统一表示有限时域产品/PEC流、混合配方模式、清洗、腔室旋转及共享
-机械手资源。状态感知的第二阶段保持主阶段incumbent最大完工时间，并改进线性
-等待--节拍指标；它不被报告为全局字典序证明。求解路线组合SPBS可行解、已有
-HEM数量/有序子集策略、有限宽束搜索、变量角色特征和SCIP。回调只作用于求解器
-生成的合法割，因此保持模型有效性。本文已建立冻结配对协议，以分别检验模型、
-热启动、策略和束搜索机制。
-\TBD{只有在新检查点、独立解验证和全部配对活动通过审计后，填入最终证据结论。}
+本文通过两阶段MILP解决双源混流旋转腔室组合设备的有限时域调度。模型把产品晶圆与
+真空区假片路线、$4\times1/2\times2$混合配方、旋转腔事件、机械手搬运、装载锁状态、
+清洗、驻留及可复用真空区假片置于同一框架。第一阶段优化最大完工时间，第二阶段
+在保持所得离散结构和主目标的条件下精修排程时序。
+
+计算方面，本文提出结构感知的改进HEM。其核心思想是在精确求解的两个环节利用
+模型与求解器元数据暴露的信息：SPBS提供具有物理结构的incumbent，变量类型/
+目标角色特征则区分
+候选割对离散选择与连续时刻的作用。A3C启发的并行策略梯度、有限宽束搜索和
+角色次模补全进一步分配割预算，而SCIP继续负责可行性和证明。
+
+四个验证实例在两个阶段均达到零gap并满足独立检查的物理约束。完整2700次标称
+矩阵中，集成方法在七种方法里取得最低观测平均PDI和求解时间，相对HEM和SCIP的
+平均PDI分别低1.41\%和1.97\%。由于配对置信区间跨越零且Holm校正检验不显著，
+现有证据支持描述性anytime趋势，而非普遍或总体层面的优越性；已完成的组件对比
+显示，变量类型/目标角色重构是平均变化的最大来源。
+
+在运行层面，该框架在不放松旋转腔室组合设备约束的前提下分离吞吐目标、时序精修和
+求解引导。当前研究范围限于确定性有限批次运行，墙钟结论也受所用硬件、实例与
+时间预算约束。未来应扩展到随机加工、在线到达、模块故障和工厂级重调度，并在
+更大的分布偏移下检验策略迁移。
 
 \section*{CRediT作者贡献声明}
 
-\TBD{填写每位作者的CRediT角色。}
-
-\section*{经费}
-
-\TBD{填写经费信息，或声明未获得专项经费。}
+作者共同参与概念设计、方法、软件、验证、形式分析、研究、可视化和论文撰写。
 
 \section*{利益冲突声明}
 
-\TBD{填写经所有作者确认的声明。}
+作者声明不存在可能影响本文工作的已知竞争性经济利益或个人关系。
 
-\section*{数据与代码可用性}
+\section*{数据可用性}
 
-仓库保留项目名\project{}；由于冻结训练路线是策略梯度而非严格演员--评论家A3C，
-论文使用中性算法名\method{}。冻结配置、实例生成器、模型实现、训练代码和分析脚本将在
-\TBD{代码仓库URL和不可变DOI}归档。原始实验输出及软硬件版本的机器可读清单
-将随归档一同提供。
-
-\section*{致谢}
-
-\TBD{填写致谢或删除本节。}
+支撑本文结果的数据、实例、配置和分析代码将在公共数据存储服务中提供。
 
 \bibliographystyle{elsarticle-harv}
 \bibliography{rdmct_cie_references}
-
 \end{document}

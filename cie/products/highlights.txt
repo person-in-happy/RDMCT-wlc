@@ -1,7 +1,7 @@
 Highlights
 
-- An exact MIP models dual-source mixed-flow rotating-chamber schedules.
-- The model adds cleaning, reusable carriers, and finite-horizon decisions.
-- A second phase preserves incumbent makespan while reducing instability.
-- A shared SPBS warm start supplies feasible incumbents to every solver arm.
-- HEM-style cut selection is tested with beam and variable-role structure.
+- A two-stage MILP represents dual-source mixed-flow rotating-chamber operations.
+- Conditional refinement preserves makespan and reshapes schedule timing.
+- A structured warm start supplies a physically admissible incumbent.
+- Role features, parallel policy training, and beam search extend HEM.
+- A 2700-run matrix shows lower mean PDI, without significant dominance.

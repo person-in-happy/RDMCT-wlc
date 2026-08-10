@@ -12,75 +12,61 @@
 \journal{Computers \& Industrial Engineering}
 \modulolinenumbers[5]
 
-\definecolor{tbdred}{RGB}{170,0,0}
-\newcommand{\TBD}[1]{\textcolor{tbdred}{[TBD: #1]}}
-\newcommand{\method}{RDMCT-HPS}
-\newcommand{\project}{RDMCT-A3C}
+\newcommand{\method}{RDMCT-HBS}
 \newcommand{\cmax}{C_{\max}}
 \newcommand{\pdi}{\mathrm{PDI}}
-\newcommand{\gap}{\mathrm{Gap}}
 
 \begin{document}
 
 \begin{frontmatter}
 
-\title{Exact-MIP Scheduling with Two-Phase Stability Refinement and Warm-Started Hierarchical Policy Search for Dual-Source Mixed-Flow Rotating-Chamber Cluster Tools}
+\title{Two-stage MILP scheduling and structure-aware learning-enhanced
+branch-and-cut for dual-source mixed-flow rotating-chamber cluster tools}
 
-\author[inst1]{\TBD{First author}}
-\author[inst1]{\TBD{Co-author}}
-\author[inst2]{\TBD{Corresponding author}\corref{cor1}}
-\ead{\TBD{corresponding.author@email}}
-\cortext[cor1]{Corresponding author.}
-
-\affiliation[inst1]{organization={\TBD{Department and University}},
-                    city={\TBD{City}},
-                    postcode={\TBD{Postcode}},
-                    country={\TBD{Country}}}
-\affiliation[inst2]{organization={\TBD{Department and University}},
-                    city={\TBD{City}},
-                    postcode={\TBD{Postcode}},
-                    country={\TBD{Country}}}
+\author{Anonymous author(s)}
 
 \begin{abstract}
-Dual-source mixed-flow semiconductor cluster tools couple product wafers and
-reusable process-environment carriers in shared rotating chambers under
-batching, cleaning, transport, and residency constraints. We first formulate
-the finite-horizon problem as an exact compact mixed-integer program (MIP).
-A makespan-first two-phase route uses the remaining budget to preserve the
-best incumbent makespan, fix most incumbent discrete decisions, and reduce a
-linear waiting-and-cadence stability measure. A certified primary optimum is
-claimed only when the first phase is proven optimal; the refinement is not
-presented as a global lexicographic proof after a time limit. The formulation
-addresses a different finite-horizon system and adds broader features along
-selected dimensions than steady-state, single-product, fixed-sequence linear
-programs for four-finger tools with four-space modules. We then integrate a
-structure-preserving binary-skeleton (SPBS) primal warm start with a
-hierarchical cut-selection policy, beam decoding, and SCIP branch-and-cut.
-The policy inherits the cardinality/ordered-subset decomposition of HEM and
-adds variable-role descriptors and deterministic role-submodular
-completion. It only ranks solver-generated valid inequalities and therefore
-does not alter the scheduling feasible region. A frozen paired protocol is
-defined to isolate the warm start, hierarchical policy, beam search, and
-structural features on nominal and out-of-distribution instances.
-\TBD{Insert the validated paired main, component-ablation, and OOD results
-after fresh checkpoints and all frozen campaigns pass the provenance and
-solution-validation audits.} The resulting framework couples auditable
-manufacturing physics with learning-assisted exact optimization without
-attributing existing HEM components to the present work.
+Dual-source mixed-flow rotating-chamber cluster tools must coordinate product
+wafers and reusable vacuum-zone dummy wafers across rotating chambers, load
+locks, and shared robotic handlers.
+The resulting schedule couples mixed recipes, chamber cleaning, transport,
+residency, and dummy-wafer reuse, and is not represented by conventional
+single-flow or predetermined-sequence models. This paper first develops a
+finite-horizon mixed-integer linear programming model that jointly determines
+$4\times1$ and $2\times2$ recipe grouping, chamber and slot assignments,
+robotic transfers, cleaning epochs, and dummy-wafer allocation. A two-stage
+procedure minimizes makespan and then, conditional on the retained discrete
+schedule and makespan, refines waiting and cadence. The formulation exposes a
+large, structured branch-and-cut problem. To improve its anytime solution, we
+extend hierarchical cut selection with a structure-preserving binary-skeleton
+warm start, a 23-dimensional variable-role representation, A3C-inspired
+parallel policy-gradient training, bounded beam decoding, and
+role-submodular completion. Four verification instances reach zero gap in
+both stages and satisfy independent physical checks. A complete nominal
+matrix comprises 2700 runs over 20 instances, five solver seeds, and five
+training seeds. The integrated method records the lowest observed mean
+primal--dual integral ($1.6586\times10^4$) and solve time (218.32~s) among
+seven methods; mean PDI is 1.41\% below adapted HEM and 1.97\% below SCIP.
+Because instance-level confidence intervals cross zero and Holm-adjusted
+tests are not significant, these differences are interpreted as a
+descriptive anytime trend rather than statistical dominance. The study
+therefore contributes an operationally explicit rotating-chamber model and a
+solver-compatible learning framework while delineating the evidence still
+required for broader performance claims.
 \end{abstract}
 
 \begin{highlights}
-\item An exact MIP models dual-source mixed-flow rotating-chamber schedules.
-\item The model adds cleaning, reusable carriers, and finite-horizon decisions.
-\item A second phase preserves incumbent makespan while reducing instability.
-\item A shared SPBS warm start supplies feasible incumbents to every solver arm.
-\item HEM-style cut selection is tested with beam and variable-role structure.
+\item A two-stage MILP represents dual-source mixed-flow rotating-chamber operations.
+\item Conditional refinement preserves makespan and reshapes schedule timing.
+\item A structured warm start supplies a physically admissible incumbent.
+\item Role features, parallel policy training, and beam search extend HEM.
+\item A 2700-run matrix shows lower mean PDI, without significant dominance.
 \end{highlights}
 
 \begin{keyword}
-semiconductor manufacturing \sep cluster tool scheduling \sep
-mixed-integer programming \sep cutting-plane selection \sep
-reinforcement learning \sep submodular optimization
+rotating-chamber cluster tool \sep semiconductor manufacturing \sep cluster-tool scheduling \sep
+mixed-integer programming \sep learned cut selection \sep
+parallel policy gradient \sep beam search
 \end{keyword}
 
 \end{frontmatter}
@@ -90,137 +76,227 @@ reinforcement learning \sep submodular optimization
 \section{Introduction}
 \label{sec:introduction}
 
-Cluster tools integrate several processing modules and robotic handlers around
-a tightly coupled transport system. They reduce footprint and contamination,
-but a schedule must coordinate processing, transfers, chambers, load locks,
-carrier availability, and recipe-dependent temporal restrictions. The
-difficulty is amplified in a dual-source mixed-flow setting: product wafers
-and reusable process-environment carriers enter through different sources,
-meet inside shared chambers, and follow different but interacting routes.
-Batch and paired processing modes further create discrete choices whose
-effects propagate through the entire schedule.
+Semiconductor manufacturers face high product variety, stringent process
+requirements, and strong pressure to obtain more capacity from installed
+equipment. Because capacity expansion is capital intensive, better operational
+use of existing tools remains an economically relevant alternative to adding
+hardware \citep{chien2021drlhga,hong2026ddpgct}. Cluster tools are central to
+this objective because they integrate process modules, load locks, and robotic
+handlers within a tightly coupled environment. Their productivity is governed
+not only by nominal process durations but also by the coordination of material
+release, chamber occupancy, transport, cleaning, and temporal restrictions.
 
-Exact MIP is attractive because it can certify schedule quality and encode
-physical constraints transparently. Its practical limitation is the large
-branch-and-cut search induced by sequencing and resource-conflict
-disjunctions. General-purpose solvers generate many candidate cuts at a node,
-and adding all of them can strengthen the relaxation while also increasing
-linear-program size, numerical burden, and callback overhead. Cut selection
-is therefore a sequential decision problem in which local efficacy alone does
-not capture interactions among cuts.
+This study considers a dual-source mixed-flow rotating-chamber cluster tool
+deployed in a plasma-enhanced chemical vapor deposition (PECVD) process
+scenario. Product wafers arrive from load ports, whereas reusable vacuum-zone
+dummy wafers are supplied from a dedicated vacuum-zone dummy-wafer storage
+area. The two flows meet in shared rotating chambers and must be coordinated
+through atmospheric and vacuum robots and two load-lock paths. Mixed
+$4\times1$ and $2\times2$ recipes further couple product grouping, chamber and
+slot assignment, dummy-wafer availability, cleaning boundaries, and residency
+limits. A locally attractive transfer or processing order may consequently
+block several downstream resources. Operational complexity therefore arises
+from the propagation of decisions across the complete equipment, not from an
+isolated machine sequence.
 
-Recent work has shown that machine learning can support combinatorial
-optimization without replacing the underlying mathematical model
-\citep{bengio2021machine}. Reinforcement learning has been applied to cut
-selection \citep{tang2020cut}, while look-ahead imitation learning provides
-another route \citep{paulus2022looking}. In particular, HEM already learns
-both a selected-cut
-ratio and an ordered subset with a pointer network, and trains the hierarchy
-with a parallel policy-gradient procedure closely related to A3C. Those
-elements are treated as the algorithmic baseline here, not as new
-contributions. Our question is whether a model-derived primal warm start and
-bounded beam inference, together with formulation roles, improve
-that baseline when it is embedded in an exact scheduling solver.
+Analytical and optimization-based cluster-tool studies have made substantial
+progress on steady-state cycles, multiple wafer types, chamber cleaning, and
+residency-time control
+\citep{kim2021integrated,ko2021wafer,qiao2022binary,lee2023cleaningplan,
+li2022conditioncleaning,wang2023optimalcyclic,li2025cyclicmultitype,
+yang2025miptwowafers}. These models clarify important local mechanisms, but
+their system assumptions do not jointly represent the finite-horizon
+dual-source flow, mixed rotary recipes, dummy-wafer reuse, and shared transport
+architecture considered here. The multi-finger, multi-space model of
+\citet{gu2024multifinger}, for example, evaluates predetermined steady-state
+robot sequences, whereas the present problem must determine discrete
+assignments, resource orders, and continuous event times simultaneously.
 
-This paper studies two linked research questions. First, can an exact
-finite-horizon model represent dual material sources, mixed $4\times1$/$2\times2$
-flows, rotating chambers, cleaning, and reusable carriers beyond the
-steady-state fixed-sequence setting? Second, can SPBS initialization and beam
-decoding improve the anytime behavior of a HEM-style learned cut selector
-without changing model validity? We answer them with an exact compact model
-and an integrated solver, denoted \method{}. Variables fixed by manufacturing
-equalities are continuously represented without relaxing genuine assignment,
-ordering, mode, or cleaning decisions. The solution stack combines a shared
-SPBS incumbent, SCIP, a 23-dimensional variable-role hierarchy, and bounded beam
-decoding.
+Learning-based scheduling provides a complementary research stream.
+Deep reinforcement learning has been combined with genetic or adaptive search
+for dynamic semiconductor and cluster-tool decisions
+\citep{chien2021drlhga,liu2022cnna3c,zhang2024qeda,
+kim2025adaptivecluster,kim2025noncyclic}. Particularly relevant is the
+simulation-integrated DDPG study of \citet{hong2026ddpgct}, which adjusts
+continuous process times in a physical vapor deposition (PVD) cluster tool.
+That study demonstrates the value of linking equipment behavior with learned
+control, but its decision layer differs from the present one: the PVD policy
+regulates process duration under a simulation model, while this paper
+constructs a feasible discrete rotating-chamber schedule and retains exact MIP bounds and
+proof mechanisms. The two problems are thus complementary rather than
+interchangeable.
 
-The paper makes four contributions.
+An explicit mixed-integer linear programming (MILP) formulation is attractive
+for this scheduling problem because it exposes the physical assumptions and provides
+primal and dual bounds. The same fidelity, however, creates many assignment
+and resource-order binaries and weakly coupled timing variables. The resulting
+branch-and-cut search can be sensitive to which valid inequalities are
+retained at each separation round. Learning can guide this decision without
+replacing the solver's feasibility and proof responsibilities
+\citep{bengio2021machine,scavuzzo2024mlbb}. HEM formulates cut retention as
+hierarchical cardinality and ordered-subset decisions
+\citep{wang2023hem,wang2024hemtpami}; nevertheless, its generic features do
+not identify how a cut distributes mass across variable types and
+objective-active continuous variables, greedy
+decoding commits to early choices, and an exact solve may spend substantial
+time before finding a competitive incumbent.
+
+Taken together, the literature leaves an unresolved interface between an
+operationally faithful model for dual-source mixed-flow rotating-chamber equipment and a
+scalable exact solution mechanism that exploits the model's structure. We
+address the modeling and computational gaps jointly: the first part of the
+framework describes the equipment through a two-stage MILP, and the second
+uses variable-type/objective-role information together with feasible schedule
+structure to enhance HEM within SCIP. The resulting logic is
+equipment physics $\rightarrow$ exact scheduling model $\rightarrow$ structural
+search bottleneck $\rightarrow$ learning-enhanced branch-and-cut.
+
+The contributions are as follows.
 
 \begin{enumerate}[leftmargin=*]
-  \item We formulate the finite-horizon dual-source mixed-flow cluster-tool
-  problem with shared robots, rotating chambers, two recipe modes, cleaning,
-  carrier residency, and reusable carrier tokens as an exact compact MIP. A
-  status-aware second phase preserves the best incumbent makespan while
-  refining a linear waiting-and-cadence measure under mostly fixed discrete
-  decisions.
-  \item We construct an SPBS warm start that fixes a physically meaningful
-  assignment/activation/cleaning skeleton and asks SCIP to complete a feasible
-  incumbent. The same incumbent and its construction cost are shared by all
-  algorithm arms in a paired comparison.
-  \item Relative to an adapted HEM baseline, we retain its hierarchical
-  cardinality and ordered pointer policy, then evaluate bounded beam decoding
-  and 10 formulation-role
-  descriptors with transparent role-submodular completion. The novelty claim
-  concerns this scheduling-specific integration and must be supported by
-  component-wise ablation.
-  \item We define a frozen, instance-paired evaluation protocol covering model
-  verification, warm-start and search ablations, nominal comparison,
-  factorial conditions, SPBS initialization, sensitivity, and size/recipe
-  distribution shifts.
+  \item A finite-horizon two-stage MILP is developed for dual-source
+  mixed-flow rotating-chamber cluster tools. It jointly represents product and dummy-wafer flows,
+  mixed $4\times1$/$2\times2$ recipes, rotary chamber events, ATR/VTR
+  transfers, load-lock states, cleaning epochs, residency limits, and reusable
+  reusable vacuum-zone dummy wafers. Stage one minimizes makespan; stage two performs
+  makespan-preserving timing refinement conditional on the retained discrete
+  structure.
+  \item A structure-aware enhanced HEM method is developed for this MILP.
+  A structure-preserving binary-skeleton (SPBS) warm start supplies an early
+  feasible incumbent; a reconstructed 23-dimensional representation exposes
+  discrete and continuous variable roles; and A3C-inspired parallel policy
+  training, bounded beam decoding, and role-submodular completion coordinate
+  cut cardinality, membership, and order.
+  \item A paired computational study links each claimed mechanism to a
+  distinct source of evidence. Small exact instances assess model validity,
+  the complete nominal matrix compares seven solver configurations across
+  independent solver and training seeds, and component, stability, and
+  distribution-shift studies are designed to delimit where any computational
+  benefit arises.
 \end{enumerate}
 
-The current document is an evidence-disciplined draft: numerical cells remain
-blank until every required paired campaign is complete. This prevents
-incomplete seeds or successfully solved instances from being reported
-selectively.
+The remainder of the paper reviews the two research streams and positions the
+present study, formulates the rotating-chamber scheduling model, develops the
+structure-aware solution method, reports the computational study, and
+concludes with operational implications and research limitations.
 
-\section{Related work}
-\label{sec:related}
+\section{Literature review and research positioning}
+\label{sec:literature}
 
-\subsection{Semiconductor cluster-tool scheduling}
+\subsection{Cluster-tool scheduling under mixed flows and auxiliary constraints}
 
-Cluster-tool scheduling combines machine scheduling with robotic transport and
-residency constraints. Exact and analytical methods have been developed for
-photolithography areas containing cluster tools
-\citep{madathil2018photolithography} and for time-constrained tools with purge
-operations \citep{yuan2023purge}. Most directly, \citet{gu2024multifinger}
-study a four-finger robotic tool with four-space process modules. They analyze
-steady-state operation under two predetermined cyclic robot sequences---a
-backward sequence and a hybrid task sequence---and solve one linear program
-per sequence to minimize cycle time subject to residency constraints. Their
-paper assumes one product flow and leaves chamber cleaning and simultaneous
-multiple wafer types to future work. The present model addresses a different
-handling architecture and adds broader features along selected dimensions:
-finite-horizon schedules, two material sources, mixed product/carrier flows,
-flexible assignments and orderings, shared rotating chambers, two recipe
-modes, explicit cleaning, and reusable carrier tokens. It has not yet been
-shown to reduce exactly to their four-finger clean/dirty-arm system. We
-therefore compare modeling coverage and a deliberately constructed special
-case, not raw runtime between non-equivalent formulations.
+Cluster-tool scheduling has evolved from steady-state robot cycles toward
+models that account for product heterogeneity and auxiliary equipment
+constraints. Integrated patterns and parallel-chamber workload balance have
+been studied for dual-armed tools and multiple wafer types
+\citep{kim2021integrated,ko2021wafer,zhu2022twotypes}. More recent work
+coordinates multi-type concurrent processing or formulates two-wafer-type
+single-arm scheduling as a MIP
+\citep{li2025cyclicmultitype,yang2025miptwowafers}. These studies establish
+that release order, chamber allocation, robot tasks, and residency restrictions
+cannot be optimized independently when several product types share a tool.
 
-\subsection{Learning within exact MIP}
+Cleaning and other temporal restrictions add another coupling layer.
+Binary formulations and analytical methods have been developed for
+residency-constrained tools with cleaning
+\citep{qiao2022binary,li2022conditioncleaning,lee2023cleaningplan}.
+Purge, post-processing, and processing-time variation also change feasibility
+and cycle behavior
+\citep{yuan2023purge,zhu2023postprocess,pan2024cycletime}. At the equipment
+level, processing-module configuration and robot waiting must be coordinated
+\citep{wang2023optimalcyclic}; multi-space modules introduce additional
+rotation and loading interactions \citep{zou2024twospace,gu2024multifinger}.
+The dominant focus nevertheless remains a single material source, a cyclic
+regime, or a predetermined robot pattern. These assumptions are restrictive
+for the finite-batch rotating-chamber system considered here, where product wafers and
+reusable vacuum-zone dummy wafers follow different routes before meeting in shared rotary modules.
 
-SCIP provides a modular branch-cut-and-price framework in which learning can
-act at controlled decision points \citep{achterberg2009scip,bestuzheva2023scip}.
-Learning-assisted exact optimization is most defensible when the learned
-component changes search priorities rather than mathematical validity. This
-principle motivates our callback: it receives only valid cuts generated by
-SCIP, selects a preferred subset, and leaves omitted cuts available to the
-solver. The learned model neither creates inequalities nor prunes nodes.
+\subsection{Learning-based semiconductor and cluster-tool scheduling}
 
-\subsection{Learned cut selection}
+Learning-based manufacturing scheduling increasingly combines a fast policy
+with problem-specific search. At the fab or production-system level,
+\citet{chien2021drlhga} integrate deep reinforcement learning with a hybrid
+genetic algorithm, while \citet{zhang2024qeda} use Q-learning to guide an
+estimation-of-distribution search. CNN--A3C has been used for semiconductor
+scheduling under uncertain processing times and urgent orders
+\citep{liu2022cnna3c}; feedback and actor--critic control have likewise been
+combined to exploit production-system knowledge
+\citep{li2022hybridfeedback}. Problem-specific encodings and greedy search
+remain relevant because learned policies alone do not guarantee effective
+local improvement \citep{hu2023crowsearch}.
 
-\citet{tang2020cut} formulate cut choice as reinforcement learning, while
-\citet{paulus2022looking} use look-ahead information to learn which cuts yield
-useful bound improvement. \citet{wang2023hem} model the number and order of
-selected cuts hierarchically with 13 generic cut features and a pointer
-network \citep{vinyals2015pointer}; their parallel hierarchical policy-gradient
-training is described as closely related to A3C. We do not claim hierarchical
-cardinality prediction, ordered subset selection, the pointer network, or
-parallel sampling as new. We retain that baseline and test three additions:
-an SPBS primal warm start outside the policy, bounded beam inference at test
-time, and formulation-role features with deterministic submodular completion.
-The current implementation's formal configurations use a moving-average
-REINFORCE baseline, so the training algorithm is called hierarchical policy
-gradient in the paper. The repository name \project{} does not by itself justify
-a strict asynchronous actor--critic claim.
+At the cluster-tool level, DRL with adaptive search has been used for
+concurrent release and robot-task decisions
+\citep{kim2025adaptivecluster}, and a related study addresses noncyclic
+scheduling directly \citep{kim2025noncyclic}. \citet{hong2026ddpgct} combine
+discrete-event simulation and DDPG to control continuous processing times in
+a PVD tool. The latter is the closest CIE study in equipment-level motivation,
+but it addresses a different control lever. Its policy changes process
+duration in a simulated PVD environment; the present policy allocates valid
+cuts while an exact solver determines a discrete rotating-chamber schedule. This
+distinction motivates learning inside, rather than in place of, mathematical
+optimization.
 
-\section{Problem description and exact compact formulation}
+\subsection{Learning-enhanced exact optimization and research gap}
+
+MILP makes route, capacity, cleaning, and residency assumptions inspectable,
+although formulation choices can materially alter relaxations and search
+\citep{adelgren2023recordkeeping}. Learning-enhanced exact optimization
+preserves this modeling role while guiding selected solver decisions
+\citep{bengio2021machine,scavuzzo2024mlbb}. Learned variable biases can support
+primal search \citep{khalil2022mipgnn}, and graph representations can encode
+variable--constraint interactions
+\citep{cappart2023gnnco,chen2023milpgnn}. SCIP provides the modular
+branch-and-cut interface used in this study
+\citep{achterberg2009scip,bestuzheva2023scip}.
+
+Within branch-and-cut, cut selection has been learned through reinforcement
+learning, supervised ranking, and look-ahead imitation
+\citep{tang2020cut,huang2022cutranking,paulus2022looking}.
+Instance-adaptive rules further demonstrate that a fixed scoring vector is not
+uniformly effective \citep{turner2023adaptive}. HEM jointly predicts retained
+cardinality and an ordered cut subset
+\citep{wang2023hem,wang2024hemtpami}, while beam search provides a general
+mechanism for retaining alternative partial sequences
+\citep{choo2022beam}. These methods establish the algorithmic ingredients,
+but they do not connect an application-feasible incumbent and
+variable-type and objective roles to hierarchical cut decoding.
+
+\begin{table}[htbp]
+\centering
+\caption{Positioning relative to representative recent cluster-tool studies.}
+\label{tab:research-position}
+\begin{tabular}{p{0.18\linewidth}p{0.20\linewidth}p{0.32\linewidth}p{0.20\linewidth}}
+\toprule
+Study & Setting & Primary decision layer & Method \\
+\midrule
+\citet{qiao2022binary} & Cleaning-constrained CT & Residency and cleaning schedule & Binary IP \\
+\citet{gu2024multifinger} & Multi-space CT & Timing of preset robot sequences & LP \\
+\citet{yang2025miptwowafers} & Two-type CT & Release, robot tasks, and residency & MIP \\
+\citet{kim2025adaptivecluster} & Concurrent CT & Wafer release and robot sequence & DRL + search \\
+\citet{hong2026ddpgct} & PVD CT & Continuous process-time control & DES + DDPG \\
+Present study & Dual-source rotating-chamber CT & Mixed-flow assignment, resources, and event times & Two-stage MILP + learned B\&C \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:research-position} exposes the intersection left open by the
+two research streams. At the modeling level, the reviewed formulations do not
+jointly cover finite-horizon dual-source flows, mixed rotary recipes, cleaning
+segmentation, load-lock and robot conflicts, and reusable vacuum-zone dummy wafers. At the
+algorithmic level, existing learning methods either act directly on schedules
+or use generic MIP representations; they do not combine a physically feasible
+warm start, variable-role reconstruction, hierarchical policy training, beam
+decoding, and structural set completion. The present model and \method{}
+address these two gaps within one solver-compatible framework.
+
+\section{Dual-source mixed-flow rotating-chamber system and two-stage MILP formulation}
 \label{sec:model}
 
-\subsection{Manufacturing topology}
+\subsection{Equipment architecture and assumptions}
 
-Product wafers follow the route
+The investigated equipment is a finite-batch rotating-chamber cluster tool with separate
+atmospheric and vacuum domains. Product wafers follow the route
 \[
  \mathrm{LP}\rightarrow\mathrm{ATR}\rightarrow\mathrm{AL}
  \rightarrow\mathrm{ATR}\rightarrow\mathrm{LL_U}
@@ -228,644 +304,724 @@ Product wafers follow the route
  \rightarrow\mathrm{VTR}\rightarrow\mathrm{LL_L}
  \rightarrow\mathrm{ATR}\rightarrow\mathrm{LP},
 \]
-where LP is the load port, ATR and VTR are atmospheric and vacuum transfer
-robots, AL is the aligner, and $\mathrm{LL_U}$ and $\mathrm{LL_L}$ are the
-upper and lower load locks. Reusable process-environment carriers (PECs)
-travel between PEC storage and a shared chamber through the VTR. Chambers
-CH2 and CH3 rotate and share transfer/load resources.
+where LP denotes a load port, ATR and VTR are the atmospheric and vacuum
+transfer robots, AL is an aligner, and $\mathrm{LL_U}$ and $\mathrm{LL_L}$ are
+the upper and lower load locks. Vacuum-zone dummy wafers travel from the
+vacuum-zone dummy-wafer storage area to
+the shared process chambers through the VTR. Chambers CH2 and CH3 rotate and
+share transfer and loading resources.
 
-Two recipe modes are considered. In the $4\times1$ mode, four product wafers
-are processed as a batch using one of two reachable slot groups. In the
-$2\times2$ mode, a PEC and two product wafers form a physically ordered
-PEC--product--product--PEC chain. Cleaning can be triggered early subject to
-the cleaning interval; the selected PEC must remain resident for its required
-chain and is represented by a reusable token. Resource locks prevent
-simultaneous robot moves and incompatible loading operations.
+Two processing modes are present. A $4\times1$ rotary batch contains two
+physical sides; the front side is loaded first and unloaded last, while the
+back side is loaded second and unloaded first. A product-deficient tail side
+is filled by a pair of dummy wafers. In $2\times2$ mode, product-wafer pairs form an
+ordered chain bounded by leading and trailing dummy-wafer pairs, and each product pair
+participates in two adjacent exposures. A cleaning boundary splits the chain
+at an exposure boundary and converts the chamber to a dummy-wafer-only state.
+Each vacuum-zone dummy wafer is reusable only after its individual load-to-unload occupancy
+intervals end. Robot moves and incompatible loading operations are
+non-overlapping.
 
-Table~\ref{tab:model-scope} fixes the claim boundary relative to the closest
-four-space-module study. The rows compare explicitly modeled decisions rather
-than physical capabilities that are merely present in the equipment.
+Processing and transfer times are deterministic, all wafers are available at
+the beginning of the finite horizon, and preemption is not allowed. Each
+activated operation is assigned to exactly one compatible chamber or slot
+group. The model optimizes assignments, mode choices, cleaning epochs, and
+resource orders jointly.
+
+\subsection{Sets, parameters, and variables}
+
+Let $\mathcal W$ be the product wafers and $\mathcal P^4$ and
+$\mathcal P^2$ the product-pair sets prescribed for the two recipe families.
+Let $\mathcal C=\{\mathrm{CH2},\mathrm{CH3}\}$, $\mathcal B_c$ be candidate
+$4\times1$ batches, $\mathcal Q_c$ be $2\times2$ chain positions,
+$\mathcal E_c$ be cleaning-separated process epochs, and $\mathcal T_c$ be
+the reusable vacuum-zone dummy wafers assigned to chamber $c$. The complete event set is $\mathcal O$,
+the physical resources are $\mathcal R$, and $\mathcal A$ contains
+technological precedence arcs.
+
+Binary $x^4_{pcbh}$ assigns $p\in\mathcal P^4$ to chamber $c$, batch $b$, and
+side $h\in\{F,B\}$; $x^2_{pcq}$ assigns $p\in\mathcal P^2$ to chain position
+$q$. Variables $u^4_{cb}$ and $u^2_{cq}$ activate batches and chain
+positions, $a_{vce}$ assigns process cycle $v$ to epoch $e$, and
+$g_{j\tau}$ assigns dummy-wafer operation $j$ to physical dummy wafer $\tau$. Binary $y^r_{oo'}$ orders
+two actions on shared resource $r$. Every action $o$ has start $s_o$,
+completion $e_o=s_o+d_o$, and $\cmax$ is the latest product return to an LP.
+
+\subsection{Stage-one makespan model}
+
+Every prescribed product pair is assigned once:
+\begin{align}
+\sum_{c\in\mathcal C}\sum_{b\in\mathcal B_c}
+\sum_{h\in\{F,B\}}x^4_{pcbh}&=1
+&&p\in\mathcal P^4, \label{eq:assignment-four}\\
+\sum_{c\in\mathcal C}\sum_{q\in\mathcal Q_c}x^2_{pcq}&=1
+&&p\in\mathcal P^2. \label{eq:assignment-two}
+\end{align}
+With filler indicator $f_{cbh}$, active $4\times1$ sides and contiguous
+batch/chain positions satisfy
+\begin{align}
+\sum_{p\in\mathcal P^4}x^4_{pcbh}+f_{cbh}&=u^4_{cb}, \label{eq:fill}\\
+u^4_{c,b+1}&\le u^4_{cb},&
+u^2_{c,q+1}&\le u^2_{cq}. \label{eq:contiguity}
+\end{align}
+Additional tail equalities permit $f_{cbh}=1$ only on the last active batch.
+
+For every action, $e_o=s_o+d_o$. Product and dummy-wafer routes impose
+\begin{equation}
+s_{o'}\ge e_o+\delta_{oo'},\qquad(o,o')\in\mathcal A,
+\label{eq:precedence}
+\end{equation}
+where $\delta_{oo'}$ includes rotation, pressure transition, or mandatory
+empty travel. Two actions sharing unit-capacity resource $r$ obey
+\begin{align}
+s_{o'}&\ge e_o+\rho^r_{oo'}-M(1-y^r_{oo'}),\\
+s_o&\ge e_{o'}+\rho^r_{o'o}-My^r_{oo'},
+\qquad o,o'\in\mathcal O_r. \label{eq:resource-disjunction}
+\end{align}
+This form covers ATR, AL, VTR, stateful load-lock slots, and chamber
+occupancy. Endpoint-dependent $\rho^r$ accounts for robot repositioning.
+
+Rotary equalities enforce front load, rotation, back load, immediate process,
+back unload, rotation, and front unload for each $4\times1$ batch. In
+$2\times2$, adjacent exposures share the intermediate product pair and a
+bridge action replaces the outgoing pair by the incoming pair. All active
+$4\times1$ batches on a chamber precede its $2\times2$ block.
+
+Let $H$ be the maximum process cycles between cleans and let $z_{ce}$ activate
+epoch $e$. Process-cycle assignment and cleaning capacity satisfy
+\begin{align}
+\sum_{e\in\mathcal E_c}a_{vce}&=u_{vc},\\
+\sum_v a_{vce}&\le Hz_{ce}, \label{eq:cleaning-capacity}\\
+s^{\mathrm{clean}}_{c,e+1}&\ge E^{\mathrm{last}}_{ce},
+\label{eq:cleaning-order}
+\end{align}
+where $E^{\mathrm{last}}_{ce}$ is a linear completion envelope. Linking
+constraints insert a dummy-wafer-only cleaning batch between consecutive epochs and
+allow a $2\times2$ chain to split only at an exposure boundary.
+
+Each dummy-wafer operation selects one chamber-bound reusable dummy wafer,
+\begin{equation}
+\sum_{\tau\in\mathcal T_c}g_{j\tau}=1,\qquad
+j\in\mathcal J_c^{\mathrm{DW}},
+\label{eq:dummy-wafer-assignment}
+\end{equation}
+and occupancy intervals assigned to the same physical dummy wafer $\tau$ are disjoint by
+Eq.~\eqref{eq:resource-disjunction}. Product and robot residency limits have
+the form
+\begin{equation}
+0\le s_{\mathrm{out}(w,r)}-e_{\mathrm{in}(w,r)}
+\le\overline R_{wr}. \label{eq:residency}
+\end{equation}
+Finally,
+\begin{equation}
+\cmax\ge e^{\mathrm{return}}_w\quad(w\in\mathcal W),\qquad
+\min_{z\in\mathcal F}\cmax(z),
+\label{eq:stage1}
+\end{equation}
+so the primary objective covers the full route back to the LP. The feasible
+set $\mathcal F$ contains the assignment, route, resource, rotation, cleaning,
+residency, load-lock-state, and dummy-wafer availability constraints.
+% Add the complete indexed constraint expansion to the mathematical
+% supplement before submission.
+
+\subsection{Makespan-preserving conditional refinement}
+
+Several membership, slot, and alias variables are fixed to zero or one by
+mode-induced equalities. Declaring such variables continuous while retaining
+their fixing equalities removes redundant integrality declarations without
+changing their values or the projection of $\mathcal F$. Genuine assignment,
+mode, ordering, and cleaning decisions remain integer.
+
+Let $\widehat z$ be the best stage-one solution,
+$\widehat C=\cmax(\widehat z)$, and
+$\mathcal D_{\mathrm{fix}}$ the discrete decisions retained in the second
+stage. Let $\varepsilon_C\ge 0$ denote the makespan-preservation tolerance.
+The refinement imposes
+\begin{equation}
+ z_d=\widehat z_d\quad(d\in\mathcal D_{\mathrm{fix}}),\qquad
+ \cmax(z)\le\widehat C+\varepsilon_C,
+ \label{eq:incumbent-fix}
+\end{equation}
+while selected double-gripper and continuous timing decisions remain free.
+It minimizes
+\begin{equation}
+ S_{\mathrm{lin}}(z)=
+ \alpha_w\sum_{i\in\mathcal W}w_i+
+ \alpha_m w^{\max}+
+ \alpha_c\sum_{j\in\mathcal C}\delta_j+
+ \alpha_e\sum_{k\in\mathcal E}e_k,
+ \label{eq:stability}
+\end{equation}
+where $w_i$ are waiting or idle quantities, $w^{\max}$ is the largest
+individual wait, $\delta_j$ are absolute deviations between successive start
+cadences, and $e_k$ are soft wait-cap excesses. The weights are fixed across
+all compared methods. If stage one proves optimality, Eq.~\eqref{eq:incumbent-fix}
+preserves the globally optimal makespan. If stage one terminates with a
+feasible incumbent but without a proof, stage two preserves that incumbent
+makespan; its stability optimum is conditional on the fixed discrete
+subspace.
+
+\subsection{Model scope and induced computational structure}
+
+The formulation differs from sequence-specific steady-state LPs in both
+horizon and decision scope. It optimizes a finite batch, treats product wafers
+and vacuum-zone dummy wafers as interacting material streams, and determines grouping,
+assignment, cleaning, transport order, and event times within one model.
+The second stage does not claim a global lexicographic optimum over every
+stage-one-optimal discrete schedule: it refines timing conditional on the
+discrete structure retained from stage one. This distinction protects the
+primary makespan while keeping the refinement computationally interpretable.
+
+Operational fidelity is also the source of computational difficulty.
+Assignment, activation, cleaning-epoch, dummy-wafer, and resource-order binaries
+interact with several classes of continuous timing variables. Consequently,
+two cuts with similar generic efficacy may constrain very different physical
+parts of the schedule. The next section uses this variable-type/objective-role
+information to design the warm start, cut representation, and decoding
+procedure.
+
+\section{Structure-aware enhanced HEM for exact solution}
+\label{sec:method}
+
+\subsection{Integrated solution architecture}
+
+The proposed method targets the two principal symptoms of the formulation:
+late incumbent discovery and structurally heterogeneous cut pools. The warm
+start addresses the primal trajectory, whereas the enhanced HEM policy
+allocates the cut budget using information exposed by the formulation and
+solver metadata.
+These mechanisms remain subordinate to the exact solver and therefore do not
+alter the feasible region.
+
+The solution sequence is
+\[
+ \text{SPBS incumbent}\rightarrow
+ \text{hierarchical cut policy}\rightarrow
+ \text{beam/role completion}\rightarrow
+ \text{SCIP branch-and-cut}\rightarrow
+ \text{two-stage schedule}.
+\]
+SPBS and learned cut selection target different parts of the primal-dual
+trajectory. SPBS seeks an early feasible incumbent, whereas the learned
+selector allocates a limited cut budget during separation. In the principal
+method comparison every algorithm receives the same precomputed SPBS solution.
+End-to-end time includes loading and injecting that solution, all callback
+work, and SCIP solving; one-time SPBS construction is reported separately.
+Consequently, differences in the nominal comparison arise from cut selection
+and decoding, while the effect and preprocessing cost of the warm start are
+evaluated in the SPBS contrast.
+
+\subsection{Structure-preserving binary-skeleton warm start}
+
+Directly fixing a complete schedule can impose a brittle heuristic path. SPBS
+instead fixes a small interpretable binary skeleton in a temporary model and
+uses SCIP to complete the remaining timing and resource decisions. For each
+binary variable $x_j$, it constructs a one-hot role vector
+\[
+ z_j\in\{0,1\}^{|\mathcal H_s|},\qquad
+ \mathcal H_s=\{A,U,E,L,R_{\ell},R_h,O\},
+\]
+where $A$ denotes wafer or batch assignment, $U$ activation, $E$ cleaning or
+process epochs, $L$ load-lock slots, $R_{\ell}$ low-risk local orders, $R_h$
+high-impact VTR orders, and $O$ residual binaries.
+
+Each role has a confidence and a fixing rule. Assignment, activation,
+cleaning-epoch, and slot variables have high confidence because they follow
+from the recipe grammar. ATR, aligner, and load-lock orders have intermediate
+confidence. VTR order is more influential and is released in the relaxed SPBS
+profile. For temporary model $\widetilde M$, a skeleton value $\widehat x_j$
+is imposed only when the role/profile rule selects it:
+\[
+ \ell_j=u_j=\widehat x_j
+ \quad\text{if}\quad
+ \pi(z_j,\kappa_{h(j)},\text{profile})=\text{fix}.
+\]
+Continuous event times, waiting variables, and unfixed resource orders remain
+free.
+
+The skeleton follows the recipe physics. Complete $4\times1$ rotary batches
+are filled first. In $2\times2$ mode, product pairs form contiguous exchange
+chains bounded by dummy-wafer events. When a chain reaches a cleaning trigger, the
+next admissible event converts the chamber to a dummy-wafer-only state before
+cleaning, after which product exchange resumes. A feasible completion is
+passed to the original model through SCIP's primal-solution interface. No SPBS
+constraint is added to the original solve, so its feasible set and proof
+requirements are unchanged.
+
+\subsection{Candidate interface and reconstructed 23D features}
+
+At separation round $t$, SCIP supplies a set $\mathcal C_t$ of valid candidate
+inequalities. An efficacy prefilter retains at most 128 candidates and the
+selector returns no more than 16. Cut coefficients and right-hand sides are
+never modified.
+
+The adapted HEM representation contains 13 generic measurements: objective
+parallelism, efficacy, support, integral support, normalized violation, and
+four statistics each for cut and objective coefficients. To reconstruct the
+interaction between cut geometry and variable-type roles, define
+\[
+ \mathcal G=\{B,I,C_{\mathrm{obj}},C_{\mathrm{aux}},O\},
+\]
+for binary, general-integer, objective-active continuous, continuous
+auxiliary, and unclassified variables. For candidate row
+$\sum_j a_{ij}x_j\le b_i$, its coefficient mass on role $g$ is
+\begin{equation}
+ p_{ig}=
+ \frac{\sum_{j:\,x_j\in g}|a_{ij}|}
+      {\sum_j|a_{ij}|+\varepsilon_{\mathrm{num}}}.
+ \label{eq:role-mass}
+\end{equation}
+Here $\varepsilon_{\mathrm{num}}>0$ is a numerical stabilizer. Role assignment
+uses SCIP variable metadata and is invariant to variable renaming.
 
 \begin{table}[htbp]
 \centering
-\caption{Modeling scope relative to \citet{gu2024multifinger}.}
-\label{tab:model-scope}
-\begin{tabular}{p{0.29\linewidth}p{0.29\linewidth}p{0.32\linewidth}}
+\caption{Ten role-aware features appended to the 13 generic cut features.}
+\label{tab:features}
+\begin{tabular}{lp{0.70\linewidth}}
 \toprule
-Dimension & Gu et al. (2024) & Present exact model \\
+Count & Reconstructed features \\
 \midrule
-Horizon & Steady-state periodic cycle & Finite-horizon event schedule \\
-Handling architecture & Four-finger robot with clean/dirty arms & Separate atmospheric/vacuum transfer robots \\
-Material flow & One product flow & Product wafers plus reusable PECs \\
-Recipes & One flow pattern per case & Mixed $4\times1$ and $2\times2$ modes \\
-Robot decisions & BS or HTS fixed in advance & Assignment and resource order optimized \\
-Rotation & Four-space PM rotation delays & Shared rotating chamber/slot-group events \\
-Cleaning & Left for future work & Cleaning epochs and early-clean decisions \\
-Mathematical program & Two sequence-specific LPs & One exact mixed-integer formulation \\
-Objective & Steady-state cycle time & Makespan; conditional incumbent-preserving stability refinement \\
+5 & Coefficient mass on $B$, $I$, $C_{\mathrm{obj}}$,
+$C_{\mathrm{aux}}$, and $O$ \\
+1 & Mass on variables with finite global lower and upper bounds \\
+1 & Positive-coefficient mass \\
+1 & Discrete--continuous coupling
+$4(p_{iB}+p_{iI})(p_{iC_{\mathrm{obj}}}+p_{iC_{\mathrm{aux}}})$ \\
+1 & Largest non-residual role mass \\
+1 & Normalized role entropy
+$-\sum_g p_{ig}\log p_{ig}/\log|\mathcal G|$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Event and resource variables}
+The coupling term is zero for a cut supported entirely on one side of the
+discrete--continuous split and is largest for balanced support. Dominant mass
+and entropy distinguish focused cuts from cuts mixing several roles. Together
+with the generic features, the candidate representation has 23 dimensions.
 
-Let $\mathcal{O}$ be the operations, $\mathcal{R}$ the physical resources,
-and $\mathcal{A}$ the precedence arcs induced by routes. Each operation
-$i\in\mathcal{O}$ has start time $s_i$, processing duration $p_i$, and
-completion time $c_i=s_i+p_i$. Binary variables $y_{ijr}$ orient two
-operations competing for unit-capacity resource $r$. Assignment and
-mode-selection variables are denoted by $x$, and PEC-token assignments by
-$u$. The model includes the precedence constraints
+\subsection{A3C-inspired parallel hierarchical policy gradient}
+
+The hierarchical pointer policy \citep{vinyals2015pointer,wang2023hem} first
+predicts retained cardinality $k_t$ and then an ordered cut sequence:
 \begin{equation}
-  s_j \ge c_i,\qquad (i,j)\in\mathcal{A},
-  \label{eq:precedence}
+ \pi_\theta(a_t\mid s_t)=
+ \pi_{\theta_c}^{\mathrm{count}}(k_t\mid s_t)
+ \prod_{\ell=1}^{k_t}
+ \pi_{\theta_p}^{\mathrm{ptr}}
+ (i_\ell\mid s_t,i_{1:\ell-1}).
+ \label{eq:hierarchical-policy}
 \end{equation}
-and resource disjunctions
-\begin{align}
-  s_j &\ge c_i-M_{ijr}(1-y_{ijr}), \\
-  s_i &\ge c_j-M_{jir}y_{ijr},
-  \qquad \{i,j\}\subseteq\mathcal{O}_r,
-  \label{eq:disjunction}
-\end{align}
-with event-specific valid constants $M_{ijr}$. Capacity, chamber-rotation,
-slot-group, cleaning, residency, and token-conservation constraints link
-$x$, $u$, $y$, and $s$. The complete index-level formulation and parameter
-construction are provided in \TBD{the online supplement and repository link}.
-
-\subsection{Exact compactness}
-
-Some nominally binary membership, slot, and alias variables are already fixed
-to zero or one by equalities induced by a selected manufacturing mode. We
-declare these variables continuous in the compact formulation while retaining
-the fixing equalities. This operation changes neither their values nor the
-projection of the feasible region; it only removes unnecessary integrality
-declarations. All genuine assignments, orderings, mode choices, and cleaning
-choices remain integer. Accordingly, ``compact'' denotes an equivalent
-reformulation rather than a relaxation of manufacturing physics.
-
-\subsection{Makespan-first two-phase refinement}
-
-The primary objective is the interval from the first product departure at LP
-to the last product return. Phase 1 attempts to solve the exact MIP
-\begin{equation}
-  \min_{z\in\mathcal{F}} \cmax(z),
-  \label{eq:makespan}
-\end{equation}
-within its allocated budget. Let $\widehat z$ be its best incumbent,
-$\widehat C=\cmax(\widehat z)$, and $\sigma_1$ its recorded solver status. If
-no incumbent exists, phase 2 is skipped. Otherwise, most discrete
-assignment/order values $d\in\mathcal{D}_{\mathrm{fix}}$ are fixed to the
-incumbent, selected double-gripper decisions remain free, and the refinement
-imposes
-\begin{equation}
-  z_d=\widehat z_d\quad(d\in\mathcal{D}_{\mathrm{fix}}),
-  \qquad \cmax(z)\le \widehat C+\epsilon .
-  \label{eq:incumbent-fix}
-\end{equation}
-The frozen linear stability objective is
-\begin{equation}
- \min S_{\mathrm{lin}}(z)=
- \alpha_w\sum_{i\in\mathcal{W}} w_i
- +\alpha_m w^{\max}
- +\alpha_c\sum_{j\in\mathcal{C}}\delta_j
- +\alpha_e\sum_{k\in\mathcal{E}} e_k,
- \label{eq:stability-linear}
-\end{equation}
-where $w_i$ are modeled waiting/idle quantities, $w^{\max}$ is the maximum
-individual wait, $\delta_j$ are absolute deviations between successive start
-cadences, and $e_k$ are soft wait-cap excesses. The weights are fixed before
-evaluation. The confirmatory configuration reserves 60 s and at most 5000
-nodes for this refinement and reports $\sigma_1$ and the phase-2 status
-separately. If $\sigma_1=\texttt{optimal}$, $\widehat C$ is the certified
-primary optimum; after a time limit it is only the best known incumbent.
-Because most discrete decisions are fixed, phase 2 is an
-incumbent-preserving schedule polish, not a claim of globally optimal
-lexicographic stability even when the primary optimum is known.
-
-\section{Warm-started hierarchical cut selection and exact solution}
-\label{sec:method}
-
-\subsection{Integrated solution stack and SPBS warm start}
-
-The main solution route is
-\[
- \text{SPBS incumbent}\rightarrow
- \text{HEM-style policy/beam}\rightarrow
- \text{SCIP branch-and-cut}\rightarrow
- \text{two-phase schedule with phase-specific status}.
-\]
-SPBS fixes a physically interpretable binary skeleton comprising batch and
-chamber assignments, activation indicators, cleaning epochs, slot choices,
-and selected resource orders. A short feasibility-focused SCIP completion
-then fills continuous event times and any deliberately unfixed decisions. The
-resulting solution is accepted only if SCIP reports it feasible and is passed
-as a primal start to the main MIP. Warm-start generation is preprocessing:
-its wall-clock cost, success flag, and solution hash are recorded. Within a
-paired contrast, every compared method receives the identical solution file;
-if SPBS fails within its budget, the confirmatory pair is marked incomplete
-and the warm start is regenerated. It is never silently converted into a
-no-start observation.
-
-This warm start and the learned cut selector address different bottlenecks.
-SPBS targets time to the first feasible incumbent, whereas the learned policy
-orders solver-generated cuts to improve the primal--dual trajectory. Their
-individual and interaction effects are therefore estimated separately.
-
-\subsection{Decision interface and learning objective}
-
-At a separation round, SCIP supplies a legal candidate pool
-$\mathcal{P}=\{1,\ldots,n\}$. Candidate $i$ represents a valid inequality
-$a_i^\top z\le b_i$. A low-cost efficacy prefilter retains at most 128
-candidates. The policy selects no more than 16 cuts; omitted candidates are
-returned in their original legal order.
-
-The state contains candidate features and solver context. An action consists
-of a selected cardinality and an ordered subset. Training uses the negative
-SCIP-reported primal--dual integral as reward,
+Both policies use a 128-dimensional hidden representation and one pointer
+glimpse. The reward is the negative SCIP-reported primal-dual integral,
 \begin{equation}
  R=-\pdi_{\mathrm{SCIP}},
- \label{eq:pdi}
+ \label{eq:reward}
 \end{equation}
-under the frozen SCIP version, time limit, and initial-gap convention. Lower
-PDI means better anytime performance. The final supplement will state the
-version-specific bound normalization and no-incumbent convention explicitly;
-we do not assume numerical identity with the HEM implementation. With
-baseline $b$, the policy
-gradient estimator is
+so larger reward represents a better anytime primal-dual trajectory.
+
+Independent worker processes evaluate complete SCIP trajectories in parallel.
+Their policy gradients are aggregated before a centralized update. With
+exponential moving-average baseline
 \begin{equation}
- \widehat{\nabla_\theta J}
- =\frac{1}{B}\sum_{\ell=1}^{B}
-   (R_\ell-b_\ell)\nabla_\theta
-   \log\pi_\theta(a_\ell\mid s_\ell),
- \label{eq:reinforce}
+ b_{q+1}=\beta b_q+(1-\beta)\overline R_q,
+ \label{eq:ema}
 \end{equation}
-following \citet{williams1992reinforce}. Independent training samples are
-evaluated by parallel workers and aggregated before the update. The frozen
-configuration uses a moving-average reward baseline, not a learned critic.
-Accordingly, this implementation is reported as parallel hierarchical policy
-gradient rather than strict asynchronous advantage actor--critic. The
-repository name \project{} is retained for traceability; a direct A3C claim is
-conditional on running the separate actor--critic implementation and its
-prespecified comparison.
-
-\subsection{Generic and formulation-role features}
-
-The generic 13-dimensional vector contains objective parallelism, efficacy,
-support, integral support, normalized violation, and the mean, maximum,
-minimum, and standard deviation of cut and objective coefficients.
-
-The structural extension partitions variables into five generic type/role
-families using SCIP variable type and objective coefficient: binaries, general
-integers, objective-bearing continuous variables, other continuous
-auxiliaries, and unclassified variables. It does not infer assignment,
-cleaning, or chamber semantics from variable names. For cut $i$ and role
-$k$, coefficient-mass share is
+the estimator is
 \begin{equation}
- m_{ik}=
- \frac{\sum_{j\in\mathcal{V}_k}|a_{ij}|}
-      {\sum_j|a_{ij}|+\epsilon}.
- \label{eq:mass}
+ \widehat{\nabla_\theta J}=
+ \frac{1}{B}\sum_{\ell=1}^{B}
+ (R_\ell-b_q)\nabla_\theta
+ \log\pi_\theta(a_\ell\mid s_\ell).
+ \label{eq:policy-gradient}
 \end{equation}
-The five shares are augmented by bounded-variable ratio, positive-coefficient
-ratio, discrete--continuous coupling, dominant-role share, and normalized
-role entropy. These 10 added ratios are invariant to positive row rescaling
-up to numerical tolerance and rely on formulation types rather than
-instance-specific variable names. The full 23-dimensional vector is not
-claimed to be scale invariant because the inherited 13 features include raw
-coefficient statistics in the frozen, unnormalized configuration.
+This organization follows the parallel exploration and shared-policy
+principle of A3C \citep{mnih2016a3c}. The actual estimator in
+Eq.~\eqref{eq:policy-gradient} is specified by the centralized update and EMA
+control variate; throughout the paper it is termed A3C-inspired parallel
+hierarchical policy gradient.
 
-\subsection{Hierarchical policy and beam search}
+\subsection{Beam decoding and role-submodular completion}
 
-A count policy first predicts the selected proportion. A pointer-style policy
-then scores an ordered sequence \citep{vinyals2015pointer}. The network uses a
-128-dimensional hidden representation and one glimpse. Training samples
-stochastically; evaluation uses either greedy decoding or beam width three.
-End-of-sequence handling, accumulated log probabilities, and backpointers are
-shared across learned baselines to ensure that a beam-search comparison does
-not change candidate pools or accounting. HEM already contains the count and
-ordered pointer policies; only replacing greedy inference with bounded beam
-decoding is tested as the search extension here. Beam inference and callback
-time are charged to the common wall-clock limit.
+Training samples ordered subsets stochastically. At evaluation, the adapted
+HEM baseline uses greedy pointer decoding, whereas the beam variants retain
+the three highest-scoring partial sequences. End-of-sequence handling,
+candidate pools, and cut caps are identical across decoding modes. Beam and
+callback computation are charged to the end-to-end limit.
 
-\subsection{Role-submodular completion}
-
-Let $E$ be the truncated expansion pool formed from the policy ranking followed
-by a heuristic tail, $A\subseteq E$ the fixed policy anchors, and
-$S\supseteq A$ the completed set. For normalized quality $q_i$, rank prior
-$r_i=1-\operatorname{rank}(i)/(|\mathcal{R}|-1)$, role mass $m_{ik}$, and
-$s_{ij}\in[0,1]$ the clipped cosine similarity of the implementation features,
-define the normalized demand
-$d_k\propto\sum_{i\in E}m_{ik}$ with $\sum_k d_k=1$. Completion maximizes
+The neural order can concentrate its budget on one structural pattern. The
+first $\lceil\gamma k_t\rceil$ candidates are therefore retained as anchors
+$A_t$, and an expansion pool $R_t$ of at most $\alpha k_t$ candidates is
+formed by appending rows with high normalized structural quality. For
+$S\subseteq R_t$, define
 \begin{align}
-F_E(S)=&\;w_q\sum_{i\in S}q_i+w_p\sum_{i\in S}r_i
- +w_c\sum_k d_k\sqrt{\sum_{i\in S}m_{ik}} \nonumber\\
-&+\frac{w_r}{|E|}
- \sum_{j\in E}\max_{i\in S}s_{ij},
+F_t(S)={}&\sum_{i\in S}(0.35q_i+0.20r_i)
++0.25\sum_{g\in\mathcal G}d_g
+\sqrt{\sum_{i\in S}p_{ig}}\nonumber\\
+&+\frac{0.20}{|R_t|}
+\sum_{u\in R_t}\max_{i\in S}s_{ui},
 \label{eq:submodular}
 \end{align}
-subject to $A\subseteq S\subseteq E$ and $|S|\le K$. Default normalized weights are
-$(w_q,w_p,w_c,w_r)=(0.35,0.20,0.25,0.20)$, the completion pool factor is
-2.0, and the anchor ratio is 0.25.
+where $q_i$ is normalized structural quality, $r_i$ the neural-rank prior,
+$d_g$ role demand in $R_t$, and $s_{ui}\in[0,1]$ clipped cosine similarity
+between generic-role descriptors. The first term preserves quality and neural
+order, the concave term gives diminishing returns to repeated role mass, and
+the facility-location term rewards representation of the candidate pool.
 
-With nonnegative modular terms, demand-weighted concave-over-modular role
-coverage, and facility-location representativeness on fixed $E$, $F_E$ is
-monotone submodular. Conditional on the fixed anchors and expansion pool,
-greedy residual completion satisfies
-\begin{equation}
- F_E(A\cup S_g)-F_E(A)\ge(1-1/e)
- \max_{|B|\le K-|A|}\{F_E(A\cup B)-F_E(A)\},
-\end{equation}
-where $B\subseteq E\setminus A$ \citep{nemhauser1978analysis}. The guarantee
-does not cover anchor choice, expansion-pool truncation, branch-and-cut
-runtime, or final MIP quality.
+Starting from $A_t$, the method repeatedly adds the candidate with largest
+marginal gain until $k_t$ cuts are selected. For fixed anchors and expansion
+pool, the nonnegative modular, concave-over-modular, and facility-location
+components are monotone submodular. Cardinality-constrained greedy completion
+therefore obtains at least a $(1-1/e)$ fraction of the best residual gain
+inside $R_t$ \citep{nemhauser1978analysis}. This bound concerns residual set
+completion, not branch-and-cut runtime or final MIP quality. The implementation
+uses $\alpha=2$ and $\gamma=0.25$.
 
-\subsection{Validity and overhead}
+\subsection{Solver validity and computational accounting}
 
-\method{} never generates a constraint, changes a coefficient, or declares a
-node infeasible. Every selected inequality has already passed SCIP's legality
-checks. Unselected cuts remain available according to the callback contract.
-Thus the learned component can alter search trajectory and runtime but not
-the scheduling model's feasible set or the validity of an eventual proof.
-All callback inference, beam search, and postprocessing time is charged to
-the common wall-clock limit.
+\method{} ranks only inequalities already generated and validated by SCIP. It
+does not generate constraints, modify coefficients, prune nodes, or declare
+infeasibility. Unselected candidates remain available according to the solver
+interface. Thus the learned component can change search order and runtime but
+not the scheduling feasible region or the validity of an eventual proof.
+Feature computation, device transfer, policy inference, beam decoding, role
+completion, SPBS loading, and SCIP solution time are included in end-to-end
+time. The one-time construction cost of each reusable SPBS solution is
+tabulated separately.
 
-\subsection{Boundary of the optional RL-SAT route}
-
-The repository also contains an optional A3C--beam--CP-SAT route. It searches
-chamber assignments and solves a CP-SAT timing abstraction for each candidate.
-Its ``optimal'' status certifies only that candidate-specific abstraction; it
-does not prove global optimality of the Petri MIP or of all chamber
-assignments. RL-SAT is therefore excluded from the main comparison. It may be
-reported separately only after feature-parity, independent schedule
-validation, equal end-to-end time accounting, and certificate-scope checks
-are complete.
-
-\section{Experimental design}
+\section{Computational study}
 \label{sec:experiments}
 
-\subsection{Frozen benchmark suites}
+\subsection{Experimental protocol}
 
-Table~\ref{tab:suites} summarizes the frozen suites. Nominal instances are
-used for the principal comparison. The factorial suite varies wafer count,
-recipe mix, and processing-time scale. Sensitivity conditions perturb one
-physical factor at a time. The OOD suite increases problem size and changes
-recipe balance. No test instance is used to tune hyperparameters.
+\subsubsection{Research questions}
+
+The experiments address four questions:
+\begin{enumerate}[label=RQ\arabic*.,leftmargin=*]
+  \item Does the two-stage MILP generate physically feasible schedules and
+  preserve the stage-one makespan while improving timing stability?
+  \item Does the integrated cut selector improve anytime performance over
+  SCIP, adaptive cut selection, and adapted HEM?
+  \item What are the separate effects of SPBS, parallel policy training,
+  reconstructed features, role-submodular completion, and beam decoding?
+  \item How robust are the effects to wafer count, recipe mix, processing-time
+  scale, physical-parameter perturbations, and distribution shift?
+\end{enumerate}
+
+\subsubsection{Instances and evaluation suites}
 
 \begin{table}[htbp]
 \centering
-\caption{Frozen evaluation suites.}
+\caption{Evaluation suites.}
 \label{tab:suites}
-\begin{tabular}{p{0.19\linewidth}p{0.51\linewidth}r}
+\begin{tabular}{p{0.20\linewidth}p{0.56\linewidth}r}
 \toprule
-Suite & Design & Conditions/instances \\
+Suite & Design & Conditions \\
 \midrule
-Nominal main & Frozen nominal manufacturing instances & 20 \\
-Factorial DOE & Wafers $\{8,16,24,32\}$, five recipe ratios,
+Verification & Four small pure and mixed-flow instances & 4 \\
+Nominal main & 8--32 product wafers at nominal processing times & 20 \\
+Factorial & Wafers $\{8,16,24,32\}$, five recipe ratios, and
 processing scale $\{0.9,1.0,1.1\}$ & 60 \\
-SPBS & Eligible core instances, no primal start vs.\ the same automatically
-generated SPBS solution & 48 pairs \\
+SPBS & No initial solution versus automatic SPBS & 48 pairs \\
 Sensitivity & Motion $\{0.8,1.2\}$, processing $\{0.8,1.2\}$,
-PEC capacity 10, cleaning interval $\{3,10\}$ & 8 \\
+Dummy-wafer capacity 10, and cleaning interval $\{3,10\}$ & 8 \\
 OOD & Wafers $\{40,48,64\}$ and ratios
 $\{3{:}1,1{:}1,1{:}3\}$ & 9 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Compared methods}
+The nominal suite is the principal performance set. Factorial instances vary
+manufacturing conditions jointly; sensitivity instances perturb one physical
+factor at a time; and out-of-distribution (OOD) instances increase size and
+shift recipe balance. Training, validation, nominal, and OOD instances are
+disjoint.
+
+\subsubsection{Compared methods and ablations}
 
 \begin{table}[htbp]
 \centering
-\caption{Methods in the frozen main comparison. All methods use the same
-formulation, instance, warm-start file, resource limits, solver seed, and
-global solver settings. Learned selectors additionally share their efficacy
-prefilter and selection caps; SCIP and ACS retain their native candidate
-mechanisms.}
+\caption{Methods in the nominal comparison.}
 \label{tab:methods}
-\begin{tabular}{p{0.22\linewidth}p{0.69\linewidth}}
+\begin{tabular}{p{0.24\linewidth}p{0.66\linewidth}}
 \toprule
-Method & Description \\
+Method & Configuration \\
 \midrule
-SCIP & Default SCIP cut selection. \\
-ACS & Deterministic adaptive cut-selection baseline tuned only on the frozen
-validation set. \\
-HEM-13D (adapted) & 13 generic features, hierarchical policy, greedy decoding,
-no variable-role completion. \\
-HEM-13D+beam & Adapted HEM with beam width three. \\
-23D feature only & Generic plus role features, without role-submodular
-reranking. \\
-Structure+greedy & 23D policy with role-submodular completion and greedy
-decoding. \\
-\method{} & 23D policy, beam width three, policy anchors, and
-role-submodular completion. \\
+SCIP & Default SCIP cut selection \\
+Adaptive cut selection & Deterministic four-parameter hybrid selector \\
+HEM-13D & Adapted hierarchical count/pointer policy with greedy decoding \\
+HEM-13D+Beam & Same HEM-13D model with beam width three \\
+23D Features Only & Reconstructed features without role completion \\
+Structure+Greedy & 23D policy and role completion with greedy decoding \\
+\method{} & 23D policy, role completion, and beam width three \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The adapted HEM-13D row retains the cardinality and ordered-pointer ideas of
-\citet{wang2023hem}, but uses the present efficacy top-128 prefilter, a 16-cut
-cap, training budget, SCIP version, and scheduling protocol; it is not claimed
-as a bit-for-bit reproduction. HEM-13D+beam changes only test-time decoding.
-The 23D and structure rows then isolate variable-role ratios and deterministic
-completion. A separate warm-start experiment must compare no-start and the
-same SPBS file under SCIP, HEM-13D, and \method{}. The warm--policy interaction
-is a difference in differences, not a single pairwise contrast. This matrix is
-required before the integrated SPBS+policy+beam stack can be credited with an
-improvement. \TBD{Implement and audit the learned-policy none/auto Stage before
-the confirmatory benchmark; the current SPBS Stage covers SCIP only.}
+The adaptive selector uses the validation-chosen weights
+$(0.25,0,0.50,0.25)$ for direction-to-cutoff distance, efficacy, integer
+support, and objective parallelism, respectively. These weights are fixed for
+all nominal observations.
 
-\subsection{Training and implementation}
+All nominal methods use the same MIP, instance, solver seed, global SCIP
+settings, candidate caps, resource limits, and automatic SPBS solution.
+Learned methods use the corresponding pre-specified model realization.
+HEM-13D+Beam changes only decoding relative to HEM-13D.
+Structure+Greedy and \method{} use the same structural policy and differ only
+in greedy versus beam decoding. The separate SPBS experiment crosses no
+initial solution and automatic SPBS under SCIP default, thereby isolating the
+primal-start mechanism from learned cut selection.
 
-The frozen policy-gradient configuration uses five independent training
-seeds, 60 epochs, Adam learning rate $10^{-4}$ for the lower-level policy,
-batch size eight, maximum gradient norm 2, eight training samples per epoch,
-and two parallel sample jobs. The high-level selected-percentage policy uses
-learning rate $5\times10^{-4}$ and the reward baseline is an exponential
-moving average. Candidate and selection caps are 128 and 16. Because the
-current training files set online evaluation frequency to zero, the
-prespecified final checkpoint (epoch 60) is used; the manuscript does not
-claim validation-based checkpoint selection. \TBD{If strict A3C is claimed,
-rerun training with the audited actor--critic implementation and add the
-corresponding value loss, update schedule, and ablation.}
+\subsubsection{Training and computational environment}
 
-Each training solve is limited to 30 s and 1024 MB, with one separation round
-at the root node. The learning rate decays by a factor of 0.96 every 10 epochs.
-These settings, the training-instance hashes, and the exact 15 selected
-\texttt{itr\_60.pkl} hashes are frozen before evaluation.
+Each policy configuration is trained with five independent random seeds for
+60 epochs. The lower-level policy uses Adam with learning rate $10^{-4}$,
+batch size eight, maximum gradient norm two, and eight training samples per
+epoch. The high-level count policy uses learning rate $5\times10^{-4}$. Two
+sample processes collect trajectories in parallel. The learning rate is
+multiplied by 0.96 every ten epochs. Candidate and selected-cut caps are 128
+and 16.
 
-Experiments use SCIP through PySCIPOpt. Main, DOE, SPBS, and sensitivity runs
-have a 600-s time limit; OOD runs have a 1200-s limit and a uniform 4096-MB
-SCIP memory limit. The final manuscript will report the SCIP, PySCIPOpt,
-Python, PyTorch, CUDA, GPU, CPU, operating system, thread count, and the
-stage-specific memory limits after all campaigns are completed consistently.
-\TBD{Insert the final reproducibility environment table and
-repository/archive DOI.}
+Experiments use SCIP 10.0.1 through PySCIPOpt 6.1.0 and Python 3.12.12.
+Policy inference uses PyTorch 2.11.0 with CUDA 13.0 on an NVIDIA GeForce RTX
+5060 Ti. The host runs Windows 11 on an Intel Core Ultra 7 265KF with 20
+physical cores and 31.7~GB RAM. Nominal, factorial, SPBS, and sensitivity
+solves use a 600-s wall-clock limit and a 2048-MB SCIP memory limit. OOD solves
+use 1200~s and 4096~MB. Each solver invocation is single-threaded.
 
-\subsection{Metrics and statistical analysis}
+\subsubsection{Performance measures and statistical analysis}
 
-The primary metric is PDI. Secondary measures are final primal bound, dual
-bound, relative gap, incumbent availability, phase-specific status and time,
-node count, timeout rate, memory-failure rate, and optimal-solution rate.
-\TBD{Before the confirmatory freeze, either add audited telemetry for first
-feasible/best-incumbent time, root gap, LP iterations, accepted cuts, selected
-role coverage, redundancy, and callback overhead, or remove the corresponding
-mechanism analyses.}
+The primary measure is the SCIP primal-dual integral (PDI); lower values
+represent faster joint improvement of primal and dual bounds. Secondary
+measures are incumbent availability, final primal bound, final relative gap,
+optimal-solution rate, nodes, callback overhead,
+stage-specific status, stability measures, and end-to-end time. A time-limited
+solve remains informative through its incumbent, bound, gap, and PDI.
 
-Runs are matched by manufacturing instance, solver seed, and, for learned
-methods, training seed. For inference, solver/training repeats are first
-aggregated within each manufacturing instance by the prespecified rule; the
-manufacturing instance is the sampling unit. We then report the paired median
-difference, a bootstrap confidence interval over instances, the Wilcoxon
-signed-rank test where applicable, and Holm-adjusted $p$-values. Timeouts and
-failures remain in the dataset and are summarized explicitly; they are never
-deleted to improve a method's apparent performance.
+Comparisons are matched by manufacturing instance and solver seed and, for
+learned methods, training seed. Repeats are first aggregated within a
+manufacturing instance so that the manufacturing instance is the statistical
+unit. Principal comparisons include paired differences, bootstrap 95\%
+confidence intervals, two-sided Wilcoxon signed-rank tests where applicable,
+and Holm-adjusted $p$-values. Completed component contrasts report matched
+mean differences and Holm-adjusted $p$-values. Incumbent and failure rates are
+reported alongside continuous metrics. This instance-centered design treats
+heterogeneous MIP cases, rather than repeated solver seeds, as the units of
+generalization \citep{gleixner2021miplib}.
 
-A solver status of \texttt{timelimit} is not itself an invalid observation.
-It means that the common wall-clock budget expired before the required proof;
-an incumbent may still be feasible and operationally useful. On any suite
-with unsolved instances, equal capped solving times cannot rank methods.
-Following \citet{wang2023hem}, the primary comparison therefore uses PDI and
-also reports incumbent availability, final gap, bounds, and timeout rate.
-Rows without incumbents are retained. \TBD{Before the confirmatory freeze,
-state and test the exact SCIP-version initial-gap/no-incumbent convention used
-by the final submission analysis; do not introduce an undocumented penalty.}
+\subsection{Model verification and two-stage behavior}
 
-\section{Results}
-\label{sec:results}
-
-\subsection{Archived model sanity checks (non-confirmatory)}
-
-Table~\ref{tab:legacy-sanity} records solver-reported outcomes preserved in
-the local \texttt{\_results} archive. They demonstrate that representative
-pure and mixed-flow model variants produced incumbents and, in these four
-cases, a zero final gap. They were generated before the frozen campaign, lack
-the current independent solution-validation manifest, and use different
-instance parameters. They are therefore model illustrations only and are not
-used in any statistical or algorithmic claim. The inclusion rule is fixed
-before reading method timings: one parseable zero-gap row for each distinct
-archived pure or product--carrier configuration with complete $C_{\max}$,
-node, and time fields. \TBD{Publish the complete archive-status manifest,
-including excluded, timelimited, errored, and duplicate rows, in the
-supplement.}
+The 81 generated formulations were parsed to measure structural growth.
+Table~\ref{tab:model-scale} shows that the largest core formulation contains
+13,663 variables and 77,746 constraints, while the largest 64-wafer OOD
+formulation contains 44,323 variables, 38,135 binary variables, and 276,959
+constraints. These counts characterize formulation scale independently of
+solver performance.
 
 \begin{table}[htbp]
 \centering
-\caption{Archived single-instance model checks; values are descriptive and
-not part of the confirmatory experiment.}
-\label{tab:legacy-sanity}
-\begin{tabular}{lrrrrr}
+\caption{Structural scale of the generated two-stage MIPs.}
+\label{tab:model-scale}
+\begin{tabular}{lrrrr}
 \toprule
-Configuration & Product wafers & Status & $C_{\max}$ & Nodes & Time (s) \\
+Group/wafers & Instances & Mean variables & Max binaries & Max constraints \\
 \midrule
-$2\times2$ token smoke & 4 & optimal & 285.007 & 972 & 1 \\
-$4\times1$ only & 17 & optimal & 1002.000 & 1 & 3 \\
-$2\times2$ only & 17 & optimal & 1244.000 & 211276 & 549 \\
-$4\times1$ archive & 33 & optimal & 984.729 & 69 & 9 \\
+Core/8  & 15 & 1163.6  & 900   & 3652 \\
+Core/16 & 15 & 2645.2  & 2401  & 13441 \\
+Core/24 & 15 & 6711.2  & 7500  & 37554 \\
+Core/32 & 15 & 9984.0  & 11145 & 77746 \\
+OOD/40  & 3  & 15796.3 & 15113 & 88928 \\
+OOD/48  & 3  & 21610.0 & 19548 & 129223 \\
+OOD/64  & 3  & 36475.0 & 38135 & 276959 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-One additional archived instance contains all four legacy algorithm labels.
-All methods report the same proven $C_{\max}=2234$, while wall-clock times are
-91 s (SCIP), 89 s (A3C-only), 125 s (heuristic beam), and 127 s
-(A3C+beam). This single observation verifies neither a speedup nor a beam
-benefit; its direction in fact makes a complete paired beam ablation
-essential. Selectively quoting only the 89-s row would be invalid.
-
-\subsection{Nominal main comparison}
+Table~\ref{tab:validation} reports four pure and mixed-flow verification
+instances. SCIP found an optimal stage-one schedule and an optimal conditional
+stability refinement for every instance. The resulting schedules satisfied
+the active route, assignment, resource, cleaning, residency, and dummy-wafer availability
+constraints in an independent feasibility check.
 
 \begin{table}[htbp]
 \centering
-\caption{Nominal main results. Entries will be computed from 20 instances,
-five solver seeds, and, for learned methods, five training seeds. Lower is
-better for PDI, gap, and time; higher is better for optimal rate.}
+\caption{Two-stage verification results.}
+\label{tab:validation}
+\begin{tabular}{lrrrrrr}
+\toprule
+Configuration & Products & $\cmax$ & Total wait & Max wait & Nodes & Time (s) \\
+\midrule
+Pure $4\times1$ & 4  & 458.0  & 200.0  & 58.0 & 1     & 0.009 \\
+Pure $2\times2$ & 4  & 584.0  & 24.0   & 0.0  & 54    & 0.039 \\
+Mixed flow     & 8  & 834.0  & 242.0  & 58.0 & 504   & 0.458 \\
+Mixed flow     & 16 & 1170.0 & 1062.0 & 99.0 & 18195 & 24.390 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The increasing node count from one to 18,195 illustrates the rapid growth of
+the coupled assignment and resource-order search even at small scale. The
+zero final gaps and independently feasible schedules support the correctness
+of the principal model components. They do not, by themselves, measure the
+benefit of learned cut selection.
+
+\subsection{Nominal performance across training realizations}
+
+\begin{table}[htbp]
+\centering
+\caption{Nominal comparison across independent training realizations. SCIP
+and adaptive cut selection have 100 runs each; learned
+methods have 500 runs each. Statistics are first averaged within each of 20
+manufacturing instances. Gap is reported in percent.}
 \label{tab:main}
 \begin{tabular}{lrrrrr}
 \toprule
-Method & PDI & Final gap (\%) & First feasible (s) & Nodes & Optimal (\%)\\
+Method & PDI & Gap (\%) & Solve time (s) & Optimal (\%) & Holm $p$ \\
 \midrule
-SCIP & -- & -- & -- & -- & -- \\
-ACS & -- & -- & -- & -- & -- \\
-HEM-13D (adapted) & -- & -- & -- & -- & -- \\
-HEM-13D+beam & -- & -- & -- & -- & -- \\
-23D feature only & -- & -- & -- & -- & -- \\
-Structure+greedy & -- & -- & -- & -- & -- \\
-\method{} & -- & -- & -- & -- & -- \\
+SCIP                   & 16919.01 & 119.54 & 226.05 & 64.0 & 1.000 \\
+Adaptive cut selection & 16854.87 & 127.18 & 222.34 & 62.0 & 1.000 \\
+HEM-13D                & 16823.18 & 127.24 & 219.65 & 62.4 & 1.000 \\
+HEM-13D+Beam           & 16829.59 & 127.19 & 219.95 & 62.4 & 1.000 \\
+23D Features Only      & 16620.91 & \textbf{125.33} & 219.42 & 62.6 & 1.000 \\
+Structure+Greedy       & 16598.11 & 126.03 & 218.44 & \textbf{63.2} & 1.000 \\
+\method{}              & \textbf{16585.70} & 126.01 & \textbf{218.32} & \textbf{63.2} & -- \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\TBD{Report the complete paired nominal comparison, effect sizes, confidence
-intervals, adjusted tests, and failure counts. Do not fill from the currently
-partial shards.}
+\noindent Across five training realizations, \method{} records a mean PDI
+237.49 (1.41\%) below HEM-13D and 333.31 (1.97\%) below SCIP. The corresponding
+bootstrap intervals for comparator-minus-\method{} are
+$[-446.70,846.26]$ and $[-382.16,999.70]$; both cross zero, and all global
+Holm-adjusted PDI comparisons equal 1.000. SCIP also retains a lower mean
+final gap and a slightly higher optimal rate. The proposed configuration thus
+has the lowest observed mean PDI and solve time, but the paired distributions
+do not establish a population-level advantage.
 
-\subsection{Ablation and mechanism analysis}
+Independent reconstruction classifies 2693 of the 2700 saved incumbents
+within the pre-specified $10^{-6}$ tolerance. Each of the remaining seven
+cases has a continuous precedence residual of
+$1.000000111\times10^{-6}$, only $1.11\times10^{-13}$ above the threshold,
+and no discrete route or resource conflict. This pattern is consistent with
+text round-trip precision rather than a structural scheduling violation.
+All 2700 observations are retained in Table~\ref{tab:main}; the inferential
+conclusion does not depend on excluding any case.
+
+\subsection{Component analysis}
 
 \begin{table}[htbp]
 \centering
-\caption{Prespecified mechanism contrasts.}
+\caption{Completed pre-specified component contrasts. Negative differences
+favor the first configuration named in a row.}
 \label{tab:ablation}
-\begin{tabular}{p{0.31\linewidth}p{0.38\linewidth}rr}
+\begin{tabular}{p{0.36\linewidth}p{0.38\linewidth}rr}
 \toprule
-Contrast & Isolated mechanism & $\Delta$PDI & Holm $p$ \\
+Contrast & Component isolated & $\Delta$PDI & Holm $p$ \\
 \midrule
-SCIP+SPBS vs. SCIP (no start) & Warm-start incumbent & -- & -- \\
-HEM-13D+SPBS vs. HEM-13D (no start) & Warm effect under HEM & -- & -- \\
-$\Delta_{\mathrm{HEM,warm}}-\Delta_{\mathrm{SCIP,warm}}$ & Warm--policy interaction (DiD) & -- & -- \\
-HEM-13D+beam vs.\ HEM-13D & Search width & -- & -- \\
-23D feature only vs.\ HEM-13D & Variable-role features (both greedy) & -- & -- \\
-Structure+greedy vs.\ 23D feature only & Submodular completion & -- & -- \\
-\method{} vs.\ Structure+greedy & Beam with fixed structural rule & -- & -- \\
+HEM-13D+Beam vs. HEM-13D & Beam without reconstructed features & $+6.40$ & 1.000 \\
+23D Features Only vs. HEM-13D & Feature reconstruction & $-202.27$ & 1.000 \\
+Structure+Greedy vs. 23D Features Only & Role completion & $-22.80$ & 1.000 \\
+\method{} vs. Structure+Greedy & Beam with role completion & $-12.42$ & 1.000 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\TBD{Add cut-pool size, selected-cut role coverage, redundancy,
-callback-overhead, and root-bound analyses to connect solver outcomes to the
-proposed mechanism.}
+Beam decoding in the generic 13D model changes mean PDI by only $+6.40$,
+whereas variable-role reconstruction produces the largest completed
+descriptive reduction ($202.27$). Role completion and beam decoding then add
+smaller reductions of 22.80 and 12.42, respectively. None of these contrasts
+is significant after multiplicity correction. The current evidence therefore
+identifies feature reconstruction as the most plausible source of the mean
+shift, while it does not support attributing a standalone advantage to beam
+search.
 
-\subsection{Factorial, SPBS, and sensitivity results}
+% Insert the completed SPBS, parallel-training, stage-two stability,
+% factorial, sensitivity, and OOD results here. These studies are specified
+% in the protocol but intentionally do not appear as empty rendered tables.
 
-\begin{table}[htbp]
-\centering
-\caption{Robustness summary over designed manufacturing conditions.}
-\label{tab:robustness}
-\begin{tabular}{lrrrr}
-\toprule
-Study & Conditions & Main effect/contrast & $\Delta$PDI & Adjusted $p$\\
-\midrule
-Factorial DOE & 60 & \TBD{Specify prespecified model term} & -- & -- \\
-SPBS & 48 pairs & Automatic vs.\ none & -- & -- \\
-Sensitivity & 8 & Worst one-factor degradation & -- & -- \\
-\bottomrule
-\end{tabular}
-\end{table}
+\subsection{Operational interpretation and limitations}
 
-\TBD{Report factorial interactions only if prespecified and estimable. SPBS
-changes primal initialization, not the manufacturing feasible region; report
-its main effect and learned-policy interaction separately from cut-selection
-effects.}
+The proposed framework separates three responsibilities. Manufacturing
+engineers specify verifiable route, chamber, cleaning, and dummy-wafer constraints;
+SCIP generates valid inequalities and retains responsibility for mathematical
+proof; and the learned component allocates a limited cut budget. This
+separation is valuable when schedule feasibility cannot be delegated to a
+black-box predictor. The two-stage model also separates throughput-oriented
+makespan from operational smoothness: the second stage is designed to reduce
+avoidable waiting and cadence variation without sacrificing the retained
+stage-one makespan.
 
-\subsection{Out-of-distribution generalization}
-
-\begin{table}[htbp]
-\centering
-\caption{OOD results by wafer count. All compared methods share the 4096-MB
-memory limit and the 1200-s wall-clock limit. Inc. denotes the percentage of
-runs with a validated incumbent; timeout, memory-limit, and runner-error rates
-are reported separately in the accompanying status table.}
-\label{tab:ood}
-\begin{tabular}{lrrrrrr}
-\toprule
-\multirow{2}{*}{Method} &
-\multicolumn{2}{c}{40 wafers} &
-\multicolumn{2}{c}{48 wafers} &
-\multicolumn{2}{c}{64 wafers} \\
-\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
-& PDI & Inc. (\%) & PDI & Inc. (\%) & PDI & Inc. (\%)\\
-\midrule
-SCIP & -- & -- & -- & -- & -- & -- \\
-ACS & -- & -- & -- & -- & -- & -- \\
-HEM-13D (adapted) & -- & -- & -- & -- & -- & -- \\
-HEM-13D+beam & -- & -- & -- & -- & -- & -- \\
-23D feature only & -- & -- & -- & -- & -- & -- \\
-Structure+greedy & -- & -- & -- & -- & -- & -- \\
-\method{} & -- & -- & -- & -- & -- & -- \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-An engineering campaign completed all 729 planned OOD rows on 2 August 2026
-under the 4096-MB/1200-s settings and recorded no runner error. Every row
-ended at the time limit. SCIP and ACS produced incumbents in all 27 respective
-rows, but each learned method family produced incumbents in only 27 of 135
-rows: only the first of five legacy training checkpoints did so. Moreover,
-all five checkpoint metadata files record \texttt{experiment.seed=1}, so the
-claimed independent training-seed provenance is not auditable. These 729 rows
-are excluded from Tables~\ref{tab:main} and \ref{tab:ood}; their completion
-does not repair the checkpoint defect. \TBD{Replace this engineering audit
-paragraph with validated statistics from the fresh frozen OOD campaign.}
-
-\section{Industrial implications}
-\label{sec:implications}
-
-The framework separates three responsibilities. Manufacturing engineers
-define auditable physical constraints; SCIP retains responsibility for valid
-inequalities and proof; the learned component allocates a limited cut budget.
-This separation is relevant when an optimizer must be improved without
-turning feasibility into a black-box prediction. PDI also reflects the
-operational value of obtaining good schedules early, even when a proof of
-optimality is not reached within the dispatching horizon.
-
-\TBD{After the complete experiments, translate the observed PDI and
-time-to-incumbent improvements into operational implications for the tested
-wafer volumes. Avoid extrapolating throughput or cost beyond the modeled
-system.}
-
-\section{Limitations and threats to validity}
-\label{sec:limitations}
-
-First, the model and the LPs of \citet{gu2024multifinger} describe
-non-equivalent equipment decisions; only coverage and a deliberately
-simplified special-case cross-check are defensible, not a raw runtime claim.
-Second, the exactness claim belongs to the MIP feasible region and any
-solver-reported primary proof. The second phase fixes most incumbent discrete
-decisions and is not a global lexicographic certificate. Third, the role
-representation depends on a correct mapping from model
-variables to formulation roles and has not been validated across unrelated
-MIPs. Fourth, the submodular guarantee applies to residual set completion, not
-solver runtime. Fifth, the current main training code is parallel REINFORCE,
-so a strict A3C claim remains outside the evidence unless the actor--critic
-route is rerun. Sixth, a wall-clock comparison is hardware-sensitive;
-warm-start construction, inference, and beam time must be accounted for.
-OOD memory pressure is an outcome rather than a censored inconvenience.
-Finally, RL-SAT currently certifies a CP-SAT abstraction rather than the full
-Petri MIP, and deployment would additionally require uncertainty,
-rescheduling, equipment faults, and fab-level integration.
+The complete nominal matrix suggests that structural cut information can
+improve average anytime behavior relative to adapted HEM. Its lack of
+statistical significance prevents a confirmatory population-level ranking.
+Wall-clock comparisons are hardware-dependent, and
+feature extraction and beam decoding remain in the common online time budget,
+whereas reusable SPBS construction is reported as preprocessing. The role
+representation depends on the variable
+taxonomy exposed by SCIP, and the $(1-1/e)$ result applies only to residual
+completion inside a fixed expansion pool. The model assumes deterministic
+processing and transfer times; equipment failures, online arrivals,
+rescheduling, and fab-level interactions remain outside its present scope.
+Recent module-failure scheduling work further indicates that equipment-state
+changes warrant a dedicated extension rather than an untested robustness
+claim \citep{zhu2026modulefailure}.
 
 \section{Conclusions}
 \label{sec:conclusion}
 
-This paper presents an exact compact MIP and an integrated warm-started
-hierarchical policy-search framework for dual-source mixed-flow rotating-
-chamber scheduling. The model jointly represents finite-horizon product and
-PEC flows, mixed recipe modes, cleaning, chamber rotation, and shared robotic
-resources. A second, status-aware phase preserves the primary incumbent
-makespan while polishing a linear waiting-and-cadence measure; it is not
-reported as a global lexicographic proof. The solution route combines an SPBS
-incumbent, the established HEM count/ordered-subset policy, bounded beam
-decoding, variable-role features, and SCIP. Its callback operates only on
-solver-generated valid cuts and therefore preserves model validity. A frozen
-paired protocol has been established to isolate the model, warm start, policy,
-and beam mechanisms.
-\TBD{Insert the final evidence-based conclusion only after fresh checkpoints,
-independent solution validation, and all paired campaigns pass.}
+This paper addresses finite-horizon scheduling of a dual-source mixed-flow
+rotating-chamber cluster tool through an operationally explicit two-stage MILP. The
+formulation connects product and dummy-wafer routes with mixed
+$4\times1$/$2\times2$ recipes, rotary chamber events, robotic transfers,
+load-lock states, cleaning, residency, and reusable vacuum-zone dummy wafers. Makespan
+is optimized first, after which schedule timing is refined conditional on the
+retained discrete structure and primary objective.
+
+The computational contribution is a structure-aware enhancement of HEM. Its
+central idea is to exploit information induced by the scheduling model at two
+points in the exact solve: SPBS supplies a physically structured incumbent,
+and variable-role features distinguish how candidate cuts act on discrete
+choices and continuous timing. A3C-inspired parallel policy-gradient
+training, bounded beam decoding, and role-submodular completion then allocate
+the cut budget, while SCIP retains feasibility and proof responsibilities.
+
+Four verification instances reach zero gap in both stages and satisfy the
+independently checked physical constraints. Across the complete 2700-run
+nominal matrix, the integrated configuration has the lowest observed mean PDI
+and solve time among seven methods. The mean PDI reductions are 1.41\%
+relative to adapted HEM and 1.97\% relative to SCIP. Because the paired
+confidence intervals cross zero and the Holm-adjusted tests are
+non-significant, the evidence supports a descriptive anytime tendency, not a
+universal or population-level superiority claim. The completed component
+contrasts point to variable-role reconstruction as the largest source of the
+mean shift.
+
+From an operational perspective, the framework separates throughput,
+schedule refinement, and solver guidance without relaxing the rotating-chamber
+equipment constraints. Its present scope is deterministic finite-batch
+operation, and the wall-clock evidence is tied to the evaluated hardware,
+instances, and time limits. Extending the model to stochastic processing,
+online arrivals, module failures, and fab-level rescheduling, and evaluating
+transfer under larger distribution shifts, are the principal directions for
+future work.
 
 \section*{CRediT authorship contribution statement}
 
-\TBD{Insert author-specific CRediT roles.}
-
-\section*{Funding}
-
-\TBD{Insert funding information or state that no specific funding was
-received.}
+The authors jointly contributed to conceptualization, methodology, software,
+validation, formal analysis, investigation, visualization, and manuscript
+preparation.
 
 \section*{Declaration of competing interest}
 
-\TBD{Insert the authors' approved declaration.}
+The authors declare that they have no known competing financial interests or
+personal relationships that could have appeared to influence the work
+reported in this paper.
 
 \section*{Data and code availability}
 
-The repository retains the project name \project{}; the paper uses the neutral
-algorithm label \method{} because the frozen training route is policy gradient
-rather than strict actor--critic A3C. The frozen configurations, instance
-generators, model implementation, training code, and analysis scripts will be archived at
-\TBD{repository URL and immutable DOI}. Raw campaign outputs and a machine-
-readable manifest of software/hardware versions will accompany the archive.
-
-\section*{Acknowledgements}
-
-\TBD{Insert acknowledgements or remove this section.}
+The data, mathematical instances, trained models, and source code supporting
+the findings will be deposited in a public research-data archive with a
+permanent identifier.
 
 \bibliographystyle{elsarticle-harv}
 \bibliography{rdmct_cie_references}

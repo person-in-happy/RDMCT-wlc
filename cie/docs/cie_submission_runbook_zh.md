@@ -1,6 +1,6 @@
 # Computers & Industrial Engineering 投稿执行手册
 
-> 审计时间：2026-08-02（Asia/Shanghai）。本文给出从当前证据状态走到可投稿状态的执行顺序。实验协议定义仍以 [`../README.md`](../README.md) 为准。本文中的 PowerShell 命令均为单行命令，不使用续行符。
+> 审计时间：2026-08-09（Asia/Shanghai）。本文给出从当前证据状态走到可投稿状态的执行顺序。实验协议定义仍以 [`../README.md`](../README.md) 为准。本文中的 PowerShell 命令均为单行命令，不使用续行符。
 
 官方依据：[C&IE Guide for Authors](https://www.sciencedirect.com/journal/computers-and-industrial-engineering/publish/guide-for-authors)；[Elsevier LaTeX instructions](https://www.elsevier.com/en-gb/researcher/author/policies-and-guidelines/latex-instructions)。投稿要求可能变化，正式上传当天再次核对。
 
@@ -14,7 +14,7 @@
 
 ### 1.2 投稿级路线的真实起点
 
-正式`*_repro_v1` benchmark仍为0/6273行。三类新模型均已完成：HEM、feature-only与Proposed各5/5，共15/15个epoch-60检查点。`selected_checkpoint_manifest.csv`已经冻结15/15个明确路径及checkpoint/variant SHA-256；Main、Stability和OOD的runner现已强制读取并逐项校验该manifest，不再回退`params.pkl`。旧`cie/models/<family>/seed_N`目录、旧Main、旧OOD、旧SPBS和smoke不得并入新campaign。正式命令禁止使用`-AllowLegacyCheckpoints`。
+正式`*_repro_v1` benchmark已采集Main 2700/2700行和Stability原子检查点885/1500行。三类新模型均已完成：HEM、feature-only与Proposed各5/5，共15/15个epoch-60检查点。`selected_checkpoint_manifest.csv`冻结了15/15个明确路径及checkpoint/variant SHA-256；Main、Stability和OOD的runner强制读取并逐项校验该manifest，不回退`params.pkl`。Main精确矩阵、主键、错误和解文件数量完整，但2026-08-09独立SCIP `checkSol`发现7/2700个文本保存解未通过，故投稿审计当前为FAIL。逐条打印违反原因后确认，7条均只涉及连续时间先后约束，违反量统一为$1.00000011116208\times10^{-6}$，即仅比默认$10^{-6}$可行性容差多约$1.11\times10^{-13}$；这是解文本往返精度边界，不是离散路由或资源冲突。仍须预先声明并测试统一的round-trip验解容差、重跑全部独立验解并取得PASS，才能冻结正式统计。旧`cie/models/<family>/seed_N`目录、旧Main、旧OOD、旧SPBS和smoke不得并入新campaign。正式命令禁止使用`-AllowLegacyCheckpoints`。
 
 正式训练输出位于带时间戳的递归目录，而不是固定的`cie/models/<family>/seed_N`。必须按`variant.json`中的parser seed、SCIP seed、experiment seed和训练数据路径递归解析，并强制存在`itr_60.pkl`；不能把中断训练的`params.pkl`当作epoch 60正式模型。第5节给出门禁。
 
@@ -40,6 +40,12 @@
 
 恢复时必须保持Stage、CampaignId、ShardTag、Seeds、TrainingSeeds、时间/内存上限、warm-start模式、数据、训练配置、代码、模型和ACS文件不变。benchmark和ACS的签名会拒绝或隔离参数/资产变化；训练续跑还会核对训练代码、配置、训练LP、family和三处seed。不得删除或编辑`.checkpoints`、`params.pkl`、`variant.json`，也不得把较早`itr_*.pkl`手工改名。运行benchmark前仍须确认15个正式模型均为`itr_60.pkl`。
 
+### 2.1 2026-08-08中断点与恢复位置
+
+当前没有Python/SCIP评测进程。三路Stability均为外部中断而非程序异常，`run.err.log`均为空。可直接审计到的最后终端输出时间分别为：solver seed 1在2026-08-08 00:15:49.391、seed 2在00:16:43.335、seed 3在00:16:18.076（中国标准时间）；因此本次中断的最后可观测时间为2026-08-08 00:16:43.335。日志没有单独记录操作系统杀进程时刻，不能把最后输出时间伪称为精确终止时刻。
+
+原子保存进度为885/900（当前三路子矩阵），总Stability目标进度为885/1500：seed 1保存293/300，停在`linear_off`、training seed 5，最后完成实例`cie_core_n024_f000_m024_proc100.lp`，恢复后从第14/20个实例`cie_core_n024_f006_m018_proc100.lp`开始；seed 2与seed 3各保存296/300，最后完成`cie_core_n024_f018_m006_proc100.lp`，恢复后均从第17/20个实例`cie_core_n032_f000_m032_proc100.lp`开始。重新执行第6.3节A1、B1、C1三条原命令即可，签名相同的已完成行自动跳过；这不是继续训练，15个训练模型早已完成，而是继续稳定性benchmark。三路只剩7/4/4、合计15个未原子保存的任务，各路首个任务就是中断时正在计算的实例，按600秒上限并行恢复约需1--1.5小时。
+
 ## 3. 投稿前必须补齐的证据
 
 | 项目 | 投稿目标 | 当前正式有效 | 目的 |
@@ -51,15 +57,15 @@
 | Warm starts | 65 | 已完成 | core 48、sensitivity 8、OOD 9均通过；OOD报告 failures=0 |
 | Validation | 4行 | 4 | 4/4均有incumbent，独立验解、精确矩阵和投稿审计全部PASS |
 | 建模证据 | 1套 | 已完成 | compact测试通过；81/81个LP的变量、约束、文件大小和解析时间表已生成 |
-| Main | 2700行 | 0 | 标称实例主比较与算法消融 |
-| Stability | 1500行 | 0 | `full/stage2_off/linear_off`控制变量实验 |
+| Main | 2700行 | 2700已采集；审计FAIL | 精确矩阵完整，但7个保存解未通过独立`checkSol`，修复前不得作为最终投稿证据 |
+| Stability | 1500行 | 885个原子完成行 | `full/stage2_off/linear_off`控制变量实验；当前三路885/900，总体尚缺615 |
 | DOE | 300行 | 0 | 制造因素主效应和预设交互 |
 | SPBS | 960行 | 0 | auto warm start与none组件对比 |
 | 学习策略×SPBS交互 | 可选 | 0 | 仅在正文主张SPBS与学习策略存在协同/交互时必做 |
 | Sensitivity | 80行 | 0 | 工艺和资源参数稳健性 |
 | OOD | 729行 | 0 | 大规模分布外泛化 |
 
-当前已实现的正式benchmark核心矩阵合计6273行。最短可投稿路线不把非等价Gu特例和“学习策略×SPBS协同”设为硬前置；正文必须相应收窄为“新MIP相对文献边界的扩展”“学习策略改进的主效应”和“SPBS初解的独立主效应”，不得写成二者存在正交互。还必须完成全部incumbent解文件的独立可行性验证、制造指标、实例级聚合、效应量、置信区间、双侧配对Wilcoxon和Holm校正。
+当前已实现的正式benchmark核心矩阵合计6273行，其中已采集3585行（Main 2700，Stability 885）。Main阶段性实例级统计中，Proposed平均PDI为16585.70，低于HEM的16823.18和SCIP的16919.01，但相对HEM的bootstrap 95\%区间为$[-446.70,846.26]$（以“对照减Proposed”为正），全局Holm校正$p=1.0$；因此只能写“观察到改善趋势”，不能写“显著优于”。最短可投稿路线不把非等价Gu特例和“学习策略×SPBS协同”设为硬前置；正文必须相应收窄为“新MIP相对文献边界的扩展”“学习策略改进的主效应”和“SPBS初解的独立主效应”，不得写成二者存在正交互。当前最高优先级不是启动新的DOE/OOD，而是诊断Main的7条独立验解失败并使审计达到`invalid_count=0`。
 
 正式benchmark启动前的实际门槛如下：
 
@@ -245,6 +251,8 @@ Set-Location D:\git\git\RDMCT-A3C; $env:CUDA_MODULE_LOADING='LAZY'; $env:RDMCT_C
 
 目的：在共同auto-SPBS、共同预算和5×5随机种子设计下比较SCIP、ACS、HEM-13D、HEM-13D+beam、23D feature-only、structure策略与Proposed；检验总体算法优势，并隔离束搜索、角色特征和结构补全的贡献。
 
+当前进度：七个分片均已结束，精确矩阵2700/2700、运行错误0、解写出错误0、incumbent 2700/2700。阶段性统计已写入论文，但独立验解有7行失败，投稿审计为FAIL。失败集中于两个实例：`cie_core_n016_f008_m008_proc100.lp`的HEM、HEM+Beam、Structure+Greedy和Proposed各1行，以及`cie_core_n024_f000_m024_proc100.lp`的Feature-only、Structure+Greedy和Proposed各1行；SCIP与ACS没有失败。7条的最大违反量均为$1.00000011116208\times10^{-6}$，属于文本序列化后刚好越过默认容差的连续先后约束。不要重跑整个Main，也不要删除检查点。下一步应为独立验解器加入明确、保守且有单元测试的round-trip容差策略，同时保留原始残差报告；随后重跑第7节Main后处理。只有在更严格的解再导出仍被要求且无法从现有解可靠完成时，才考虑参数一致的修复分片。审计PASS前不得把Main表称为最终投稿结果。
+
 终端A依次执行A1、A2，共900行：
 
 ```powershell
@@ -282,6 +290,8 @@ Set-Location D:\git\git\RDMCT-A3C; $env:CUDA_MODULE_LOADING='LAZY'; $env:RDMCT_C
 ### 6.3 Stability（目标1500行）
 
 目的：比较`full/stage2_off/linear_off`，验证条件式第二阶段目标是否在不改变主目标最优性的前提下改善排程稳定性，并区分已证明最优与仅有incumbent的结果。
+
+当前进度：原子检查点885/1500。先在三个终端分别原样重跑下面的A1、B1、C1；它们会跳过已保存的885行，只重做中断时尚未落盘的当前实例并完成剩余任务。A1剩7个原子任务，B1和C1各剩4个，三路恢复约1--1.5小时。A1/B1/C1完成后，再按既定队列运行A2、B2、C2和C3以补齐solver seeds 4--5；不得提前运行Stability后处理。
 
 终端A依次执行A1、A2，共540行：
 
@@ -472,18 +482,20 @@ Set-Location D:\git\git\RDMCT-A3C; $env:CUDA_MODULE_LOADING='LAZY'; $env:RDMCT_C
 
 | 工作 | 三并发或单路现实估算 | 硬上限/保守估算 |
 | --- | ---: | ---: |
-| 新OOD warm-start收尾 | 当前仍在运行；结束后按失败数重试 | 单个失败实例最多1800秒，成功实例直接复用 |
+| 新OOD warm-start收尾 | 已完成，报告failures=0 | 0小时，不重跑 |
 | checkpoint resolver与15模型冻结 | 已完成 | 最终commit后复核约数分钟 |
 | 三类模型训练 | 15/15已完成 | 0小时，不重跑 |
 | ACS validation网格 | 720/720已完成并冻结 | 0小时，不重跑 |
-| model-evidence、测试、冻结与Validation | 约1--4小时加最多4×600秒Validation | 若发现错误需先修复再重新冻结 |
-| 6273行核心benchmark（三终端） | 约208--220小时 | 约403小时 |
+| model-evidence、测试、冻结与Validation | 已完成且Validation审计PASS | 0小时，不重跑 |
+| Main | 2700/2700已采集；7条为统一的$10^{-6}$文本往返容差边界 | 容差策略、测试和重新验解约1--3小时；预计无需重跑2700行 |
+| Stability | 885/1500；当前三路收尾约1--1.5小时 | 余下615行全部触顶约34.2小时三并发 |
+| DOE、SPBS、Sensitivity、OOD | 0/2069 | 全部触顶约115小时三并发，另加后处理 |
 | 可选A2交互增量 | 约23--30小时 | 约61小时；仅保留协同声明时增加 |
 | 验解、统计、模型规模表、图表、论文与投稿包 | 4--7天 | 若返工则更长 |
 
 A2若选择执行，采用最短可识别设计：复用Main中相同20实例的auto行，只新增SCIP、HEM-13D和RDMCT-HPS的none行，共约1100行；不重复auto行。按旧Main约222秒/行估算三并发约23小时，全部触顶约61小时。默认最短投稿路线不执行A2，并在正文删除协同/交互主张。
 
-若机器24小时连续运行且不补strict A3C/A2，现实约2--3周；每天只运行约12小时约3--5周。403小时是6273行三队列全部触顶的保守累计墙钟上限。若坚持strict A3C，还需演员--评论家实现、5个训练模型和至少一组500行标称配对，另预留约2--4周。任何正式benchmark开始后的签名代码/协议修改都会使受影响结果失效。
+在Main的统一文本往返容差通过测试且无需重跑2700行的前提下，剩余2684个benchmark原子任务按三并发全部触顶约149小时，24小时连续运行约7--10天，夜间必须中断且每天运行12小时约2--3周，再预留2--4天用于验解、统计和论文回填。若期刊级复核要求重新导出或重算7个解，增量应远小于重跑整个Main；只有求解/写解协议必须整体改变时才需要重新评估Main有效性。若坚持strict A3C，还需演员--评论家实现、5个训练模型和至少一组500行标称配对，另预留约2--4周。任何正式benchmark开始后的签名代码/协议修改都会使受影响结果失效。
 
 ## 10. “可以投稿”的最终定义
 

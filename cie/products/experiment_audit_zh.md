@@ -103,7 +103,7 @@ SPBS已有spbs_none seeds 1--7共336行，其中seed 3、实例cie_core_n032_f02
 
 ### 5.2 DOE制造因素实验
 
-目的：估计晶圆数、配方比例和加工时间系数对吞吐率、周期时间、资源利用率、PEC占用和清洗开销的主效应及预设交互。
+目的：估计晶圆数、配方比例和加工时间系数对吞吐率、周期时间、资源利用率、真空区假片占用和清洗开销的主效应及预设交互。
 
     .\cie\run_cie_single.ps1 -Stage benchmark-doe -CampaignId cie_doe_600s_compact_final_v1 -ShardTag seeds1to2 -LogId cie_doe_600s_compact_final_v1_seeds1to2 -Seeds '1,2' -TimeLimit 600 -MemoryLimitMB 2048
 
@@ -127,7 +127,7 @@ SPBS已有spbs_none seeds 1--7共336行，其中seed 3、实例cie_core_n032_f02
 
 ### 5.4 参数敏感性
 
-目的：检验运动时间、加工时间、PEC容量和清洗间隔变化下结论是否稳定。
+目的：检验运动时间、加工时间、真空区假片容量和清洗间隔变化下结论是否稳定。
 
     .\cie\run_cie_single.ps1 -Stage benchmark-sensitivity -CampaignId cie_sensitivity_600s_compact_final_v1 -ShardTag seeds1to4 -LogId cie_sensitivity_600s_compact_final_v1_seeds1to4 -Seeds '1,2,3,4' -TimeLimit 600 -MemoryLimitMB 2048
 
