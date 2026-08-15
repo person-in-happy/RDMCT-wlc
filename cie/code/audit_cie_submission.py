@@ -220,6 +220,13 @@ def _parse_bool(value: object, name: str) -> bool:
     raise ValueError(f"{name}={value!r} is not a boolean")
 
 
+def _canonical_conflict_value(field_name: str, value: object) -> object:
+    """Normalize CSV and JSONL values before cross-artifact comparison."""
+    if field_name == "has_incumbent":
+        return _parse_bool(value, field_name)
+    return str(value or "").strip()
+
+
 def parse_seed_list(value: str, name: str) -> tuple[int, ...]:
     try:
         values = tuple(
@@ -899,9 +906,9 @@ def audit_campaign(
             "solution_write_error",
             "status",
         ):
-            if str(csv_row.get(field_name) or "").strip() != str(
-                jsonl_row.get(field_name) or ""
-            ).strip():
+            if _canonical_conflict_value(
+                field_name, csv_row.get(field_name)
+            ) != _canonical_conflict_value(field_name, jsonl_row.get(field_name)):
                 report.issues.append(
                     f"CSV/JSONL conflict for {key.display()} field {field_name}: "
                     f"{csv_by_key[key].location()} != {jsonl_by_key[key].location()}"

@@ -1,77 +1,57 @@
-# C&IE 论文包与当前证据状态
+# C&IE 投稿产品与证据状态
 
-> 审计时间：2026-08-02（Asia/Shanghai）。本目录中的正式结果表只能在新campaign、独立验解和统计门槛全部通过后填写；归档单例只作非验证性模型健全性检查，空白或`[TBD]`不是结果。
+> 审计快照：2026-08-14 11:47:04（Asia/Shanghai）。实验定义以 [C&IE复现协议](../README.md) 为准，运行和恢复命令以 [投稿执行手册](../docs/cie_submission_runbook_zh.md) 为准。
 
-完整协议见 [`../README.md`](../README.md)，从暂停、恢复到投稿的唯一执行入口见 [`../docs/cie_submission_runbook_zh.md`](../docs/cie_submission_runbook_zh.md)。
+## 1. 已冻结证据
 
-当前长任务已统一为可恢复入口：训练按完整epoch恢复，ACS与benchmark按单次求解恢复，warm start按实例复用；中断后必须保持参数不变并原样重跑同一条`run_cie_single.ps1`命令。不要直接运行底层Python或删除`.checkpoints`。
+| 阶段 | 目标 | 状态 | 投稿用途 |
+| --- | ---: | --- | --- |
+| Validation | 4 | 4/4，独立验解与审计PASS | 模型和求解链验证 |
+| Main | 2700 | 2700/2700，独立验解与审计PASS | 七方法标称比较 |
+| Stability | 1500 | 1500/1500，独立验解与审计PASS | 两阶段排程机制 |
+| DOE | 300 | 300/300，独立验解与审计PASS | 规模、配方和工艺因素 |
+| SPBS | 960 | 960/960；728个incumbent全部有效，审计PASS | 初始解主效应 |
+| Sensitivity | 80 | 80/80，独立验解与审计PASS | 单因素参数扰动 |
+| OOD | 729 | 112/729，seed1/2/3三路运行中 | 分布外评估 |
 
-## 1. 投稿有效进度
+正式六组benchmark当前为5652/6269；加Validation后为5656/6273，尚缺OOD 617行。历史`*_final_v1`、smoke、legacy checkpoint和筛选单例不得并入正式统计。
 
-严格按当前 `*_repro_v1` 协议，旧 `*_final_v1`、smoke 和 legacy checkpoint 结果均不得并入正式结果。
+## 2. 已进入稿件的主要结论
 
-| 项目 | 投稿目标 | 当前正式有效 | 状态 |
-| --- | ---: | ---: | --- |
-| 完整epoch-60训练候选 | 15 | 15 | HEM、feature-only、Proposed各5/5；冻结manifest已完成并由runner强制消费 |
-| Validation | 4 | 4 | 4个incumbent均独立验解通过，提交审计PASS |
-| Main | 2700 | 0 | 待运行 |
-| Stability | 1500 | 0 | 待运行 |
-| DOE | 300 | 0 | 待运行 |
-| SPBS | 960 | 0 | 待运行 |
-| Sensitivity | 80 | 0 | 待运行 |
-| OOD | 729 | 0 | 待运行 |
+- RDMCT-HBS在完整2700次标称实验中取得七种方法最低平均PDI（16585.70）和最低平均求解时间（218.32 s），平均PDI相对适配HEM和SCIP分别降低1.41%和1.97%，在所评协议下具有最强平均anytime性能。
+- SPBS使incumbent获得率从51.67%提高至100%，并使平均PDI降低26.19%；Holm校正`p`分别为`2.55\times10^{-5}`和`3.46\times10^{-8}`。
+- 相对关闭第二阶段，完整两阶段配置使事件重构的路线总等待、最大等待、节拍CV和节拍偏差和分别降低51.91%、68.89%、39.70%和94.05%，四项经Holm校正后均显著。
+- DOE显示晶圆数与混流配方构成产生强交互；全部预设加工时间尺度主效应和交互效应的置信区间均跨零。
+- Sensitivity的80次运行全部获得并验解可行解；该单方法OFAT只支持预设参数扰动下的可运行性，不用于声称跨方法鲁棒性排序。
 
-正式确认性性能矩阵仍为**0/6273**，其benchmark前门槛已全部通过：15模型冻结清单、ACS validation 720/720、全部65个warm starts、81/81个LP的model-evidence、CIE测试59/59以及Validation 4/4独立验解/审计均完成。下一步按执行手册启动Main三队列。
+## 3. 当前投稿文件
 
-## 2. 历史工程结果（不得填入最终论文表）
+- `rdmct_cie_draft.tex/pdf`：英文双匿名正文工作稿，Elsevier `elsarticle` 模板，摘要246词。
+- `rdmct_cie_analysis_focused.tex/pdf`：重新撰写的分析导向英文稿，突出模型逻辑、结果机理和明确优势结论，旧稿未覆盖。
+- `rdmct_cie_analysis_focused_zh.tex/pdf`：与分析导向英文稿同步的中文审查稿。
+- `manuscript_analysis_focused_anonymous.tex/pdf`：分析导向新稿的独立匿名投稿入口及已编译PDF，不覆盖原匿名稿。
+- `highlights_analysis_focused.txt`：分析导向新稿专用英文Highlights，原`highlights.txt`保持不变。
+- `submission_metadata_analysis_focused.md`：分析导向新稿专用投稿元数据与待作者确认项。
+- `manuscript_versions.md`：旧稿冻结哈希、新稿用途及版本关系。
+- `manuscript_anonymous.tex/pdf`：单一来源匿名投稿包装文件；当前PDF已编译，OOD回填后重新冻结。
+- `rdmct_cie_draft_zh.tex/pdf`：中文审查稿。
+- `rdmct_cie_references.bib`：英文参考文献库。
+- `highlights.txt`：5条英文Highlights，每条71--79字符。
+- `title_page.tex/pdf`：采用作者提供文稿中的姓名、单位、邮箱和通讯作者信息生成的一页独立标题页。
+- `cover_letter_draft.tex/pdf`：一页C&IE投稿信草稿，已写入模型、算法和审计通过的量化贡献。
+- `rdmct_cie_supplement.tex/pdf`：匿名补充材料，含实验矩阵、验解口径、物理指标定义、SPBS、Sensitivity和DOE补充证据。
+- `submission_metadata.md`：投稿系统元数据及必须由作者确认的缺失信息清单。
+- `figure_captions.txt`：正文图和补充图的独立英文图注。
+- `Figure_DOE_PDI_effects.png`：正文DOE效应图。
+- `Figure_S1_DOE_diagnostics.png`：补充材料诊断图。
+- `experiment_audit_zh.md`：正式实验和主张边界审计。
 
-| 实验 | 工程目标 | 审计快照 | 问题 |
-| --- | ---: | ---: | --- |
-| Main | 2700 | 880 | campaign 不完整且不属于冻结的投稿协议 |
-| OOD | 729 | 729 | 0 runner error、全部timelimit；旧模型seed来源错误且跨代码版本 |
-| SPBS | 960 | 336 | campaign 不完整且含 1 个 runner error |
-| Stability | 1500 | 0 | 未运行 |
-| DOE | 300 | 0 | 未运行 |
-| Sensitivity | 80 | 0 | 未运行 |
-| Validation | 4 | 0 | 未运行 |
+## 4. 尚未闭合的投稿门槛
 
-`cie_ood_1200s_mem4096_final_v1`已经729/729完成。SCIP/ACS各27/27有incumbent，每个学习方法族仅27/135；旧15个`variant.json`的`experiment.seed`均为1，且活动跨代码修改。它只能作为运行链路和大实例困难度诊断，不能进入正式性能表。`timelimit`本身不是无效观测；这里被排除的根因是checkpoint provenance。
+1. OOD达到729/729后运行`run_cie_postprocess.ps1 -Stage ood`，要求矩阵、独立验解和投稿审计PASS，再把正式结果写入中英文稿。
+2. 独立title page已写入作者姓名、单位、通信地址和邮箱；作者仍须确认原文未提供的基金、致谢、ORCID和逐作者CRediT分工。
+3. 将匿名数据/代码包上传到不暴露作者身份的评审链接；接受后替换为永久公共归档标识符。
+4. title page、cover letter、supplement和figure captions已生成；OOD回填后再冻结最终匿名正文`manuscript_anonymous.tex/pdf`和扁平LaTeX源包。
+5. 上传前检查PDF元数据、文件名、致谢、基金号、身份化链接和自引措辞，确保不泄露作者身份。
 
-## 3. 从当前进度继续
-
-1. 补齐或删去机制声明所依赖的遥测：cut-pool size、accepted cut count、变量角色覆盖、冗余、callback/fallback开销、dual bound、root gap、LP iterations、首次解/最佳解/证明时间。
-2. 等当前OOD warm-start结束；若不是9/9且`failures=0`，按执行手册用1800秒命令重试。成功实例会复用。
-3. 执行`model-evidence`，完成测试和最终评估commit，再运行`freeze-checkpoints`复核15/15，随后先跑Validation。
-4. 冻结代码、LP、训练数据、模型、ACS、环境、训练commit和评估commit的hash。冻结后不得修改签名代码或数据生成器。
-5. Validation全部PASS后，按执行手册最多三路进入Main、Stability、DOE、SPBS、Sensitivity、OOD；仓库名保留`RDMCT-A3C`，稿件算法暂名`RDMCT-HPS`，只有完成演员--评论家对照后才主张strict A3C。
-
-## 4. 论文与投稿包缺口
-
-现有英文稿使用Elsevier官方`elsarticle` class，有6个关键词和5条highlights，但仍有32个`TBD`、8张表和0张图。本机尚无可用的LaTeX编译工具链；摘要还缺正式结果，最终再验收250词上限。
-
-正式上传前按“官方要求 + 本项目内部完整性门槛”准备：
-
-- 双匿名正文 `manuscript_anonymous.tex/pdf`；独立 title page 应列出与 Editorial Manager 顺序一致的作者、每个单位的完整标准名称/地址/国家及通信信息；
-- 3--5 条、每条不超过 85 字符的可编辑 highlights；
-- Elsevier declarations tool 生成的利益冲突 `.doc/.docx`；
-- CRediT、Funding 和 Data statement；匿名评审稿不得泄露逐作者贡献、完整基金号或身份化链接，完整信息放入不发审稿人的作者材料/投稿字段；数据初投使用匿名链接，最终使用永久标识符（优先 DOI），不能共享则说明原因；
-- 生成式 AI 使用声明；不得用生成式 AI 生成或修改投稿图片或 graphical abstract；
-- 投稿型 supplement、完整 APA 7 参考文献、术语表和可复现清单；supplement 是本项目因正文承诺而设的内部必需项，不是 C&IE 通用硬性项；
-- 平铺的 LaTeX 源文件包、编译 PDF、单独图文件与 `figure_captions.txt`、全体作者批准；cover letter 建议准备，并以正式上传当天 Editorial Manager 字段为准。
-
-摘要除不超过 250 个英文词外，还应独立、事实性地包含目的、主要结果和结论，不含引用，非常用缩写首次定义；关键词须为英文。Graphical abstract 是鼓励项而非硬性项。
-
-官方依据：[C&IE Guide for Authors](https://www.sciencedirect.com/journal/computers-and-industrial-engineering/publish/guide-for-authors)；[Elsevier LaTeX instructions](https://www.elsevier.com/en-gb/researcher/author/policies-and-guidelines/latex-instructions)。正式上传当天应再次核对。
-
-## 5. 最终填表门槛
-
-- 核心正式阶段达到4/2700/1500/300/960/80/729，model-evidence通过且无重复主键；只有声称协同时才要求A2约1100条增量；
-- `error` 和 `solution_write_error` 为空，timeout、memlimit 和无 incumbent 行不得删除；
-- 每个 incumbent 有唯一 `.sol`，独立验解 `invalid_count=0`；
-- 七个campaign的 `run_cie_postprocess.ps1` 均显示PASS，并保存精确矩阵审计、实例级bootstrap/效应量/Wilcoxon/Holm；DOE还须有主效应、预设交互、置信区间、诊断数据和程序生成图；
-- runner强制消费冻结manifest，15个模型路径/hash与每行结果一致，正式命令不含`-AllowLegacyCheckpoints`；
-- 模型、LP、ACS、commit 和环境 hash 完整，所有数字可追溯到冻结分析产物；
-- 正文没有 `[TBD]`、无来源的 `--` 或人工外推结果；
-- 双匿名、声明、数据、补充材料和 LaTeX 源包均通过投稿清单。
-
-完整结果未达到这些门槛前，只能报告工程预检进度，不能声称已经形成最终 C&IE 性能证据。
+满足上述门槛表示材料达到可提交状态，不代表期刊必然录用。

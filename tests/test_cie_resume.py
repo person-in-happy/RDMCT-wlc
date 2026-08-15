@@ -221,3 +221,10 @@ def test_powershell_entrypoints_enable_resume_and_clean_interrupts():
     assert 'function Stop-CieProcessTree' in launcher
     assert 'Stop-CieProcessTree -RootProcessId $process.Id' in launcher
     assert 'finally {' in launcher
+    assert 'function New-CieRunMutex' in launcher
+    assert 'function Get-ConflictingCieProcesses' in launcher
+    assert 'run_cie_benchmarks\\.py' in launcher
+    assert '--output_dir' in launcher
+    assert '$runMutex.WaitOne(0)' in launcher
+    assert '$runMutex.ReleaseMutex()' in launcher
+    assert 'An existing C&IE run already targets this stage/campaign/shard' in launcher

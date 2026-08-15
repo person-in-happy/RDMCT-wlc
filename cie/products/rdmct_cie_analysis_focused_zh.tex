@@ -1,0 +1,535 @@
+\documentclass[preprint,12pt,authoryear]{elsarticle}
+
+\usepackage[UTF8,scheme=plain]{ctex}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs,multirow,array}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{lineno}
+\usepackage{microtype}
+\usepackage{url}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit}
+\setlength{\emergencystretch}{3em}
+
+\journal{Computers \& Industrial Engineering（中文审查版）}
+\modulolinenumbers[5]
+
+\newcommand{\method}{RDMCT-HBS}
+\newcommand{\cmax}{C_{\max}}
+\newcommand{\pdi}{\mathrm{PDI}}
+
+\begin{document}
+\begin{frontmatter}
+
+\title{双源混流旋转腔室组合设备调度的两阶段MILP与结构感知学习增强分支割}
+\author{匿名作者}
+
+\begin{abstract}
+双源混流旋转腔室组合设备需要在共享腔室、装载锁和机械手之间协调产品晶圆与
+可复用真空区假片。配方分组、腔室旋转、清洗、物料可用性和驻留限制相互耦合，
+使最大完工时间相同的排程仍可能具有完全不同的等待与加工节拍。本文构建首个面向
+混合$4\times1$/$2\times2$运行的有限时域两阶段MILP：第一阶段最小化端到端
+最大完工时间，第二阶段保持离散排程和最大完工时间并精修物理路线等待与腔室节拍。
+为求解该模型，本文提出\method{}，在SCIP中集成结构保持二元骨架初始解、变量
+角色重构、A3C启发的并行策略梯度、有限宽束解码和结构化割集补全。四个精确实例
+验证了模型。2700次标称实验中，\method{}在七种方法中取得最低平均原始--对偶
+积分和求解时间，平均PDI较适配HEM和SCIP分别降低1.41\%和1.97\%。独立960次
+实验表明，初始解策略使平均PDI降低26.19\%，并将可行解获得率由51.67\%提高到
+100\%。1500次控制实验中，第二阶段使路线总等待、路线最大等待、节拍变异和节拍
+偏差分别降低51.91\%、68.89\%、39.70\%和94.05\%。结果明确证明了两阶段模型
+的运行价值和结构感知精确搜索的计算优势。
+\end{abstract}
+
+\begin{highlights}
+\item 两阶段MILP统一表示双源混流旋转腔室组合设备调度。
+\item 保持最大完工时间的精修显著改善物理等待与腔室节拍。
+\item SPBS使平均PDI降低26.19\%，并保证每次运行均获得可行解。
+\item 变量角色重构使束式割解码具备组合设备结构感知能力。
+\item RDMCT-HBS在2700次实验中取得七种方法最强平均anytime性能。
+\end{highlights}
+
+\begin{keyword}
+旋转腔室组合设备 \sep 半导体制造 \sep 混合整数线性规划 \sep
+学习增强分支割 \sep 初始解 \sep 束搜索 \sep 排程稳定性
+\end{keyword}
+
+\end{frontmatter}
+\linenumbers
+
+\section{引言}
+
+半导体装备投资巨大，其有效产能往往不只由名义加工时间决定，更取决于设备内部
+资源能否被合理协调。组合设备把工艺腔室、装载锁和机械手集成在同一个强耦合系统
+中，一个局部看似合理的动作可能同时推迟多个下游工序。因此，在不增加硬件的情况
+下，改进调度是提高装备利用率和制造效率的直接途径
+\citep{chien2021drlhga,hong2026ddpgct}。
+
+本文研究应用于PECVD工艺场景的双源混流旋转腔室组合设备。产品晶圆从大气侧
+装载端口进入，可复用真空区假片从独立存储区进入；两条物流在旋转腔室汇合，并
+竞争真空机械手。设备同时执行$4\times1$和$2\times2$配方。前者按前后两侧
+组成旋转批次，后者通过相邻曝光共享中间产品对。清洗还会插入仅含假片的加工周期，
+并把连续生产划分为多个epoch。因此，调度需要同时决定产品分组、腔室与侧面、
+清洗边界、物理假片、共享资源次序和连续事件时刻。
+
+现有组合设备研究已经覆盖周期调度、多晶圆类型、驻留限制、清洗和多空间模块
+\citep{qiao2022binary,li2022conditioncleaning,wang2023optimalcyclic,
+li2025cyclicmultitype,yang2025miptwowafers,gu2024multifinger}，但尚未在一个
+有限时域模型中统一表示双源物流、混合旋转配方、可复用假片库存和共享搬运。
+区别并非简单增加一组容量约束：假片分配和清洗位置会改变机械手冲突关系，必须与
+产品分组和时序共同优化。
+
+学习式调度通常直接控制派工或工艺参数
+\citep{liu2022cnna3c,zhang2024qeda,kim2025adaptivecluster,
+kim2025noncyclic}。与本文工程背景最接近的\citet{hong2026ddpgct}采用DDPG与
+离散事件仿真调节PVD组合设备的连续加工时间。本文的决策层不同：加工时间给定，
+算法必须构造离散旋转腔排程，并保留MIP的下界与最优性证明。因此，本文把学习
+机制置于精确求解器内部，而不是用黑箱策略替代数学规划。
+
+本文解决两个相互关联的研究缺口。模型方面，以两阶段MILP区分吞吐量与排程质量，
+同时保持二者属于同一套物理决策；算法方面，把设备结构同时用于原始可行解和割平面
+选择。研究逻辑由此形成“设备物理结构—精确调度模型—模型诱导的搜索瓶颈—结构感知
+分支割”的完整链条。
+
+主要贡献如下：
+\begin{enumerate}[leftmargin=*]
+\item 构建双源混流旋转腔室组合设备的有限时域MILP，统一决定混合配方分组、
+腔室侧面、旋转事件、机械手、装载锁、清洗epoch、驻留和可复用真空区假片。
+\item 引入保持最大完工时间的第二阶段，使模型在不改变第一阶段生产方案的条件下，
+进一步优化产品物理等待和腔室加工节拍。
+\item 提出结构感知改进HEM方法\method{}，将SPBS初始解、变量角色特征、
+A3C启发并行训练、有限宽束解码和结构化割集补全嵌入SCIP。
+\end{enumerate}
+
+本文的实验章节按结论组织：精确实例验证模型，完整标称矩阵比较算法，控制实验解释
+初始解与两阶段机制，析因实验揭示计算难度的制造来源。
+
+\section{研究基础与定位}
+
+\subsection{组合设备调度模型}
+
+组合设备模型已由稳态机械手循环扩展到多产品与附加约束。双臂工具的集成模式、
+并行腔负载和多晶圆类型得到持续研究
+\citep{kim2021integrated,ko2021wafer,zhu2022twotypes}；近期模型进一步联合决定
+投放顺序、机械手任务、腔室分配和驻留
+\citep{li2025cyclicmultitype,yang2025miptwowafers}。清洗、吹扫和后处理研究表明，
+仅满足腔室容量并不能保证时序可行
+\citep{qiao2022binary,lee2023cleaningplan,yuan2023purge,
+zhu2023postprocess,pan2024cycletime}。
+
+旋转和多空间模块还引入侧面相关的装卸与共享腔室运动。\citet{gu2024multifinger}
+研究多指机械手和多空间加工模块，为本文的腔室结构提供直接参照，但其核心是计算
+给定周期序列的时刻。本文把决策边界扩展为同时生成物料分组、腔室侧面、清洗epoch、
+资源次序与事件时刻，并增加来源不同、能够循环使用的真空区假片物流。
+
+\subsection{学习增强调度与精确优化}
+
+深度强化学习已经与遗传搜索、自适应搜索和领域编码结合用于半导体调度
+\citep{chien2021drlhga,liu2022cnna3c,zhang2024qeda,
+li2022hybridfeedback}。这些工作共同说明，学习策略只有与问题结构结合时才能
+稳定发挥作用。精确优化则提供显式约束、原始与对偶界和可验证可行性；近年来的
+学习增强MIP方法在保持这些性质的同时指导分支、原始搜索和割选择
+\citep{bengio2021machine,khalil2022mipgnn,scavuzzo2024mlbb}。
+
+割选择尤其适合本文模型，因为不同割即使具有相近通用效率，也可能分别约束腔室
+分配、连续时刻或二者耦合。已有研究采用强化学习、监督排序、前瞻模仿和自适应
+打分管理割平面\citep{tang2020cut,huang2022cutranking,
+paulus2022looking,turner2023adaptive}。HEM进一步把选择建模为数量与有序子集的
+层次决策\citep{wang2023hem,wang2024hemtpami}，但其通用特征不能区分变量的
+设备角色，贪心解码也会过早丢弃替代序列。本文的创新正是把双源旋转腔MILP的
+物理结构引入该层次决策。
+
+\section{工业问题与两阶段MILP}
+
+\subsection{双物流及其交互}
+
+图~\ref{fig:system-zh-new}给出理解模型所需的设备结构。产品晶圆经过大气域、上
+装载锁、真空机械手、旋转腔室和下装载锁后返回装载端口；真空区假片始终位于真空域。
+两条物流共享VTR和腔室，但具有不同的释放与返回要求。
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+node distance=7mm and 7mm,
+box/.style={draw,rounded corners,align=center,minimum height=8mm,minimum width=16mm,fill=blue!5},
+vbox/.style={box,fill=orange!10},
+flow/.style={-{Latex[length=2mm]},thick},
+dflow/.style={-{Latex[length=2mm]},thick,dashed,red!70!black},
+domainbox/.style={draw,dashed,rounded corners,inner sep=4mm}]
+\node[box] (lp) {装载\\端口};
+\node[box,right=of lp] (atr) {ATR};
+\node[box,right=of atr] (al) {对准器};
+\node[vbox,right=of al] (llu) {上装载锁};
+\node[vbox,right=of llu] (vtr) {VTR};
+\node[vbox,right=of vtr,minimum width=27mm] (ch) {旋转腔室\\CH2--CH3};
+\node[vbox,below=of vtr] (lll) {下装载锁};
+\node[vbox,above=of vtr] (store) {真空区假片\\存储区};
+\draw[flow] (lp)--(atr)--(al)--(llu)--(vtr)--(ch);
+\draw[flow] (ch) |- (lll);
+\draw[flow] (lll) -| (atr);
+\draw[flow] (atr) -- ++(0,-15mm) -| (lp);
+\draw[dflow] (store)--(vtr);
+\draw[dflow] (vtr)--(ch);
+\draw[dflow] (ch) to[bend right=28] (store);
+\node[domainbox,fit=(lp)(atr)(al)] (atm) {};
+\node[domainbox,fit=(llu)(vtr)(ch)(lll)(store)] (vac) {};
+\node[above=1mm of atm.north] {大气域};
+\node[above=1mm of vac.north] {真空域};
+\end{tikzpicture}}
+\caption{双源物流与共享资源。实线表示产品晶圆路线，虚线表示可复用真空区假片。}
+\label{fig:system-zh-new}
+\end{figure}
+
+$4\times1$模式依次执行前侧装载、旋转、后侧装载、加工和逆序卸载，最后不足的
+产品侧由假片补齐。$2\times2$模式把产品对连接成曝光链，相邻曝光共享中间产品对，
+首尾位置使用假片对。清洗只能在合法曝光边界中断链，并占用一个仅含假片的加工周期。
+同一物理假片的两个占用区间不得重叠。
+
+由此形成三个决策层：物料层决定配方组、腔室、侧面、清洗epoch和物理假片；
+资源层决定机械手、装载锁和腔室冲突动作的先后；时刻层决定事件时刻并满足驻留限制。
+物料选择会改变资源冲突与时序网络，三层不能顺序拆开独立求解。
+
+\subsection{决策结构和关键约束}
+
+设$\mathcal W$为产品晶圆，$\mathcal C$为旋转腔室，$\mathcal O$为操作集合，
+$\mathcal R$为单位容量资源。二元变量$x$分配产品对，$u$启用批次或链位置，$a$
+分配清洗epoch，$g$把假片作业分配给物理假片，$y$决定共享资源操作次序；$s_o$、
+$e_o=s_o+d_o$为操作开始与完成时刻。核心关系为
+\begin{align}
+&\sum_{k\in\mathcal K(p)}x_{pk}=1 && p\in\mathcal P,\\
+&x_{pk}\le u_k,\qquad u_{k+1}\le u_k, && k\in\mathcal K,\\
+&s_{o'}\ge e_o+\delta_{oo'}, &&(o,o')\in\mathcal A,\\
+&s_{o'}\ge e_o+\rho^r_{oo'}-M(1-y^r_{oo'}), &&o,o'\in\mathcal O_r,\\
+&s_o\ge e_{o'}+\rho^r_{o'o}-My^r_{oo'}, &&o,o'\in\mathcal O_r,\\
+&\sum_{\tau\in\mathcal T_c}g_{j\tau}=1 &&j\in\mathcal J_c^{\rm DW}.
+\end{align}
+第一式保证每个产品组恰好进入一个配方位置，第二式建立连续启用结构，第三式构成
+完整产品与假片工艺路线，成对析取约束统一处理ATR、对准器、装载锁槽位、VTR、
+腔室和每片可复用假片的互斥占用；$\rho$包含端点相关的机械手回位时间。
+
+表~\ref{tab:rule-zh-new}把其余工业规则与数学机制对应起来。该映射说明，模型可行性
+来自整条设备轨迹，而不仅是腔室不重叠。
+
+\begin{table}[htbp]
+\centering
+\caption{MILP表示的工业规则}
+\label{tab:rule-zh-new}
+\begin{tabular}{p{0.23\linewidth}p{0.34\linewidth}p{0.33\linewidth}}
+\toprule
+工业规则 & 数学机制 & 排程作用 \\
+\midrule
+旋转侧面次序 & 事件等式与前驱弧 & 保证装载--旋转--加工--卸载物理过程 \\
+混合配方 & 分配、启用和相邻位置链接 & 选择可行产品分组与共享曝光 \\
+清洗间隔 & 周期--epoch分配与容量 & 在合法边界插入假片清洗 \\
+可复用假片库存 & 物理假片分配与区间析取 & 禁止同一假片被同时使用 \\
+机械手与装载锁容量 & 端点相关资源排序 & 消除搬运冲突并计入回位 \\
+驻留限制 & 成对路线事件的时间上界 & 保护时间敏感产品和搬运 \\
+有限批次吞吐量 & 最晚返回装载端口时刻 & 度量端到端而非腔室内完工 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+清洗epoch满足$\sum_v a_{vce}\le Hz_{ce}$，其中$H$是两次清洗间允许的最大加工
+周期数。链接约束在相邻epoch之间插入假片清洗，并保证$2\times2$链只在曝光边界
+分段。驻留限制统一写为
+\begin{equation}
+0\le s_{\mathrm{out}(w,r)}-e_{\mathrm{in}(w,r)}\le\overline R_{wr}.
+\end{equation}
+
+\subsection{先优化吞吐量，再优化排程质量}
+
+第一阶段最小化最后一片产品返回装载端口的时刻：
+\begin{equation}
+\cmax\ge e_w^{\rm return}\quad(w\in\mathcal W),\qquad
+\min_{z\in\mathcal F}\cmax(z),
+\end{equation}
+其中$\mathcal F$包含全部物料、旋转、清洗、资源和时序约束。仅最小化$\cmax$
+不能保证运行质量：在最后完成时刻相同时，中间等待、极端驻留和腔室节拍仍可能
+存在巨大差异，并影响工艺一致性和对小扰动的恢复能力。
+
+设第一阶段最好排程为$\widehat z$，最大完工时间为$\widehat C$。第二阶段固定其
+离散物料和资源结构$\mathcal D_{\rm fix}$：
+\begin{equation}
+z_d=\widehat z_d\ (d\in\mathcal D_{\rm fix}),\qquad
+\cmax(z)\le\widehat C+\varepsilon_C,
+\end{equation}
+并最小化
+\begin{equation}
+\Phi(z)=\lambda_1Q_{\rm total}+\lambda_2Q_{\max}
++\lambda_3D_{\rm cadence}+\lambda_4E_{\rm cap}.
+\end{equation}
+四项分别表示路线总等待、最大单段等待、相邻腔室开始时刻偏差和软等待上限超额。
+该阶段不能恶化保留的最大完工时间，也不能改变配方、分配、清洗和资源次序。若
+第一阶段证明最优，精修结果仍保持全局最优最大完工时间；第二目标在保留的离散结构
+内最优。因此，两阶段法实现目标分层，但始终优化同一套物理排程。
+
+\subsection{模型改进及其计算含义}
+
+相比既有旋转或多空间模型，本文同时实现四项扩展：由稳态周期改为有限批次，由单一
+物料源改为双源物流，由固定序列改为内生混合配方分组，并由单一最大完工时间改为
+条件式排程质量精修。四项扩展不可彼此独立，因为假片、清洗和侧面选择会直接改变
+机械手冲突图。
+
+模型完整性也解释了求解困难。分配、启用、epoch、假片身份和成对次序二元变量与
+稠密事件时刻网络耦合。通用效率相近的割可能作用于完全不同的物理决策，这正是下一
+节算法采用变量角色信息的原因。
+
+\section{结构感知学习增强精确求解}
+
+\subsection{从模型结构到求解器引导}
+
+模型具有两个主要症状：高质量可行解出现较晚，通用割分数不能说明一个割主要收紧
+离散设备选择、连续时刻还是二者耦合。\method{}在两个位置提供互补引导：SPBS在
+分支割前提供原始可行解，学习选择器在分离过程中提供对偶引导。SCIP始终保留原始
+可行域、有效割生成和最优性证明责任。
+
+\subsection{结构保持二元骨架初始解}
+
+SPBS提取排程中高置信的二元骨架，包括产品分配、批次启用、清洗epoch、装载锁位置
+和安全局部次序；连续事件时刻及全局敏感的VTR次序保持自由。临时MIP补全该骨架并
+得到物理可行排程，原始模型只接收该可行解，不接收临时固定约束。
+
+该初始解不同于任意变量提示。二元骨架给出详细时序模型原本需要从零搜索的设备组合
+结构，而补全求解负责修复局部时序冲突。由于原始MIP仅增加可行incumbent，SPBS
+不会排除更优解，也不会削弱最优性证明。
+
+\subsection{变量角色重构与层次解码}
+
+HEM使用13维通用割特征。本文依据求解器元数据，把变量分为二元、一般整数、目标
+活跃连续、连续辅助和其他五类，并为割$i$定义角色$g$上的系数质量
+\begin{equation}
+p_{ig}=\frac{\sum_{j:x_j\in g}|a_{ij}|}{\sum_j|a_{ij}|+\varepsilon}.
+\end{equation}
+角色质量、有界变量质量、符号平衡、离散--连续耦合、主导角色和角色熵把表示扩展
+到23维。特征不依赖变量名称，却能区分割在排程模型中的物理作用。
+
+高层策略决定割预算，低层指针策略产生有序候选集。独立SCIP轨迹并行采样，并以
+负PDI为回报进行A3C启发的策略梯度训练。推理时，有限宽束搜索保留多个部分序列，
+角色次模补全再平衡策略分数、即时割质量、角色覆盖和候选池代表性。三者存在明确
+协同关系：特征重构提供有意义的差异，束搜索探索替代顺序，补全防止最终集合集中于
+单一变量角色。
+
+\subsection{精确性}
+
+\method{}只排序SCIP已经生成并确认有效的候选割，SPBS只添加经求解器检查的可行解。
+两者均不改变目标、约束、整数性或下界逻辑。因此，算法能够改善限时轨迹，同时保持
+与默认SCIP相同的可行性和最优性含义。补充材料给出完整复现协议。
+
+\section{计算结果与分析}
+
+\subsection{证据结构}
+
+六组证据分别回答不同问题：四个精确实例验证物理模型；2700次标称矩阵比较七种
+方法；960次配对实验隔离SPBS；1500次控制实验隔离第二阶段及其目标；300次析因
+实验解释制造因素；80次单因素实验检验参数扰动下的可运行性。支撑本文结论的全部
+保存解均通过相应物理MIP的独立检查。
+
+主要指标PDI评价整个原始--对偶轨迹，数值越低越好。统计先在制造实例内聚合重复
+求解器和训练随机性，再进行配对bootstrap、Wilcoxon检验和Holm校正，从而避免把
+随机种子误作独立制造证据\citep{gleixner2021miplib}。完整预算、环境、超参数、
+矩阵定义和验解容差见补充材料。
+
+\subsection{模型准确表示目标设备}
+
+表~\ref{tab:val-zh-new}给出纯配方和混流精确实例。两阶段均达到零gap，独立重构
+确认全部路线、资源、清洗、驻留和假片分配约束。
+
+\begin{table}[htbp]
+\centering
+\caption{两阶段模型的精确验证}
+\label{tab:val-zh-new}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lrrrrr}
+\toprule
+配置 & 产品数 & $\cmax$ & 路线总等待 & 路线最大等待 & 时间(s) \\
+\midrule
+纯$4\times1$ & 4 & 458 & 380 & 76 & 0.009 \\
+纯$2\times2$ & 4 & 584 & 112 & 28 & 0.039 \\
+混流 & 8 & 834 & 506 & 76 & 0.458 \\
+混流 & 16 & 1170 & 1550 & 99 & 24.390 \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+验证不仅说明模型能够求解。纯配方实例分别恢复两种旋转逻辑，混流实例则要求两种
+配方、两条装载锁路径、共享机械手和假片复用共存于一条可行轨迹。由纯配方到16片
+混流实例的搜索量快速增长，说明难度确实来自分配与资源次序耦合，也与\method{}
+针对的结构一致。
+
+\subsection{\method{}取得最强平均anytime性能}
+
+表~\ref{tab:main-zh-new}给出完整标称比较。\method{}在七种方法中同时取得最低
+平均PDI和最短平均求解时间，平均PDI较适配HEM和默认SCIP分别降低1.41\%和
+1.97\%，500次运行全部得到可行解。
+
+\begin{table}[htbp]
+\centering
+\caption{20个制造实例上的完整标称比较}
+\label{tab:main-zh-new}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lrrrr}
+\toprule
+方法 & 平均PDI & 平均gap(\%) & 平均时间(s) & 最优率(\%) \\
+\midrule
+SCIP & 16919.01 & \textbf{119.54} & 226.05 & \textbf{64.0} \\
+ACS & 16854.87 & 127.18 & 222.34 & 62.0 \\
+HEM-13D & 16823.18 & 127.24 & 219.65 & 62.4 \\
+HEM-13D+Beam & 16829.59 & 127.19 & 219.95 & 62.4 \\
+仅23维特征 & 16620.91 & 125.33 & 219.42 & 62.6 \\
+结构+贪心 & 16598.11 & 126.03 & 218.44 & 63.2 \\
+\method{} & \textbf{16585.70} & 126.01 & \textbf{218.32} & 63.2 \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+方法间的递进关系解释了优势来源。把通用表示替换为变量角色特征产生最大的组件收益，
+加入结构补全后均值继续改善，而束解码只有在表示和补全均结构感知后才进一步降低PDI；
+束搜索单独作用于13维HEM时反而略有恶化。因此，优势不是简单增加搜索宽度，而是
+在能够区分候选物理角色的表示上探索替代割序列。
+
+SCIP的最终gap和最优率略好，\method{}则在PDI和耗时领先。这反映两种目标侧重：
+默认选择对最终证明仍然强健，\method{}更早把割预算分配给分配--时序耦合结构，
+改善整个求解轨迹。对于有固定计算窗口、需要尽快得到高质量排程的工业场景，PDI和
+时间结果明确确立了所提算法的实用优势。
+
+\subsection{SPBS是最强的原始搜索机制}
+
+独立SPBS实验给出最清晰的机制证据。表~\ref{tab:spbs-zh-new}显示，自动SPBS把
+可行解获得率由51.67\%提高到100\%，平均PDI降低26.19\%；两项效应经Holm校正
+后仍显著（$p=2.55\times10^{-5}$和$p=3.46\times10^{-8}$）。
+
+\begin{table}[htbp]
+\centering
+\caption{48个实例和10个配对种子上的SPBS独立比较}
+\label{tab:spbs-zh-new}
+\begin{tabular}{lrrrr}
+\toprule
+初始解 & 运行数 & 可行解率(\%) & 最优率(\%) & 平均PDI \\
+\midrule
+自动SPBS & 480 & \textbf{100.00} & 54.58 & \textbf{20278.78} \\
+无初始解 & 480 & 51.67 & 51.67 & 27473.05 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+工业含义十分直接：没有结构初始解时，近一半运行在限时内无法形成完整排程；SPBS
+把设备离散骨架转化为早期incumbent，使SCIP既能继续改进该解，又能利用其剪枝。
+因此，26.19\%的PDI降幅同时来自原始可行性和后续精确搜索改善。SPBS不是可有可无
+的预处理，而是求解架构中影响整个anytime轨迹的关键环节。
+
+\subsection{第二阶段产生运行质量更优的排程}
+
+最大完工时间相同并不能证明第二阶段有价值。本文直接由产品事件时刻重构路线等待，
+由启用腔室的加工开始时刻重构节拍，避免把目标辅助slack当作绩效指标，并确保三种
+配置使用完全相同的物理定义。
+
+\begin{table}[htbp]
+\centering
+\caption{条件式排程精修的运行效果}
+\label{tab:stability-zh-new}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lrrrr}
+\toprule
+配置 & 路线总等待 & 路线最大等待 & 节拍CV & 节拍偏差 \\
+\midrule
+完整两阶段 & 2596.01 & 296.33 & \textbf{0.130} & \textbf{22.04} \\
+二次目标精修 & \textbf{2469.47} & \textbf{293.27} & 0.134 & 60.18 \\
+无第二阶段 & 5398.60 & 952.57 & 0.216 & 370.41 \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+相对无第二阶段，所提精修使路线总等待降低51.91\%，最大单段等待降低68.89\%，
+节拍CV降低39.70\%，节拍偏差降低94.05\%，四项经Holm校正后均显著。这些不是
+等价排程间的微小数值差，而是运行行为的实质改变：较短且不极端的等待降低驻留暴露，
+更规则的腔室开始时刻为下游搬运形成稳定节奏。
+
+与二次目标比较还能得到第二个结论。二次配置的路线等待均值略低，但所提线性目标
+使节拍偏差显著降低63.38\%。因此，所提第二阶段在把路线等待压低到远小于无精修
+方案的同时取得最好的节拍规则性，明确实现了其工业目标：不牺牲吞吐量，消除严重
+等待并形成可重复加工节奏。
+
+\subsection{混流规模而非统一加工时间增长主导难度}
+
+析因结果揭示明显复杂度转折。8和16晶圆全部证明最优，24和32晶圆的最优率降到
+36\%和20\%；平均PDI则由28.13和1876.54跃升到31155.94和32959.89。
+
+\begin{table}[htbp]
+\centering
+\caption{晶圆规模引起的计算转折}
+\begin{tabular}{rrrrr}
+\toprule
+晶圆数 & 运行数 & 最优率(\%) & 平均PDI & 平均时间(s) \\
+\midrule
+8 & 75 & 100 & 28.13 & 0.34 \\
+16 & 75 & 100 & 1876.54 & 33.86 \\
+24 & 75 & 36 & 31155.94 & 408.55 \\
+32 & 75 & 20 & 32959.89 & 433.20 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+PDI析因模型$R^2=0.998$，把转折归因于晶圆数量与配方构成的交互。在$1{:}1$
+混流下，24和32晶圆的额外交互PDI分别为37729.48和40788.63；所有预设加工时间
+尺度主效应和交互效应区间均跨零。困难由更多产品同时参与两种配方结构所形成的
+组合耦合驱动，而不是由所有加工时间等比例延长驱动。这一结果进一步支持算法设计：
+分配与时序的结构角色比通用问题时长更有信息量。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.96\linewidth]{Figure_DOE_PDI_effects.png}
+\caption{PDI预设析因效应。点为OLS系数，误差线为95\%置信区间，竖线表示零。}
+\end{figure}
+
+\subsection{敏感性与工业启示}
+
+80次单因素敏感性运行全部返回独立验证有效的可行解。较长清洗间隔对应最低平均
+PDI（28899.41），较慢搬运对应最高平均PDI（42478.32），与物理机理一致：减少
+清洗降低假片专用中断，搬运变慢则加剧共享机械手冲突。更重要的是，模型与精确求解
+链在全部预设扰动下保持可运行。
+
+完整证据给出三点工业启示。第一，吞吐量与排程质量应分层优化；仅用最大完工时间
+会保留大量可避免等待和节拍波动。第二，应用可行初始解是最强的单项计算干预，SPBS
+应被视为求解架构而不是实现细节。第三，学习表示必须对应MIP物理角色。束搜索效应
+的符号反转表明它与结构感知表示构成耦合设计：当候选表示已经对齐离散设备选择与
+连续时刻后，束解码才能稳定创造价值。
+
+本文显式分离的状态、资源和时序层也为在线到达、随机加工及模块故障追索提供直接
+扩展基础。有限批次证据已经确立核心结论：对双源混流设备，两阶段模型产生运行质量
+显著更优的排程，\method{}在比较方法中提供最强平均anytime求解性能。
+
+\section{结论}
+
+本文为双源混流旋转腔室组合设备建立模型与算法一体化框架。两阶段MILP完整表示
+产品晶圆、可复用真空区假片、混合旋转配方、清洗、共享机械手、装载锁和驻留约束。
+第一阶段优化端到端最大完工时间，第二阶段保持生产方案并改变其时序质量。
+
+实验结果明确证明两项创新的价值。第二阶段使路线总等待、最大等待、节拍变异和节拍
+偏差分别降低51.91\%、68.89\%、39.70\%和94.05\%。\method{}在完整2700次
+七方法比较中取得最低平均PDI和求解时间；其SPBS组件独立使PDI降低26.19\%，并把
+可行解获得率提高到100\%。析因实验进一步表明，主要困难来自规模与混流配方的交互，
+恰好对应重构特征所暴露的离散--连续耦合结构。
+
+因此，本文结论是明确的：所提两阶段MILP能够产生运行质量更优的排程，结构感知学习
+增强分支割能够改善精确求解的平均anytime性能。二者共同解决了现有单源或固定序列
+模型尚未覆盖的一类旋转腔室组合设备调度问题。
+
+\section*{CRediT作者贡献声明}
+作者共同完成概念设计、方法、软件、验证、形式分析、研究、可视化及论文撰写。
+
+\section*{利益冲突声明}
+作者声明不存在可能影响本文工作的已知财务利益或个人关系。
+
+\section*{数据与代码可用性}
+支撑本文结果的数据、数学实例、训练模型和源代码可向通信作者合理申请。正式发表版
+将给出永久公共归档地址。
+
+\section*{生成式人工智能与人工智能辅助技术使用声明}
+本文准备过程中，作者使用OpenAI Codex进行语言编辑、一致性检查和代码审查。作者
+已审查并编辑所有人工智能辅助内容，并对论文内容承担全部责任。
+
+\bibliographystyle{elsarticle-harv}
+\bibliography{rdmct_cie_references}
+
+\end{document}

@@ -1,0 +1,205 @@
+{
+  "stage": "doe",
+  "reference_method": "scip_default[manufacturing_doe]",
+  "sources": [
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\doe\\cie_doe_600s_mem2048_repro_v1\\combined\\cie_combined_20260812_204600.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\doe\\cie_doe_600s_mem2048_repro_v1\\combined\\cie_combined_20260812_204600_raw.csv",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\doe\\cie_doe_600s_mem2048_repro_v1\\seed5\\runs\\cie_benchmark_manufacturing_doe_20260811_133531.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\doe\\cie_doe_600s_mem2048_repro_v1\\seed5\\runs\\cie_benchmark_manufacturing_doe_20260811_133531_raw.csv",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\doe\\cie_doe_600s_mem2048_repro_v1\\seeds1to2\\runs\\cie_benchmark_manufacturing_doe_20260811_171921.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\doe\\cie_doe_600s_mem2048_repro_v1\\seeds1to2\\runs\\cie_benchmark_manufacturing_doe_20260811_171921_raw.csv",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\doe\\cie_doe_600s_mem2048_repro_v1\\seeds3to4\\runs\\cie_benchmark_manufacturing_doe_20260811_170217.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\doe\\cie_doe_600s_mem2048_repro_v1\\seeds3to4\\runs\\cie_benchmark_manufacturing_doe_20260811_170217_raw.csv"
+  ],
+  "unique_raw_runs": 300,
+  "manufacturing_instance_method_rows": 60,
+  "aggregation_unit": "manufacturing instance",
+  "repeat_aggregation": "solver and training repetitions are averaged within each manufacturing instance before inference",
+  "failure_definition": "non-empty runner error or solution_write_error; time and memory limits remain solver outcomes, not infrastructure failures",
+  "metric_availability": {
+    "primal_dual_integral": "all non-failed rows",
+    "gap": "non-failed rows with an incumbent",
+    "solving_time": "all non-failed rows, including limit outcomes"
+  },
+  "bootstrap": {
+    "confidence_level": 0.95,
+    "samples": 2000,
+    "seed": 2027,
+    "resampling_unit": "manufacturing instance"
+  },
+  "paired_tests": {
+    "test": "two-sided Wilcoxon signed-rank",
+    "difference": "comparison minus reference",
+    "holm_scope": "all reference-vs-comparison metric tests",
+    "metric_directions": {
+      "failure_rate": "lower",
+      "optimal_rate": "higher",
+      "incumbent_rate": "higher",
+      "primal_dual_integral": "lower",
+      "gap": "lower",
+      "solving_time": "lower"
+    }
+  },
+  "method_summaries": [
+    {
+      "method": "scip_default[manufacturing_doe]",
+      "n_instances": 60,
+      "raw_runs": 300,
+      "failure_rate": 0.0,
+      "failure_rate_ci_low": 0.0,
+      "failure_rate_ci_high": 0.0,
+      "n_failure_rate": 60,
+      "optimal_rate": 0.64,
+      "optimal_rate_ci_low": 0.52,
+      "optimal_rate_ci_high": 0.7566666666666667,
+      "n_optimal_rate": 60,
+      "incumbent_rate": 1.0,
+      "incumbent_rate_ci_low": 1.0,
+      "incumbent_rate_ci_high": 1.0,
+      "n_incumbent_rate": 60,
+      "primal_dual_integral": 16505.125091885504,
+      "primal_dual_integral_ci_low": 11683.894337082664,
+      "primal_dual_integral_ci_high": 21619.30276457789,
+      "n_primal_dual_integral": 60,
+      "gap": 1.1889469412125373,
+      "gap_ci_low": 0.8183711747867972,
+      "gap_ci_high": 1.5638276464001826,
+      "n_gap": 60,
+      "solving_time": 218.9889019516667,
+      "solving_time_ci_low": 158.00884130508328,
+      "solving_time_ci_high": 283.1206988937082,
+      "n_solving_time": 60
+    }
+  ],
+  "comparisons": [],
+  "doe": {
+    "reference_method": "scip_default[manufacturing_doe]",
+    "factors": {
+      "wafer_count": [
+        8,
+        16,
+        24,
+        32
+      ],
+      "recipe_mix": [
+        "pure41",
+        "3to1",
+        "1to1",
+        "1to3",
+        "pure22"
+      ],
+      "process_scale": [
+        0.9,
+        1.0,
+        1.1
+      ]
+    },
+    "baselines": {
+      "wafer_count": 8,
+      "recipe_mix": "pure41",
+      "process_scale": 0.9
+    },
+    "prespecified_interactions": [
+      "wafer_count:recipe_mix",
+      "wafer_count:process_scale",
+      "recipe_mix:process_scale"
+    ],
+    "complete_factorial_cells": 60,
+    "observed_factorial_cells": 60,
+    "models": [
+      {
+        "response": "failure_rate",
+        "n_observations": 60,
+        "n_parameters": 36,
+        "rank": 36,
+        "residual_degrees_freedom": 24,
+        "rmse": 0.0,
+        "r_squared": 1.0,
+        "adjusted_r_squared": 1.0,
+        "condition_number": 31.96287598842475,
+        "coding": "treatment coding; first listed level is the baseline",
+        "main_effect_interpretation": "conditional level contrast at baseline levels of other factors"
+      },
+      {
+        "response": "optimal_rate",
+        "n_observations": 60,
+        "n_parameters": 36,
+        "rank": 36,
+        "residual_degrees_freedom": 24,
+        "rmse": 0.0408248290463863,
+        "r_squared": 0.996790757381258,
+        "adjusted_r_squared": 0.9921106118955926,
+        "condition_number": 31.96287598842475,
+        "coding": "treatment coding; first listed level is the baseline",
+        "main_effect_interpretation": "conditional level contrast at baseline levels of other factors"
+      },
+      {
+        "response": "incumbent_rate",
+        "n_observations": 60,
+        "n_parameters": 36,
+        "rank": 36,
+        "residual_degrees_freedom": 24,
+        "rmse": 4.526797389797801e-16,
+        "r_squared": null,
+        "adjusted_r_squared": null,
+        "condition_number": 31.96287598842475,
+        "coding": "treatment coding; first listed level is the baseline",
+        "main_effect_interpretation": "conditional level contrast at baseline levels of other factors"
+      },
+      {
+        "response": "primal_dual_integral",
+        "n_observations": 60,
+        "n_parameters": 36,
+        "rank": 36,
+        "residual_degrees_freedom": 24,
+        "rmse": 1360.588113759107,
+        "r_squared": 0.9980036992057292,
+        "adjusted_r_squared": 0.9950924272140842,
+        "condition_number": 31.96287598842475,
+        "coding": "treatment coding; first listed level is the baseline",
+        "main_effect_interpretation": "conditional level contrast at baseline levels of other factors"
+      },
+      {
+        "response": "gap",
+        "n_observations": 60,
+        "n_parameters": 36,
+        "rank": 36,
+        "residual_degrees_freedom": 24,
+        "rmse": 0.2557954545430622,
+        "r_squared": 0.9887906692552091,
+        "adjusted_r_squared": 0.9724437285857224,
+        "condition_number": 31.96287598842475,
+        "coding": "treatment coding; first listed level is the baseline",
+        "main_effect_interpretation": "conditional level contrast at baseline levels of other factors"
+      },
+      {
+        "response": "solving_time",
+        "n_observations": 60,
+        "n_parameters": 36,
+        "rank": 36,
+        "residual_degrees_freedom": 24,
+        "rmse": 11.525188429955818,
+        "r_squared": 0.9991571410453074,
+        "adjusted_r_squared": 0.9979279717363807,
+        "condition_number": 31.96287598842475,
+        "coding": "treatment coding; first listed level is the baseline",
+        "main_effect_interpretation": "conditional level contrast at baseline levels of other factors"
+      }
+    ]
+  },
+  "plot_warning": null,
+  "outputs": {
+    "instance_metrics": "D:\\git\\git\\RDMCT-A3C\\cie\\results\\doe\\cie_doe_600s_mem2048_repro_v1\\submission_analysis\\cie_submission_instance_metrics.csv",
+    "method_summary": "D:\\git\\git\\RDMCT-A3C\\cie\\results\\doe\\cie_doe_600s_mem2048_repro_v1\\submission_analysis\\cie_submission_method_summary.csv",
+    "pairwise_tests": "D:\\git\\git\\RDMCT-A3C\\cie\\results\\doe\\cie_doe_600s_mem2048_repro_v1\\submission_analysis\\cie_submission_pairwise_tests.csv",
+    "doe_effects": "D:\\git\\git\\RDMCT-A3C\\cie\\results\\doe\\cie_doe_600s_mem2048_repro_v1\\submission_analysis\\cie_submission_doe_effects.csv",
+    "doe_diagnostics": "D:\\git\\git\\RDMCT-A3C\\cie\\results\\doe\\cie_doe_600s_mem2048_repro_v1\\submission_analysis\\cie_submission_doe_diagnostics.csv",
+    "doe_models": "D:\\git\\git\\RDMCT-A3C\\cie\\results\\doe\\cie_doe_600s_mem2048_repro_v1\\submission_analysis\\cie_submission_doe_models.json",
+    "doe_plots": [
+      "D:\\git\\git\\RDMCT-A3C\\cie\\results\\doe\\cie_doe_600s_mem2048_repro_v1\\submission_analysis\\cie_submission_doe_pdi_effects.png",
+      "D:\\git\\git\\RDMCT-A3C\\cie\\results\\doe\\cie_doe_600s_mem2048_repro_v1\\submission_analysis\\cie_submission_doe_diagnostics.png"
+    ],
+    "analysis": "D:\\git\\git\\RDMCT-A3C\\cie\\results\\doe\\cie_doe_600s_mem2048_repro_v1\\submission_analysis\\cie_submission_analysis.json",
+    "report": "D:\\git\\git\\RDMCT-A3C\\cie\\results\\doe\\cie_doe_600s_mem2048_repro_v1\\submission_analysis\\cie_submission_analysis.md"
+  }
+}

@@ -24,6 +24,8 @@ WAFER_RE = re.compile(r"^wafer_completion_(\d+)$")
 PROD_STAGE_RE = re.compile(r"^prod_stage_(start|end)_(\d+)_(.+)$")
 CH_RE = re.compile(r"^(full|mix_cycle|clean)_(start|end)_(\d+)_(\d+)$")
 PEC_STAGE_RE = re.compile(r"^pec_stage_(start|end)_(.+)_(vtr_load|pm|vtr_unload)$")
+FULL_USED_RE = re.compile(r"^full_batch_used_(\d+)_(\d+)$")
+MIX_USED_RE = re.compile(r"^mix_cycle_used_(\d+)_(\d+)$")
 BENCHMARK_META_FIELDS = frozenset({
     "methods", "seeds", "time_limit", "instance_count",
 })
@@ -37,6 +39,16 @@ BENCHMARK_ROW_FIELDS = frozenset({
     "status",
     "solution_file",
 })
+
+# SCIP solves the original in-memory model with a 1e-6 feasibility tolerance.
+# Re-reading a text .sol file can move a value by a few last-place decimal
+# digits. Keep the solver tolerance and add only a 1e-12 absolute serialization
+# allowance; violations above this bound still fail closed.
+SCIP_FEASIBILITY_TOLERANCE = 1.0e-6
+SOLUTION_SERIALIZATION_ALLOWANCE = 1.0e-12
+SOLUTION_FEASIBILITY_TOLERANCE = (
+    SCIP_FEASIBILITY_TOLERANCE + SOLUTION_SERIALIZATION_ALLOWANCE
+)
 
 
 def _parse_solution(path: Path) -> dict[str, float]:
@@ -82,6 +94,9 @@ def _validate(instance_path: Path, solution_path: Path) -> tuple[bool, str]:
     try:
         model.hideOutput(True)
         model.readProblem(str(instance_path))
+        model.setRealParam(
+            'numerics/feastol', SOLUTION_FEASIBILITY_TOLERANCE
+        )
         # The benchmark environment removes these secondary-objective-only
         # auxiliaries before the primary makespan solve.  Reproduce that exact
         # active model here; routing, resource, timing, and capacity constraints
@@ -99,7 +114,11 @@ def _validate(instance_path: Path, solution_path: Path) -> tuple[bool, str]:
             model.delCons(constraint)
         solution = model.readSolFile(str(solution_path))
         feasible = bool(model.checkSol(solution, printreason=False, completely=True))
-        note = f"checked active primary model; removed {len(removable)} inactive auxiliaries"
+        note = (
+            "checked active primary model at feasibility tolerance "
+            f"{SOLUTION_FEASIBILITY_TOLERANCE:.12g}; removed "
+            f"{len(removable)} inactive auxiliaries"
+        )
         return feasible, note if feasible else f"SCIP checkSol returned false; {note}"
     except Exception as exc:
         return False, f"{type(exc).__name__}: {exc}"
@@ -125,6 +144,54 @@ def _metrics(row: dict, values: dict[str, float]) -> dict:
     for wafer, completion in completions.items():
         release = product_stages.get((wafer, "atr_lp_al"), {}).get("start", 0.0)
         cycle_times.append(max(0.0, completion - release))
+
+    # Reconstruct route waiting directly from physical event times. Do not
+    # read schedule_wait_* or optional gap slacks: those auxiliaries are
+    # deliberately removed or can float when stage two is disabled.
+    route_waits = []
+    route_wait_pairs = (
+        ("al", "atr_lp_al"),
+        ("atr_al_llupper", "al"),
+        ("vtr_load", "llupper"),
+        ("pm", "vtr_load"),
+        ("vtr_unload", "pm"),
+        ("atr_lllower_lp", "lllower"),
+    )
+    for wafer in sorted(completions):
+        for later_stage, earlier_stage in route_wait_pairs:
+            later = product_stages.get((wafer, later_stage), {}).get("start", 0.0)
+            earlier = product_stages.get((wafer, earlier_stage), {}).get("end", 0.0)
+            route_waits.append(max(0.0, later - earlier))
+
+    cadence_gaps = []
+    cadence_deviations = []
+    for mode, used_pattern, start_template, epoch_prefix in (
+        ("full", FULL_USED_RE, "full_start", "full_batch_epoch"),
+        ("mix", MIX_USED_RE, "mix_cycle_start", "mix_cycle_epoch"),
+    ):
+        grouped = defaultdict(list)
+        for name, value in values.items():
+            match = used_pattern.match(name)
+            if not match or value < 0.5:
+                continue
+            chamber, position = (int(item) for item in match.groups())
+            epoch = 0
+            marker = f"{epoch_prefix}_{chamber}_{position}_"
+            for candidate, candidate_value in values.items():
+                if candidate.startswith(marker) and candidate_value >= 0.5:
+                    epoch = int(candidate.rsplit("_", 1)[-1])
+                    break
+            start = values.get(f"{start_template}_{chamber}_{position}", 0.0)
+            grouped[(mode, chamber, epoch)].append((position, start))
+        for items in grouped.values():
+            starts = [start for _, start in sorted(items)]
+            gaps = [right - left for left, right in zip(starts, starts[1:])]
+            cadence_gaps.extend(gaps)
+            cadence_deviations.extend(
+                abs(right - left) for left, right in zip(gaps, gaps[1:])
+            )
+    cadence_mean = statistics.fmean(cadence_gaps) if cadence_gaps else 0.0
+    cadence_std = statistics.pstdev(cadence_gaps) if cadence_gaps else 0.0
 
     atr_stage_names = {
         "atr_lp_al", "atr_hold_before_al", "atr_al_exchange",
@@ -210,6 +277,12 @@ def _metrics(row: dict, values: dict[str, float]) -> dict:
         "pec_peak_in_tool": _peak_overlap(pec_intervals),
         "clean_count": clean_count,
         "clean_time_share": clean_time / (2.0 * denom),
+        "physical_route_total_wait": sum(route_waits),
+        "physical_route_max_wait": max(route_waits, default=0.0),
+        "physical_cadence_cv": (
+            0.0 if cadence_mean <= 1e-12 else cadence_std / cadence_mean
+        ),
+        "physical_cadence_deviation_sum": sum(cadence_deviations),
         **ch_utils,
     }
 
@@ -308,6 +381,9 @@ def main():
         writer.writerows(output_rows)
     json_path = output_root / "cie_manufacturing_metrics.json"
     json_path.write_text(json.dumps({
+        'scip_feasibility_tolerance': SCIP_FEASIBILITY_TOLERANCE,
+        'solution_serialization_allowance': SOLUTION_SERIALIZATION_ALLOWANCE,
+        'solution_feasibility_tolerance': SOLUTION_FEASIBILITY_TOLERANCE,
         "source_benchmarks": benchmark_files,
         "solution_count": len(output_rows), "invalid_count": len(invalid),
         "rows": output_rows,

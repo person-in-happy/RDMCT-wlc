@@ -1,0 +1,209 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[margin=0.85in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs,array,graphicx}
+\usepackage[expansion=false]{microtype}
+\setlength{\emergencystretch}{3em}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.45em}
+
+\title{Supplementary material for\\
+Two-stage MILP scheduling and structure-aware learning-enhanced branch-and-cut for dual-source mixed-flow rotating-chamber cluster tools}
+\author{Anonymous author(s)}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Computational evidence design}
+
+The computational study separates formulation validation, nominal method
+comparison, mechanism-specific controls, manufacturing-factor analysis,
+parameter sensitivity, and distribution-shift evaluation. Table~\ref{tab:suites}
+gives the complete prespecified design. A run is identified by the instance,
+method, solver seed, training seed where applicable, and experimental profile.
+All observations are retained, including time-limited runs.
+
+\begin{table}[htbp]
+\centering
+\caption{Prespecified computational suites.}
+\label{tab:suites}
+\begin{tabular}{p{0.18\linewidth}p{0.52\linewidth}r}
+\toprule
+Suite & Design & Runs \\
+\midrule
+Validation & Four small physical cases, one exact solve each & 4 \\
+Nominal & 20 instances; two solver baselines with five solver seeds and five learned configurations with five solver and five training seeds & 2700 \\
+Two-stage stability & 20 instances, three refinement profiles, five solver seeds, and five training seeds & 1500 \\
+Factorial DOE & $4\times5\times3$ wafer-count, recipe-composition, and processing-scale cells with five solver seeds & 300 \\
+SPBS & 48 instances, automatic versus no warm start, ten matched solver seeds & 960 \\
+Sensitivity & Eight one-factor settings with ten solver seeds & 80 \\
+Distribution shift & Nine out-of-distribution instances; two solver baselines and five learned configurations with matched solver and training realizations & 729 \\
+\midrule
+Total & Excluding the four validation cases & 6269 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+All nominal, two-stage, factorial, SPBS, and sensitivity runs completed without
+execution failure. Every saved incumbent used in the reported statistics was
+checked independently against the corresponding mathematical instance. The
+distribution-shift suite is analysed using the same retention, validation,
+and statistical rules after its complete matrix is available.
+
+\section{Independent validation and numerical tolerance}
+
+The validator reloads each saved solution, fixes the primary decision values,
+and checks the active physical model independently of the learning policy.
+The checks cover routing and stage order, chamber and slot exclusivity, robot
+and load-lock use, recipe grouping, cleaning, residence-time limits, and
+vacuum-zone dummy-wafer capacity. Continuous residuals use the solver tolerance
+$10^{-6}$ plus a $10^{-12}$ serialization allowance, i.e., an effective
+threshold of $1.000001\times10^{-6}$. Binary and integer requirements are not
+relaxed. This allowance only accounts for the decimal text round trip of an
+otherwise accepted solver solution.
+
+\section{Event-time reconstruction of schedule stability}
+
+Schedule-stability metrics are reconstructed from physical event times rather
+than auxiliary objective variables. This makes the definition identical under
+all three refinement profiles. For product wafer $w$, define six nonnegative
+route waits:
+\begin{align}
+q_{w,1}&=[s^{\mathrm{PM}}_w-e^{\mathrm{VTRload}}_w]_+, &
+q_{w,2}&=[s^{\mathrm{VTRunload}}_w-e^{\mathrm{PM}}_w]_+,\\
+q_{w,3}&=[s^{\mathrm{AL}}_w-e^{\mathrm{ATR,LP\to AL}}_w]_+, &
+q_{w,4}&=[s^{\mathrm{ATR,AL\to LL_u}}_w-e^{\mathrm{AL}}_w]_+,\\
+q_{w,5}&=[s^{\mathrm{VTRload}}_w-e^{\mathrm{LL_u}}_w]_+, &
+q_{w,6}&=[s^{\mathrm{ATR,LL_l\to LP}}_w-e^{\mathrm{LL_l}}_w]_+,
+\end{align}
+where $[x]_+=\max(0,x)$ and $s$ and $e$ denote stage start and end times.
+The route-total and route-maximum metrics are
+\begin{equation}
+Q_{\mathrm{total}}=\sum_w\sum_{k=1}^{6}q_{w,k},\qquad
+Q_{\max}=\max_{w,k}q_{w,k}.
+\end{equation}
+
+Processing cadence is reconstructed from the ordered start times of active
+full-flow and mixed-flow chamber batches. For adjacent-start intervals
+$d_1,\ldots,d_m$, cadence variation is
+$\operatorname{CV}(d)=\operatorname{sd}(d)/\operatorname{mean}(d)$.
+The cadence-deviation sum is the sum of the absolute deviations used by the
+linear refinement objective after the discrete batch structure has been fixed.
+
+\begin{table}[htbp]
+\centering
+\caption{Instance-first means in the controlled two-stage experiment.}
+\begin{tabular}{lrrrr}
+\toprule
+Profile & Route-total & Route-maximum & Cadence CV & Cadence deviation \\
+\midrule
+Full & 2596.01 & 296.33 & \textbf{0.130} & \textbf{22.04} \\
+Linear-off & \textbf{2469.47} & \textbf{293.27} & 0.134 & 60.18 \\
+Stage2-off & 5398.60 & 952.57 & 0.216 & 370.41 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Relative to stage2-off, the full profile reduces route-total wait by 51.91\%,
+route-maximum wait by 68.89\%, cadence CV by 39.70\%, and cadence deviation by
+94.05\%; all four comparisons remain significant after Holm adjustment. The
+linear objective also reduces cadence deviation by 63.38\% relative to the
+quadratic profile. Its route-total, route-maximum, and cadence-CV differences
+from the quadratic profile are not Holm-adjusted significant.
+
+\section{Statistical protocol}
+
+The manufacturing instance is the unit of inference. Repeated solver and
+training realizations are first averaged within each instance and method or
+profile. Mean differences are reported with a nonparametric 95\% bootstrap
+interval. Paired two-sided Wilcoxon signed-rank tests use the same instance
+pairs, and all planned contrasts within an analysis family are adjusted by
+the Holm procedure. Failure, incumbent, and optimality indicators are retained
+as binary outcomes. Primal--dual integral (PDI) is the primary anytime measure;
+lower values are better. Time-limited runs remain in PDI, time, incumbent, and
+failure summaries.
+
+\section{Independent SPBS warm-start experiment}
+
+Table~\ref{tab:spbs} reports the controlled SPBS comparison. Automatic SPBS
+provides a valid incumbent in every run and reduces PDI by 7194.27 (26.19\%).
+The matched instance-level effects on incumbent availability and PDI both
+remain significant after multiplicity adjustment.
+
+\begin{table}[htbp]
+\centering
+\caption{SPBS warm-start comparison over 48 instances and ten matched seeds.}
+\label{tab:spbs}
+\begin{tabular}{lrrrr}
+\toprule
+Condition & Runs & Incumbent (\%) & Optimal (\%) & Mean PDI \\
+\midrule
+Automatic SPBS & 480 & \textbf{100.00} & 54.58 & \textbf{20278.78} \\
+No warm start & 480 & 51.67 & 51.67 & 27473.05 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The incumbent-rate difference is 48.33 percentage points (95\% CI
+$[34.58,62.29]$; Holm $p=2.55\times10^{-5}$). The PDI difference is 7194.27
+(95\% CI $[5145.78,9317.61]$; Holm $p=3.46\times10^{-8}$). The optimal-rate
+and elapsed-time differences do not remain significant after Holm adjustment.
+
+\section{One-factor parameter sensitivity}
+
+Table~\ref{tab:sensitivity} reports all eight prespecified settings. Each row
+contains ten default-SCIP runs and every run provides an independently valid
+incumbent. The experiment evaluates operational solvability under parameter
+perturbations; because it contains one method, it is not used for a cross-
+method robustness ranking.
+
+\begin{table}[htbp]
+\centering
+\caption{One-factor sensitivity results for the 24-wafer $1{:}1$ mixed-flow case.}
+\label{tab:sensitivity}
+\begin{tabular}{lrrr}
+\toprule
+Setting & Optimal (\%) & Mean PDI & Mean time (s) \\
+\midrule
+Nominal & 20 & 40728.91 & 515.09 \\
+Motion scale 0.8 & 40 & 37126.93 & 494.55 \\
+Motion scale 1.2 & 0 & 42478.32 & 539.79 \\
+Processing scale 0.8 & 60 & 33961.82 & 459.63 \\
+Processing scale 1.2 & 10 & 38663.67 & 508.40 \\
+Cleaning interval 3 & 10 & 38429.95 & 517.26 \\
+Cleaning interval 10 & 40 & 28899.41 & 497.91 \\
+Vacuum-zone dummy-wafer inventory 10 & 20 & 38152.52 & 484.80 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Factorial-model diagnostics}
+
+The factorial design contains 60 complete cells and five solver seeds per
+cell. The prespecified PDI model has $R^2=0.9980$. Wafer count and recipe
+composition exhibit strong interactions, whereas all prespecified processing-
+scale main-effect and interaction confidence intervals include zero.
+Figure~\ref{fig:diagnostics} provides the residual and influence diagnostics.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.96\linewidth]{Figure_S1_DOE_diagnostics.png}
+\caption{Diagnostic plots for the prespecified factorial PDI model fitted to
+the complete 300-run design.}
+\label{fig:diagnostics}
+\end{figure}
+
+\section{Reproducibility record}
+
+The reproducibility package preserves the instance manifest, solver and
+training seeds, method configuration, time and memory limits, trained-model
+metadata, raw row records, saved incumbent solutions, independently derived
+manufacturing metrics, and machine-readable statistical summaries. Every
+formal suite is accepted only when its expected matrix is complete, duplicate
+keys and execution errors are absent, saved solutions are covered one-to-one
+by independent validation, and the statistical input count equals the frozen
+raw count.
+
+\end{document}

@@ -1,6 +1,10 @@
 {
+  "scip_feasibility_tolerance": 1e-06,
+  "solution_serialization_allowance": 1e-12,
+  "solution_feasibility_tolerance": 1.000001e-06,
   "source_benchmarks": [
     "D:\\git\\git\\RDMCT-A3C\\cie\\results\\validation\\cie_validation_600s_repro_v1\\combined\\cie_combined_20260803_101139.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\validation\\cie_validation_600s_repro_v1\\combined\\cie_combined_20260812_213032.json",
     "D:\\git\\git\\RDMCT-A3C\\cie\\results\\validation\\cie_validation_600s_repro_v1\\seed1\\runs\\cie_benchmark_final_validation_20260803_101123.json"
   ],
   "solution_count": 4,
@@ -21,7 +25,7 @@
       "pdi": 0.0,
       "solution_file": "D:\\git\\git\\RDMCT-A3C\\cie\\results\\validation\\cie_validation_600s_repro_v1\\seed1\\solutions\\cie_validation__cie_validation_n004_f004_m000_proc100__scip_default__solverseed_1__trainseed_-1__final_validation.sol",
       "physically_feasible": true,
-      "validation_note": "checked active primary model; removed 13 inactive auxiliaries",
+      "validation_note": "checked active primary model at feasibility tolerance 1.000001e-06; removed 13 inactive auxiliaries",
       "total_wafers": 4,
       "cmax": 458.000001,
       "throughput_wph": 31.44104796628592,
@@ -35,6 +39,10 @@
       "pec_peak_in_tool": 0,
       "clean_count": 0,
       "clean_time_share": 0.0,
+      "physical_route_total_wait": 380.0,
+      "physical_route_max_wait": 76.0,
+      "physical_cadence_cv": 0.0,
+      "physical_cadence_deviation_sum": 0,
       "ch2_utilization": 0.393013099578574
     },
     {
@@ -52,7 +60,7 @@
       "pdi": 0.0,
       "solution_file": "D:\\git\\git\\RDMCT-A3C\\cie\\results\\validation\\cie_validation_600s_repro_v1\\seed1\\solutions\\cie_validation__cie_validation_n004_f000_m004_proc100__scip_default__solverseed_1__trainseed_-1__final_validation.sol",
       "physically_feasible": true,
-      "validation_note": "checked active primary model; removed 13 inactive auxiliaries",
+      "validation_note": "checked active primary model at feasibility tolerance 1.000001e-06; removed 13 inactive auxiliaries",
       "total_wafers": 4,
       "cmax": 584.000001,
       "throughput_wph": 24.65753420435354,
@@ -66,6 +74,10 @@
       "pec_peak_in_tool": 6,
       "clean_count": 0,
       "clean_time_share": 0.0,
+      "physical_route_total_wait": 112.0,
+      "physical_route_max_wait": 28.0,
+      "physical_cadence_cv": 0.0,
+      "physical_cadence_deviation_sum": 0,
       "ch2_utilization": 0.6164383551088385,
       "ch3_utilization": 0.6164383551088385
     },
@@ -84,7 +96,7 @@
       "pdi": 0.0,
       "solution_file": "D:\\git\\git\\RDMCT-A3C\\cie\\results\\validation\\cie_validation_600s_repro_v1\\seed1\\solutions\\cie_validation__cie_validation_n008_f004_m004_proc100__scip_default__solverseed_1__trainseed_-1__final_validation.sol",
       "physically_feasible": true,
-      "validation_note": "checked active primary model; removed 13 inactive auxiliaries",
+      "validation_note": "checked active primary model at feasibility tolerance 1.000001e-06; removed 13 inactive auxiliaries",
       "total_wafers": 8,
       "cmax": 834.000001,
       "throughput_wph": 34.5323740593137,
@@ -98,6 +110,10 @@
       "pec_peak_in_tool": 6,
       "clean_count": 0,
       "clean_time_share": 0.0,
+      "physical_route_total_wait": 505.9999999999983,
+      "physical_route_max_wait": 75.999999999999,
+      "physical_cadence_cv": 0.0,
+      "physical_cadence_deviation_sum": 0,
       "ch2_utilization": 0.647482013612132,
       "ch3_utilization": 0.43165467574142125
     },
@@ -116,7 +132,7 @@
       "pdi": 2303.7606837606836,
       "solution_file": "D:\\git\\git\\RDMCT-A3C\\cie\\results\\validation\\cie_validation_600s_repro_v1\\seed1\\solutions\\cie_validation__cie_validation_n016_f008_m008_proc100__scip_default__solverseed_1__trainseed_-1__final_validation.sol",
       "physically_feasible": true,
-      "validation_note": "checked active primary model; removed 13 inactive auxiliaries",
+      "validation_note": "checked active primary model at feasibility tolerance 1.000001e-06; removed 13 inactive auxiliaries",
       "total_wafers": 16,
       "cmax": 1170.000001,
       "throughput_wph": 49.230769188691646,
@@ -130,6 +146,10 @@
       "pec_peak_in_tool": 4,
       "clean_count": 0,
       "clean_time_share": 0.0,
+      "physical_route_total_wait": 1550.0000040000004,
+      "physical_route_max_wait": 98.999999,
+      "physical_cadence_cv": 0.058823529411764705,
+      "physical_cadence_deviation_sum": 0.0,
       "ch2_utilization": 0.6153846148586456,
       "ch3_utilization": 0.6153846148586457
     }

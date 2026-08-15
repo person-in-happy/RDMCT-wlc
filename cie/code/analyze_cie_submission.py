@@ -27,6 +27,12 @@ STAGES = ("validation", "main", "stability", "doe", "spbs", "sensitivity", "ood"
 RATE_METRICS = ("failure_rate", "optimal_rate", "incumbent_rate")
 VALUE_METRICS = ("primal_dual_integral", "gap", "solving_time")
 ALL_METRICS = RATE_METRICS + VALUE_METRICS
+STABILITY_VALUE_METRICS = (
+    "physical_route_total_wait",
+    "physical_route_max_wait",
+    "physical_cadence_cv",
+    "physical_cadence_deviation_sum",
+)
 METRIC_DIRECTIONS = {
     "failure_rate": "lower",
     "optimal_rate": "higher",
@@ -34,6 +40,10 @@ METRIC_DIRECTIONS = {
     "primal_dual_integral": "lower",
     "gap": "lower",
     "solving_time": "lower",
+    "physical_route_total_wait": "lower",
+    "physical_route_max_wait": "lower",
+    "physical_cadence_cv": "lower",
+    "physical_cadence_deviation_sum": "lower",
 }
 DOE_FACTORS = ("wafer_count", "recipe_mix", "process_scale")
 DOE_INTERACTIONS = (
@@ -152,6 +162,73 @@ def _variant(row: dict, stage: str, context: str) -> str:
     return method
 
 
+def _value_metrics(stage: str) -> tuple[str, ...]:
+    if stage == "stability":
+        return VALUE_METRICS + STABILITY_VALUE_METRICS
+    return VALUE_METRICS
+
+
+def _all_metrics(stage: str) -> tuple[str, ...]:
+    return RATE_METRICS + _value_metrics(stage)
+
+
+def _solution_key(value) -> str:
+    text = _text(value)
+    if not text:
+        return ""
+    return str(Path(text).resolve()).casefold()
+
+
+def _load_independent_stability_metrics(root: Path) -> dict[str, dict]:
+    path = root / "analysis" / "cie_manufacturing_metrics.csv"
+    if not path.is_file():
+        raise AnalysisError(
+            "stability analysis requires independently reconstructed metrics at "
+            f"{path}; run analyze_cie_solutions.py first"
+        )
+    required = {
+        "solution_file",
+        "physically_feasible",
+        *STABILITY_VALUE_METRICS,
+    }
+    metrics: dict[str, dict] = {}
+    with path.open("r", encoding="utf-8-sig", newline="") as stream:
+        reader = csv.DictReader(stream)
+        missing = sorted(required - set(reader.fieldnames or ()))
+        if missing:
+            raise AnalysisError(
+                f"{path}: missing independent stability fields: {', '.join(missing)}"
+            )
+        for index, raw in enumerate(reader, start=2):
+            context = _context(path, index)
+            if not _boolean(
+                raw.get("physically_feasible"), "physically_feasible", context
+            ):
+                raise AnalysisError(
+                    f"{context}: independently reconstructed solution is infeasible"
+                )
+            key = _solution_key(
+                _required_text(raw.get("solution_file"), "solution_file", context)
+            )
+            values = {
+                field: _number(raw.get(field), field, context)
+                for field in STABILITY_VALUE_METRICS
+            }
+            if any(value is None for value in values.values()):
+                raise AnalysisError(
+                    f"{context}: independent stability metric is empty"
+                )
+            previous = metrics.get(key)
+            if previous is not None and previous != values:
+                raise AnalysisError(
+                    f"{context}: conflicting independent metrics for {key}"
+                )
+            metrics[key] = values
+    if not metrics:
+        raise AnalysisError(f"{path}: independent stability table is empty")
+    return metrics
+
+
 def _normalize_row(raw: dict, stage: str, context: str) -> dict:
     if not isinstance(raw, dict):
         raise AnalysisError(f"{context}: benchmark row must be an object")
@@ -193,6 +270,13 @@ def _normalize_row(raw: dict, stage: str, context: str) -> dict:
         "solution_write_error": solution_error,
         "failure": failure,
     }
+    if stage == "stability":
+        for field in STABILITY_VALUE_METRICS:
+            row[field] = _number(raw.get(field), field, context)
+            if not failure and row[field] is None:
+                raise AnalysisError(
+                    f"{context}: non-failed stability row has no finite {field!r}"
+                )
     row["variant"] = _variant(row, stage, context)
     if not failure:
         for field in ("solving_time", "primal_dual_integral"):
@@ -263,6 +347,22 @@ def load_rows(input_dir: str | Path, stage: str) -> tuple[list[dict], list[str]]
             f"no combined JSON rows or *_raw.csv observations found under {root}"
         )
 
+    if stage == "stability":
+        independent = _load_independent_stability_metrics(root)
+        enriched = []
+        for raw, context in records:
+            solution_key = _solution_key(raw.get("solution_file"))
+            values = independent.get(solution_key)
+            if values is None:
+                raise AnalysisError(
+                    f"{context}: no independent physical metrics for solution "
+                    f"{raw.get('solution_file')!r}"
+                )
+            updated = dict(raw)
+            updated.update(values)
+            enriched.append((updated, context))
+        records = enriched
+
     unique: dict[tuple, dict] = {}
     first_context: dict[tuple, str] = {}
     for raw, context in records:
@@ -285,7 +385,7 @@ def _mean(values: Iterable[float]):
     return statistics.fmean(values) if values else None
 
 
-def aggregate_instances(rows: Sequence[dict]) -> list[dict]:
+def aggregate_instances(rows: Sequence[dict], stage: str) -> list[dict]:
     """Collapse solver and training repetitions to manufacturing instances."""
 
     grouped: dict[tuple, list[dict]] = defaultdict(list)
@@ -295,27 +395,12 @@ def aggregate_instances(rows: Sequence[dict]) -> list[dict]:
     results = []
     for (suite, path, method), repeats in sorted(grouped.items()):
         successful = [row for row in repeats if not row["failure"]]
-        pdi = [
-            row["primal_dual_integral"]
-            for row in successful
-            if row["primal_dual_integral"] is not None
-        ]
-        gaps = [
-            row["gap"]
-            for row in successful
-            if row["has_incumbent"] and row["gap"] is not None
-        ]
-        times = [
-            row["solving_time"]
-            for row in successful
-            if row["solving_time"] is not None
-        ]
+        value_metrics = _value_metrics(stage)
         instance_name = next(
             (row["instance"] for row in repeats if row["instance"]),
             re.split(r"[\\/]", path)[-1],
         )
-        results.append(
-            {
+        result = {
                 "suite": suite,
                 "path": path,
                 "instance": instance_name,
@@ -329,14 +414,17 @@ def aggregate_instances(rows: Sequence[dict]) -> list[dict]:
                 "incumbent_rate": _mean(
                     row["has_incumbent"] and not row["failure"] for row in repeats
                 ),
-                "primal_dual_integral": _mean(pdi),
-                "n_primal_dual_integral": len(pdi),
-                "gap": _mean(gaps),
-                "n_gap": len(gaps),
-                "solving_time": _mean(times),
-                "n_solving_time": len(times),
             }
-        )
+        for metric in value_metrics:
+            values = [
+                row[metric]
+                for row in successful
+                if row[metric] is not None
+                and (metric != "gap" or row["has_incumbent"])
+            ]
+            result[metric] = _mean(values)
+            result[f"n_{metric}"] = len(values)
+        results.append(result)
     return results
 
 
@@ -363,7 +451,8 @@ def _bootstrap_mean_ci(
 
 
 def summarize_methods(
-    instance_rows: Sequence[dict], bootstrap_samples: int, bootstrap_seed: int
+    instance_rows: Sequence[dict], metrics: Sequence[str],
+    bootstrap_samples: int, bootstrap_seed: int
 ) -> list[dict]:
     by_method: dict[str, list[dict]] = defaultdict(list)
     for row in instance_rows:
@@ -376,7 +465,7 @@ def summarize_methods(
             "n_instances": len(method_rows),
             "raw_runs": sum(row["repeat_count"] for row in method_rows),
         }
-        for metric in ALL_METRICS:
+        for metric in metrics:
             values = [float(row[metric]) for row in method_rows if _finite(row[metric])]
             low, high = _bootstrap_mean_ci(
                 values, bootstrap_samples, bootstrap_seed + seed_offset
@@ -425,6 +514,7 @@ def _holm(records: list[dict]) -> None:
 def compare_methods(
     instance_rows: Sequence[dict],
     reference: str,
+    metrics: Sequence[str],
     bootstrap_samples: int,
     bootstrap_seed: int,
 ) -> list[dict]:
@@ -453,7 +543,7 @@ def compare_methods(
             raise AnalysisError(
                 f"{reference!r} and {comparison!r} have no common instances"
             )
-        for metric in ALL_METRICS:
+        for metric in metrics:
             pairs = [
                 (
                     float(by_method[reference][key][metric]),
@@ -873,7 +963,7 @@ def _create_doe_plots(
         axis.set_title("Prespecified DOE effects (non-AI generated)")
         figure.tight_layout()
         path = output_dir / "cie_submission_doe_pdi_effects.png"
-        figure.savefig(path, dpi=200)
+        figure.savefig(path, dpi=600)
         plt.close(figure)
         paths.append(str(path))
 
@@ -895,7 +985,7 @@ def _create_doe_plots(
     figure.suptitle("DOE residual diagnostics (non-AI generated)")
     figure.tight_layout()
     path = output_dir / "cie_submission_doe_diagnostics.png"
-    figure.savefig(path, dpi=200)
+    figure.savefig(path, dpi=600)
     plt.close(figure)
     paths.append(str(path))
     return paths, None
@@ -916,12 +1006,14 @@ def analyze_submission(
     if bootstrap_samples < 1:
         raise AnalysisError("bootstrap_samples must be at least 1")
     rows, sources = load_rows(input_dir, stage)
-    instances = aggregate_instances(rows)
+    value_metrics = _value_metrics(stage)
+    metrics = _all_metrics(stage)
+    instances = aggregate_instances(rows, stage)
     summaries = summarize_methods(
-        instances, bootstrap_samples, bootstrap_seed
+        instances, metrics, bootstrap_samples, bootstrap_seed
     )
     comparisons = compare_methods(
-        instances, reference, bootstrap_samples, bootstrap_seed
+        instances, reference, metrics, bootstrap_samples, bootstrap_seed
     )
 
     doe_metadata = None
@@ -948,12 +1040,12 @@ def analyze_submission(
         *RATE_METRICS,
         *[
             field
-            for metric in VALUE_METRICS
+            for metric in value_metrics
             for field in (metric, f"n_{metric}")
         ],
     ]
     summary_fields = ["method", "n_instances", "raw_runs"]
-    for metric in ALL_METRICS:
+    for metric in metrics:
         summary_fields.extend(
             (
                 metric,
@@ -1066,6 +1158,14 @@ def analyze_submission(
             "primal_dual_integral": "all non-failed rows",
             "gap": "non-failed rows with an incumbent",
             "solving_time": "all non-failed rows, including limit outcomes",
+            **(
+                {
+                    metric: "all non-failed stability rows"
+                    for metric in STABILITY_VALUE_METRICS
+                }
+                if stage == "stability"
+                else {}
+            ),
         },
         "bootstrap": {
             "confidence_level": 0.95,
@@ -1077,7 +1177,9 @@ def analyze_submission(
             "test": "two-sided Wilcoxon signed-rank",
             "difference": "comparison minus reference",
             "holm_scope": "all reference-vs-comparison metric tests",
-            "metric_directions": METRIC_DIRECTIONS,
+            "metric_directions": {
+                metric: METRIC_DIRECTIONS[metric] for metric in metrics
+            },
         },
         "method_summaries": summaries,
         "comparisons": comparisons,

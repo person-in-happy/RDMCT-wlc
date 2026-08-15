@@ -1,0 +1,115 @@
+{
+  "reference_method": "scip_default[manufacturing_doe]",
+  "factors": {
+    "wafer_count": [
+      8,
+      16,
+      24,
+      32
+    ],
+    "recipe_mix": [
+      "pure41",
+      "3to1",
+      "1to1",
+      "1to3",
+      "pure22"
+    ],
+    "process_scale": [
+      0.9,
+      1.0,
+      1.1
+    ]
+  },
+  "baselines": {
+    "wafer_count": 8,
+    "recipe_mix": "pure41",
+    "process_scale": 0.9
+  },
+  "prespecified_interactions": [
+    "wafer_count:recipe_mix",
+    "wafer_count:process_scale",
+    "recipe_mix:process_scale"
+  ],
+  "complete_factorial_cells": 60,
+  "observed_factorial_cells": 60,
+  "models": [
+    {
+      "response": "failure_rate",
+      "n_observations": 60,
+      "n_parameters": 36,
+      "rank": 36,
+      "residual_degrees_freedom": 24,
+      "rmse": 0.0,
+      "r_squared": 1.0,
+      "adjusted_r_squared": 1.0,
+      "condition_number": 31.96287598842475,
+      "coding": "treatment coding; first listed level is the baseline",
+      "main_effect_interpretation": "conditional level contrast at baseline levels of other factors"
+    },
+    {
+      "response": "optimal_rate",
+      "n_observations": 60,
+      "n_parameters": 36,
+      "rank": 36,
+      "residual_degrees_freedom": 24,
+      "rmse": 0.0408248290463863,
+      "r_squared": 0.996790757381258,
+      "adjusted_r_squared": 0.9921106118955926,
+      "condition_number": 31.96287598842475,
+      "coding": "treatment coding; first listed level is the baseline",
+      "main_effect_interpretation": "conditional level contrast at baseline levels of other factors"
+    },
+    {
+      "response": "incumbent_rate",
+      "n_observations": 60,
+      "n_parameters": 36,
+      "rank": 36,
+      "residual_degrees_freedom": 24,
+      "rmse": 4.526797389797801e-16,
+      "r_squared": null,
+      "adjusted_r_squared": null,
+      "condition_number": 31.96287598842475,
+      "coding": "treatment coding; first listed level is the baseline",
+      "main_effect_interpretation": "conditional level contrast at baseline levels of other factors"
+    },
+    {
+      "response": "primal_dual_integral",
+      "n_observations": 60,
+      "n_parameters": 36,
+      "rank": 36,
+      "residual_degrees_freedom": 24,
+      "rmse": 1360.588113759107,
+      "r_squared": 0.9980036992057292,
+      "adjusted_r_squared": 0.9950924272140842,
+      "condition_number": 31.96287598842475,
+      "coding": "treatment coding; first listed level is the baseline",
+      "main_effect_interpretation": "conditional level contrast at baseline levels of other factors"
+    },
+    {
+      "response": "gap",
+      "n_observations": 60,
+      "n_parameters": 36,
+      "rank": 36,
+      "residual_degrees_freedom": 24,
+      "rmse": 0.2557954545430622,
+      "r_squared": 0.9887906692552091,
+      "adjusted_r_squared": 0.9724437285857224,
+      "condition_number": 31.96287598842475,
+      "coding": "treatment coding; first listed level is the baseline",
+      "main_effect_interpretation": "conditional level contrast at baseline levels of other factors"
+    },
+    {
+      "response": "solving_time",
+      "n_observations": 60,
+      "n_parameters": 36,
+      "rank": 36,
+      "residual_degrees_freedom": 24,
+      "rmse": 11.525188429955818,
+      "r_squared": 0.9991571410453074,
+      "adjusted_r_squared": 0.9979279717363807,
+      "condition_number": 31.96287598842475,
+      "coding": "treatment coding; first listed level is the baseline",
+      "main_effect_interpretation": "conditional level contrast at baseline levels of other factors"
+    }
+  ]
+}

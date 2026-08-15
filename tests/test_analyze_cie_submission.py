@@ -189,3 +189,61 @@ def test_doe_effects_interactions_ci_and_diagnostics(tmp_path):
         diagnostics = list(csv.DictReader(stream))
     assert len(diagnostics) == len(MODULE.ALL_METRICS) * 8
     assert {row["response"] for row in diagnostics} == set(MODULE.ALL_METRICS)
+
+
+def test_stability_analysis_includes_physical_schedule_metrics(tmp_path):
+    rows = []
+    for instance_index in range(6):
+        instance = tmp_path / f"case_{instance_index}.lp"
+        for profile, offset in (("full", 0.0), ("stage2_off", 10.0)):
+            solution_file = tmp_path / f"case_{instance_index}_{profile}.sol"
+            row = _row(
+                instance, "proposed", 1, 1, 20 + offset, 0.1, 10 + offset,
+                run_label=f"stability_{profile}_trainseed_1",
+                stability_profile=profile,
+                solution_file=str(solution_file),
+            )
+            rows.append(row)
+    input_dir = tmp_path / "input"
+    input_dir.mkdir()
+    path = input_dir / "campaign_raw.csv"
+    fields = FIELDS + ["stability_profile", "solution_file"]
+    with path.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    analysis_dir = input_dir / "analysis"
+    analysis_dir.mkdir()
+    metric_path = analysis_dir / "cie_manufacturing_metrics.csv"
+    metric_fields = [
+        "solution_file",
+        "physically_feasible",
+        *MODULE.STABILITY_VALUE_METRICS,
+    ]
+    with metric_path.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=metric_fields)
+        writer.writeheader()
+        for row in rows:
+            offset = 0.0 if row["stability_profile"] == "full" else 10.0
+            writer.writerow({
+                "solution_file": row["solution_file"],
+                "physically_feasible": True,
+                "physical_route_total_wait": 100 + offset,
+                "physical_route_max_wait": 20 + offset,
+                "physical_cadence_cv": 0.1 + offset / 100,
+                "physical_cadence_deviation_sum": 5 + offset,
+            })
+
+    payload = MODULE.analyze_submission(
+        input_dir, tmp_path / "output", "stability", "proposed[full]",
+        bootstrap_samples=50, make_plots=False,
+    )
+
+    expected = set(MODULE.ALL_METRICS + MODULE.STABILITY_VALUE_METRICS)
+    assert {row["metric"] for row in payload["comparisons"]} == expected
+    total_wait = next(
+        row for row in payload["comparisons"]
+        if row["metric"] == "physical_route_total_wait"
+    )
+    assert total_wait["mean_difference_comparison_minus_reference"] == 10.0

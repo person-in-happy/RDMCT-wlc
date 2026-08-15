@@ -10,10 +10,21 @@ from cie.code.audit_cie_submission import (
     PRIMARY_KEY_FIELDS,
     REQUIRED_ROW_FIELDS,
     PrimaryKey,
+    _canonical_conflict_value,
     audit_campaign,
     build_expected_matrix,
     main,
 )
+
+
+def test_csv_jsonl_boolean_values_are_compared_semantically():
+    assert _canonical_conflict_value("has_incumbent", "False") is False
+    assert _canonical_conflict_value("has_incumbent", False) is False
+    assert _canonical_conflict_value("has_incumbent", "true") is True
+    assert _canonical_conflict_value("has_incumbent", True) is True
+    assert _canonical_conflict_value("has_incumbent", "False") != (
+        _canonical_conflict_value("has_incumbent", True)
+    )
 
 
 SUITES = {

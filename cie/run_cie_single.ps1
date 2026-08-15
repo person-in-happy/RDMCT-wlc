@@ -32,6 +32,66 @@ $RepoRoot = Split-Path $PSScriptRoot -Parent
 $Runner = Join-Path $PSScriptRoot 'run_cie.ps1'
 Set-Location $RepoRoot
 
+function New-CieRunMutex {
+    param(
+        [Parameter(Mandatory = $true)][string]$Repository,
+        [Parameter(Mandatory = $true)][string]$JobStage,
+        [string]$JobCampaign,
+        [string]$JobShard
+    )
+    $identity = '{0}|{1}|{2}|{3}' -f $Repository, $JobStage, $JobCampaign, $JobShard
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try {
+        $hashBytes = $sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($identity))
+    } finally {
+        $sha.Dispose()
+    }
+    $hash = -join ($hashBytes[0..15] | ForEach-Object { $_.ToString('x2') })
+    return New-Object Threading.Mutex($false, ('Local\RDMCT_CIE_{0}' -f $hash))
+}
+
+function Get-ConflictingCieProcesses {
+    param(
+        [Parameter(Mandatory = $true)][string]$JobStage,
+        [string]$JobCampaign,
+        [string]$JobShard
+    )
+    if ([string]::IsNullOrWhiteSpace($JobCampaign)) { return @() }
+    $stagePattern = '(?i)(?:^|\s)-Stage\s+' + [regex]::Escape($JobStage) + '(?:\s|$)'
+    $campaignPattern = '(?i)(?:^|\s)-CampaignId\s+' + [regex]::Escape($JobCampaign) + '(?:\s|$)'
+    $shardPattern = if ([string]::IsNullOrWhiteSpace($JobShard)) {
+        $null
+    } else {
+        '(?i)(?:^|\s)-ShardTag\s+' + [regex]::Escape($JobShard) + '(?:\s|$)'
+    }
+    $outputSuffix = if ([string]::IsNullOrWhiteSpace($JobShard)) {
+        [regex]::Escape($JobCampaign) + '[\\/]runs'
+    } else {
+        [regex]::Escape($JobCampaign) + '[\\/]' + [regex]::Escape($JobShard) + '[\\/]runs'
+    }
+    $benchmarkPattern = '(?i)(?:^|\s)--output_dir\s+\S*' + $outputSuffix + '(?:\s|$)'
+    return @(
+        Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+            Where-Object {
+                $runnerMatch = (
+                    $_.CommandLine -match '(?i)run_cie\.ps1' -and
+                    $_.CommandLine -match $stagePattern -and
+                    $_.CommandLine -match $campaignPattern -and
+                    $(if ($null -eq $shardPattern) {
+                        $_.CommandLine -notmatch '(?i)(?:^|\s)-ShardTag(?:\s|$)'
+                    } else {
+                        $_.CommandLine -match $shardPattern
+                    })
+                )
+                $benchmarkMatch = (
+                    $_.CommandLine -match '(?i)run_cie_benchmarks\.py' -and
+                    $_.CommandLine -match $benchmarkPattern
+                )
+                [int]$_.ProcessId -ne $PID -and ($runnerMatch -or $benchmarkMatch)
+            }
+    )
+}
+
 & python -c "import sys; print(sys.executable)" 1>$null 2>$null
 if ($LASTEXITCODE -ne 0) { throw 'Activate a Python environment with the project dependencies first.' }
 if ($env:PYTORCH_CUDA_ALLOC_CONF -match 'expandable_segments') { Remove-Item Env:PYTORCH_CUDA_ALLOC_CONF }
@@ -41,6 +101,22 @@ if (-not $LogId) {
     elseif ($CampaignId) { $LogId = $CampaignId }
     else { $LogId = "${Stage}_$(Get-Date -Format 'yyyyMMdd_HHmmss')" }
 }
+$runMutex = New-CieRunMutex -Repository $RepoRoot -JobStage $Stage -JobCampaign $CampaignId -JobShard $ShardTag
+$runMutexOwned = $false
+try {
+    try {
+        $runMutexOwned = $runMutex.WaitOne(0)
+    } catch [Threading.AbandonedMutexException] {
+        $runMutexOwned = $true
+    }
+    if (-not $runMutexOwned) {
+        throw ('Another launcher already owns this stage/campaign/shard: {0} / {1} / {2}' -f $Stage, $CampaignId, $ShardTag)
+    }
+    $conflicts = @(Get-ConflictingCieProcesses -JobStage $Stage -JobCampaign $CampaignId -JobShard $ShardTag)
+    if ($conflicts.Count -gt 0) {
+        $processIds = @($conflicts | ForEach-Object { [string]$_.ProcessId }) -join ','
+        throw ('An existing C&IE run already targets this stage/campaign/shard (PID: {0}). Stop it or resume only after it exits.' -f $processIds)
+    }
 $logRoot = Join-Path $RepoRoot "cie\results\logs\$LogId"
 New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
 $stdout = Join-Path $logRoot 'run.out.log'
@@ -152,6 +228,12 @@ if ($process.ExitCode -ne 0) {
     Write-Host "Failed. Logs: $stdout ; $stderr" -ForegroundColor Red
     if (Test-Path -LiteralPath $stderr) { Get-Content -LiteralPath $stderr -Tail 12 }
     exit $process.ExitCode
+}
+} finally {
+    if ($runMutexOwned) {
+        try { $runMutex.ReleaseMutex() } catch { }
+    }
+    $runMutex.Dispose()
 }
 Write-Host "Completed: $Stage" -ForegroundColor Green
 Write-Host "Logs: $logRoot" -ForegroundColor DarkGray

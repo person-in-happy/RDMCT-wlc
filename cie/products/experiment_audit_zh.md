@@ -1,151 +1,108 @@
-# C&IE 实验完成度与续跑审计
+# C&IE 实验完成度与投稿证据审计
 
-> **当前结论更新于2026-08-02。** 本文下半部保留的2026-07-28命令仅为故障历史，严禁再次执行。当前正式顺序和单行命令只以[`../docs/cie_submission_runbook_zh.md`](../docs/cie_submission_runbook_zh.md)为准，协议定义以[`../README.md`](../README.md)为准。
-
-## 2026-08-02 当前快照
-
-- 旧`cie_ood_1200s_mem4096_final_v1`已完成729/729，三分片各243条，无重复、无runner/solution-write error，但729条全部`timelimit`。SCIP与ACS各27/27有incumbent；每个学习方法族只有27/135，且旧training seeds 2--5均无incumbent。
-- 旧15个checkpoint的`experiment.seed`均为1，且活动跨代码修改；旧OOD只能作为工程诊断，不能进正式性能表。`timelimit`本身并非无效，排除根因是checkpoint provenance。
-- 旧Main为880/2700且claim-ready门禁未通过；旧SPBS只有none组336条并含一条SCIP phase error；它们均不能通过挑选有利行支持算法优势。
-- 正式冻结准备已建立：commit`08f3d5959ca49dc836c0ad9d3b957bdbed7ab181`、运行前clean记录、90个LP hash，数据生成81/81成功。
-- 新HEM、feature-only与Proposed检查点均为5/5，共15/15；冻结清单已逐项记录路径、checkpoint/variant hash和三处seed，runner已强制消费。ACS validation 720/720已完成并冻结。core 48、sensitivity 8和OOD 9个warm starts均完成；OOD最终9/9、failures=0，最后一个修复解已在当前完整LP上独立验解通过。正式benchmark当前为0/6273。
-- 2026-08-02续跑协议已补强：新训练检查点保存完整训练状态并按epoch恢复；ACS逐求解写入带资产签名的JSONL；benchmark沿用逐评估JSONL；warm start按LP哈希复用。统一通过`run_cie_single.ps1`中断和原命令恢复，最多重做当前未提交的原子单元。
-- 四个归档零gap单例及一个四方法旧单例只作为“非验证性模型健全性检查”写入初稿；完整归档状态清单仍需生成，不能只引用89秒的有利行。
-
-model-evidence已完成81/81个LP，模型规模raw/summary/manifest均已生成，CIE相关测试59/59通过。最终评估代码与可移植15模型manifest已提交并推送；Validation 4/4、独立验解和投稿审计PASS。benchmark前门槛已全部通过，当前下一步是按执行手册第6.2节启动Main三队列。
-
----
-
-## 以下为2026-07-28故障历史（命令已禁用）
-
-审计时间：2026-07-28（Asia/Shanghai）。以下内容不代表当前完成度，也不作为论文最终结果表。
+> 审计快照：2026-08-14 11:34:26（Asia/Shanghai）。本文仅认定正式复现实验及其独立验解、投稿审计产物；历史单例、smoke、compact 和 final_v1 结果不得并入正式统计。执行参数与续跑命令以 [投稿执行手册](../docs/cie_submission_runbook_zh.md) 为准，实验定义以 [C&IE 复现协议](../README.md) 为准。
 
 ## 1. 当前结论
 
-现有结果仍不足以支持C&IE最终性能结论。论文中的PDI、gap、时间、节点数、最优率和显著性表应继续留空。原因是主实验只有880/2700行，统一4096 MB的OOD活动只有63/729行，SPBS只有336/960行，DOE和敏感性尚未产生正式结果。
+Main、Stability、DOE、SPBS 和 Sensitivity 已分别完成 2700、1500、300、960 和 80 行正式实验，逐解独立验证均无无效解，投稿审计均为 PASS。这五组结果已经达到写入论文结果表和消融分析的证据门槛，无需重跑。
 
-新增且可确认的结果只有一项工程预检：OOD solver seed 3、training seed 1在4096 MB上完成63行，错误数为0。它只能说明当前内存配置通过该分片，不能用于估计方法性能。
+完整投稿实验包尚未闭合。SPBS 与 Sensitivity 已完成并回填中英文稿；正式 OOD 正在三个分片并行运行，当前为 109/729。因此，当前可以撰写模型正确性、主实验、调度稳定性、DOE、SPBS 主效应和单因素参数敏感性结果，但尚不能声称分布外泛化已经验证。
 
-## 2. 完成度
+正式六组 benchmark 的总目标为 6269 行，当前完成 5649 行；另计 Validation 4/4 后，总进度为 5653/6273，尚余 OOD 620 行。该比例仅表示原子行完成度，不替代各阶段的独立验解和投稿审计。
 
-| 实验 | 冻结目标 | 当前可用结果 | 明确缺口 | 最终表是否可填 |
-|---|---:|---:|---:|---|
-| Main | 2700行 | 880行 | 1820行 | 否 |
-| OOD 4096 MB | 729行 | 63行、0错误 | 666行，正在运行 | 否 |
-| SPBS | 960行 | 336行，含1个非内存错误 | 624行及1个错误替换 | 否 |
-| DOE | 300行 | 0行 | 300行 | 否 |
-| Sensitivity | 80行 | 0行 | 80行 | 否 |
-| Validation sanity | 4行 | 0行 | 4行 | 非主表，但应完成 |
+## 2. 权威进度
 
-Main的880行由solver seed 3完整540行和solver seed 1的training seeds 1--3共340行组成。缺少solver seed 1的training seeds 4--5共200行，以及solver seeds 2、4、5各540行。
+| 阶段 | 正式目标 | 当前状态 | 独立验解 | 投稿审计 | 论文用途 |
+|---|---:|---|---|---|---|
+| Validation | 4 | 4/4，完成 | PASS | PASS | 模型与求解链路正确性 |
+| Main | 2700 | 2700/2700，完成 | 2700/2700，invalid=0 | PASS | 七方法主比较 |
+| Stability | 1500 | 1500/1500，完成 | 1500/1500，invalid=0 | PASS | 两阶段法与稳定性机制消融 |
+| DOE | 300 | 300/300，完成 | 300/300，invalid=0 | PASS | 因素、交互和规模效应 |
+| SPBS | 960 | 960/960，完成 | 728/728 incumbents，invalid=0 | PASS | 初始解策略的独立贡献 |
+| Sensitivity | 80 | 80/80，完成 | 80/80，invalid=0 | PASS | 工艺、搬运、清洗和真空区假片库存扰动 |
+| OOD | 729 | 109/729，三路运行中 | 完成后统一验解 | 未审计 | 分布外泛化与鲁棒性 |
 
-旧2048 MB OOD数据不得与新活动合并：solver seed 2有243行且无错误；solver seed 3有243行但含39个错误；solver seed 1没有raw CSV。它们只用于故障分析。
+SPBS 已形成 960 个唯一原子结果；自动和关闭初始解各 480 行。投稿审计记录 `expected=csv=jsonl=960`、错误为 0，728 个保存 incumbent 全部通过独立验解。Sensitivity 已形成 80 个唯一结果且 80/80 有 incumbent，独立验解和投稿审计均 PASS。OOD 三个活动分片 seed1/seed2/seed3 分别完成 37/37/35 行，错误日志均为 0 字节；不得重复启动同一 CampaignId 和 ShardTag，也不得在其运行时启动第四路求解。
 
-SPBS已有spbs_none seeds 1--7共336行，其中seed 3、实例cie_core_n032_f024_m008_proc090出现一次“SCIP method cannot be called at this time in solution process”错误；这不是内存错误，需要单独复跑并在最终合并时只替换该行。
+## 3. 数值验解口径
 
-## 3. 当前正在运行的三路OOD
+Main 的正式独立验解保留 SCIP 的原始可行性容差 1e-6，并仅增加 1e-12 的文本序列化裕量，即有效比较阈值为 1.000001e-6。该裕量只用于吸收解文件十进制写入和读回造成的边界舍入误差，不修改 MIP、目标值、求解状态或求解器参数，也不放宽二元变量、互斥、容量、路由等离散约束。
 
-三路均于2026-07-27 18:54启动，SCIP内存上限为每进程4096 MB，时间上限1200秒：
+在上述统一口径下，Main 2700 个解、Stability 1500 个解、DOE 300 个解、SPBS 728 个 incumbent 和 Sensitivity 80 个解均由独立分析程序验解，invalid 均为 0。SPBS 的 232 个无 incumbent 行作为真实限时结果保留，因此其 `incumbent_rows` 不等于 `expected_rows`，这不是审计失败。Stability 的物理等待与节拍量不读取可能漂移的辅助松弛变量，而是由独立分析程序直接从每个保存解的事件时间重构，并按 `solution_file` 与正式结果严格 1:1 联接。
 
-1. solver seed 1，training seeds 1--5，目标243行。
-2. solver seed 2，training seeds 1--5，目标243行。
-3. solver seed 3，续跑training seeds 2--5，目标180行；与已完成的training seed 1合并后为243行。
+权威产物位置如下：
 
-启动前三路需要的保守内存预算为3×4096+4096=16384 MB；启动前可用物理内存约23 GB，启动后约19.4 GB，可用虚拟内存约34.4 GB。核验时三个run_cie_benchmarks.py进程均已进入第一个实例，错误日志为空。当前运行期间不得再启动第四个正式实验。
+- Main：cie/results/main/cie_main_600s_mem2048_repro_v1/submission_analysis
+- Stability：cie/results/stability/cie_stability_600s_mem2048_repro_v1/submission_analysis
+- DOE：cie/results/doe/cie_doe_600s_mem2048_repro_v1/submission_analysis
+- SPBS：cie/results/spbs/cie_spbs_600s_mem2048_repro_v1/submission_analysis
+- Sensitivity：cie/results/sensitivity/cie_sensitivity_600s_mem2048_repro_v1/submission_analysis
 
-对应日志目录：
+## 4. 当前可以写入论文的结论
 
-- cie/results/logs/cie_ood_1200s_mem4096_final_v1_seed1
-- cie/results/logs/cie_ood_1200s_mem4096_final_v1_seed2
-- cie/results/logs/cie_ood_1200s_mem4096_final_v1_seed3_resume
+### 4.1 模型与实现正确性
 
-若任务被外部终止，以下为精确续跑命令；当前进程存活时不要重复执行。2026-07-28起runner默认逐项写入 `runs/.checkpoints/*.jsonl`，所以第二天应原样重跑同一命令，不能更改campaign、分片、seeds、training seeds、时间/内存上限、数据或模型。已成功完成的单项会显示 `resumed` 并跳过，异常项及中断瞬间的活动项会重试。
+Validation 4/4 以及三组正式实验共 4500 个解的独立验解结果，可以支持“两阶段双源混流旋转腔室组合设备调度模型及其求解链路在既定测试集上满足所建约束”的表述。该证据证明实现一致性和解的可行性，不单独证明算法优于其他方法。
 
-    Set-Location D:\git\git\RDMCT-A3C; $env:CUDA_MODULE_LOADING='LAZY'; $env:RDMCT_COMPACT_TEXT_LOG='1'; $env:RDMCT_TEXT_LOG_MAX_MB='2'; $env:RDMCT_TEXT_LOG_BACKUP_COUNT='1'; .\cie\run_cie_single.ps1 -Stage benchmark-ood -CampaignId cie_ood_1200s_mem4096_final_v1 -ShardTag seed1 -LogId cie_ood_1200s_mem4096_final_v1_seed1 -Seeds '1' -TrainingSeeds '2,3,4,5' -TimeLimit 1200 -MemoryLimitMB 4096 -GpuDevice cuda:0
+### 4.2 Main 主实验
 
-    Set-Location D:\git\git\RDMCT-A3C; $env:CUDA_MODULE_LOADING='LAZY'; $env:RDMCT_COMPACT_TEXT_LOG='1'; $env:RDMCT_TEXT_LOG_MAX_MB='2'; $env:RDMCT_TEXT_LOG_BACKUP_COUNT='1'; .\cie\run_cie_single.ps1 -Stage benchmark-ood -CampaignId cie_ood_1200s_mem4096_final_v1 -ShardTag seed2 -LogId cie_ood_1200s_mem4096_final_v1_seed2 -Seeds '2' -TrainingSeeds '2,3,4,5' -TimeLimit 1200 -MemoryLimitMB 4096 -GpuDevice cuda:0
+在 20 个测试实例、5 个求解器随机种子和 5 个训练随机种子的固定评估设计下，proposed 的平均 PDI 为 16585.695，低于 HEM 的 16823.184 和 SCIP default 的 16919.010，观察降幅分别为 1.41% 和 1.97%；其平均求解时间为 218.319 s，也是七种方法中的最低观察均值。
 
-    Set-Location D:\git\git\RDMCT-A3C; $env:CUDA_MODULE_LOADING='LAZY'; $env:RDMCT_COMPACT_TEXT_LOG='1'; $env:RDMCT_TEXT_LOG_MAX_MB='2'; $env:RDMCT_TEXT_LOG_BACKUP_COUNT='1'; .\cie\run_cie_single.ps1 -Stage benchmark-ood -CampaignId cie_ood_1200s_mem4096_final_v1 -ShardTag shardB -LogId cie_ood_1200s_mem4096_final_v1_seed3_resume -Seeds '3' -TrainingSeeds '2,3,4,5' -TimeLimit 1200 -MemoryLimitMB 4096 -GpuDevice cuda:0
+上述内容应写成“在本测试集上的观察均值改善”。相对 HEM 和 SCIP default 的 PDI 配对比较经 Holm 校正后均未达到显著性，不能改写为总体显著优越。
 
-## 4. 防止内存不足和白跑的改动
+### 4.3 Stability 消融
 
-1. 单任务包装器默认内存从2048 MB提高到4096 MB；主实验等需要延续旧2048 MB协议的活动必须显式写出2048。
-2. 新增TrainingSeeds参数，可从指定训练种子继续，不重复固定基线。
-3. 新增SpbsWarmStarts参数，可只跑none、auto或两者，避免重复336项SPBS。
-4. 进度读取使用FileShare.ReadWrite，不再因日志正在写入而长期显示0%。
-5. raw CSV在显著性分析前写盘；SciPy导入若遇到MemoryError，只跳过显著性分析。
-6. 紧凑日志关闭每次割选择的计数和推理计时；内部文本日志限制为2 MB并保留1个备份。
-7. runner默认在每个“实例×方法×solver seed”成功后执行flush和fsync；完整批次写完成标记。每天可用 `Ctrl+C` 停止，最多损失一个正在运行的单项。错误项不会写成完成，避免把失败结果永久跳过。
+Stability 1500/1500 行已经完成求解、逐解独立验证和投稿审计。严格物理指标按 `solution_file` 1:1 联接独立重构结果；full、linear_off 和 stage2_off 的平均物理路径总等待分别为 2596.012、2469.472 和 5398.597，平均物理路径最大等待分别为 296.326、293.271 和 952.570，物理节拍 CV 分别为 0.130049、0.134292 和 0.215676，物理节拍偏差和分别为 22.040、60.180 和 370.408。
 
-日志文件主要消耗磁盘而不是物理内存，但减少高频输出可以降低管道缓冲、格式化和磁盘I/O。机器可读raw、summary、JSON、解文件、进度行及错误日志必须保留。
+相对 stage2_off，full 使上述四项指标分别降低 51.91%、68.89%、39.70% 和 94.05%，对应 Holm 校正 p 值分别为 $3.81\times10^{-5}$、0.00224、0.02137 和 0.01838，均达到显著性门槛。相对 linear_off，只有物理节拍偏差和降低 63.38% 且达到显著性（Holm $p=0.0377$）；物理路径总等待、最大等待和节拍 CV 均不显著。因此论文可在既定实例与指标上主张第二阶段对 stage2_off 的稳定性改善，以及相对 linear_off 的节拍偏差改善，但不得声称 full 在全部稳定性指标上均优于 linear_off，也不得外推为所有生产条件下的普遍结论。
 
-注意：此前中断的seed 1/seed 2日志停在15/63，但当时版本只在整批结束时写raw，因而这15项没有完整机器可读指标，无法从紧凑日志可靠恢复，必须一次性重算。补丁后的首次启动开始逐项保留，此后不再发生整批白跑。不要删除campaign中的 `.checkpoints` 目录。
+full 的第一阶段预算为 540 s，而 stage2_off/linear_off 的对应第一阶段预算为 600 s；因此该消融中的原始 PDI 与求解时间不具备同预算因果可比性，不能用作“第二阶段使算法加速”或“第二阶段降低 PDI”的因果证据。
 
-## 5. OOD完成后的实验顺序、目的和命令
+### 4.4 DOE
 
-所有阶段最多同时三个run_cie_benchmarks.py进程。启动三路4096 MB任务前，要求可用物理内存和虚拟内存均不低于16384 MB；三路2048 MB任务要求均不低于10240 MB。低于阈值时不要强制启动。
+DOE 300/300 已完成，并已生成因素效应表、诊断表和图。可据冻结产物报告规模、混流组成、工艺时间与真空区假片负载的主效应和交互效应。正文中的每个方向性结论必须与系数符号、置信区间和诊断结果一致；DOE 完成并不自动意味着每个因素或交互项均显著。
 
-### 5.1 Main主比较
+### 4.5 SPBS 与参数敏感性
 
-目的：在20个标称实例上比较SCIP、ACS、HEM、HEM+beam、23D feature-only、structure+greedy和Proposed；隔离角色特征、结构补全与束搜索贡献。继续沿用旧活动的600秒和2048 MB，不能与4096 MB主实验混合。
+SPBS 自动初始解将实例平均 incumbent 获得率由 51.67% 提高到 100%，提高 48.33 个百分点（95% CI $[34.58,62.29]$，Holm $p=2.55\times10^{-5}$）；平均 PDI 由 27473.05 降到 20278.78，降低 7194.27（26.19%，95% CI $[5145.78,9317.61]$，Holm $p=3.46\times10^{-8}$）。这两项可作为初始解策略独立贡献的确认性证据。最优率与求解时间差经 Holm 校正后不显著，不作对应强主张；该实验只识别默认 SCIP 下的 SPBS 主效应，不证明其与学习割策略存在交互。
 
-第一波最多三路：
+Sensitivity 的 8 个 OFAT 场景、80 次运行全部获得并验解可行解，20/80 证明最优，平均 PDI 范围为 28899.41--42478.32。它支持模型及 SPBS 辅助默认 SCIP 在预设搬运、加工、清洗和真空区假片库存扰动下保持可运行，但由于没有跨方法对照，不能声称 RDMCT-HBS 的算法排序对参数扰动稳健。
 
-    .\cie\run_cie_single.ps1 -Stage benchmark-main -CampaignId cie_main_600s_compact_final_v1 -ShardTag seed1 -LogId cie_main_600s_compact_final_v1_seed1_resume -Seeds '1' -TrainingSeeds '4,5' -TimeLimit 600 -MemoryLimitMB 2048 -GpuDevice cuda:0
+## 5. 当前不可主张的结论
 
-    .\cie\run_cie_single.ps1 -Stage benchmark-main -CampaignId cie_main_600s_compact_final_v1 -ShardTag seed2 -LogId cie_main_600s_compact_final_v1_seed2 -Seeds '2' -TrainingSeeds '1,2,3,4,5' -TimeLimit 600 -MemoryLimitMB 2048 -GpuDevice cuda:0
+- 不得声称 proposed 在总体上或统计意义上显著优于全部基线；Main 的关键 PDI 比较经多重校正后不显著。
+- 不得声称 proposed 在所有指标上占优。其平均 gap 高于 SCIP default，最优率 0.632 也低于 SCIP default 的 0.640。
+- 不得把 Main 中的观察均值差写成因果贡献。Main 同时改变多个算法部件，不能单独证明 Beam Search、特征重构或初始解策略各自显著有效。
+- 不得把 Stability 中不同第一阶段预算下的 PDI 或求解时间差写成第二阶段的因果加速证据；稳定性主张只使用独立事件重构的物理等待与节拍指标。
+- 不得把 SPBS 对默认 SCIP 的主效应写成 SPBS 与学习策略的协同或交互效应。
+- 不得把单方法 Sensitivity 结果写成 RDMCT-HBS 相对基线的参数鲁棒性。
+- OOD 仅完成 109/729，不能声称具有分布外泛化能力或跨规模鲁棒性。
+- 不得用历史单例、旧 Campaign、smoke 结果或筛选后的有利样本替代完整配对统计。
+- 若正文使用“严格 A3C”“RL-SAT 贡献”或“各模块协同增益”等强表述，必须补充与该表述一一对应的受控实验；否则应删除或降级该表述。
 
-    .\cie\run_cie_single.ps1 -Stage benchmark-main -CampaignId cie_main_600s_compact_final_v1 -ShardTag seed4 -LogId cie_main_600s_compact_final_v1_seed4 -Seeds '4' -TrainingSeeds '1,2,3,4,5' -TimeLimit 600 -MemoryLimitMB 2048 -GpuDevice cuda:0
+## 6. 剩余步骤与优先级
 
-任一路结束后再启动seed 5：
+### P0：闭合强制投稿证据
 
-    .\cie\run_cie_single.ps1 -Stage benchmark-main -CampaignId cie_main_600s_compact_final_v1 -ShardTag seed5 -LogId cie_main_600s_compact_final_v1_seed5 -Seeds '5' -TrainingSeeds '1,2,3,4,5' -TimeLimit 600 -MemoryLimitMB 2048 -GpuDevice cuda:0
+1. 保持当前 OOD seed1/seed2/seed3 三个分片运行；如需中断，分别按一次 `Ctrl+C` 并等待返回提示符，次日原样重跑第6.7节三条命令。
+2. 完成 OOD 729/729 后执行统一汇总、独立验解、矩阵审计和实例级统计。结果必须按预注册方法和完整实例报告，不得仅保留取得 incumbent 的样本。
+3. SPBS 与 Sensitivity 已完成、验解、审计并回填，不重跑。
 
-### 5.2 DOE制造因素实验
+### P1：冻结统计与稿件
 
-目的：估计晶圆数、配方比例和加工时间系数对吞吐率、周期时间、资源利用率、真空区假片占用和清洗开销的主效应及预设交互。
+1. SPBS 与 Sensitivity 已回填；OOD 完成后将其最终汇总、配对检验、置信区间和图表写入英文稿与中文审查稿。
+2. 逐项核对摘要、贡献、结果和结论，使每个性能主张均能追溯到冻结 CSV/JSON、独立验解报告和 submission_audit.json。
+3. 冻结代码版本、依赖、实例清单、模型与权重哈希、随机种子和运行参数；记录生成论文表图所用的确切产物。
+4. 生成并检查匿名正文 PDF、标题页、Highlights、利益冲突声明、作者贡献声明、数据与代码可用性声明及补充材料。
 
-    .\cie\run_cie_single.ps1 -Stage benchmark-doe -CampaignId cie_doe_600s_compact_final_v1 -ShardTag seeds1to2 -LogId cie_doe_600s_compact_final_v1_seeds1to2 -Seeds '1,2' -TimeLimit 600 -MemoryLimitMB 2048
+### P2：仅在保留相应强主张时补充
 
-    .\cie\run_cie_single.ps1 -Stage benchmark-doe -CampaignId cie_doe_600s_compact_final_v1 -ShardTag seeds3to4 -LogId cie_doe_600s_compact_final_v1_seeds3to4 -Seeds '3,4' -TimeLimit 600 -MemoryLimitMB 2048
+- 若要证明“初始解与学习策略存在协同作用”，增加 SPBS × learning 的受控交互实验。
+- 若要把方法称为严格 A3C，增加独立演员—评论家实现及同预算比较；否则统一使用当前实现对应的准确方法名称。
+- 若要把 RL-SAT 列为核心创新，增加关闭该部件的同预算消融；否则将其作为可选求解组件而非已验证贡献。
 
-    .\cie\run_cie_single.ps1 -Stage benchmark-doe -CampaignId cie_doe_600s_compact_final_v1 -ShardTag seed5 -LogId cie_doe_600s_compact_final_v1_seed5 -Seeds '5' -TimeLimit 600 -MemoryLimitMB 2048
+## 7. 投稿判定
 
-### 5.3 SPBS初解组件实验
+当前状态为“除 OOD 外的正式证据均已达到可引用门槛，完整投稿证据尚未闭合”。Main、Stability、DOE、SPBS 和 Sensitivity 不需要重跑；强制剩余实验仅为 OOD 620 行及其统一后处理、独立验解和投稿审计。当前执行位置是继续 seed1/seed2/seed3 三个 OOD 分片，分别从 37/37/35 行恢复。
 
-目的：固定SCIP设置，只比较无初解与自动SPBS初解，衡量对incumbent rate、PDI、gap和求解时间的作用。
-
-    .\cie\run_cie_single.ps1 -Stage benchmark-spbs -CampaignId cie_spbs_600s_compact_final_v1 -ShardTag auto_seeds1to4 -LogId cie_spbs_600s_compact_final_v1_auto_seeds1to4 -Seeds '1,2,3,4' -SpbsWarmStarts auto -TimeLimit 600 -MemoryLimitMB 2048
-
-    .\cie\run_cie_single.ps1 -Stage benchmark-spbs -CampaignId cie_spbs_600s_compact_final_v1 -ShardTag auto_seeds5to7 -LogId cie_spbs_600s_compact_final_v1_auto_seeds5to7 -Seeds '5,6,7' -SpbsWarmStarts auto -TimeLimit 600 -MemoryLimitMB 2048
-
-    .\cie\run_cie_single.ps1 -Stage benchmark-spbs -CampaignId cie_spbs_600s_compact_final_v1 -ShardTag both_seeds8to10 -LogId cie_spbs_600s_compact_final_v1_both_seeds8to10 -Seeds '8,9,10' -SpbsWarmStarts both -TimeLimit 600 -MemoryLimitMB 2048
-
-补齐后单独复跑seed 3的none组并只替换错误实例，不覆盖其余47个原始观测：
-
-    .\cie\run_cie_single.ps1 -Stage benchmark-spbs -CampaignId cie_spbs_600s_compact_final_v1 -ShardTag retry_seed3_none -LogId cie_spbs_600s_compact_final_v1_retry_seed3_none -Seeds '3' -SpbsWarmStarts none -TimeLimit 600 -MemoryLimitMB 2048
-
-### 5.4 参数敏感性
-
-目的：检验运动时间、加工时间、真空区假片容量和清洗间隔变化下结论是否稳定。
-
-    .\cie\run_cie_single.ps1 -Stage benchmark-sensitivity -CampaignId cie_sensitivity_600s_compact_final_v1 -ShardTag seeds1to4 -LogId cie_sensitivity_600s_compact_final_v1_seeds1to4 -Seeds '1,2,3,4' -TimeLimit 600 -MemoryLimitMB 2048
-
-    .\cie\run_cie_single.ps1 -Stage benchmark-sensitivity -CampaignId cie_sensitivity_600s_compact_final_v1 -ShardTag seeds5to7 -LogId cie_sensitivity_600s_compact_final_v1_seeds5to7 -Seeds '5,6,7' -TimeLimit 600 -MemoryLimitMB 2048
-
-    .\cie\run_cie_single.ps1 -Stage benchmark-sensitivity -CampaignId cie_sensitivity_600s_compact_final_v1 -ShardTag seeds8to10 -LogId cie_sensitivity_600s_compact_final_v1_seeds8to10 -Seeds '8,9,10' -TimeLimit 600 -MemoryLimitMB 2048
-
-### 5.5 Validation sanity
-
-目的：在四个冻结小实例上验证基础SCIP链路、解文件和可行性检查，不用于测试集调参。
-
-    .\cie\run_cie_single.ps1 -Stage benchmark-validation -CampaignId cie_validation_600s_final_v1 -ShardTag seed1 -LogId cie_validation_600s_final_v1_seed1 -Seeds '1' -TimeLimit 600 -MemoryLimitMB 2048
-
-## 6. 最终接收标准
-
-1. 行数达到2700、729、960、300和80，且种子/方法/训练种子覆盖与冻结设计一致。
-2. 所有错误和超时保留；工程错误单独复跑并记录替换规则。
-3. 不混合不同时间上限、内存上限、模型检查点或候选预算。
-4. 解文件重新载入SCIP验证，invalid_count必须为0。
-5. 按制造实例配对，Wilcoxon检验和Holm校正以实例为统计单元。
-6. 只有满足以上条件后，才把数值写入中英文论文结果表。
+当六组正式 benchmark 全部达到目标行数并通过审计，论文所有占位符均替换、主张边界与统计结果一致、投稿文件齐备后，才可将状态改为“可提交”。

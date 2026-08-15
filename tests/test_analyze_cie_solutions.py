@@ -124,3 +124,45 @@ def test_repeated_analysis_does_not_consume_its_own_output(tmp_path, monkeypatch
     assert second["source_benchmarks"] == [str(benchmark_path)]
     assert second["solution_count"] == 1
     assert second["rows"][0]["solver_seed"] == 1
+
+
+def test_serialized_solution_allowance_is_tiny_and_explicit():
+    assert MODULE.SCIP_FEASIBILITY_TOLERANCE == 1.0e-6
+    assert MODULE.SOLUTION_SERIALIZATION_ALLOWANCE == 1.0e-12
+    assert MODULE.SOLUTION_FEASIBILITY_TOLERANCE == 1.000001e-6
+
+
+def test_physical_stability_metrics_ignore_floating_auxiliary_slacks(tmp_path):
+    values = {
+        "c_max": 50.0,
+        "wafer_completion_1": 50.0,
+        "prod_stage_end_1_atr_lp_al": 2.0,
+        "prod_stage_start_1_al": 5.0,
+        "prod_stage_end_1_al": 8.0,
+        "prod_stage_start_1_atr_al_llupper": 10.0,
+        "prod_stage_end_1_llupper": 14.0,
+        "prod_stage_start_1_vtr_load": 15.0,
+        "prod_stage_end_1_vtr_load": 17.0,
+        "prod_stage_start_1_pm": 19.0,
+        "prod_stage_end_1_pm": 25.0,
+        "prod_stage_start_1_vtr_unload": 29.0,
+        "prod_stage_end_1_lllower": 35.0,
+        "prod_stage_start_1_atr_lllower_lp": 40.0,
+        "full_batch_used_2_1": 1.0,
+        "full_batch_used_2_2": 1.0,
+        "full_batch_used_2_3": 1.0,
+        "full_start_2_1": 0.0,
+        "full_start_2_2": 10.0,
+        "full_start_2_3": 25.0,
+        "full_batch_idle_2_1_2": 10000.0,
+        "schedule_wait_unconstrained": 10000.0,
+    }
+
+    metrics = MODULE._metrics(
+        {"best_objective": 50.0}, values
+    )
+
+    assert metrics["physical_route_total_wait"] == 17.0
+    assert metrics["physical_route_max_wait"] == 5.0
+    assert metrics["physical_cadence_cv"] == 0.2
+    assert metrics["physical_cadence_deviation_sum"] == 5.0

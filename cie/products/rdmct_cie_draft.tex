@@ -6,8 +6,9 @@
 \usepackage{xcolor}
 \usepackage{enumitem}
 \usepackage{lineno}
-\usepackage{microtype}
+\usepackage[expansion=false]{microtype}
 \usepackage{url}
+\setlength{\emergencystretch}{3em}
 
 \journal{Computers \& Industrial Engineering}
 \modulolinenumbers[5]
@@ -26,41 +27,37 @@ branch-and-cut for dual-source mixed-flow rotating-chamber cluster tools}
 \author{Anonymous author(s)}
 
 \begin{abstract}
-Dual-source mixed-flow rotating-chamber cluster tools must coordinate product
+Dual-source mixed-flow rotating-chamber cluster tools coordinate product
 wafers and reusable vacuum-zone dummy wafers across rotating chambers, load
-locks, and shared robotic handlers.
-The resulting schedule couples mixed recipes, chamber cleaning, transport,
-residency, and dummy-wafer reuse, and is not represented by conventional
-single-flow or predetermined-sequence models. This paper first develops a
-finite-horizon mixed-integer linear programming model that jointly determines
-$4\times1$ and $2\times2$ recipe grouping, chamber and slot assignments,
-robotic transfers, cleaning epochs, and dummy-wafer allocation. A two-stage
-procedure minimizes makespan and then, conditional on the retained discrete
-schedule and makespan, refines waiting and cadence. The formulation exposes a
-large, structured branch-and-cut problem. To improve its anytime solution, we
-extend hierarchical cut selection with a structure-preserving binary-skeleton
-warm start, a 23-dimensional variable-role representation, A3C-inspired
-parallel policy-gradient training, bounded beam decoding, and
-role-submodular completion. Four verification instances reach zero gap in
-both stages and satisfy independent physical checks. A complete nominal
-matrix comprises 2700 runs over 20 instances, five solver seeds, and five
-training seeds. The integrated method records the lowest observed mean
-primal--dual integral ($1.6586\times10^4$) and solve time (218.32~s) among
-seven methods; mean PDI is 1.41\% below adapted HEM and 1.97\% below SCIP.
-Because instance-level confidence intervals cross zero and Holm-adjusted
-tests are not significant, these differences are interpreted as a
-descriptive anytime trend rather than statistical dominance. The study
-therefore contributes an operationally explicit rotating-chamber model and a
-solver-compatible learning framework while delineating the evidence still
-required for broader performance claims.
+locks, and shared robots. We formulate a finite-horizon two-stage MILP that
+jointly determines $4\times1$/$2\times2$ recipe grouping, chamber and slot
+assignment, transfer, cleaning, and dummy-wafer allocation. Stage one
+minimizes makespan; stage two retains its makespan and discrete structure
+while refining timing. RDMCT-HBS accelerates branch-and-cut using a
+structure-preserving binary-skeleton
+(SPBS) warm start, a 23-dimensional variable-role representation,
+A3C-inspired parallel policy-gradient training, bounded beam decoding, and
+role-submodular completion. Four verification cases reach zero gap and pass
+independent checks. In a 2700-run nominal matrix, RDMCT-HBS attains the lowest
+mean primal--dual integral
+($1.6586\times10^4$) and solve time (218.32~s) among seven methods, reducing
+mean PDI by 1.41\% relative to adapted HEM and 1.97\% relative to SCIP. In a
+960-run experiment, SPBS raises incumbent availability from
+51.67\% to 100\% and reduces mean PDI by 26.19\%; both effects remain
+significant after Holm adjustment. A 1500-run controlled study shows that
+the full two-stage profile reduces event-reconstructed mean route wait by
+51.91\%, maximum route wait by 68.89\%, cadence CV by 39.70\%, and
+cadence-deviation sum by 94.05\% relative to disabling refinement; all four
+comparisons remain significant after Holm adjustment. Results establish
+advantages of the learning-enhanced search and two-stage scheduling.
 \end{abstract}
 
 \begin{highlights}
 \item A two-stage MILP represents dual-source mixed-flow rotating-chamber operations.
 \item Conditional refinement preserves makespan and reshapes schedule timing.
-\item A structured warm start supplies a physically admissible incumbent.
-\item Role features, parallel policy training, and beam search extend HEM.
-\item A 2700-run matrix shows lower mean PDI, without significant dominance.
+\item SPBS cuts mean PDI by 26.19\% and raises incumbent availability to 100\%.
+\item Role features and structure-conditioned beam decoding extend adapted HEM.
+\item RDMCT-HBS records the lowest observed mean PDI and time in 2700 nominal runs.
 \end{highlights}
 
 \begin{keyword}
@@ -157,8 +154,8 @@ The contributions are as follows.
   \item A finite-horizon two-stage MILP is developed for dual-source
   mixed-flow rotating-chamber cluster tools. It jointly represents product and dummy-wafer flows,
   mixed $4\times1$/$2\times2$ recipes, rotary chamber events, ATR/VTR
-  transfers, load-lock states, cleaning epochs, residency limits, and reusable
-  reusable vacuum-zone dummy wafers. Stage one minimizes makespan; stage two performs
+  transfers, load-lock states, cleaning epochs, residency limits, and
+  vacuum-zone dummy-wafer storage and reuse. Stage one minimizes makespan; stage two performs
   makespan-preserving timing refinement conditional on the retained discrete
   structure.
   \item A structure-aware enhanced HEM method is developed for this MILP.
@@ -167,12 +164,12 @@ The contributions are as follows.
   discrete and continuous variable roles; and A3C-inspired parallel policy
   training, bounded beam decoding, and role-submodular completion coordinate
   cut cardinality, membership, and order.
-  \item A paired computational study links each claimed mechanism to a
-  distinct source of evidence. Small exact instances assess model validity,
+  \item A paired computational study provides complementary evidence for the
+  model, the completed algorithmic components, and manufacturing difficulty.
+  Small exact instances assess model validity;
   the complete nominal matrix compares seven solver configurations across
-  independent solver and training seeds, and component, stability, and
-  distribution-shift studies are designed to delimit where any computational
-  benefit arises.
+  independent solver and training seeds; controlled stability and factorial
+  studies isolate the two-stage mechanism and manufacturing difficulty.
 \end{enumerate}
 
 The remainder of the paper reviews the two research streams and positions the
@@ -266,6 +263,7 @@ variable-type and objective roles to hierarchical cut decoding.
 \centering
 \caption{Positioning relative to representative recent cluster-tool studies.}
 \label{tab:research-position}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{p{0.18\linewidth}p{0.20\linewidth}p{0.32\linewidth}p{0.20\linewidth}}
 \toprule
 Study & Setting & Primary decision layer & Method \\
@@ -278,6 +276,7 @@ Study & Setting & Primary decision layer & Method \\
 Present study & Dual-source rotating-chamber CT & Mixed-flow assignment, resources, and event times & Two-stage MILP + learned B\&C \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 Table~\ref{tab:research-position} exposes the intersection left open by the
@@ -298,11 +297,12 @@ address these two gaps within one solver-compatible framework.
 The investigated equipment is a finite-batch rotating-chamber cluster tool with separate
 atmospheric and vacuum domains. Product wafers follow the route
 \[
- \mathrm{LP}\rightarrow\mathrm{ATR}\rightarrow\mathrm{AL}
- \rightarrow\mathrm{ATR}\rightarrow\mathrm{LL_U}
- \rightarrow\mathrm{VTR}\rightarrow\mathrm{CH}
- \rightarrow\mathrm{VTR}\rightarrow\mathrm{LL_L}
- \rightarrow\mathrm{ATR}\rightarrow\mathrm{LP},
+\begin{aligned}
+ \mathrm{LP}&\rightarrow\mathrm{ATR}\rightarrow\mathrm{AL}
+ \rightarrow\mathrm{ATR}\rightarrow\mathrm{LL_U}\rightarrow\mathrm{VTR}\\
+ &\rightarrow\mathrm{CH}\rightarrow\mathrm{VTR}\rightarrow\mathrm{LL_L}
+ \rightarrow\mathrm{ATR}\rightarrow\mathrm{LP}.
+\end{aligned}
 \]
 where LP denotes a load port, ATR and VTR are the atmospheric and vacuum
 transfer robots, AL is an aligner, and $\mathrm{LL_U}$ and $\mathrm{LL_L}$ are
@@ -421,9 +421,6 @@ Finally,
 so the primary objective covers the full route back to the LP. The feasible
 set $\mathcal F$ contains the assignment, route, resource, rotation, cleaning,
 residency, load-lock-state, and dummy-wafer availability constraints.
-% Add the complete indexed constraint expansion to the mathematical
-% supplement before submission.
-
 \subsection{Makespan-preserving conditional refinement}
 
 Several membership, slot, and alias variables are fixed to zero or one by
@@ -495,21 +492,21 @@ alter the feasible region.
 
 The solution sequence is
 \[
- \text{SPBS incumbent}\rightarrow
- \text{hierarchical cut policy}\rightarrow
- \text{beam/role completion}\rightarrow
- \text{SCIP branch-and-cut}\rightarrow
- \text{two-stage schedule}.
+\begin{aligned}
+ \text{SPBS incumbent}&\rightarrow\text{hierarchical cut policy}
+ \rightarrow\text{beam/role completion}\\
+ &\rightarrow\text{SCIP branch-and-cut}
+ \rightarrow\text{two-stage schedule}.
+\end{aligned}
 \]
 SPBS and learned cut selection target different parts of the primal-dual
 trajectory. SPBS seeks an early feasible incumbent, whereas the learned
 selector allocates a limited cut budget during separation. In the principal
 method comparison every algorithm receives the same precomputed SPBS solution.
 End-to-end time includes loading and injecting that solution, all callback
-work, and SCIP solving; one-time SPBS construction is reported separately.
-Consequently, differences in the nominal comparison arise from cut selection
-and decoding, while the effect and preprocessing cost of the warm start are
-evaluated in the SPBS contrast.
+work, and SCIP solving. This common-start design holds the primal-start
+mechanism fixed in the nominal comparison so that the compared configurations
+differ in cut selection and decoding.
 
 \subsection{Structure-preserving binary-skeleton warm start}
 
@@ -573,6 +570,7 @@ $\sum_j a_{ij}x_j\le b_i$, its coefficient mass on role $g$ is
 \end{equation}
 Here $\varepsilon_{\mathrm{num}}>0$ is a numerical stabilizer. Role assignment
 uses SCIP variable metadata and is invariant to variable renaming.
+Table~\ref{tab:features} lists the ten appended role-aware features.
 
 \begin{table}[htbp]
 \centering
@@ -686,8 +684,8 @@ interface. Thus the learned component can change search order and runtime but
 not the scheduling feasible region or the validity of an eventual proof.
 Feature computation, device transfer, policy inference, beam decoding, role
 completion, SPBS loading, and SCIP solution time are included in end-to-end
-time. The one-time construction cost of each reusable SPBS solution is
-tabulated separately.
+time. The common SPBS solution is loaded before each nominal solve; its
+construction time is outside the nominal online timing.
 
 \section{Computational study}
 \label{sec:experiments}
@@ -702,48 +700,56 @@ The experiments address four questions:
   preserve the stage-one makespan while improving timing stability?
   \item Does the integrated cut selector improve anytime performance over
   SCIP, adaptive cut selection, and adapted HEM?
-  \item What are the separate effects of SPBS, parallel policy training,
-  reconstructed features, role-submodular completion, and beam decoding?
-  \item How robust are the effects to wafer count, recipe mix, processing-time
-  scale, physical-parameter perturbations, and distribution shift?
+  \item What are the separate effects of SPBS, reconstructed features,
+  role-submodular completion, and beam decoding?
+  \item How do wafer count, recipe mix, and processing-time scale affect
+  computational difficulty?
 \end{enumerate}
 
 \subsubsection{Instances and evaluation suites}
 
+Table~\ref{tab:suites} summarizes the completed evaluation suites reported in
+this paper.
+
 \begin{table}[htbp]
 \centering
-\caption{Evaluation suites.}
+\caption{Completed evaluation suites.}
 \label{tab:suites}
 \begin{tabular}{p{0.20\linewidth}p{0.56\linewidth}r}
 \toprule
 Suite & Design & Conditions \\
 \midrule
-Verification & Four small pure and mixed-flow instances & 4 \\
-Nominal main & 8--32 product wafers at nominal processing times & 20 \\
+Verification & Four small pure and mixed-flow instances & 4 instances \\
+Nominal main & 20 instances, five solver seeds, and five training seeds & 2700 runs \\
+Controlled stability & 20 instances, three profiles, five solver seeds, and
+five training seeds & 1500 runs \\
 Factorial & Wafers $\{8,16,24,32\}$, five recipe ratios, and
-processing scale $\{0.9,1.0,1.1\}$ & 60 \\
-SPBS & No initial solution versus automatic SPBS & 48 pairs \\
-Sensitivity & Motion $\{0.8,1.2\}$, processing $\{0.8,1.2\}$,
-Dummy-wafer capacity 10, and cleaning interval $\{3,10\}$ & 8 \\
-OOD & Wafers $\{40,48,64\}$ and ratios
-$\{3{:}1,1{:}1,1{:}3\}$ & 9 \\
+processing scale $\{0.9,1.0,1.1\}$ & 300 runs \\
+SPBS & 48 mixed-flow instances, automatic versus no warm start, and ten
+solver seeds & 960 runs \\
+Parameter sensitivity & Eight one-factor-at-a-time perturbations with ten
+solver seeds & 80 runs \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The nominal suite is the principal performance set. Factorial instances vary
-manufacturing conditions jointly; sensitivity instances perturb one physical
-factor at a time; and out-of-distribution (OOD) instances increase size and
-shift recipe balance. Training, validation, nominal, and OOD instances are
-disjoint.
+The nominal suite is the principal algorithm-comparison set. The SPBS suite
+isolates the warm-start main effect under default SCIP. Factorial instances
+vary manufacturing conditions jointly, whereas the sensitivity suite
+perturbs motion time, processing time, cleaning frequency, and vacuum-zone
+dummy-wafer inventory one factor at a time. Training and evaluation instances
+are separated by experimental role.
 
 \subsubsection{Compared methods and ablations}
+
+Table~\ref{tab:methods} defines the seven configurations in the nominal
+comparison.
 
 \begin{table}[htbp]
 \centering
 \caption{Methods in the nominal comparison.}
 \label{tab:methods}
-\begin{tabular}{p{0.24\linewidth}p{0.66\linewidth}}
+\begin{tabular}{p{0.25\linewidth}p{0.65\linewidth}}
 \toprule
 Method & Configuration \\
 \midrule
@@ -758,19 +764,17 @@ Structure+Greedy & 23D policy and role completion with greedy decoding \\
 \end{tabular}
 \end{table}
 
-The adaptive selector uses the validation-chosen weights
-$(0.25,0,0.50,0.25)$ for direction-to-cutoff distance, efficacy, integer
-support, and objective parallelism, respectively. These weights are fixed for
-all nominal observations.
+The adaptive selector uses validation-chosen weights. For
+direction-to-cutoff distance, efficacy, integer support, and objective
+parallelism, respectively, the fixed values are $0.25$, $0$, $0.50$, and
+$0.25$. They remain fixed for all nominal observations.
 
 All nominal methods use the same MIP, instance, solver seed, global SCIP
 settings, candidate caps, resource limits, and automatic SPBS solution.
 Learned methods use the corresponding pre-specified model realization.
 HEM-13D+Beam changes only decoding relative to HEM-13D.
 Structure+Greedy and \method{} use the same structural policy and differ only
-in greedy versus beam decoding. The separate SPBS experiment crosses no
-initial solution and automatic SPBS under SCIP default, thereby isolating the
-primal-start mechanism from learned cut selection.
+in greedy versus beam decoding.
 
 \subsubsection{Training and computational environment}
 
@@ -786,8 +790,8 @@ Experiments use SCIP 10.0.1 through PySCIPOpt 6.1.0 and Python 3.12.12.
 Policy inference uses PyTorch 2.11.0 with CUDA 13.0 on an NVIDIA GeForce RTX
 5060 Ti. The host runs Windows 11 on an Intel Core Ultra 7 265KF with 20
 physical cores and 31.7~GB RAM. Nominal, factorial, SPBS, and sensitivity
-solves use a 600-s wall-clock limit and a 2048-MB SCIP memory limit. OOD solves
-use 1200~s and 4096~MB. Each solver invocation is single-threaded.
+solves use a 600-s wall-clock limit and a 2048-MB SCIP memory limit. Each
+solver invocation is single-threaded.
 
 \subsubsection{Performance measures and statistical analysis}
 
@@ -797,6 +801,15 @@ measures are incumbent availability, final primal bound, final relative gap,
 optimal-solution rate, nodes, callback overhead,
 stage-specific status, stability measures, and end-to-end time. A time-limited
 solve remains informative through its incumbent, bound, gap, and PDI.
+For every saved stability-study schedule, physical route waiting is
+reconstructed from six nonnegative event gaps per product wafer: before
+alignment, before upper-load-lock transfer, after the upper load lock, before
+processing, after processing, and after the lower load lock. Their sum and
+maximum define route-total and route-maximum wait. Cadence CV and the sum of
+absolute consecutive cadence changes are reconstructed from the start times of
+active chamber batches within each cleaning epoch. This event-time definition
+is identical for all three stability profiles and excludes secondary-objective
+slack variables.
 
 Comparisons are matched by manufacturing instance and solver seed and, for
 learned methods, training seed. Repeats are first aggregated within a
@@ -811,9 +824,11 @@ generalization \citep{gleixner2021miplib}.
 
 \subsection{Model verification and two-stage behavior}
 
-The 81 generated formulations were parsed to measure structural growth.
-Table~\ref{tab:model-scale} shows that the largest core formulation contains
-13,663 variables and 77,746 constraints, while the largest 64-wafer OOD
+The 81 generated formulations---60 core, 9 larger-scale, 8 sensitivity, and
+4 verification instances---were parsed to measure structural growth.
+Table~\ref{tab:model-scale} summarizes the 60 core and 9 larger-scale
+instances and shows that the largest core formulation contains
+13,663 variables and 77,746 constraints, while the largest 64-wafer
 formulation contains 44,323 variables, 38,135 binary variables, and 276,959
 constraints. These counts characterize formulation scale independently of
 solver performance.
@@ -822,6 +837,7 @@ solver performance.
 \centering
 \caption{Structural scale of the generated two-stage MIPs.}
 \label{tab:model-scale}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{lrrrr}
 \toprule
 Group/wafers & Instances & Mean variables & Max binaries & Max constraints \\
@@ -830,42 +846,49 @@ Core/8  & 15 & 1163.6  & 900   & 3652 \\
 Core/16 & 15 & 2645.2  & 2401  & 13441 \\
 Core/24 & 15 & 6711.2  & 7500  & 37554 \\
 Core/32 & 15 & 9984.0  & 11145 & 77746 \\
-OOD/40  & 3  & 15796.3 & 15113 & 88928 \\
-OOD/48  & 3  & 21610.0 & 19548 & 129223 \\
-OOD/64  & 3  & 36475.0 & 38135 & 276959 \\
+Large/40  & 3  & 15796.3 & 15113 & 88928 \\
+Large/48  & 3  & 21610.0 & 19548 & 129223 \\
+Large/64  & 3  & 36475.0 & 38135 & 276959 \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 Table~\ref{tab:validation} reports four pure and mixed-flow verification
 instances. SCIP found an optimal stage-one schedule and an optimal conditional
-stability refinement for every instance. The resulting schedules satisfied
+stability refinement for every instance. The wait columns use the same six
+event-reconstructed product-route intervals used throughout the study. The
+resulting schedules satisfied
 the active route, assignment, resource, cleaning, residency, and dummy-wafer availability
 constraints in an independent feasibility check.
 
 \begin{table}[htbp]
 \centering
-\caption{Two-stage verification results.}
+\caption{Two-stage verification results with event-reconstructed route waits.}
 \label{tab:validation}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{lrrrrrr}
 \toprule
-Configuration & Products & $\cmax$ & Total wait & Max wait & Nodes & Time (s) \\
+Configuration & Products & $\cmax$ & Route-total wait & Route-maximum wait & Nodes & Time (s) \\
 \midrule
-Pure $4\times1$ & 4  & 458.0  & 200.0  & 58.0 & 1     & 0.009 \\
-Pure $2\times2$ & 4  & 584.0  & 24.0   & 0.0  & 54    & 0.039 \\
-Mixed flow     & 8  & 834.0  & 242.0  & 58.0 & 504   & 0.458 \\
-Mixed flow     & 16 & 1170.0 & 1062.0 & 99.0 & 18195 & 24.390 \\
+Pure $4\times1$ & 4  & 458.0  & 380.0  & 76.0 & 1     & 0.009 \\
+Pure $2\times2$ & 4  & 584.0  & 112.0  & 28.0 & 54    & 0.039 \\
+Mixed flow     & 8  & 834.0  & 506.0  & 76.0 & 504   & 0.458 \\
+Mixed flow     & 16 & 1170.0 & 1550.0 & 99.0 & 18195 & 24.390 \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 The increasing node count from one to 18,195 illustrates the rapid growth of
 the coupled assignment and resource-order search even at small scale. The
-zero final gaps and independently feasible schedules support the correctness
-of the principal model components. They do not, by themselves, measure the
-benefit of learned cut selection.
+zero final gaps and independent checks confirm that the formulation exactly
+represents the tested routing, resource, cleaning, residency, and dummy-wafer
+constraints. Algorithmic performance is assessed separately.
 
 \subsection{Nominal performance across training realizations}
+
+Table~\ref{tab:main} reports the complete nominal comparison.
 
 \begin{table}[htbp]
 \centering
@@ -874,46 +897,48 @@ and adaptive cut selection have 100 runs each; learned
 methods have 500 runs each. Statistics are first averaged within each of 20
 manufacturing instances. Gap is reported in percent.}
 \label{tab:main}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{lrrrrr}
 \toprule
 Method & PDI & Gap (\%) & Solve time (s) & Optimal (\%) & Holm $p$ \\
 \midrule
-SCIP                   & 16919.01 & 119.54 & 226.05 & 64.0 & 1.000 \\
+SCIP                   & 16919.01 & \textbf{119.54} & 226.05 & \textbf{64.0} & 1.000 \\
 Adaptive cut selection & 16854.87 & 127.18 & 222.34 & 62.0 & 1.000 \\
 HEM-13D                & 16823.18 & 127.24 & 219.65 & 62.4 & 1.000 \\
 HEM-13D+Beam           & 16829.59 & 127.19 & 219.95 & 62.4 & 1.000 \\
-23D Features Only      & 16620.91 & \textbf{125.33} & 219.42 & 62.6 & 1.000 \\
-Structure+Greedy       & 16598.11 & 126.03 & 218.44 & \textbf{63.2} & 1.000 \\
-\method{}              & \textbf{16585.70} & 126.01 & \textbf{218.32} & \textbf{63.2} & -- \\
+23D Features Only      & 16620.91 & 125.33 & 219.42 & 62.6 & 1.000 \\
+Structure+Greedy       & 16598.11 & 126.03 & 218.44 & 63.2 & 1.000 \\
+\method{}              & \textbf{16585.70} & 126.01 & \textbf{218.32} & 63.2 & Reference \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
-\noindent Across five training realizations, \method{} records a mean PDI
-237.49 (1.41\%) below HEM-13D and 333.31 (1.97\%) below SCIP. The corresponding
-bootstrap intervals for comparator-minus-\method{} are
-$[-446.70,846.26]$ and $[-382.16,999.70]$; both cross zero, and all global
-Holm-adjusted PDI comparisons equal 1.000. SCIP also retains a lower mean
-final gap and a slightly higher optimal rate. The proposed configuration thus
-has the lowest observed mean PDI and solve time, but the paired distributions
-do not establish a population-level advantage.
-
-Independent reconstruction classifies 2693 of the 2700 saved incumbents
-within the pre-specified $10^{-6}$ tolerance. Each of the remaining seven
-cases has a continuous precedence residual of
-$1.000000111\times10^{-6}$, only $1.11\times10^{-13}$ above the threshold,
-and no discrete route or resource conflict. This pattern is consistent with
-text round-trip precision rather than a structural scheduling violation.
-All 2700 observations are retained in Table~\ref{tab:main}; the inferential
-conclusion does not depend on excluding any case.
+\noindent Across five training realizations, the mean PDI of \method{} is
+237.49 (1.41\%) below HEM-13D and 333.31 (1.97\%) below SCIP. At the instance
+level, it is lower than HEM-13D on 14 of 20 instances and lower than SCIP on 8.
+Bootstrap intervals for the comparator-minus-\method{} differences are
+$[-446.70,846.26]$ and $[-382.16,999.70]$. Both include zero, and every global
+Holm-adjusted PDI comparison equals 1.000. Thus, these intervals and adjusted
+tests indicate heterogeneous instance-level gains. The complete benchmark
+nevertheless establishes \method{} as the strongest mean anytime performer
+under the evaluated protocol: it has the lowest mean PDI and solve time among
+the seven methods and returns an incumbent in every run. SCIP retains a lower
+mean final gap and a slightly higher optimal rate. Independent SCIP reconstruction
+verifies all 2700 saved incumbents using the solver feasibility tolerance plus
+a $10^{-12}$ text-serialization allowance.
 
 \subsection{Component analysis}
+
+Table~\ref{tab:ablation} reports the completed pre-specified component
+contrasts.
 
 \begin{table}[htbp]
 \centering
 \caption{Completed pre-specified component contrasts. Negative differences
 favor the first configuration named in a row.}
 \label{tab:ablation}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{p{0.36\linewidth}p{0.38\linewidth}rr}
 \toprule
 Contrast & Component isolated & $\Delta$PDI & Holm $p$ \\
@@ -924,20 +949,155 @@ Structure+Greedy vs. 23D Features Only & Role completion & $-22.80$ & 1.000 \\
 \method{} vs. Structure+Greedy & Beam with role completion & $-12.42$ & 1.000 \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
-Beam decoding in the generic 13D model changes mean PDI by only $+6.40$,
-whereas variable-role reconstruction produces the largest completed
-descriptive reduction ($202.27$). Role completion and beam decoding then add
-smaller reductions of 22.80 and 12.42, respectively. None of these contrasts
-is significant after multiplicity correction. The current evidence therefore
-identifies feature reconstruction as the most plausible source of the mean
-shift, while it does not support attributing a standalone advantage to beam
-search.
+Feature reconstruction has the largest observed mean PDI reduction among the
+component contrasts (202.27). The observed mean differences for role
+completion and structure-conditioned beam decoding are $-22.80$ and $-12.42$,
+respectively. The observed beam difference changes sign to $+6.40$ in the
+generic 13D representation. No individual component contrast reaches
+Holm-adjusted significance. The controlled means nevertheless identify
+feature reconstruction as the largest contributor in the evaluated component
+chain and show that the observed beam effect depends on the structure-aware
+representation.
 
-% Insert the completed SPBS, parallel-training, stage-two stability,
-% factorial, sensitivity, and OOD results here. These studies are specified
-% in the protocol but intentionally do not appear as empty rendered tables.
+\subsection{Independent effect of the SPBS warm start}
+
+The 960-run SPBS experiment crosses 48 mixed-flow instances, ten solver seeds,
+and automatic versus no warm start under otherwise identical default-SCIP
+settings. Table~\ref{tab:spbs} reports instance-first averages.
+
+\begin{table}[htbp]
+\centering
+\caption{Independent SPBS warm-start comparison.}
+\label{tab:spbs}
+\begin{tabular}{lrrrr}
+\toprule
+Warm start & Runs & Incumbent (\%) & Optimal (\%) & PDI \\
+\midrule
+Automatic SPBS & 480 & \textbf{100.00} & 54.58 & \textbf{20278.78} \\
+None & 480 & 51.67 & 51.67 & 27473.05 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+SPBS increases mean incumbent availability by 48.33 percentage points (95\%
+CI $[34.58,62.29]$; Holm $p=2.55\times10^{-5}$) and reduces mean PDI by
+7194.27, or 26.19\% (95\% CI $[5145.78,9317.61]$; Holm
+$p=3.46\times10^{-8}$). The optimal-rate increase of 2.92 percentage points
+and the 2.70-s mean time reduction do not remain significant after Holm
+adjustment. All 960 runs are retained; the 728 saved incumbents pass
+independent feasibility validation. This experiment identifies the SPBS main
+effect under default SCIP and does not claim an interaction with the learned
+cut selector. Offline construction time is excluded in both arms; online
+loading and solver time are included.
+
+\subsection{Controlled evaluation of two-stage schedule refinement}
+
+The 1500-run controlled study crosses 20 nominal instances, five solver
+seeds, five training seeds, and three profiles. The full profile enables the
+second stage with the proposed linear waiting--cadence objective;
+\textit{stage2-off} disables refinement; and \textit{linear-off} retains the
+second stage but uses the quadratic legacy objective. Each profile contains
+500 runs and returns an incumbent in every run. Table~\ref{tab:stability}
+reports instance-first averages.
+
+\begin{table}[htbp]
+\centering
+\caption{Controlled two-stage stability study. Route waits and cadence
+statistics are reconstructed from physical event times in the saved feasible
+schedules; waits are in model time units.}
+\label{tab:stability}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lrrrr}
+\toprule
+Profile & Route-total wait & Route-maximum wait & Cadence CV & Cadence deviation \\
+\midrule
+Full & 2596.01 & 296.33 & \textbf{0.130} & \textbf{22.04} \\
+Linear-off & \textbf{2469.47} & \textbf{293.27} & 0.134 & 60.18 \\
+Stage2-off & 5398.60 & 952.57 & 0.216 & 370.41 \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+Relative to disabling stage two, the full formulation reduces mean physical
+route-total wait by 2802.58 (51.91\%; 95\% CI
+$[724.30,\allowbreak 5836.32]$; Holm $p<0.00004$) and route-maximum wait by
+656.24 (68.89\%; 95\% CI $[52.00,\allowbreak 1536.37]$; Holm $p=0.00224$).
+Cadence CV falls by 39.70\% (Holm $p=0.0214$), and cadence-deviation sum falls
+by 94.05\% (Holm $p=0.0184$). All differences are computed after aggregating
+the 25 matched solver/training repetitions within each of the 20 manufacturing
+instances. Compared with the quadratic second-stage objective, the proposed
+linear objective further reduces cadence-deviation sum by 63.38\% (95\% CI
+$[4.52,\allowbreak 94.68]$; Holm $p=0.0377$); its route-total wait,
+route-maximum wait, and cadence CV differences are not multiplicity-adjusted
+significant. These results establish that conditional second-stage refinement
+produces materially tighter product routes and more regular processing
+cadence under the common 600-s end-to-end budget.
+
+\subsection{Manufacturing-factor effects}
+
+The full $4\times5\times3$ factorial design contains 60 instances and five
+solver seeds per cell (300 runs), with no execution failure and an incumbent
+in every run. Table~\ref{tab:doe-scale} shows the steep scale transition: all
+8- and 16-wafer runs are solved to optimality, whereas the optimal rate falls
+to 36\% and 20\% at 24 and 32 wafers.
+
+\begin{table}[htbp]
+\centering
+\caption{Marginal computational difficulty by wafer count in the factorial study.}
+\label{tab:doe-scale}
+\begin{tabular}{rrrrr}
+\toprule
+Wafers & Runs & Optimal (\%) & PDI & Time (s) \\
+\midrule
+8  & 75 & 100 & 28.13 & 0.34 \\
+16 & 75 & 100 & 1876.54 & 33.86 \\
+24 & 75 & 36 & 31155.94 & 408.55 \\
+32 & 75 & 20 & 32959.89 & 433.20 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The prespecified interaction model ($R^2=0.998$ for PDI) identifies wafer
+count and recipe composition as the dominant joint source of difficulty. At
+the $1{:}1$ recipe mix, the additional PDI interaction is 37729.48 for 24
+wafers (95\% CI $[34486.94,\allowbreak 40972.01]$) and 40788.63 for 32 wafers (95\% CI
+$[37546.09,\allowbreak 44031.16]$). By contrast, the main-effect intervals for processing
+time scale cross zero. All prespecified processing-scale main-effect and
+interaction confidence intervals cross zero. Within this factorial design,
+the supported difficulty transition is therefore associated with wafer-count--
+recipe coupling rather than proportional processing-duration changes.
+
+Figure~\ref{fig:doe-pdi-effects} reports every prespecified PDI coefficient
+with its 95\% confidence interval, making the scale--recipe interactions and
+the processing-scale main and interaction effects whose intervals include
+zero directly comparable.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.96\linewidth]{Figure_DOE_PDI_effects.png}
+\caption{Prespecified factorial effects on PDI. Points are OLS coefficients
+and bars are 95\% confidence intervals; the vertical line denotes zero. The
+figure is generated directly from the complete 300-run DOE.}
+\label{fig:doe-pdi-effects}
+\end{figure}
+
+\subsection{One-factor-at-a-time parameter sensitivity}
+
+The 80-run sensitivity study perturbs a 24-wafer $1{:}1$ mixed-flow instance
+through motion-time scales of 0.8 and 1.2, processing-time scales of 0.8 and
+1.2, cleaning intervals of 3 and 10, and vacuum-zone dummy-wafer inventory of
+10, with the nominal setting retained as a reference. Each of the eight
+settings uses ten solver seeds. Every run completes without an execution
+failure, returns an incumbent, and passes independent feasibility validation;
+20 of 80 runs prove optimality. Across settings, mean PDI ranges from 28899.41
+at cleaning interval 10 to 42478.32 at motion scale 1.2. This one-method study
+shows that the formulation and SPBS-assisted exact solve remain operational
+through the prescribed parameter perturbations; it is not used to infer a
+cross-method robustness ranking.
 
 \subsection{Operational interpretation and limitations}
 
@@ -951,12 +1111,15 @@ makespan from operational smoothness: the second stage is designed to reduce
 avoidable waiting and cadence variation without sacrificing the retained
 stage-one makespan.
 
-The complete nominal matrix suggests that structural cut information can
-improve average anytime behavior relative to adapted HEM. Its lack of
-statistical significance prevents a confirmatory population-level ranking.
-Wall-clock comparisons are hardware-dependent, and
-feature extraction and beam decoding remain in the common online time budget,
-whereas reusable SPBS construction is reported as preprocessing. The role
+In the complete nominal matrix, \method{} leads all seven configurations in
+mean PDI and solve time under the evaluated protocol. Its nominal
+instance-level intervals include zero, indicating that the gain varies across
+instances. Independently, the SPBS experiment establishes large,
+multiplicity-adjusted improvements in incumbent availability and PDI, while
+the controlled two-stage study provides multiplicity-adjusted evidence for
+the scheduling mechanism.
+Wall-clock comparisons are hardware-dependent, and feature extraction, SPBS
+loading, and beam decoding remain in the common online time budget. The role
 representation depends on the variable
 taxonomy exposed by SCIP, and the $(1-1/e)$ result applies only to residual
 completion inside a fixed expansion pool. The model assumes deterministic
@@ -987,14 +1150,30 @@ the cut budget, while SCIP retains feasibility and proof responsibilities.
 
 Four verification instances reach zero gap in both stages and satisfy the
 independently checked physical constraints. Across the complete 2700-run
-nominal matrix, the integrated configuration has the lowest observed mean PDI
-and solve time among seven methods. The mean PDI reductions are 1.41\%
-relative to adapted HEM and 1.97\% relative to SCIP. Because the paired
-confidence intervals cross zero and the Holm-adjusted tests are
-non-significant, the evidence supports a descriptive anytime tendency, not a
-universal or population-level superiority claim. The completed component
-contrasts point to variable-role reconstruction as the largest source of the
-mean shift.
+nominal matrix, RDMCT-HBS records the lowest observed mean PDI and solve
+time, with PDI reductions of 1.41\% relative to adapted HEM and 1.97\%
+relative to SCIP, thereby establishing the strongest mean anytime performance
+under the evaluated nominal protocol. The instance-level intervals show that
+the magnitude of this gain is heterogeneous. Feature reconstruction has the
+largest observed mean component reduction, while role completion and
+structure-conditioned beam decoding provide additional observed mean
+reductions. The independent 960-run SPBS study further shows a 26.19\% PDI
+reduction and a rise in incumbent availability from 51.67\% to 100\%, with
+both effects significant after Holm adjustment.
+
+The 1500-run stability study further confirms the modeling contribution.
+Relative to disabling the second stage, the full formulation reduces
+event-reconstructed route-total and route-maximum wait by 51.91\% and 68.89\%,
+and cadence CV and cadence-deviation sum by 39.70\% and 94.05\%, with all four
+comparisons remaining significant after Holm adjustment. The factorial study
+explains where difficulty originates: wafer
+count and mixed-recipe composition interact strongly, whereas all prespecified
+processing-scale main and interaction confidence intervals
+include zero. The 80-run parameter study additionally returns a validated
+incumbent in every prescribed one-factor perturbation. Together, these results
+establish the operational advantage of the two-stage formulation and a clear
+empirical advantage of the structure-aware solver enhancement under the
+evaluated protocol.
 
 From an operational perspective, the framework separates throughput,
 schedule refinement, and solver guidance without relaxing the rotating-chamber
@@ -1020,8 +1199,15 @@ reported in this paper.
 \section*{Data and code availability}
 
 The data, mathematical instances, trained models, and source code supporting
-the findings will be deposited in a public research-data archive with a
-permanent identifier.
+the findings are available from the corresponding author on reasonable
+request. A permanent public archive will be cited in the version of record.
+
+\section*{Declaration of generative AI and AI-assisted technologies in the writing process}
+
+During the preparation of this work, the authors used OpenAI Codex for
+language editing, consistency checking, and code review. The authors reviewed
+and edited all AI-assisted output and take full responsibility for the content
+of the publication.
 
 \bibliographystyle{elsarticle-harv}
 \bibliography{rdmct_cie_references}
