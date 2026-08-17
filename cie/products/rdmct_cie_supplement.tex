@@ -54,31 +54,60 @@ returns an independently valid incumbent.
 
 \section{Indexed MILP specification}
 
-This section gives the complete constraint architecture used to instantiate
-the finite-horizon model. Let $\mathcal W$, $\mathcal P$, $\mathcal C$,
-$\mathcal K$, $\mathcal O$, and $\mathcal R$ denote product wafers, product
-groups, chambers, candidate recipe positions, operations, and unit-capacity
-resources. $\mathcal K(p)$ contains positions compatible with group $p$;
-$\mathcal A$ is the set of technological arcs; and $\mathcal O_r$ contains
-operations that may use resource $r$. For chamber $c$,
-$\mathcal J_c^{\rm DW}$ contains dummy-wafer demands and $\mathcal T_c$ its
-reusable physical dummy wafers. Cleaning epochs are $\mathcal E_c$.
+This section records the principal indexed constraint families used to
+instantiate the finite-horizon model; it is a compact mathematical map of the
+implemented formulation rather than a claim that every generated row is
+printed here. Let $\mathcal W$, $\mathcal P$, $\mathcal C$, $\mathcal K$,
+$\mathcal O$, and $\mathcal R$ denote product wafers, same-mode product-pair
+groups, rotary chambers, candidate recipe slots, operations, and unit-capacity
+resources. A slot $k\in\mathcal K(p)$ is a chamber--batch--side tuple in
+$4\times1$ mode or a chamber--chain-position tuple in $2\times2$ mode.
+$\mathcal A$ is the set of technological predecessor arcs, and
+$\mathcal O_r$ contains operations that may use resource $r$. For each chamber
+$c$, $\mathcal V_c=(v_{c1},\ldots,v_{c n_c})$ is the ordered set of candidate
+processing cycles and $\mathcal E_c=\{1,\ldots,E_c\}$ is the ordered set of
+potential cleaning epochs. The parameter $H$ is the maximum number of active
+processing cycles permitted between two cleans. Furthermore,
+$\mathcal J_c^{\rm DW}$ contains dummy-wafer use demands and $\mathcal T_c$
+contains the reusable physical vacuum-zone dummy wafers.
 
 The binary variables are assignment $x_{pk}$, position activation $u_k$,
 operation activation $b_o$, cycle-to-epoch assignment $a_{vce}$, epoch use
-$z_{ce}$, dummy identity $g_{j\tau}$, and resource order $y^r_{oo'}$.
-Continuous variables $s_o,e_o$ are event start and completion times. The
+$z_{ce}$, dummy identity $g_{j\tau}$, and resource order $y^r_{oo'}$. Here
+$b_v$ is the activation variable $b_o$ for the processing operation associated
+with cycle $v\in\mathcal V_c$, and $z_{ce}=1$ means that epoch $e$ of chamber
+$c$ contains at least one active cycle. Likewise, $b_j$ below abbreviates the
+activation of dummy-use demand $j$. Continuous variables $s_o,e_o$ are event
+start and completion times.
+
+Pairs belonging to one recipe mode have identical processing data and their
+identifiers carry no physical meaning. They are therefore ordered by identifier
+and mapped to the compatible slots in a fixed interleaved chamber order. Define
+the canonical incidence
+\begin{equation}
+\bar{x}_{pk}=\mathbf 1\{k=k^{\rm can}(p)\},\qquad
+x_{pk}=\bar{x}_{pk}\quad(p\in\mathcal P,\ k\in\mathcal K(p)).
+\label{eq:canonical-incidence}
+\end{equation}
+Equation~\ref{eq:canonical-incidence} is a same-mode symmetry reduction: it
+chooses one representative from
+each orbit of pair-label permutations and does not remove a physically distinct
+schedule under the modeled identical-pair data. The odd product/dummy tail, if
+present, occupies the last compatible $2\times2$ position. The resulting
 fixed-duration, activation, and assignment relations are
 \begin{align}
 &\sum_{k\in\mathcal K(p)}x_{pk}=1 &&(p\in\mathcal P),\\
 &x_{pk}\le u_k,\quad u_{k+1}\le u_k,\quad
 b_o=\chi_o(x,u,a) &&(o\in\mathcal O),\\
+&b_{o'}\le b_o &&((o,o')\in\mathcal A),\\
 &0\le s_o\le Mb_o,\quad e_o=s_o+d_ob_o &&(o\in\mathcal O),
 \end{align}
 where the binary affine incidence map $\chi_o$ activates exactly the events
 belonging to the selected $4\times1$ side, $2\times2$ chain position, or
-cleaning cycle. The full route logic is generated from the following active
-event chains:
+cleaning cycle. The predecessor inequality makes operation activation
+consistent along every generated technological chain: an active successor
+cannot have an inactive required predecessor. The route logic is generated
+from the following active event chains:
 \begin{center}
 \begin{tabular}{p{0.16\linewidth}p{0.76\linewidth}}
 \toprule
@@ -121,16 +150,23 @@ Dummy identity and cleaning are linked by
 &&(j\in\mathcal J_c^{\rm DW}),\\
 &\sum_{e\in\mathcal E_c}a_{vce}=b_v,\quad
 a_{vce}\le z_{ce},\quad
-\sum_v a_{vce}\le H z_{ce},\\
-&z_{c,e+1}\le z_{ce},\qquad
-\sum_e e\,a_{vce}\le\sum_e e\,a_{v+1,c,e}.
+z_{ce}\le\sum_{v\in\mathcal V_c}a_{vce},\\
+&\sum_{v\in\mathcal V_c}a_{vce}\le H z_{ce},\quad
+z_{c,e+1}\le z_{ce},\\
+&b_{v_{c,q+1}}\le b_{v_{cq}},\\
+&\sum_{e\in\mathcal E_c}e\,a_{v_{cq},c,e}
+\le\sum_{e\in\mathcal E_c}e\,a_{v_{c,q+1},c,e}
++E_c(1-b_{v_{c,q+1}})
+&& (q=1,\ldots,n_c-1).
 \end{align}
 If $g_{j\tau}=g_{j'\tau}=1$, the same resource disjunction is activated for
 dummy uses $j$ and $j'$, preventing overlapping reuse. Epoch transitions
-activate exactly one intervening dummy-only cleaning route. The last
-inequality makes epoch indices nondecreasing along chamber positions; the
-adjacency equations in $\chi_o$ permit a $2\times2$ split only at that
-transition.
+activate the intervening dummy-only cleaning route, with its activation equal
+to $z_{c,e+1}$. The two last inequalities impose prefix activation and
+nondecreasing epoch indices on consecutive active cycles; the term
+$E_c(1-b_{v_{c,q+1}})$ prevents an inactive suffix from falsely constraining
+its active predecessor. The adjacency equations in $\chi_o$ permit a
+$2\times2$ split only at an activated epoch transition.
 
 Residence and completion constraints are
 \begin{align}
@@ -138,42 +174,70 @@ Residence and completion constraints are
 -e_{\operatorname{in}(w,r)}\le\overline R_{wr},\\
 C_{\max}&\ge e_w^{\rm return} &&(w\in\mathcal W).
 \end{align}
-Stage one minimizes $C_{\max}$. Stage two fixes all retained integer values,
-adds $C_{\max}\le\widehat C+10^{-6}$, and minimizes
+Stage one minimizes $C_{\max}$. Stage two fixes the retained routing and
+resource-order integers from its stage-one incumbent (double-gripper choices
+remain free), adds $C_{\max}\le\widehat C+10^{-6}$, and minimizes
 \begin{equation}
-\Phi=L_{\rm sum}+10L_{\max}+25D_{\rm cadence},
+\Phi=L_{\rm sum}+10L_{\max}+25D_{\rm cadence}+0E_{\rm cap}.
 \end{equation}
-where $L_{\rm sum}$ and $L_{\max}$ aggregate the model-native wait/idle
-variables kept tight by the linear objective and
-\begin{equation}
-D_{\rm cadence}=\sum_{m,c,e,\ell\ge2}
-\left|(h_{mce,\ell+1}-h_{mce,\ell})
--(h_{mce,\ell}-h_{mce,\ell-1})\right|.
-\end{equation}
-A soft-cap excess term is supported by the formulation but has weight zero in
-the reported profile. Hence the second stage preserves the stage-one
+Let $w_i\ge0$ denote a model-native wait or capacity-adjusted idle term,
+$i\in\mathcal L$, let $\bar{w}_i$ be its optional soft target, and let
+$h_{mce\ell}$ be the $\ell$th active processing start of mode $m$, chamber
+$c$, and epoch $e$. The max, absolute-value, and optional soft-cap terms are
+linearized by
+\begin{align}
+L_{\rm sum}&=\sum_{i\in\mathcal L}w_i,&
+L_{\max}&\ge w_i &&(i\in\mathcal L),\\
+\Delta_{mce\ell}&=(h_{mce,\ell+1}-h_{mce,\ell})
+ -(h_{mce,\ell}-h_{mce,\ell-1}),\\
+d_{mce\ell}&\ge \Delta_{mce\ell},&
+d_{mce\ell}&\ge-\Delta_{mce\ell},&
+D_{\rm cadence}&=\sum_{m,c,e,\ell\ge2}d_{mce\ell},\\
+\xi_i&\ge w_i-\bar{w}_i,&
+\xi_i&\ge0,&
+E_{\rm cap}&=\sum_{i\in\mathcal L}\xi_i.
+\end{align}
+The symbol $\xi_i$ is reserved for cap excess and is distinct from the epoch
+indicator $z_{ce}$. A positive coefficient makes each epigraph variable tight
+at optimum. The formal profile disables the soft target, so its effective cap
+weight is zero and only the first three terms enter the reported objective.
+Hence stage two preserves the stage-one
 makespan within numerical tolerance; if stage one is time-limited, this
 statement applies to its retained incumbent rather than to an unproved global
 optimum.
 
-The same inequalities exclude scheduling deadlock in each generated complete
-schedule. Any circular wait would be a directed cycle in the combined
-technological and selected resource-order graph. Summing its positive
-separation inequalities yields a contradiction, while terminal constraints
-require all material routes to return. Thus every feasible MILP solution is a
-deadlock-free offline trajectory under the modeled operating conditions.
+For the deterministic offline problem, a scheduling deadlock is a circular
+wait among active material-transfer or processing operations in which every
+operation awaits a resource or predecessor held ahead of it. Such a wait would
+be a directed cycle in the combined technological and selected resource-order
+graph. Summing the positive separation inequalities around that cycle gives
+$s_o\ge s_o+\epsilon$ for some $\epsilon>0$, a contradiction; terminal
+constraints also require every product and reusable dummy route to finish.
+Thus every feasible solution is a deadlock-free complete offline trajectory
+for the modeled resources, durations, and availability assumptions. This is
+not a runtime deadlock-recovery guarantee under equipment faults, stochastic
+delays, operator intervention, or any resource state omitted from the model.
 
 \section{Independent validation and numerical tolerance}
 
-The validator reloads each saved solution, fixes the primary decision values,
-and checks the active physical model independently of the learning policy.
-The checks cover routing and stage order, chamber and slot exclusivity, robot
-and load-lock use, recipe grouping, cleaning, residence-time limits, and
-vacuum-zone dummy-wafer capacity. Continuous residuals use the solver tolerance
-$10^{-6}$ plus a $10^{-12}$ serialization allowance, i.e., an effective
-threshold of $1.000001\times10^{-6}$. Binary and integer requirements are not
-relaxed. This allowance only accounts for the decimal text round trip of an
-otherwise accepted solver solution.
+The four small validation cases exercise pure $4\times1$, pure $2\times2$,
+and two mixed configurations. Their saved schedules are reloaded, the reported
+primary decisions are fixed, and the active physical model is checked
+independently of the learning policy. The same solution-level procedure is
+then applied to every saved benchmark incumbent. It covers route and stage
+order, chamber and slot exclusivity, robot and load-lock use, recipe grouping,
+cleaning, residence limits, and vacuum-zone dummy-wafer capacity. Continuous
+residuals use the solver tolerance $10^{-6}$ plus a $10^{-12}$ serialization
+allowance, i.e., an effective threshold of
+$1.000001\times10^{-6}$. Binary and integer requirements are not relaxed.
+This allowance only accounts for the decimal text round trip of an otherwise
+accepted solver solution.
+
+The validation claim is deliberately bounded: it establishes consistency
+between the generated instances, serialized solutions, and implemented
+constraints for the tested cases. It is not field validation of unmodeled
+equipment behavior, a proof of correctness for every possible parameterization,
+or evidence of online recovery from faults and stochastic disturbances.
 
 \section{Event-time reconstruction of schedule stability}
 
@@ -202,10 +266,13 @@ $d_1,\ldots,d_m$, cadence variation is
 $\operatorname{CV}(d)=\operatorname{sd}(d)/\operatorname{mean}(d)$.
 The cadence-deviation sum is the sum of the absolute deviations used by the
 linear refinement objective after the discrete batch structure has been fixed.
+Table~\ref{tab:stability-profiles} reports the resulting instance-first means.
 
 \begin{table}[htbp]
 \centering
-\caption{Instance-first means in the controlled two-stage experiment.}
+\caption{Instance-first means in the matched, equal-total-budget
+stability-profile experiment.}
+\label{tab:stability-profiles}
 \begin{tabular}{lrrrr}
 \toprule
 Profile & Route-total & Route-maximum & Cadence CV & Cadence deviation \\
@@ -222,7 +289,14 @@ route-maximum wait by 68.89\%, cadence CV by 39.70\%, and cadence deviation by
 94.05\%; all four comparisons remain significant after Holm adjustment. The
 linear objective also reduces cadence deviation by 63.38\% relative to the
 quadratic profile. Its route-total, route-maximum, and cadence-CV differences
-from the quadratic profile are not Holm-adjusted significant.
+from the quadratic profile are not Holm-adjusted significant. These estimates
+compare complete stability profiles under the same 600-s total budget, not a
+pure stage-two intervention applied to an identical stage-one incumbent:
+stage2-off can spend the full budget on the primary solve, whereas the two
+refinement profiles reserve up to 60 s. The results therefore identify the
+operational effect of the prespecified full two-stage configuration under a
+common total budget; they do not isolate a stage-two causal effect conditional
+on an equal primary search horizon.
 
 \section{Statistical protocol}
 
@@ -240,10 +314,11 @@ Specifically, if $G(t)$ is SCIP's normalized primal--dual gap at time $t$,
 \begin{equation}
 \operatorname{PDI}(T)=\int_0^T G(t)\,dt .
 \end{equation}
-Terminal gap is $G(T)$. Reported solution time covers model loading, the
-primary SCIP solve, the cut-selection callback, conditional second-stage
-refinement, and solution writing inside the common measured run; offline SPBS
-generation is excluded and is evaluated separately by the paired SPBS suite.
+Terminal gap is $G(T)$. Reported solution time is the sum of SCIP-reported
+primary and conditional-refinement solving times. It excludes model loading,
+solution serialization, and offline SPBS construction. The paired SPBS suite
+therefore estimates the downstream solve effect of loading a precomputed
+start; it is not an end-to-end comparison that charges start construction.
 
 \section{Solver, learning, and decoding configuration}
 
@@ -267,20 +342,26 @@ width-three beam decoding.
 
 Each candidate cut has 13 generic attributes: objective parallelism, efficacy,
 support, integer support, normalized violation, and the mean, maximum, minimum,
-and standard deviation of cut and objective coefficients. Ten added
-descriptors are the coefficient-mass shares on binary, general-integer,
-objective-active continuous, auxiliary-continuous, and other variables,
-followed by bounded-variable share, positive-coefficient share,
-discrete--continuous coupling, dominant-role share, and normalized role
-entropy. Candidates are first screened deterministically by efficacy to at
-most 128 rows, and at most 16 are selected.
+and standard deviation of cut and objective coefficients. The ten added
+descriptors use only solver-visible variable types and optimization roles:
+coefficient-mass shares on SCIP binary, general-integer (including implied
+integer), nonzero-objective continuous, zero-objective auxiliary-continuous,
+and other variables, followed by bounded-variable mass, positive-coefficient
+mass, discrete--continuous coupling, dominant-family mass, and normalized
+family entropy. They are computed from SCIP type, objective, bound, column, and
+row-coefficient metadata; formulation-specific variable names are never
+parsed. Candidates are screened deterministically by descending efficacy,
+with original index as the tie breaker, to at most 128 rows; at most 16 rows
+are selected.
 
 The 23-dimensional input passes through layer normalization, separate
-projections of the generic and role blocks, gated fusion, a one-layer LSTM,
-and pointer attention. A high-level policy chooses the selection fraction; a
-low-level pointer policy with an end token generates an ordered, nonrepeating
-sequence. Beam width is three, with cumulative joint log probability and no
-length normalization. Structural completion retains at most
+$13$- and $10$-dimensional projections, and a learned residual gate before a
+one-layer LSTM encoder and pointer-attention decoder. The recurrent hidden
+dimension is 128, with one attention glimpse and tanh exploration coefficient
+5. A high-level policy chooses the selection fraction; a low-level pointer
+policy with an explicit end token generates an ordered, nonrepeating sequence.
+Beam width is three, ranked by cumulative joint log probability without length
+normalization. Structural completion retains at most
 $\lceil0.25k\rceil$ policy anchors for target cardinality $k$ and greedily
 fills from a pool of at most $2k$ candidates. Its quality, policy, role
 coverage, and representativeness weights are $0.35$, $0.20$, $0.25$, and
@@ -288,28 +369,66 @@ $0.20$. The associated $(1-1/e)$ property applies only to the residual
 monotone-submodular completion problem with fixed anchors and pool, not to
 global cut selection.
 
-Training uses five training instances and five independent training seeds.
-For each seed, two workers collect eight trajectories per epoch for 60 epochs;
-each trajectory has a 30-s/1024-MB SCIP budget, including a 5-s conditional
-refinement. A central Adam update uses an exponential-moving-average baseline
-with coefficient $0.9$. Low- and high-level learning rates are $10^{-4}$ and
-$5\times10^{-4}$; the gradient norm is capped at 2, and the learning rate is
-multiplied by 0.96 every ten epochs. The return is negative SCIP PDI. This is
-an A3C-inspired parallel hierarchical REINFORCE backbone with no learned
-critic and no asynchronous parameter update.
+Training uses five training LPs and five independent training seeds. For each
+seed, two workers jointly collect eight complete trajectories per epoch for 60
+epochs with stochastic decoding; each trajectory has a 30-s/1024-MB SCIP
+budget, including at most 5 s of conditional refinement and one separation
+round at the root. A central synchronous Adam update uses an
+exponential-moving-average return baseline with coefficient $0.9$. Low- and
+high-level policy learning rates are $10^{-4}$ and $5\times10^{-4}$; the
+gradient norm is capped at 2, and both learning rates are multiplied by 0.96
+every ten epochs. The return is negative SCIP PDI, with neither feature nor
+reward normalization. This is an A3C-inspired parallel hierarchical REINFORCE
+backbone with no learned critic and no asynchronous parameter update.
+
+The terminal training epoch is prespecified rather than selected on benchmark
+performance. For each method family and seed, the retained epoch-60 parameter
+set must match the training split and seed and must have the required feature
+dimension and PDI reward. There is one admissible parameter set for each
+family--seed pair; no benchmark or test outcome enters parameter selection.
 
 \section{SPBS construction and acceptance}
 
-SPBS fixes deterministic assignment, activation, cleaning-epoch, load-lock
-slot, and selected ATR/aligner/load-lock/VTR order roles in a temporary
-zero-objective feasibility MIP. If no solution is found, a fixed sequence of
-profiles progressively releases the most globally sensitive resource orders
-and then slot choices. Each attempt stops at its first feasible solution.
-The selected physical schedule is reconstructed in the full model with
-secondary variables free and is accepted only after a complete SCIP
-feasibility check. The production MILP receives only this incumbent; no
-temporary fixing survives. All formal starts are additionally keyed to the
-exact LP hash.
+SPBS first fixes the canonical assignment, activation, and cleaning-epoch
+core in a temporary zero-objective feasibility MIP. The profiles then add or
+release load-lock-slot and resource-order decisions in the deterministic
+sequence shown in Table~\ref{tab:spbs-profiles}. Fractions are shares of the
+configured SPBS construction limit; every nonfinal attempt receives the
+smaller of its share and the remaining time, with a 5-s minimum when time
+remains, and the final profile receives the remainder. Each attempt stops at
+its first feasible solution.
+
+\begin{table}[htbp]
+\centering
+\caption{Deterministic SPBS release hierarchy for instances below 32 product
+wafers. The core comprises canonical assignment, activation, and cleaning
+epochs.}
+\label{tab:spbs-profiles}
+\begin{tabular}{p{0.20\linewidth}p{0.58\linewidth}r}
+\toprule
+Profile & Fixed decisions & Limit share \\
+\midrule
+Full & Core, load-lock slots, ATR/aligner, load-lock, and VTR orders & 0.10 \\
+Relaxed-VTR & Core, slots, ATR/aligner and load-lock orders & 0.15 \\
+Relaxed-LL & Core, slots and ATR/aligner orders & 0.45 \\
+Fixed-slots & Core and load-lock slots & 0.15 \\
+Structure-only & Core only & remainder \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For at least 32 product wafers without a positive wait cap, the sequence is
+fixed-slots (0.50), structure-only (0.25), and an unrestricted final fallback.
+With a positive wait cap, it is structure-only (0.60) followed by the
+unrestricted fallback. The unrestricted profile removes even the structural
+fixings and uses only the remaining feasibility-search budget.
+
+The selected physical schedule is reconstructed with secondary variables free
+in the full current model and is accepted only after SCIP's complete original-
+space feasibility check. The production MILP receives only the accepted
+incumbent; no temporary fixing survives. Each cached start records the accepted
+profile and construction attempts and is reusable only when its full-model
+scope and exact LP SHA-256 match the current instance.
 
 \section{Hardware, software, and budgets}
 
@@ -318,6 +437,7 @@ Experiments ran under Windows 11 Pro on an Intel Core Ultra 7 265KF
 The evaluation environment uses Python 3.12.12, SCIP 10.0.1 through
 PySCIPOpt 6.1.0, and PyTorch 2.11.0+cu130. The code does not impose a solver thread count, so no
 single-thread assumption is used in the analysis.
+Table~\ref{tab:budgets} records the formal per-run limits.
 
 \begin{table}[htbp]
 \centering
@@ -338,19 +458,25 @@ Distribution shift & 1200 & 4096 & 1140 s primary + up to 60 s \\
 \end{tabular}
 \end{table}
 
-In the two-stage control, Full and Quadratic-objective (linear-off) reserve 60 s for linear and
-quadratic refinement, respectively; Stage2-off assigns all 600 s to the
-primary solve. Therefore PDI and time from that control have unequal primary
-horizons and are not used as causal evidence for the second stage. The
-reported route-wait and cadence conclusions are reconstructed from the saved
-event schedules under identical definitions.
+All three stability profiles have the same 600-s total and 2048-MB memory
+budgets. Full and Quadratic-objective (linear-off) reserve up to 60 s for
+linear and quadratic refinement, respectively; Stage2-off assigns all 600 s
+to the primary solve. Their primary horizons are therefore unequal. Neither
+PDI/time nor the reconstructed route metrics identify a pure stage-two causal
+effect holding the stage-one incumbent and search horizon fixed. The matched
+comparison instead measures each complete profile under a common total budget,
+with route-wait and cadence outcomes reconstructed from saved event schedules
+under identical definitions.
 
 \section{Independent SPBS warm-start experiment}
 
 Table~\ref{tab:spbs} reports the controlled SPBS comparison. Automatic SPBS
 provides a valid incumbent in every run and reduces PDI by 7194.27 (26.19\%).
 The matched instance-level effects on incumbent availability and PDI both
-remain significant after multiplicity adjustment.
+remain significant after multiplicity adjustment. Both conditions start their
+600-s timed production solve after any SPBS construction has finished; hence
+the comparison isolates the value of supplying the verified incumbent but
+does not include its offline generation cost.
 
 \begin{table}[htbp]
 \centering

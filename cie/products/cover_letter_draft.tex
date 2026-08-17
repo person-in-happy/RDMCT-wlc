@@ -4,7 +4,7 @@
 \setlength{\emergencystretch}{3em}
 \setlength{\longindentation}{0.48\textwidth}
 \signature{Lizhen Shao\\Corresponding author\\University of Science and Technology Beijing\\\texttt{lshao@ustb.edu.cn}}
-\address{Department of Control Science and Engineering\\University of Science and Technology Beijing\\Beijing 100083, China}
+\address{Department of Control Science and Engineering\\University of Science and Technology Beijing\\No.\ 30 Xueyuan Road, Haidian District\\Beijing 100083, China}
 \date{\today}
 
 \begin{document}
@@ -21,36 +21,40 @@ Industrial Engineering}.
 The paper addresses an industrial scheduling problem arising in rotating-
 chamber cluster tools used in a PECVD process setting. Product wafers and
 reusable vacuum-zone dummy wafers share chambers, load locks, and robots while
-obeying recipe grouping, residency, cleaning, capacity, and transfer
-constraints. The resulting dual-source mixed-flow problem is not represented
-by existing single-flow or fixed-routing cluster-tool models.
+obeying recipe compatibility, residency, cleaning, capacity, and transfer
+constraints. Their concurrent interaction creates a finite-horizon scheduling
+problem that is not captured by single-flow cluster-tool formulations.
 
 The paper makes two connected contributions. First, it develops a finite-
-horizon two-stage MILP that jointly determines recipe grouping, chamber and
-slot assignment, transfers, cleaning, dummy-wafer allocation, and timing;
-the second stage preserves the stage-one makespan within numerical tolerance and the discrete schedule while
-refining physical route waits and processing cadence. Second, it develops
-RDMCT-HBS, a structure-aware learning-enhanced branch-and-cut method combining
-an SPBS warm start, reconstructed variable-role features, A3C-inspired
+horizon two-stage MILP that integrates canonical same-recipe pairing and slot
+incidence with transfers, cleaning epochs, reusable dummy-wafer allocation,
+shared-resource ordering, residence limits, and event timing. The canonical
+incidence removes equivalent labels; the second stage preserves the stage-one
+discrete schedule and makespan within numerical tolerance while refining
+physical route waits and processing cadence. Second, it develops RDMCT-HBS, a
+structure-aware learning-enhanced branch-and-cut method combining a
+precomputed SPBS incumbent, reconstructed variable-role features, A3C-inspired
 parallel policy-gradient training, bounded beam decoding, and role-submodular
 completion.
 
 The computational evidence is both extensive and mechanism-specific. In a
-2700-run nominal comparison, RDMCT-HBS records the lowest mean primal--dual
-integral and mean solution time among seven methods. A separate 960-run
-controlled experiment shows that SPBS reduces mean primal--dual integral by
-26.19\% and increases incumbent availability from 51.67\% to 100\%. In 1500
-matched stability runs, two-stage refinement reduces physical route-total
-wait, route-maximum wait, cadence coefficient of variation, and cadence
-deviation by 51.91\%, 68.89\%, 39.70\%, and 94.05\%, respectively, relative
-to disabling refinement. A complete 300-run factorial experiment further
-identifies the interaction between wafer count and mixed-flow recipe as the
-principal source of computational difficulty in the factorial design. The
+2700-run nominal comparison, RDMCT-HBS records the lowest observed mean
+primal--dual integral and mean solver time among seven methods. A separate
+960-run paired experiment shows that supplying a precomputed SPBS incumbent
+reduces mean primal--dual integral by 26.19\% and increases incumbent
+availability from 51.67\% to 100\% during the timed SCIP stage; offline SPBS
+construction is excluded from that budget. In 1500 matched runs under the same
+600-s total budget, the complete two-stage workflow returns schedules with
+physical route-total wait, route-maximum wait, cadence coefficient of
+variation, and cadence deviation lower by 51.91\%, 68.89\%, 39.70\%, and
+94.05\%, respectively, than the no-refinement workflow. A complete 300-run
+factorial experiment further shows that wafer count and mixed-flow recipe
+composition dominate the observed difficulty variation. The
 larger-scale stress test adds 729 time-limited runs on nine 40--64-wafer
 configurations, every one of which returns an independently validated
 incumbent. Across the complete evidence programme, all 6273 planned runs are
 accounted for and all 6041 saved incumbents pass independent feasibility
-checking.
+checking against their frozen generated MILPs.
 
 The work fits the journal because it integrates a new industrial-engineering
 model with an explainable, exact-optimization-compatible learning method and

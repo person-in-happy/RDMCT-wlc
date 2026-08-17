@@ -58,14 +58,14 @@
 | Validation | 4行 | 4 | 4/4均有incumbent，独立验解、精确矩阵和投稿审计全部PASS |
 | 建模证据 | 1套 | 已完成 | compact测试通过；81/81个LP的变量、约束、文件大小和解析时间表已生成 |
 | Main | 2700行 | 2700，审计PASS | 七方法公平比较；PDI与时间均值第一，全部保存解独立验解通过 |
-| Stability | 1500行 | 1500，独立验解与审计PASS | 完整/关闭二阶段/替代目标控制实验；物理等待与节拍由事件时间独立重构并严格联接 |
+| Stability | 1500行 | 1500，独立验解与审计PASS | 同一600 s总预算下比较完整/无精修/替代目标工作流；物理等待与节拍由事件时间独立重构并严格联接 |
 | DOE | 300行 | 300，审计PASS | 60单元析因、主效应/交互/诊断图已完成 |
-| SPBS | 960行 | 960，独立验解与审计PASS | auto warm start与none组件对比；PDI与incumbent率主效应显著 |
+| SPBS | 960行 | 960，独立验解与审计PASS | 预计算SPBS incumbent与none对比；定时SCIP阶段的PDI与incumbent率差异显著，离线构造成本不计入 |
 | 学习策略×SPBS交互 | 可选 | 0 | 仅在正文主张SPBS与学习策略存在协同/交互时必做 |
 | Sensitivity | 80行 | 80，独立验解与审计PASS | 工艺、搬运、清洗和真空区假片库存OFAT |
 | OOD | 729行 | 729，独立验解与审计PASS | 大规模分布外可行性与性能边界 |
 
-核心矩阵（不含Validation）已完成6269/6269行；加Validation为6273/6273。七阶段投稿审计均为`PASS`，共6041个incumbent全部通过独立验解，`invalid_count=0`。Main中Proposed平均PDI为16585.70，低于HEM的16823.18和SCIP的16919.01，平均求解时间218.32~s亦为七方法最低；相对HEM和SCIP的区间跨零且Holm校正$p=1.0$，因此只主张标称矩阵中的最低观测均值，不声称总体显著领先。Stability中，相对stage2_off，完整配置使物理路径总等待、最大等待、节拍CV和节拍偏差和分别降低51.91\%、68.89\%、39.70\%和94.05\%，四项Holm校正后均显著。SPBS自动初始解相对none使incumbent率由51.67\%提高至100\%，PDI降低26.19\%，Holm $p$分别为$2.55\times10^{-5}$和$3.46\times10^{-8}$。Sensitivity 80/80均有有效incumbent，但仅为单方法OFAT。OOD 729/729均在1200~s触顶但均有有效incumbent；ACS取得最低平均OOD PDI，所有全局Holm校正方法差异均不显著，故OOD只支持分布外可行性，不支持RDMCT-HBS领先主张。当前主张范围内无需继续运行benchmark。
+核心矩阵（不含Validation）已完成6269/6269行；加Validation为6273/6273。七阶段投稿审计均为`PASS`，共6041个incumbent全部通过针对冻结生成MILP的独立重载验解，`invalid_count=0`。Main中Proposed平均PDI为16585.70，低于HEM的16823.18和SCIP的16919.01，平均求解时间218.32~s亦为七方法最低；相对HEM和SCIP的区间跨零且Holm校正$p=1.0$，因此只主张标称矩阵中的最低观测均值，不声称总体显著领先。Stability中，在相同600~s总预算下，完整两阶段工作流相对无精修工作流所得排程的物理路径总等待、最大等待、节拍CV和节拍偏差和分别低51.91\%、68.89\%、39.70\%和94.05\%，四项Holm校正后均显著；由于二者第一阶段预算分别为540~s和600~s，该比较不解释为固定同一第一阶段排程后的纯第二阶段因果效应。向SCIP提供预计算SPBS incumbent后，定时求解阶段的incumbent率由51.67\%提高至100\%，PDI降低26.19\%，Holm $p$分别为$2.55\times10^{-5}$和$3.46\times10^{-8}$；该口径不含离线SPBS构造成本。Sensitivity 80/80均有有效incumbent，但仅为单方法OFAT。OOD 729/729均在1200~s触顶但均有有效incumbent；ACS取得最低平均OOD PDI，所有全局Holm校正方法差异均不显著，故OOD只支持分布外可行性，不支持RDMCT-HBS领先主张。当前主张范围内无需继续运行benchmark。
 
 最终证据解释与归档边界如下：
 
@@ -83,8 +83,8 @@
 | M2 | 独立解验证 | 重载每个incumbent并检查原MIP可行性 | 第6.1节+第7节validation |
 | M3 | Gu BS/HTS约化特例 | 可选外部边界验证；两个模型不等价，不作为核心实验前置 | 无Stage；最短路线以文献差异表代替，不声称约化等价 |
 | M4 | 模型规模表 | 报告变量数、整数变量数、约束数、LP大小和解析时间随晶圆数增长 | `model-evidence` Stage，见下方命令 |
-| M5 | 两阶段稳定性 | 比较`full/stage2_off/linear_off`并按primary status区分最优证明与incumbent抛光 | 第6.3节+第7节stability |
-| A1 | SCIP none vs SPBS | 隔离原始热启动对incumbent率、PDI和gap的主效应 | 第6.5节+第7节spbs |
+| M5 | 两阶段稳定性 | 在同一总预算下比较`full/stage2_off/linear_off`工作流，并明确第一阶段预算差异与因果边界 | 第6.3节+第7节stability |
+| A1 | SCIP none vs SPBS | 比较向SCIP提供预计算SPBS incumbent后定时求解阶段的incumbent率、PDI和gap | 第6.5节+第7节spbs |
 | A2 | HEM/Proposed none vs SPBS | 仅用于估计热启动与学习策略的difference-in-differences交互 | 可选；只有保留“协同/交互”主张时才实现并补跑 |
 | A3 | HEM greedy vs beam | 隔离有限宽束搜索 | 第6.2节Main中的HEM-13D/HEM-13D+beam |
 | A4 | 13D/23D/structure消融 | 隔离变量角色比例与次模补全 | 第6.2节Main；角色特征比较必须使用双方greedy |
@@ -289,9 +289,9 @@ Set-Location D:\git\git\RDMCT-A3C; $env:CUDA_MODULE_LOADING='LAZY'; $env:RDMCT_C
 
 ### 6.3 Stability（目标1500行）
 
-目的：比较`full/stage2_off/linear_off`，验证条件式第二阶段目标是否在不改变主目标最优性的前提下改善排程稳定性，并区分已证明最优与仅有incumbent的结果。
+目的：在相同600~s总预算下比较`full/stage2_off/linear_off`三种完整工作流，并区分已证明最优与仅有incumbent的结果。full和linear_off均采用540~s第一阶段加60~s精修，stage2_off把600~s全部用于第一阶段；因此full对stage2_off是工作流结果比较，不是固定同一第一阶段排程后的纯第二阶段因果对照。
 
-当前进度：已完成1500/1500，运行错误0、全部incumbent独立验解通过，严格`solution_file` 1:1联接和后处理审计均为`PASS`。full、linear_off、stage2_off的平均物理路径总等待分别为2596.012、2469.472、5398.597，最大等待分别为296.326、293.271、952.570，节拍CV分别为0.130049、0.134292、0.215676，节拍偏差和分别为22.040、60.180、370.408。相对stage2_off，full的四项降幅依次为51.91\%、68.89\%、39.70\%、94.05\%，Holm校正$p$依次为$3.81\times10^{-5}$、0.00224、0.02137、0.01838；相对linear_off仅节拍偏差和降低63.38\%且显著（Holm $p=0.0377$），其余不显著。full第一阶段预算为540~s，而关闭阶段的配置为600~s，所以PDI和求解时间不作因果加速证据。本节命令仅作复现来源保留，当前不要重跑。
+当前进度：已完成1500/1500，运行错误0、全部incumbent独立验解通过，严格`solution_file` 1:1联接和后处理审计均为`PASS`。full、linear_off、stage2_off的平均物理路径总等待分别为2596.012、2469.472、5398.597，最大等待分别为296.326、293.271、952.570，节拍CV分别为0.130049、0.134292、0.215676，节拍偏差和分别为22.040、60.180、370.408。相对stage2_off，在相同总预算下full工作流所得排程的四项指标依次低51.91\%、68.89\%、39.70\%、94.05\%，Holm校正$p$依次为$3.81\times10^{-5}$、0.00224、0.02137、0.01838；相对linear_off仅节拍偏差和降低63.38\%且显著（Holm $p=0.0377$），其余不显著。由于full第一阶段为540~s而stage2_off为600~s，PDI、时间及四项排程差异均不得解释为保持同一第一阶段排程时的纯第二阶段因果效应；full与linear_off的540+60预算则可用于比较两种精修目标。本节命令仅作复现来源保留，当前不要重跑。
 
 终端A依次执行A1、A2，共540行：
 
@@ -347,7 +347,7 @@ Set-Location D:\git\git\RDMCT-A3C; $env:CUDA_MODULE_LOADING='LAZY'; $env:RDMCT_C
 
 ### 6.5 SPBS（目标960行）
 
-目的：固定SCIP和预算，仅比较none与auto-SPBS，识别warm initial solution对incumbent率、PDI和最终gap的独立主效应；本阶段不证明它与学习策略存在协同。
+目的：固定SCIP和定时求解预算，比较none与预计算auto-SPBS incumbent输入后的求解表现；离线SPBS构造成本不计入600~s，因此结果识别的是已提供初始解时的求解阶段效应，而非端到端生成时间收益，也不证明它与学习策略存在协同。
 
 本阶段已完成960/960：none与auto各480行；728个incumbent独立验解有效，投稿审计PASS。下列命令仅作同一campaign的可恢复复现记录，当前不要重跑。
 
@@ -457,17 +457,17 @@ Set-Location D:\git\git\RDMCT-A3C; $env:CUDA_MODULE_LOADING='LAZY'; $env:RDMCT_C
 - HEM-13D+beam对HEM-13D：隔离束搜索贡献。
 - feature-only-23D-greedy对HEM-13D-greedy：隔离角色/扩展特征贡献。
 - Proposed对structure-greedy：在相同结构策略下检验束搜索增益。
-- SCIP-auto对SCIP-none：只检验SPBS warm start的独立贡献，不解释学习策略交互。
+- SCIP-auto对SCIP-none：只比较预计算SPBS incumbent输入后的定时求解阶段差异，不含离线构造成本，也不解释学习策略交互。
 
 “评测样本内的平均优势”和“总体统计显著优越”必须分开判断。完整2700次Main矩阵显示：RDMCT-HBS在七种配置中取得最低观测平均PDI与最短观测平均求解时间，平均PDI相对HEM和SCIP分别降低1.41\%和1.97\%。正文可明确陈述这一标称矩阵样本事实。相对HEM和SCIP的实例级区间仍跨零且Holm校正$p=1.0$，所以不得扩大为“总体统计显著优于所有基线”“对所有实例普遍优越”或无条件的实际领先。
 
-模型贡献已有独立的确认性证据：1500次Stability实验全部通过独立验解，严格物理指标由事件时间重构后按`solution_file` 1:1联接，后处理审计`PASS`。相对stage2_off，完整两阶段配置使物理路径总等待、最大等待、节拍CV和节拍偏差和分别降低51.91\%、68.89\%、39.70\%和94.05\%，Holm校正$p$分别为$3.81\times10^{-5}$、0.00224、0.02137和0.01838；相对linear_off仅节拍偏差和降低63.38\%且显著。SPBS 960行也已形成确认性算法证据：自动初始解使incumbent率提高48.33个百分点、PDI降低26.19\%，两项Holm校正后均显著。Sensitivity 80行证明预设OFAT场景均能产生经验证incumbent，但不证明跨方法排序稳健。OOD 729行全部触顶但均产生经验证incumbent；ACS平均OOD PDI最低且全局Holm校正差异均不显著，因此只主张分布外可行解交付，不主张RDMCT-HBS的OOD排序优势。
+模型工作流已有确认性结果：1500次Stability实验全部通过针对冻结生成MILP的独立重载验解，严格物理指标由事件时间重构后按`solution_file` 1:1联接，后处理审计`PASS`。在相同600~s总预算下，完整两阶段工作流相对stage2_off所得排程的物理路径总等待、最大等待、节拍CV和节拍偏差和分别低51.91\%、68.89\%、39.70\%和94.05\%，Holm校正$p$分别为$3.81\times10^{-5}$、0.00224、0.02137和0.01838；相对具有相同540+60预算的linear_off，仅节拍偏差和降低63.38\%且显著。由于full与stage2_off第一阶段预算不同，不把该差异解释为固定同一排程后的纯精修因果效应。SPBS 960行显示：向SCIP提供预计算初始解后，定时阶段的incumbent率提高48.33个百分点、PDI降低26.19\%，两项Holm校正后均显著；离线构造时间未计入。Sensitivity 80行证明预设OFAT场景均能产生经验证incumbent，但不证明跨方法排序稳健。OOD 729行全部触顶但均产生经验证incumbent；ACS平均OOD PDI最低且全局Holm校正差异均不显著，因此只主张分布外可行解交付，不主张RDMCT-HBS的OOD排序优势。
 
 `timelimit`行必须保留。存在incumbent时使用PDI、gap、上下界与解质量；无incumbent时进入incumbent-rate及预设惩罚/截尾分析，不能删行。归档检查先核对每个campaign的`submission_audit.json`为`PASS`，再从`cie_submission_analysis.json`和配套CSV追溯中英文稿数值；任何手工挑选行或跨campaign混合都不允许。
 
 ## 8. 论文和Editorial Manager投稿包
 
-现有分析导向英文稿使用官方`elsarticle` class，并有同步中文审查稿、独立匿名入口、title page、cover letter、highlights、figure captions和supplement。Main、Stability、DOE、SPBS、Sensitivity及OOD正式结果均已回填，MiKTeX工具链可生成英文和中文PDF。计算证据已经闭合；最终上传仍取决于作者补齐基金/致谢、逐作者CRediT、ORCID、全体作者原创性与投稿同意、通信作者完整邮寄地址和电话，以及匿名数据/代码评审链接，并完成最终匿名化与源包冻结。
+现有分析导向英文稿使用官方`elsarticle` class，并有同步中文审查稿、独立匿名入口、title page、cover letter、highlights、figure captions和supplement。Main、Stability、DOE、SPBS、Sensitivity及OOD正式结果均已回填，MiKTeX工具链可生成英文和中文PDF。计算证据已经闭合；完整USTB校址已依据官网补入，两个匿名源包也已在独立临时目录编译和匿名检查通过。最终上传仍取决于作者补齐基金/致谢、逐作者CRediT、ORCID、全体作者原创性与投稿同意、通信作者电话与地址确认，以及匿名数据/代码评审链接。
 
 最终按“官方要求 + 本项目论文完整性门槛”准备：
 
@@ -496,19 +496,20 @@ Set-Location D:\git\git\RDMCT-A3C; $env:CUDA_MODULE_LOADING='LAZY'; $env:RDMCT_C
 | Incumbent验解 | 6041个incumbent全部独立验解通过，`invalid_count=0` |
 | 追加计算 | 当前论文主张不需要新增实验；A2只有在新增SPBS与学习策略协同/交互主张时才需要 |
 
-当前没有待续跑的正式实验或后处理命令。上传前必须由作者确认或补齐：基金与基金号、致谢、逐作者CRediT、ORCID、全体作者原创性/独家投稿/最终版本同意、通信作者完整邮寄地址和电话，以及匿名数据/代码评审链接。上述项目依赖作者信息或外部归档服务，不以实验运行时长估算。
+当前没有待续跑的正式实验或后处理命令。上传前必须由作者确认或补齐：基金与基金号、致谢、逐作者CRediT、ORCID、全体作者原创性/独家投稿/最终版本同意、通信作者电话及已补入校址的确认，以及匿名数据/代码评审链接。上述项目依赖作者信息或外部归档服务，不以实验运行时长估算。
 
 ## 10. “可以投稿”的最终定义
 
 - [x] `model-evidence`、checkpoint选择规则和当前正文所需机制边界已冻结；M3/A2仅在增加对应主张时补充。
-- [ ] 工作区对应一个可复现commit，环境、LP、模型、ACS均有hash。
+- [x] 本次最终稿将作为单一可复现commit提交；环境、LP、模型、ACS及匿名源包均有hash。
 - [x] 求解入口强制消费冻结checkpoint manifest；15个模型路径/hash与每行结果一致，正式命令没有`-AllowLegacyCheckpoints`。
 - [x] 6273行核心矩阵完整、无重复，建模证据单独验收，错误处理和censoring规则可审计；当前不声称SPBS×策略协同。
 - [x] 七阶段共6041个incumbent全部独立验解通过，`invalid_count=0`。
 - [x] Main、Stability、DOE、SPBS、Sensitivity与OOD实例级统计均已完成；七阶段投稿审计均为`PASS`。
 - [x] 算法名统一为RDMCT-HBS，A3C启发的并行层次策略梯度表述与实现一致。
 - [x] 中英文分析导向稿无`TBD`或无来源结果；SPBS、Sensitivity与OOD均已回填并可追溯到正式分析产物。
-- [ ] 双匿名稿、title page、highlights、利益冲突、AI声明、CRediT、Funding、Data statement和LaTeX源包齐全；本项目内部要求的supplement齐全，cover letter按Editorial Manager字段准备。
-- [ ] 摘要、关键词、highlights、APA 7、术语表和匿名化检查通过。
+- [x] 技术稿双匿名PDF、highlights、利益冲突、AI声明、Data statement、supplement以及正文/补充材料LaTeX源包已生成并通过独立编译与匿名检查。
+- [ ] title page中的基金、致谢、逐作者CRediT、ORCID、通信作者电话和作者确认，以及匿名数据/代码评审链接仍待作者补齐；完成后重建最终匿名源包并提交。
+- [x] 摘要（保守计数244词）、7个关键词、5条highlights、术语、引文/交叉引用及双匿名检查均通过；参考文献采用一致的`elsarticle-harv`格式。
 
 满足这些门槛表示“材料达到可投稿状态”，不代表期刊必然录用。

@@ -1,5 +1,5 @@
-A two-stage MILP unifies dual-source mixed rotating-chamber scheduling.
-Makespan-preserving refinement sharply improves waits and chamber cadence.
-SPBS cuts mean PDI by 26.19% and raises incumbent availability to 100%.
-Variable-role reconstruction makes beam cut decoding structure-aware.
-RDMCT-HBS has the lowest observed mean PDI and time over 2700 nominal runs.
+A two-stage MILP models dual-source mixed rotating-chamber scheduling.
+Under 600 s, the two-stage workflow yields lower waits and cadence.
+Precomputed SPBS supplied to SCIP lowers mean PDI by 26.19%.
+Role features plus beam decoding attain the lowest nominal mean PDI.
+All 729 larger shifted-instance runs return solver-checked incumbents.

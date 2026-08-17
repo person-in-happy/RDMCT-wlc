@@ -11,11 +11,11 @@
 ## Authors and affiliations
 
 1. Lizhen Shao
-   - Department of Control Science and Engineering, University of Science and Technology Beijing, Beijing 100083, China
+   - Department of Control Science and Engineering, University of Science and Technology Beijing, No. 30 Xueyuan Road, Haidian District, Beijing 100083, China
    - Email: lshao@ustb.edu.cn
    - Corresponding author: Yes
 2. Lincong Wei
-   - Department of Control Science and Engineering, University of Science and Technology Beijing, Beijing 100083, China
+   - Department of Control Science and Engineering, University of Science and Technology Beijing, No. 30 Xueyuan Road, Haidian District, Beijing 100083, China
    - Email: m202420836@xs.ustb.edu.cn
    - Corresponding author: No
 
@@ -32,6 +32,8 @@ The author order, affiliation, emails, and corresponding-author designation are 
 - Chinese highlights for review: `highlights_analysis_focused_zh.txt`
 - Figure captions: `figure_captions.txt`
 - Bibliography: `rdmct_cie_references.bib`
+- Flat anonymous manuscript source bundle: `CIE_RDMCTHBS_anonymous_source_20260817.zip`
+- Separate anonymous supplement source bundle: `CIE_RDMCTHBS_anonymous_supplement_source_20260817.zip`
 
 ## Required confirmations before upload
 
@@ -39,7 +41,7 @@ The author order, affiliation, emails, and corresponding-author designation are 
 - Acknowledgements.
 - Individual CRediT roles for each author; the generic joint-contribution statement is provisional.
 - ORCID identifiers.
-- Complete postal address and telephone number for the corresponding author.
+- Confirmation of the official USTB postal address and the corresponding author's telephone number.
 - Originality, exclusive submission, and approval by all authors.
 - Anonymous data/code review link and post-acceptance archive identifier.
 
