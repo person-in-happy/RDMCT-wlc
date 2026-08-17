@@ -21,4 +21,4 @@ The original manuscript requested by the author remains unchanged. Its frozen SH
 
 This version reorganizes the paper around industrial logic, model decisions, mechanism-level evidence, and result interpretation. Training hyperparameters and run-matrix details are not presented as the main narrative. The new version adds a dual-source equipment-flow diagram and an explicit mapping from industrial rules to mathematical mechanisms and scheduling consequences.
 
-The formal OOD experiment is still running. Its audited result will be added to the analysis-focused manuscripts only after the full 729-run matrix is complete and independently validated.
+The formal OOD experiment is complete: all 729 runs reached the time limit but returned independently validated incumbents, with no runner or solution-writing errors. Across the nine larger configurations, adaptive cut selection achieved the lowest mean OOD PDI; the globally Holm-adjusted method contrasts were not significant. The analysis-focused manuscripts therefore use OOD as evidence of feasible-schedule delivery under distribution shift, not as evidence that RDMCT-HBS ranks first out of distribution.

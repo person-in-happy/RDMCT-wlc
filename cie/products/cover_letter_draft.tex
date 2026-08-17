@@ -28,7 +28,7 @@ by existing single-flow or fixed-routing cluster-tool models.
 The paper makes two connected contributions. First, it develops a finite-
 horizon two-stage MILP that jointly determines recipe grouping, chamber and
 slot assignment, transfers, cleaning, dummy-wafer allocation, and timing;
-the second stage preserves the stage-one makespan and discrete schedule while
+the second stage preserves the stage-one makespan within numerical tolerance and the discrete schedule while
 refining physical route waits and processing cadence. Second, it develops
 RDMCT-HBS, a structure-aware learning-enhanced branch-and-cut method combining
 an SPBS warm start, reconstructed variable-role features, A3C-inspired
@@ -45,8 +45,12 @@ wait, route-maximum wait, cadence coefficient of variation, and cadence
 deviation by 51.91\%, 68.89\%, 39.70\%, and 94.05\%, respectively, relative
 to disabling refinement. A complete 300-run factorial experiment further
 identifies the interaction between wafer count and mixed-flow recipe as the
-dominant source of computational difficulty. Saved incumbents used for these
-claims pass independent feasibility validation.
+principal source of computational difficulty in the factorial design. The
+larger-scale stress test adds 729 time-limited runs on nine 40--64-wafer
+configurations, every one of which returns an independently validated
+incumbent. Across the complete evidence programme, all 6273 planned runs are
+accounted for and all 6041 saved incumbents pass independent feasibility
+checking.
 
 The work fits the journal because it integrates a new industrial-engineering
 model with an explainable, exact-optimization-compatible learning method and
@@ -54,9 +58,10 @@ evaluates both computational and manufacturing consequences. The formulation
 and solution architecture are also transferable to other tightly coupled
 multi-resource scheduling systems with auxiliary flows and shared transport.
 
-Before upload, the authors will confirm that this manuscript is original, is
-not under consideration elsewhere, has been approved by all authors, and that
-the funding, acknowledgement, and individual CRediT statements are complete.
+% Before submission, the authors must confirm originality, exclusive
+% consideration, approval by all authors, funding, acknowledgements, and
+% individual CRediT roles. These facts are intentionally not asserted here
+% until author confirmation is received.
 
 Thank you for your consideration.
 

@@ -1,14 +1,12 @@
 # C&IE 实验完成度与投稿证据审计
 
-> 审计快照：2026-08-14 11:34:26（Asia/Shanghai）。本文仅认定正式复现实验及其独立验解、投稿审计产物；历史单例、smoke、compact 和 final_v1 结果不得并入正式统计。执行参数与续跑命令以 [投稿执行手册](../docs/cie_submission_runbook_zh.md) 为准，实验定义以 [C&IE 复现协议](../README.md) 为准。
+> 审计快照：2026-08-17 14:58:02（Asia/Shanghai）。本文仅认定正式复现实验及其独立验解、投稿审计产物；历史单例、smoke、compact 和 final_v1 结果不得并入正式统计。执行参数与续跑命令以 [投稿执行手册](../docs/cie_submission_runbook_zh.md) 为准，实验定义以 [C&IE 复现协议](../README.md) 为准。
 
 ## 1. 当前结论
 
-Main、Stability、DOE、SPBS 和 Sensitivity 已分别完成 2700、1500、300、960 和 80 行正式实验，逐解独立验证均无无效解，投稿审计均为 PASS。这五组结果已经达到写入论文结果表和消融分析的证据门槛，无需重跑。
+Main、Stability、DOE、SPBS、Sensitivity 和 OOD 已分别完成 2700、1500、300、960、80 和 729 行正式实验，七个阶段（含 Validation）的投稿审计全部 PASS。正式 benchmark 为 6269/6269；另计 Validation 4/4 后，总矩阵为 6273/6273。全部 6041 个保存 incumbent 均通过独立验解，`invalid_count=0`。
 
-完整投稿实验包尚未闭合。SPBS 与 Sensitivity 已完成并回填中英文稿；正式 OOD 正在三个分片并行运行，当前为 109/729。因此，当前可以撰写模型正确性、主实验、调度稳定性、DOE、SPBS 主效应和单因素参数敏感性结果，但尚不能声称分布外泛化已经验证。
-
-正式六组 benchmark 的总目标为 6269 行，当前完成 5649 行；另计 Validation 4/4 后，总进度为 5653/6273，尚余 OOD 620 行。该比例仅表示原子行完成度，不替代各阶段的独立验解和投稿审计。
+实验取证已经闭环。Main 支持标称范围的最低观察平均 PDI 与求解时间；Stability 和 SPBS 分别提供显著的模型运营优势与初始解算法优势；Sensitivity 支持预设参数扰动下的可运行性；OOD 的 729 次运行全部交付验解有效的可行排程，支持规模与分布偏移下的集成求解链稳健性。
 
 ## 2. 权威进度
 
@@ -20,15 +18,15 @@ Main、Stability、DOE、SPBS 和 Sensitivity 已分别完成 2700、1500、300�
 | DOE | 300 | 300/300，完成 | 300/300，invalid=0 | PASS | 因素、交互和规模效应 |
 | SPBS | 960 | 960/960，完成 | 728/728 incumbents，invalid=0 | PASS | 初始解策略的独立贡献 |
 | Sensitivity | 80 | 80/80，完成 | 80/80，invalid=0 | PASS | 工艺、搬运、清洗和真空区假片库存扰动 |
-| OOD | 729 | 109/729，三路运行中 | 完成后统一验解 | 未审计 | 分布外泛化与鲁棒性 |
+| OOD | 729 | 729/729，完成 | 729/729，invalid=0 | PASS | 大规模分布偏移下的可行排程交付 |
 
-SPBS 已形成 960 个唯一原子结果；自动和关闭初始解各 480 行。投稿审计记录 `expected=csv=jsonl=960`、错误为 0，728 个保存 incumbent 全部通过独立验解。Sensitivity 已形成 80 个唯一结果且 80/80 有 incumbent，独立验解和投稿审计均 PASS。OOD 三个活动分片 seed1/seed2/seed3 分别完成 37/37/35 行，错误日志均为 0 字节；不得重复启动同一 CampaignId 和 ShardTag，也不得在其运行时启动第四路求解。
+SPBS 已形成 960 个唯一原子结果；自动和关闭初始解各 480 行。投稿审计记录 `expected=csv=jsonl=960`、错误为 0，728 个保存 incumbent 全部通过独立验解。Sensitivity 已形成 80 个唯一结果且 80/80 有 incumbent。OOD 三个分片各 243 行，合计 729 个唯一结果；729/729 有 incumbent，错误与写解错误为 0，独立验解和投稿审计均 PASS。所有正式求解阶段均已结束，不再启动恢复命令。
 
 ## 3. 数值验解口径
 
 Main 的正式独立验解保留 SCIP 的原始可行性容差 1e-6，并仅增加 1e-12 的文本序列化裕量，即有效比较阈值为 1.000001e-6。该裕量只用于吸收解文件十进制写入和读回造成的边界舍入误差，不修改 MIP、目标值、求解状态或求解器参数，也不放宽二元变量、互斥、容量、路由等离散约束。
 
-在上述统一口径下，Main 2700 个解、Stability 1500 个解、DOE 300 个解、SPBS 728 个 incumbent 和 Sensitivity 80 个解均由独立分析程序验解，invalid 均为 0。SPBS 的 232 个无 incumbent 行作为真实限时结果保留，因此其 `incumbent_rows` 不等于 `expected_rows`，这不是审计失败。Stability 的物理等待与节拍量不读取可能漂移的辅助松弛变量，而是由独立分析程序直接从每个保存解的事件时间重构，并按 `solution_file` 与正式结果严格 1:1 联接。
+在上述统一口径下，Main 2700 个解、Stability 1500 个解、DOE 300 个解、SPBS 728 个 incumbent、Sensitivity 80 个解和 OOD 729 个解均由独立分析程序验解，invalid 均为 0。SPBS 的 232 个无 incumbent 行作为真实限时结果保留，因此其 `incumbent_rows` 不等于 `expected_rows`，这不是审计失败。Stability 的物理等待与节拍量不读取可能漂移的辅助松弛变量，而是由独立分析程序直接从每个保存解的事件时间重构，并按 `solution_file` 与正式结果严格 1:1 联接。
 
 权威产物位置如下：
 
@@ -37,12 +35,13 @@ Main 的正式独立验解保留 SCIP 的原始可行性容差 1e-6，并仅增�
 - DOE：cie/results/doe/cie_doe_600s_mem2048_repro_v1/submission_analysis
 - SPBS：cie/results/spbs/cie_spbs_600s_mem2048_repro_v1/submission_analysis
 - Sensitivity：cie/results/sensitivity/cie_sensitivity_600s_mem2048_repro_v1/submission_analysis
+- OOD：cie/results/ood/cie_ood_1200s_mem4096_repro_v1/submission_analysis
 
 ## 4. 当前可以写入论文的结论
 
 ### 4.1 模型与实现正确性
 
-Validation 4/4 以及三组正式实验共 4500 个解的独立验解结果，可以支持“两阶段双源混流旋转腔室组合设备调度模型及其求解链路在既定测试集上满足所建约束”的表述。该证据证明实现一致性和解的可行性，不单独证明算法优于其他方法。
+Validation 4/4 以及六组正式 benchmark 的 6041 个 incumbent 独立验解结果，可以支持“两阶段双源混流旋转腔室组合设备调度模型及其求解链路在既定测试集上满足所建约束”的表述。该证据证明实现一致性和解的可行性；算法优势由 Main、SPBS 和 Stability 的受控比较分别支撑。
 
 ### 4.2 Main 主实验
 
@@ -68,6 +67,12 @@ SPBS 自动初始解将实例平均 incumbent 获得率由 51.67% 提高到 100%
 
 Sensitivity 的 8 个 OFAT 场景、80 次运行全部获得并验解可行解，20/80 证明最优，平均 PDI 范围为 28899.41--42478.32。它支持模型及 SPBS 辅助默认 SCIP 在预设搬运、加工、清洗和真空区假片库存扰动下保持可运行，但由于没有跨方法对照，不能声称 RDMCT-HBS 的算法排序对参数扰动稳健。
 
+### 4.6 OOD规模与分布偏移
+
+OOD 的 9 个 40--64 晶圆构型形成 729/729 条唯一结果，全部为保留的 `timelimit` 行，但 729/729 均获得并验解有效的 incumbent。自适应割选择、HEM、HEM+Beam、Structure+Greedy、SCIP、RDMCT-HBS 和 feature-only 的实例优先平均 PDI 依次为 70915.54、73003.59、73165.58、73507.76、73670.99、73919.15 和 74187.22。RDMCT-HBS 的观察平均终止 gap 为 170.02%，较 SCIP 的 171.35% 低 0.78%；OOD 全局 Holm 校正后没有方法差异达到显著性。
+
+因此，OOD 证据明确支持“集成 SPBS--MILP--SCIP 求解链在更大分布偏移构型的全部 729 次运行中交付有效可行排程”。它与 Main 结论互补：RDMCT-HBS 在标称范围取得最低观察平均 PDI 与时间，而极端规模下自适应割选择取得最低平均 PDI，不能把标称排名扩大为跨分布普遍第一。
+
 ## 5. 当前不可主张的结论
 
 - 不得声称 proposed 在总体上或统计意义上显著优于全部基线；Main 的关键 PDI 比较经多重校正后不显著。
@@ -76,21 +81,21 @@ Sensitivity 的 8 个 OFAT 场景、80 次运行全部获得并验解可行解�
 - 不得把 Stability 中不同第一阶段预算下的 PDI 或求解时间差写成第二阶段的因果加速证据；稳定性主张只使用独立事件重构的物理等待与节拍指标。
 - 不得把 SPBS 对默认 SCIP 的主效应写成 SPBS 与学习策略的协同或交互效应。
 - 不得把单方法 Sensitivity 结果写成 RDMCT-HBS 相对基线的参数鲁棒性。
-- OOD 仅完成 109/729，不能声称具有分布外泛化能力或跨规模鲁棒性。
+- 不得声称 RDMCT-HBS 在 OOD 上排名第一；OOD 最低平均 PDI 属于自适应割选择，且全部方法配对差异经全局 Holm 校正后均不显著。
 - 不得用历史单例、旧 Campaign、smoke 结果或筛选后的有利样本替代完整配对统计。
 - 若正文使用“严格 A3C”“RL-SAT 贡献”或“各模块协同增益”等强表述，必须补充与该表述一一对应的受控实验；否则应删除或降级该表述。
 
 ## 6. 剩余步骤与优先级
 
-### P0：闭合强制投稿证据
+### P0：冻结投稿材料
 
-1. 保持当前 OOD seed1/seed2/seed3 三个分片运行；如需中断，分别按一次 `Ctrl+C` 并等待返回提示符，次日原样重跑第6.7节三条命令。
-2. 完成 OOD 729/729 后执行统一汇总、独立验解、矩阵审计和实例级统计。结果必须按预注册方法和完整实例报告，不得仅保留取得 incumbent 的样本。
-3. SPBS 与 Sensitivity 已完成、验解、审计并回填，不重跑。
+1. 六组正式 benchmark 与 Validation 已全部完成、验解和审计，不再重跑。
+2. 将 OOD 最终表、完整可行性结论和真实排序同步到英文稿、中文审查稿及补充材料。
+3. 重编译匿名正文、中文审查稿、supplement 和 cover letter，并执行匿名化、引用、数值与版面检查。
 
 ### P1：冻结统计与稿件
 
-1. SPBS 与 Sensitivity 已回填；OOD 完成后将其最终汇总、配对检验、置信区间和图表写入英文稿与中文审查稿。
+1. SPBS、Sensitivity 与 OOD 均已回填；逐表核对其最终汇总、配对检验和置信区间。
 2. 逐项核对摘要、贡献、结果和结论，使每个性能主张均能追溯到冻结 CSV/JSON、独立验解报告和 submission_audit.json。
 3. 冻结代码版本、依赖、实例清单、模型与权重哈希、随机种子和运行参数；记录生成论文表图所用的确切产物。
 4. 生成并检查匿名正文 PDF、标题页、Highlights、利益冲突声明、作者贡献声明、数据与代码可用性声明及补充材料。
@@ -103,6 +108,4 @@ Sensitivity 的 8 个 OFAT 场景、80 次运行全部获得并验解可行解�
 
 ## 7. 投稿判定
 
-当前状态为“除 OOD 外的正式证据均已达到可引用门槛，完整投稿证据尚未闭合”。Main、Stability、DOE、SPBS 和 Sensitivity 不需要重跑；强制剩余实验仅为 OOD 620 行及其统一后处理、独立验解和投稿审计。当前执行位置是继续 seed1/seed2/seed3 三个 OOD 分片，分别从 37/37/35 行恢复。
-
-当六组正式 benchmark 全部达到目标行数并通过审计，论文所有占位符均替换、主张边界与统计结果一致、投稿文件齐备后，才可将状态改为“可提交”。
+当前状态为“实验与统计证据全部闭环，稿件证据回填已完成，等待作者元数据与数据链接确认后即可上传”。Main、Stability、DOE、SPBS、Sensitivity 和 OOD 均不需要重跑。剩余事项只包括作者确认 funding、致谢、逐作者 CRediT、ORCID、原创与独家投稿声明，以及提供匿名数据/代码评审链接。

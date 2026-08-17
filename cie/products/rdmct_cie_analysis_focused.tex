@@ -27,36 +27,38 @@ branch-and-cut for dual-source mixed-flow rotating-chamber cluster tools}
 \author{Anonymous author(s)}
 
 \begin{abstract}
-Dual-source mixed-flow rotating-chamber cluster tools must coordinate product
-wafers and reusable vacuum-zone dummy wafers through shared chambers, load
-locks, and robots. Their schedules couple recipe grouping, chamber rotation,
-cleaning, material availability, and residence-time restrictions, so a
-throughput-optimal sequence can still contain operationally poor waiting and
-cadence. We formulate the first finite-horizon two-stage MILP that integrates
-these decisions for mixed $4\times1$/$2\times2$ operation. Stage one minimizes
-end-to-end makespan; stage two preserves the selected discrete schedule and
-makespan while refining physical route waits and chamber cadence. To solve the
-resulting model, we develop \method{}, which combines a structure-preserving
-binary-skeleton warm start with variable-role reconstruction, A3C-inspired
+Dual-source mixed-flow rotating-chamber cluster tools coordinate product and
+reusable vacuum-zone dummy wafers across shared chambers, load locks, and
+robots. Scheduling couples recipe grouping, rotation, cleaning, material
+availability, and residence limits; a throughput-optimal sequence can still
+exhibit poor waits and cadence. We formulate the first finite-horizon two-stage
+MILP integrating these decisions in mixed $4\times1$/$2\times2$ operation.
+Stage one minimizes end-to-end makespan; stage two retains the discrete
+schedule and makespan within numerical tolerance while refining physical route
+waits and chamber cadence. To solve it, we develop rotating dual-source
+mixed-flow cluster-tool hierarchical beam search (RDMCT-HBS), combining a
+structure-preserving binary-skeleton warm start (SPBS), variable-role reconstruction, A3C-inspired
 parallel policy-gradient learning, bounded beam decoding, and structural cut
 completion inside SCIP. Four exact cases verify the formulation. In 2700
 nominal runs, \method{} achieves the lowest mean primal--dual integral and
 solution time among seven methods, improving mean PDI by 1.41\% over adapted
-HEM and 1.97\% over SCIP. A separate 960-run experiment shows that the warm
-start reduces mean PDI by 26.19\% and raises incumbent availability from
+HEM and 1.97\% over SCIP. A separate 960-run comparison shows that SPBS
+reduces mean PDI by 26.19\% and raises incumbent availability from
 51.67\% to 100\%. In 1500 controlled runs, the second stage reduces physical
 route-total wait, route-maximum wait, cadence variation, and cadence deviation
-by 51.91\%, 68.89\%, 39.70\%, and 94.05\%, respectively. The results establish
-both the operational value of the two-stage model and the computational
-advantage of structure-aware exact search.
+by 51.91\%, 68.89\%, 39.70\%, and 94.05\%, respectively. Across 729 OOD runs
+on nine larger configurations, all methods return an independently validated
+incumbent. The results establish both the operational value of the two-stage
+model and the nominal-range computational advantage of structure-aware exact
+search.
 \end{abstract}
 
 \begin{highlights}
 \item A two-stage MILP unifies dual-source mixed rotating-chamber scheduling.
 \item Makespan-preserving refinement sharply improves waits and chamber cadence.
-\item SPBS cuts mean PDI by 26.19\% and guarantees an incumbent in every run.
+\item SPBS cuts mean PDI by 26.19\% and raises incumbent availability to 100\%.
 \item Variable-role reconstruction makes beam cut decoding structure-aware.
-\item RDMCT-HBS leads seven methods in mean anytime performance over 2700 runs.
+\item RDMCT-HBS has the lowest observed mean PDI and time over 2700 nominal runs.
 \end{highlights}
 
 \begin{keyword}
@@ -135,11 +137,11 @@ A3C-inspired parallel learning, bounded beam decoding, and structural set
 completion while leaving feasibility and proof to SCIP.
 \end{enumerate}
 
-The computational study is organized around conclusions rather than execution
-steps. Exact verification establishes model fidelity; the nominal comparison
-establishes algorithmic performance; targeted controls explain the warm-start
-and two-stage mechanisms; and a factorial study identifies the manufacturing
-conditions that create computational difficulty.
+The evidence design links the two contributions to complementary tests. Exact
+verification establishes formulation fidelity; the nominal comparison measures
+algorithmic performance; controlled contrasts identify the warm-start and
+second-stage effects; and factorial and shifted-instance studies reveal the
+manufacturing conditions that govern computational difficulty and scalability.
 
 \section{Research background and positioning}
 \label{sec:background-new}
@@ -224,7 +226,9 @@ Figure~\ref{fig:system-new} shows the system at the level needed to understand
 the optimization model. Product wafers traverse the atmospheric domain,
 upper load lock, vacuum robot, rotary chamber, lower load lock, and return
 path. Dummy wafers begin and end in the vacuum domain. The two streams share
-the VTR and chambers but have different release and return requirements.
+the vacuum transfer robot (VTR) and chambers but have different release and
+return requirements; the atmospheric transfer robot (ATR) handles the external
+product-wafer route.
 
 \begin{figure}[htbp]
 \centering
@@ -281,28 +285,38 @@ network.
 
 \subsection{Decision structure and principal constraints}
 
-Let $\mathcal W$ denote product wafers, $\mathcal C$ the rotary chambers,
+Let $\mathcal W$ denote product wafers, $\mathcal P$ the product groups,
+$\mathcal C$ the rotary chambers, $\mathcal K$ the candidate recipe positions,
 $\mathcal O$ the operations, and $\mathcal R$ the unit-capacity resources.
-Binary variables $x$ assign product pairs to recipe positions, $u$ activate
-batches and chain positions, $a$ assign process cycles to cleaning epochs,
-$g$ assign dummy operations to physical dummy wafers, and $y$ order operations
-that share a resource. Each operation $o$ has start $s_o$, completion
-$e_o=s_o+d_o$, and fixed duration $d_o$.
+$\mathcal K(p)$ is the set of positions admissible for group $p$,
+$\mathcal A$ is the technological-arc set, and $\mathcal O_r$ contains the
+operations that may use resource $r$. For chamber $c$, $\mathcal J_c^{\rm DW}$
+is the set of dummy-wafer demands and $\mathcal T_c$ is its physical dummy
+inventory. Binary variables $x$ assign product groups to recipe positions,
+$u$ and $b$ activate positions and operations, $a$ assign process cycles to
+cleaning epochs, $g$ assign dummy demands to physical dummy wafers, and $y$
+order operations that share a resource. Each operation $o$ has start $s_o$,
+completion $e_o=s_o+d_o$, and duration $d_o$. The constants $\delta_{oo'}$
+and $\rho^r_{oo'}$ are technological and endpoint-dependent setup separations,
+and $M$ is a valid scheduling-horizon bound.
 
 The central model relations are compactly represented by
 \begin{align}
 &\sum_{k\in\mathcal K(p)}x_{pk}=1 && p\in\mathcal P, \label{eq:new-assign}\\
 &x_{pk}\le u_k,\qquad u_{k+1}\le u_k, && k\in\mathcal K, \label{eq:new-activate}\\
 &s_{o'}\ge e_o+\delta_{oo'}, &&(o,o')\in\mathcal A, \label{eq:new-prec}\\
-&s_{o'}\ge e_o+\rho^r_{oo'}-M(1-y^r_{oo'}), &&o,o'\in\mathcal O_r,\label{eq:new-res1}\\
-&s_o\ge e_{o'}+\rho^r_{o'o}-My^r_{oo'}, &&o,o'\in\mathcal O_r,\label{eq:new-res2}\\
-&\sum_{\tau\in\mathcal T_c}g_{j\tau}=1 &&j\in\mathcal J_c^{\rm DW}.\label{eq:new-dummy}
+&s_{o'}\ge e_o+\rho^r_{oo'}-M(1-y^r_{oo'})-M(2-b_o-b_{o'}),
+&&\{o,o'\}\subseteq\mathcal O_r,\label{eq:new-res1}\\
+&s_o\ge e_{o'}+\rho^r_{o'o}-My^r_{oo'}-M(2-b_o-b_{o'}),
+&&\{o,o'\}\subseteq\mathcal O_r,\label{eq:new-res2}\\
+&\sum_{\tau\in\mathcal T_c}g_{j\tau}=b_j
+&&j\in\mathcal J_c^{\rm DW}.\label{eq:new-dummy}
 \end{align}
 Equation~\eqref{eq:new-assign} makes every product group part of exactly one
 recipe position. Equation~\eqref{eq:new-activate} links assignments to a
 contiguous active structure. Technological arcs in
 Eq.~\eqref{eq:new-prec} create complete product and dummy routes. The paired
-disjunctions~\eqref{eq:new-res1}--\eqref{eq:new-res2} prevent overlap on the
+activation-qualified disjunctions~\eqref{eq:new-res1}--\eqref{eq:new-res2} prevent overlap on the
 ATR, aligner, load-lock slots, VTR, chambers, and each reusable dummy wafer;
 the setup term $\rho$ includes endpoint-dependent robot repositioning.
 
@@ -331,6 +345,7 @@ Finite-batch throughput & Latest return-to-load-port variable & Measures end-to-
 
 Cleaning epochs satisfy
 \begin{equation}
+\sum_e a_{vce}=b_v,\qquad a_{vce}\le z_{ce},\qquad
 \sum_v a_{vce}\le H z_{ce},
 \end{equation}
 where $H$ is the maximum number of process cycles between cleans and $z_{ce}$
@@ -340,6 +355,17 @@ boundary. Residence limits take the form
 \begin{equation}
 0\le s_{\mathrm{out}(w,r)}-e_{\mathrm{in}(w,r)}\le \overline R_{wr}.
 \end{equation}
+
+In this setting, a scheduling deadlock is a circular wait in which active
+wafer moves hold resources while requesting one another's next resource. The
+MILP excludes such a cycle from every generated schedule. Every active route
+has a finite source-to-return precedence chain, and every pair sharing a
+unit-capacity resource receives exactly one temporal order. A directed cycle
+in the combined route--resource graph would make the corresponding positive
+separation inequalities sum to $0>0$ and is therefore infeasible. Terminal
+return constraints additionally require every product and assigned dummy
+wafer to complete its route. Thus each feasible solution is a complete,
+deadlock-free offline equipment trajectory under the modeled conditions.
 
 \subsection{Throughput first, schedule quality second}
 
@@ -366,18 +392,34 @@ z_d=\widehat z_d\ (d\in\mathcal D_{\rm fix}),\qquad
 \end{equation}
 It then minimizes
 \begin{equation}
-\Phi(z)=\lambda_1 Q_{\rm total}+\lambda_2 Q_{\max}
+\Phi(z)=\lambda_1 L_{\rm sum}+\lambda_2 L_{\max}
 +\lambda_3 D_{\rm cadence}+\lambda_4 E_{\rm cap},
 \label{eq:new-stage2}
 \end{equation}
-where $Q_{\rm total}$ and $Q_{\max}$ capture avoidable route waiting,
-$D_{\rm cadence}$ measures deviations between consecutive chamber starts,
-and $E_{\rm cap}$ penalizes soft wait-cap excess.
+where $\mathcal L(z)$ contains the model-native wait and idle terms that are
+tight under the linear objective, and $h_{mc e\ell}$ is the $\ell$th active
+processing start for recipe mode $m$, chamber $c$, and cleaning epoch $e$:
+\begin{align}
+L_{\rm sum}&=\sum_{\ell\in\mathcal L(z)}\ell, &
+L_{\max}&=\max_{\ell\in\mathcal L(z)}\ell,\\
+D_{\rm cadence}&=\sum_{m,c,e,\ell\ge2}\left|
+(h_{mce,\ell+1}-h_{mce,\ell})-(h_{mce,\ell}-h_{mce,\ell-1})\right|,\\
+E_{\rm cap}&=\sum_{\ell\in\mathcal L(z)}[\ell-\bar\ell]_+.
+\end{align}
+The nonnegative weights $\lambda_1,\ldots,\lambda_4$ set the trade-off among
+aggregate waiting, extreme waiting, cadence irregularity, and soft wait-cap
+excess. The formal linear profile uses weights $(1,10,25,0)$; the last term is
+available only when a positive soft cap is configured. Physical product-route
+waits reported as operational outcomes are reconstructed uniformly from event
+times, rather than read from these objective auxiliaries; their six-segment
+definition is given in the supplement.
 
+Here $\varepsilon_C$ is only the numerical equality tolerance.
 Equation~\eqref{eq:new-fix} gives the two-stage model a clear guarantee. The
-second stage cannot worsen the retained makespan and cannot change the chosen
+second stage cannot worsen the retained makespan beyond this tolerance and cannot change the chosen
 recipe, assignment, cleaning, or resource-order structure. If stage one proves
-optimality, the refined schedule remains globally makespan-optimal; its timing
+optimality, the refined schedule remains globally makespan-optimal within the
+same tolerance; its timing
 is optimal for Eq.~\eqref{eq:new-stage2} within the retained discrete
 structure. If stage one ends with an incumbent, the same statement holds
 relative to that incumbent. The model therefore separates objectives without
@@ -408,7 +450,8 @@ the solver design in the next section.
 The MILP exhibits two practical symptoms: finding the first competitive
 incumbent can be slow, and generic cut scores do not reveal whether a cut
 tightens discrete equipment choices, continuous timing, or their coupling.
-\method{} addresses the symptoms at complementary points. SPBS supplies
+\method{} addresses the symptoms at complementary points. Structure-preserving
+binary-skeleton (SPBS) initialization supplies
 primal guidance before branch-and-cut, while the learned selector supplies
 dual guidance during separation. Both components remain advisory: SCIP keeps
 the original feasible region, validates incumbents, generates valid cuts, and
@@ -416,12 +459,13 @@ retains proof responsibility.
 
 \subsection{Structure-preserving binary-skeleton warm start}
 
-SPBS extracts the high-confidence binary skeleton of a schedule: product
-assignment, batch activation, cleaning epoch, load-lock placement, and safe
-local order decisions. Continuous event times and globally sensitive VTR
-orders remain free. A temporary MIP completes this partial skeleton and returns
-a physically feasible schedule. Only that schedule---not the temporary fixing
-constraints---is injected into the original model.
+SPBS fixes deterministic assignment, activation, cleaning-epoch, load-lock,
+and selected resource-order roles in a temporary feasibility MIP. If a profile
+finds no incumbent, VTR, load-lock, and other order fixings are progressively
+released; continuous event times always remain free. A start is accepted only
+after reconstruction and complete feasibility checking in the full model.
+Only that feasible schedule---not the temporary fixing constraints---is
+injected into the unrestricted production model.
 
 This design is stronger than an arbitrary primal hint. The retained decisions
 encode the combinatorial architecture that the detailed timing model must
@@ -446,19 +490,38 @@ representation to 23 dimensions. The features are invariant to variable names
 but distinguish the physical function of a cut.
 
 A high-level policy selects the cut budget and a low-level pointer policy
-orders candidates. Independent SCIP trajectories are sampled in parallel and
-optimized with an A3C-inspired policy-gradient scheme whose reward is negative
-PDI. At inference, bounded beam search keeps alternative partial sequences
-instead of committing to the first locally best cut. Role-submodular
+orders candidates \citep{vinyals2015pointer}. If $k$ cuts are selected from
+state $S$, their joint probability is
+\begin{equation}
+\pi_\theta(k,i_{1:k}\mid S)=\pi_\theta^{H}(k\mid S)
+\prod_{t=1}^{k}\pi_\theta^{L}(i_t\mid S,i_{1:t-1}).
+\end{equation}
+Two workers collect independent SCIP trajectories in parallel; their batches
+then drive a central update of the shared policy with return $R=-\pdi$. The
+estimator
+\begin{equation}
+\widehat{\nabla_\theta J}=\frac{1}{B}\sum_{b=1}^{B}
+(R_b-\bar R_{\rm EMA})\nabla_\theta\log\pi_\theta(\tau_b),\qquad
+\bar R_{\rm EMA}\leftarrow0.9\bar R_{\rm EMA}+0.1\bar R
+\end{equation}
+uses an exponential-moving-average return baseline, not an independently
+learned critic. We therefore describe the backbone as A3C-inspired parallel
+policy gradient \citep{mnih2016a3c}; the new contributions are the scheduling
+warm start, role reconstruction, decoding, and completion mechanisms.
+
+At inference, bounded beam search keeps alternative partial sequences instead
+of committing to the first locally best cut \citep{choo2022beam}. Role-submodular
 completion then adds candidates that balance policy score, immediate cut
-quality, role coverage, and representation of the remaining pool. The
+quality, role coverage, and representation of the remaining pool
+\citep{nemhauser1978analysis}. The
 mechanisms are complementary: reconstruction supplies meaningful diversity;
 beam decoding explores alternative orders; completion prevents the final set
 from collapsing onto one variable role.
 
 \subsection{Exactness and computational scope}
 
-\method{} ranks only cuts already generated and certified as valid by SCIP.
+\method{} ranks only cuts already generated and certified as valid by SCIP
+\citep{achterberg2009scip,bestuzheva2023scip}.
 SPBS adds only a solver-checked incumbent. Consequently, neither component
 changes the objective, constraints, integrality requirements, or lower-bound
 logic. The method can improve anytime behavior while preserving the same
@@ -470,18 +533,22 @@ supplementary material documents the reproducibility protocol.
 
 \subsection{Evidence structure}
 
-The study uses six complementary evidence sets. Four exact cases verify the
+The study uses seven complementary evidence sets. Four exact cases verify the
 physical formulation. A 2700-run nominal matrix compares seven methods over
 20 manufacturing instances and independent solver and training realizations.
 A 960-run matched experiment isolates SPBS. A 1500-run control isolates the
 second-stage mechanism and its objective. A 300-run factorial design explains
 how wafer count, recipe composition, and process scale shape difficulty. An
 80-run one-factor study tests operational solvability under parameter
-perturbations. All saved incumbents supporting reported conclusions pass
+perturbations. Finally, 729 runs on nine shifted 40--64-wafer configurations
+test larger-scale feasible-schedule delivery. All saved incumbents supporting reported conclusions pass
 independent checks of the corresponding physical MIP.
 
-PDI is the primary anytime metric because it measures the quality of the
-entire primal--dual trajectory; lower is better. Repetitions are aggregated
+PDI is the primary anytime metric because it integrates SCIP's normalized
+primal--dual gap over the common horizon; lower is better. Terminal gap is the
+normalized bound gap at termination, and reported solution time covers the
+complete primary solve and conditional refinement within the common wall-clock
+budget. Repetitions are aggregated
 within manufacturing instances before paired bootstrap intervals, Wilcoxon
 tests, and Holm adjustment are calculated. This prevents repeated random seeds
 from being treated as independent manufacturing evidence
@@ -512,32 +579,39 @@ Mixed flow & 16 & 1170 & 1550 & 99 & 24.390 \\
 }
 \end{table}
 
-The verification does more than show that the code runs. Pure cases recover
-the distinct rotary logic of each recipe, while mixed cases require both
+The pure cases recover the distinct rotary logic of each recipe, while mixed cases require both
 recipe structures, two load-lock paths, shared robots, and dummy reuse to
-coexist in one feasible trajectory. The rapid growth in search effort from
-the small pure cases to the 16-product mixed case confirms that the difficulty
-comes from coupled assignment and resource order, precisely the structure
-targeted by \method{}.
+coexist in one feasible trajectory. The 16-product case also exercises the
+coupled assignment and resource-order constraints targeted by \method{}.
 
-\subsection{\method{} provides the strongest mean anytime performance}
+\subsection{\method{} attains the lowest observed nominal mean PDI and time}
 
 Table~\ref{tab:new-main} gives the full nominal comparison. \method{} has the
 lowest mean PDI and the shortest mean solution time among all seven methods.
 Its mean PDI is 1.41\% below adapted HEM and 1.97\% below default SCIP. Every
 one of its 500 runs returns a feasible incumbent.
 
+All seven conditions receive the same independently verified automatic SPBS
+incumbent, time limit, memory limit, and solver seeds. The comparison therefore
+isolates cut-selection and decoding choices rather than the total SPBS effect,
+which is identified separately below. SCIP denotes its default cut selector
+under this shared start; adaptive cut selection (ACS) uses a tuned four-score
+SCIP rule. HEM-13D and HEM-13D+Beam share the original 13-feature policy and
+differ only in decoding. The 23D-only condition uses reconstructed features
+without structural reranking; Structure+Greedy adds role-based completion; and
+\method{} combines that structure with beam decoding.
+
 \begin{table}[htbp]
 \centering
-\caption{Nominal comparison; statistics are first averaged within 20 manufacturing instances.}
+\caption{Nominal comparison under a common SPBS start; statistics are first averaged within 20 manufacturing instances.}
 \label{tab:new-main}
 \resizebox{\linewidth}{!}{%
 \begin{tabular}{lrrrr}
 \toprule
 Method & Mean PDI & Mean gap (\%) & Mean time (s) & Optimal (\%) \\
 \midrule
-SCIP & 16919.01 & \textbf{119.54} & 226.05 & \textbf{64.0} \\
-Adaptive cut selection & 16854.87 & 127.18 & 222.34 & 62.0 \\
+SCIP default selector & 16919.01 & \textbf{119.54} & 226.05 & \textbf{64.0} \\
+Adaptive cut selection (ACS) & 16854.87 & 127.18 & 222.34 & 62.0 \\
 HEM-13D & 16823.18 & 127.24 & 219.65 & 62.4 \\
 HEM-13D+Beam & 16829.59 & 127.19 & 219.95 & 62.4 \\
 23D Features Only & 16620.91 & 125.33 & 219.42 & 62.6 \\
@@ -561,10 +635,16 @@ leads PDI and elapsed time. This is an interpretable trade-off rather than a
 contradiction. SCIP's default selection remains strong for eventual proof,
 while \method{} improves the trajectory by allocating cuts toward the coupled
 assignment--timing structure earlier. For time-constrained industrial use,
-where an incumbent and its quality during the available horizon matter, the
-PDI and time results establish the algorithm's practical advantage.
+where an incumbent and its quality during the available horizon matter,
+\method{} has the lowest observed nominal mean PDI and time.
+The instance-first mean PDI improvements over HEM and SCIP are 237.49
+(95\% bootstrap CI $[-446.71,846.26]$) and 333.31
+(CI $[-382.16,999.70]$), respectively; both Holm-adjusted tests have $p=1$.
+Thus the nominal ranking is an observed average advantage over this matrix,
+whereas the statistically supported controlled gains are the SPBS and
+second-stage effects reported next.
 
-\subsection{SPBS is the dominant primal mechanism}
+\subsection{SPBS provides a significant primal improvement}
 
 The independent SPBS experiment gives the clearest mechanism-level result.
 As Table~\ref{tab:new-spbs} shows, automatic SPBS raises incumbent availability
@@ -613,7 +693,7 @@ all profiles.
 Profile & Route-total wait & Route-maximum wait & Cadence CV & Cadence deviation \\
 \midrule
 Full two-stage model & 2596.01 & 296.33 & \textbf{0.130} & \textbf{22.04} \\
-Quadratic refinement & \textbf{2469.47} & \textbf{293.27} & 0.134 & 60.18 \\
+Quadratic objective (linear off) & \textbf{2469.47} & \textbf{293.27} & 0.134 & 60.18 \\
 No second stage & 5398.60 & 952.57 & 0.216 & 370.41 \\
 \bottomrule
 \end{tabular}}
@@ -676,7 +756,7 @@ bars are 95\% confidence intervals, and the vertical line denotes zero.}
 \label{fig:new-doe}
 \end{figure}
 
-\subsection{Sensitivity and industrial implications}
+\subsection{Sensitivity confirms operational solvability}
 
 All 80 one-factor sensitivity runs return independently valid incumbents.
 The lowest mean PDI occurs with a longer cleaning interval (28899.41), whereas
@@ -686,24 +766,64 @@ while slower transport intensifies conflicts on already shared robots. More
 importantly, the formulation and exact-solution chain remain operational
 across every prescribed perturbation.
 
+\subsection{OOD stress test confirms scalable feasibility}
+
+The distribution-shift suite enlarges the batch to 40--64 wafers and changes
+the product-mixture composition. Every one of the 729 runs returns a saved
+incumbent that passes independent validation. Because every run uses the
+complete search horizon, PDI and terminal gap provide the discriminating
+measures in Table~\ref{tab:new-ood}.
+
+\begin{table}[htbp]
+\centering
+\caption{OOD stress test; statistics are first averaged within nine manufacturing instances.}
+\label{tab:new-ood}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lrrrr}
+\toprule
+Method & Runs & Incumbent (\%) & Mean PDI & Mean gap (\%) \\
+\midrule
+SCIP & 27 & 100 & 73670.99 & 171.35 \\
+Adaptive cut selection & 27 & 100 & \textbf{70915.54} & \textbf{160.78} \\
+HEM-13D & 135 & 100 & 73003.59 & 165.88 \\
+HEM-13D+Beam & 135 & 100 & 73165.58 & 167.04 \\
+23D Features Only & 135 & 100 & 74187.22 & 169.96 \\
+Structure+Greedy & 135 & 100 & 73507.76 & 168.54 \\
+\method{} & 135 & 100 & 73919.15 & 170.02 \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+Adaptive cut selection records the lowest OOD PDI, while \method{} has an
+observed mean terminal gap 0.78\% below default SCIP. No OOD pairwise contrast
+remains significant after global Holm adjustment. The complete outcome
+separates two forms of evidence: \method{} leads observed mean anytime search
+in the nominal production range, and the shared SPBS--MILP--SCIP pipeline
+delivers a validated feasible schedule in every larger shifted run. All seven
+methods use the full search horizon and none proves OOD optimality, identifying
+global bound closure as the remaining extreme-scale challenge.
+
+\subsection{Industrial implications}
+
 Three implications follow from the complete evidence. First, throughput and
 schedule quality should be optimized sequentially: a makespan-only model
 leaves substantial avoidable waiting and cadence instability. Second, an
-application-feasible incumbent is the most powerful single computational
-intervention; SPBS should therefore be treated as part of the solution
+application-feasible incumbent gives the largest controlled computational
+improvement measured here; SPBS should therefore be treated as part of the solution
 architecture rather than a preprocessing detail. Third, learning is most
 effective when its representation mirrors the MIP's physical roles. The
-observed sign reversal of the beam effect establishes that beam search and
-structure-aware representation form a coupled design: beam decoding creates
-value after the candidate representation has been aligned with discrete
-equipment choices and continuous timing.
+observed sign reversal of the beam effect is consistent with coupling between
+beam search and the structure-aware representation: beam decoding improves the
+observed mean only after candidate roles are aligned with discrete equipment
+choices and continuous timing. This comparison does not itself test a
+statistical interaction.
 
 The explicit state, resource, and timing layers also provide a direct foundation
 for online arrivals, stochastic processing, and module-failure recourse. The
 present finite-batch evidence establishes the central result: for dual-source
 mixed-flow equipment, the two-stage model produces materially better schedules
-and \method{} provides the strongest mean anytime search among the compared
-methods.
+and \method{} attains the lowest observed nominal mean PDI and time among the
+compared methods.
 
 \section{Conclusions}
 \label{sec:conclusion-new}
@@ -719,24 +839,21 @@ The experimental results establish the value of both contributions. The full
 model yields physically valid pure and mixed schedules, and second-stage
 refinement cuts route-total wait, maximum route wait, cadence variation, and
 cadence deviation by 51.91\%, 68.89\%, 39.70\%, and 94.05\%. The proposed
-\method{} solver records the lowest mean PDI and solution time in the complete
+\method{} solver records the lowest observed mean PDI and solution time in the complete
 2700-run seven-method comparison. Its SPBS component independently reduces
 PDI by 26.19\% and raises incumbent availability to 100\%. Factorial results
 further show that the principal difficulty is the interaction between scale
-and mixed-recipe composition, exactly the discrete--continuous structure
-exposed by the reconstructed features.
+and mixed-recipe composition, the same class of discrete--continuous coupling
+represented by the reconstructed features. All 729 OOD runs also produce
+independently validated incumbents, establishing feasible schedule delivery on
+nine larger shifted configurations.
 
 The central conclusion is therefore unambiguous: the proposed two-stage MILP
 produces operationally superior schedules, and the structure-aware
-learning-enhanced branch-and-cut method improves the mean anytime performance
-of exact solution. Together they provide a rigorous and practically useful
+learning-enhanced branch-and-cut method attains the best observed nominal mean
+anytime performance in this comparison. Together they provide a rigorous and practically useful
 approach to a class of rotating-chamber scheduling problems that is not
 covered by existing single-source or fixed-sequence models.
-
-\section*{CRediT authorship contribution statement}
-The authors jointly contributed to conceptualization, methodology, software,
-validation, formal analysis, investigation, visualization, and manuscript
-preparation.
 
 \section*{Declaration of competing interest}
 The authors declare that they have no known competing financial interests or

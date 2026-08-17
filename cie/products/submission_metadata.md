@@ -37,9 +37,9 @@ The author order, affiliation, emails, and corresponding-author designation are 
 - Acknowledgements: not present in the supplied author-information document.
 - Individual CRediT roles for each author: not present in the supplied author-information document.
 - ORCID identifiers: not present in the supplied author-information document.
-- Telephone number: not present in the supplied author-information document and omitted from the title page.
+- Complete postal address and telephone number for the corresponding author: not present in the supplied author-information document and must be confirmed before upload.
 - Originality, exclusive submission, and approval by all authors: authors must confirm before upload.
-- Permanent anonymous data/code review link and post-acceptance archive identifier: to be added after the final OOD results and reproducibility package are frozen.
+- Anonymous data/code review link and post-acceptance archive identifier: to be added after the reproducibility package is frozen.
 
 ## Files
 
@@ -53,4 +53,4 @@ The author order, affiliation, emails, and corresponding-author designation are 
 
 ## Evidence freeze status
 
-Validation, Main, Stability, DOE, SPBS, and Sensitivity are complete and audited. The formal OOD campaign is still running; its results must be independently validated, statistically analysed, and inserted into both manuscripts before the package is submission-ready.
+Validation 4/4, Main 2700/2700, Stability 1500/1500, DOE 300/300, SPBS 960/960, Sensitivity 80/80, and OOD 729/729 are complete. The six formal benchmark suites contain 6269/6269 expected rows; including Validation gives 6273/6273. All 6041 incumbents passed independent verification (`invalid_count=0`), and all seven submission audits report `PASS`. Every OOD run reached the time limit but returned a valid incumbent. ACS has the lowest mean OOD PDI, while the globally Holm-adjusted OOD method contrasts are not significant; no RDMCT-HBS OOD-superiority claim is supported.

@@ -1,6 +1,6 @@
 # Computers & Industrial Engineering 投稿执行手册
 
-> 审计时间：2026-08-14 11:34:26（Asia/Shanghai）。本文给出从当前证据状态走到可投稿状态的执行顺序。实验协议定义仍以 [`../README.md`](../README.md) 为准。本文中的 PowerShell 命令均为单行命令，不使用续行符。
+> 审计时间：2026-08-17 14:58:02（Asia/Shanghai）。本文记录已闭合的投稿证据、复现入口和上传前作者事项。实验协议定义仍以 [`../README.md`](../README.md) 为准。本文中的 PowerShell 命令均为单行命令，不使用续行符。
 
 官方依据：[C&IE Guide for Authors](https://www.sciencedirect.com/journal/computers-and-industrial-engineering/publish/guide-for-authors)；[Elsevier LaTeX instructions](https://www.elsevier.com/en-gb/researcher/author/policies-and-guidelines/latex-instructions)。投稿要求可能变化，正式上传当天再次核对。
 
@@ -16,7 +16,7 @@
 
 正式`*_repro_v1`活动中，Main 2700/2700、Stability 1500/1500和DOE 300/300均已完成，并于2026-08-12重新执行独立SCIP验解、精确矩阵审计和正式统计，三阶段的`submission_audit.json`均为`PASS`。Main原有7条边界失败已确认来自`.sol`文本序列化：连续残差只比SCIP默认$10^{-6}$容差高$1.11\times10^{-13}$。验解器现保留SCIP容差并只增加$10^{-12}$绝对序列化裕量；该策略有单元测试，2700/2700个保存解现全部通过，并未删除或挑选任何行。Stability的物理路径总等待、最大等待、节拍CV和节拍偏差均由保存解的事件时间独立重构，并按`solution_file`与正式结果严格1:1联接；完整性联接和后处理审计均已`PASS`，无需重跑求解器。DOE已生成预设主效应、交互、置信区间及两张程序图。
 
-截至2026-08-14 11:34:26，SPBS已完成960/960并通过独立验解、精确矩阵审计和正式统计；Sensitivity已完成80/80，80个保存解全部有效且投稿审计PASS。正式OOD正在seed1/seed2/seed3三个分片并行运行，分别完成37/37/35行，共109/729，三个错误日志均为0字节。其warm starts 9/9通过完整验解和LP哈希核对。旧`cie/models/<family>/seed_N`目录、旧Main、旧OOD、旧SPBS和smoke不得并入新campaign；正式命令禁止使用`-AllowLegacyCheckpoints`。
+截至2026-08-17 14:58:02，SPBS已完成960/960，Sensitivity已完成80/80，正式OOD已完成729/729；三阶段均通过独立验解、精确矩阵审计和正式统计。OOD的729行全部为`timelimit`，但每行均有经独立验解的有效incumbent，runner error和solution-write error均为0，`invalid_count=0`，投稿审计`PASS`。其warm starts 9/9通过完整验解和LP哈希核对。旧`cie/models/<family>/seed_N`目录、旧Main、旧OOD、旧SPBS和smoke不得并入新campaign；正式复现命令禁止使用`-AllowLegacyCheckpoints`。
 
 正式训练输出位于带时间戳的递归目录，而不是固定的`cie/models/<family>/seed_N`。必须按`variant.json`中的parser seed、SCIP seed、experiment seed和训练数据路径递归解析，并强制存在`itr_60.pkl`；不能把中断训练的`params.pkl`当作epoch 60正式模型。第5节给出门禁。
 
@@ -44,9 +44,9 @@
 
 ### 2.1 已完成的旧中断恢复记录
 
-2026-08-08 Stability中断的最后可观测终端输出为00:16:43.335（中国标准时间），当时原子进度885/1500。原样恢复后，该阶段于2026-08-11 08:42:46完成1500/1500，2026-08-12通过独立验解与投稿审计，因此不再执行旧恢复命令。当前三个活动进程均属于OOD阶段；如需夜间中断，分别按一次`Ctrl+C`并等待三个启动命令返回提示符，次日原样重跑第6.7节相同CampaignId、ShardTag、Seeds、TrainingSeeds和预算命令，已保存行自动跳过。
+2026-08-08 Stability中断的最后可观测终端输出为00:16:43.335（中国标准时间），当时原子进度885/1500。原样恢复后，该阶段于2026-08-11 08:42:46完成1500/1500，2026-08-12通过独立验解与投稿审计，因此不再执行旧恢复命令。正式OOD的三个分片也已完成并审计，不再存在需要恢复的正式benchmark进程；第6节命令仅作为从零复现入口保留。
 
-## 3. 投稿前必须补齐的证据
+## 3. 投稿证据矩阵（已闭合）
 
 | 项目 | 投稿目标 | 当前正式有效 | 目的 |
 | --- | ---: | ---: | --- |
@@ -63,14 +63,14 @@
 | SPBS | 960行 | 960，独立验解与审计PASS | auto warm start与none组件对比；PDI与incumbent率主效应显著 |
 | 学习策略×SPBS交互 | 可选 | 0 | 仅在正文主张SPBS与学习策略存在协同/交互时必做 |
 | Sensitivity | 80行 | 80，独立验解与审计PASS | 工艺、搬运、清洗和真空区假片库存OFAT |
-| OOD | 729行 | 109，三路运行中 | 大规模分布外泛化 |
+| OOD | 729行 | 729，独立验解与审计PASS | 大规模分布外可行性与性能边界 |
 
-当前核心矩阵（不含Validation）已原子完成5649/6269行；加Validation为5653/6273，尚缺OOD 620行。Main中Proposed平均PDI为16585.70，低于HEM的16823.18和SCIP的16919.01，平均求解时间218.32~s亦为七方法最低，可明确写“在固定2700次标称实验中取得最强平均anytime性能”；相对HEM和SCIP的区间跨零，说明增益随实例而异。Stability中，相对stage2_off，完整配置使物理路径总等待、最大等待、节拍CV和节拍偏差和分别降低51.91\%、68.89\%、39.70\%和94.05\%，四项Holm校正后均显著。SPBS自动初始解相对none使incumbent率由51.67\%提高至100\%，PDI降低26.19\%，Holm $p$分别为$2.55\times10^{-5}$和$3.46\times10^{-8}$。Sensitivity 80/80均有有效incumbent，但仅为单方法OFAT，不作跨方法鲁棒性主张。当前最高优先级是继续三个OOD分片；不要重复启动、启动第四路或提前后处理。
+核心矩阵（不含Validation）已完成6269/6269行；加Validation为6273/6273。七阶段投稿审计均为`PASS`，共6041个incumbent全部通过独立验解，`invalid_count=0`。Main中Proposed平均PDI为16585.70，低于HEM的16823.18和SCIP的16919.01，平均求解时间218.32~s亦为七方法最低；相对HEM和SCIP的区间跨零且Holm校正$p=1.0$，因此只主张标称矩阵中的最低观测均值，不声称总体显著领先。Stability中，相对stage2_off，完整配置使物理路径总等待、最大等待、节拍CV和节拍偏差和分别降低51.91\%、68.89\%、39.70\%和94.05\%，四项Holm校正后均显著。SPBS自动初始解相对none使incumbent率由51.67\%提高至100\%，PDI降低26.19\%，Holm $p$分别为$2.55\times10^{-5}$和$3.46\times10^{-8}$。Sensitivity 80/80均有有效incumbent，但仅为单方法OFAT。OOD 729/729均在1200~s触顶但均有有效incumbent；ACS取得最低平均OOD PDI，所有全局Holm校正方法差异均不显著，故OOD只支持分布外可行性，不支持RDMCT-HBS领先主张。当前主张范围内无需继续运行benchmark。
 
-正式benchmark启动前的实际门槛如下：
+最终证据解释与归档边界如下：
 
-1. 论文机制表要求 cut-pool size、角色覆盖、冗余、callback开销和root-bound证据；当前runner只有部分callback时间，没有完整cut count、dual bound、root gap、LP iterations、首次/最佳解/证明时间。应先增加并测试遥测，或删除论文中对应声明。冻结后再改遥测会迫使正式实验全部重跑。
-2. checkpoint门禁已经实现并冻结15/15；正式启动前再次执行`freeze-checkpoints`，确认清单仍为15/15且hash未漂移。
+1. 正式runner没有完整采集cut count、dual bound、root gap、LP iterations、首次/最佳解/证明时间，因此稿件不得新增依赖这些未采集遥测的机制性量化主张；否则必须另行冻结协议并重跑受影响矩阵。
+2. checkpoint门禁已经实现并冻结15/15；最终源包应保留清单、路径/hash、variant hash和三处seed的追溯记录。
 3. 当前`benchmark-main`让全部方法统一使用auto warm start，`benchmark-spbs`比较SCIP的none/auto。因此核心矩阵能分别估计“学习方法在共同初解条件下的差异”和“SPBS对SCIP的主效应”，不能估计二者的交互。最短路线删除协同声明；若保留协同声明，再补A2交互实验。
 4. `model-evidence` Stage现已覆盖compact模型单元验证与变量/约束/LP大小/解析时间规模表。Gu（2024）的固定BS/HTS稳态LP与本文有限时域双源混流两阶段MIP并不等价，不能作为等价性硬门槛；正文应做逐项建模差异表。独立incumbent验解由validation和正式后处理完成。
 5. 当前训练命令固定`baseline_type=simple`，没有严格演员--评论家A3C对照。默认做法是把算法准确命名为“并行层次策略梯度”；只有在增加严格A3C实现及公平配对实验后，才把A3C训练本身写成创新。RL-SAT不用于替代该缺口。
@@ -97,7 +97,7 @@ M1与M4统一执行命令如下；该命令生成可审计的模型规模原始�
 Set-Location D:\git\git\RDMCT-A3C; .\cie\run_cie_single.ps1 -Stage model-evidence -LogId cie_model_evidence_repro_v1
 ```
 
-M3和A2不再是最短路线的硬阻塞项：M3因问题设定不等价而改为文献边界比较；A2通过删除协同声明而改为可选。`model-evidence`、冻结清单、warm starts、训练及Validation均已通过；Main、Stability、DOE、SPBS和Sensitivity已经冻结，当前只续跑OOD。
+M3和A2不是当前主张的硬阻塞项：M3因问题设定不等价而改为文献边界比较；A2通过不作协同/交互声明而保持可选。`model-evidence`、冻结清单、warm starts、训练、Validation以及Main、Stability、DOE、SPBS、Sensitivity和OOD均已完成并审计。
 
 ## 4. 正式冻结门槛
 
@@ -225,13 +225,13 @@ $src=(Get-ChildItem cie\results\acs_tuning -Filter 'acs_grid_*.json' | Sort-Obje
 Set-Location D:\git\git\RDMCT-A3C; .\cie\run_cie_single.ps1 -Stage warmstarts-ood -WarmStartTimeLimit 1800 -MemoryLimitMB 4096 -LogId warm_ood_repro_v1
 ```
 
-model-evidence已完成81/81个LP并生成raw、summary与manifest；Validation 4/4及独立验解/投稿审计PASS。Main、Stability、DOE、SPBS和Sensitivity均已完成并审计。**现在从这里继续：** 保持第6.7节三个OOD分片运行；中断后原样执行同三条命令。
+model-evidence已完成81/81个LP并生成raw、summary与manifest；Validation 4/4及独立验解/投稿审计PASS。Main、Stability、DOE、SPBS、Sensitivity和OOD均已完成并审计。当前主张所需实验已经闭合，无继续运行命令。
 
-## 6. 正式benchmark：最多三路
+## 6. 正式benchmark：已全部完成（从零复现时最多三路）
 
-**benchmark前置门槛已全部通过。** OOD warm-start 9/9、model-evidence 81/81、15模型可移植manifest以及Validation 4/4独立验解/投稿审计均已完成。M3不是等价模型的强制实验，A2仅在声称协同时必需。第6.2--6.6节均已完成；当前只执行第6.7节OOD。
+**benchmark前置门槛和七阶段验收均已通过。** OOD warm-start 9/9、model-evidence 81/81、15模型可移植manifest、Validation 4/4及六组正式benchmark 6269/6269均已完成。M3不是等价模型的强制实验，A2仅在新增SPBS与学习策略协同/交互主张时必需。第6.1--6.7节命令均仅作为可恢复复现记录保留，当前不要重跑。
 
-三个终端分别执行标记为A/B/C的队列，同一终端中的命令按出现顺序逐条执行，任意时刻最多三条。矩阵按solver seed和training seed拆开以均衡负载；一个阶段全部完成并验收后再进入下一阶段。Main/OOD显式使用冻结ACS；Main/OOD/Stability还通过默认参数`cie\results\repro_manifest\selected_checkpoint_manifest.csv`强制使用冻结模型。需要停机时在各终端各按一次`Ctrl+C`并等待提示符返回；启动器会清理该实验的子进程树。第二天原样重跑当时尚未完成的同一条命令；完成行从`.checkpoints/*.jsonl`恢复，中断时正在求解且尚未写入的一个原子项会自动重做。不得用新的CampaignId或ShardTag“续跑”，否则会建立另一套断点。
+若将来从零复现，三个终端分别执行标记为A/B/C的队列，同一终端中的命令按出现顺序逐条执行，任意时刻最多三条。矩阵按solver seed和training seed拆开以均衡负载；一个阶段全部完成并验收后再进入下一阶段。Main/OOD显式使用冻结ACS；Main/OOD/Stability还通过默认参数`cie\results\repro_manifest\selected_checkpoint_manifest.csv`强制使用冻结模型。复现中需要停机时，在各终端各按一次`Ctrl+C`并等待提示符返回；再次原样运行同一命令即可读取`.checkpoints/*.jsonl`中的完整原子项。不得更换CampaignId或ShardTag冒充续跑。
 
 每次新开三个终端，先分别执行一次以下单行设置，避免SCIP文本日志膨胀：
 
@@ -395,7 +395,9 @@ Set-Location D:\git\git\RDMCT-A3C; $env:CUDA_MODULE_LOADING='LAZY'; $env:RDMCT_C
 
 ### 6.7 OOD（目标729行）
 
-目的：在更大规模和分布外构型上检验泛化；大量`timelimit`时以PDI、最终gap、incumbent率和上下界为主，不比较统一触顶的原始运行时间。
+目的：在更大规模和分布外构型上检验可行解交付能力与性能边界；全部方法统一触顶时以PDI、最终gap、incumbent率和上下界为主，不把原始运行时间作为速度证据。
+
+最终状态：729/729完成，三个分片各243行；重复键0，runner error与solution-write error均为0。729行全部为`timelimit`且全部有incumbent，所有保存解均通过独立验解，`invalid_count=0`，投稿审计`PASS`。ACS取得最低平均OOD PDI；RDMCT-HBS的OOD均值不占优，所有全局Holm校正方法差异均不显著。因此，本阶段证明共同求解链在九个更大构型上均能交付有效可行排程，不证明RDMCT-HBS在分布外显著领先。以下三条命令仅用于从零复现，当前不要执行。
 
 ```powershell
 .\cie\run_cie_single.ps1 -Stage benchmark-ood -CampaignId cie_ood_1200s_mem4096_repro_v1 -ShardTag seed1 -LogId cie_ood_1200s_mem4096_repro_v1_seed1 -Seeds '1' -TrainingSeeds '1,2,3,4,5' -TimeLimit 1200 -MemoryLimitMB 4096 -GpuDevice cuda:0 -AcsWeightsFile cie\results\repro_manifest\selected_acs.json
@@ -411,7 +413,7 @@ Set-Location D:\git\git\RDMCT-A3C; $env:CUDA_MODULE_LOADING='LAZY'; $env:RDMCT_C
 
 ## 7. 合并、验解和统计
 
-每个正式campaign完成后运行一次对应命令。run_cie_postprocess.ps1 按失败即停止的顺序完成：递归合并、SCIP独立验解、精确矩阵/主键/错误/solution审计、制造实例优先聚合、bootstrap 95%区间、配对效应量、双侧Wilcoxon与全局Holm。DOE另外输出预设主效应、两两交互、OLS置信区间、诊断数据和两张程序生成的非AI图。
+七个正式campaign的后处理均已执行并通过。run_cie_postprocess.ps1 按失败即停止的顺序完成：递归合并、SCIP独立验解、精确矩阵/主键/错误/solution审计、制造实例优先聚合、bootstrap 95%区间、配对效应量、双侧Wilcoxon与全局Holm。DOE另外输出预设主效应、两两交互、OLS置信区间、诊断数据和两张程序生成的非AI图。以下命令仅作为确定性复现入口保留。
 
 ```powershell
 .\cie\run_cie_postprocess.ps1 -Stage validation -CampaignId cie_validation_600s_repro_v1
@@ -457,15 +459,15 @@ Set-Location D:\git\git\RDMCT-A3C; $env:CUDA_MODULE_LOADING='LAZY'; $env:RDMCT_C
 - Proposed对structure-greedy：在相同结构策略下检验束搜索增益。
 - SCIP-auto对SCIP-none：只检验SPBS warm start的独立贡献，不解释学习策略交互。
 
-“评测样本内的平均优势”和“总体统计显著优越”必须分开判断。完整2700次Main矩阵已经证明：RDMCT-HBS在七种配置中取得最低平均PDI与最短平均求解时间，平均PDI相对HEM和SCIP分别降低1.41\%和1.97\%。因此正文可以明确写“在所评协议下具有最强平均anytime性能”，而不是降格为“趋势”。相对HEM和SCIP的实例级区间仍跨零且Holm校正$p=1.0$，所以不得将这一确定的样本事实扩大为“总体统计显著优于所有基线”或“对所有实例普遍优越”。
+“评测样本内的平均优势”和“总体统计显著优越”必须分开判断。完整2700次Main矩阵显示：RDMCT-HBS在七种配置中取得最低观测平均PDI与最短观测平均求解时间，平均PDI相对HEM和SCIP分别降低1.41\%和1.97\%。正文可明确陈述这一标称矩阵样本事实。相对HEM和SCIP的实例级区间仍跨零且Holm校正$p=1.0$，所以不得扩大为“总体统计显著优于所有基线”“对所有实例普遍优越”或无条件的实际领先。
 
-模型贡献已有独立的确认性证据：1500次Stability实验全部通过独立验解，严格物理指标由事件时间重构后按`solution_file` 1:1联接，后处理审计`PASS`。相对stage2_off，完整两阶段配置使物理路径总等待、最大等待、节拍CV和节拍偏差和分别降低51.91\%、68.89\%、39.70\%和94.05\%，Holm校正$p$分别为$3.81\times10^{-5}$、0.00224、0.02137和0.01838；相对linear_off仅节拍偏差和降低63.38\%且显著。SPBS 960行也已形成确认性算法证据：自动初始解使incumbent率提高48.33个百分点、PDI降低26.19\%，两项Holm校正后均显著。Sensitivity 80行证明预设OFAT场景均能产生经验证incumbent，但不证明跨方法排序稳健。OOD完成前不得主张分布外泛化。
+模型贡献已有独立的确认性证据：1500次Stability实验全部通过独立验解，严格物理指标由事件时间重构后按`solution_file` 1:1联接，后处理审计`PASS`。相对stage2_off，完整两阶段配置使物理路径总等待、最大等待、节拍CV和节拍偏差和分别降低51.91\%、68.89\%、39.70\%和94.05\%，Holm校正$p$分别为$3.81\times10^{-5}$、0.00224、0.02137和0.01838；相对linear_off仅节拍偏差和降低63.38\%且显著。SPBS 960行也已形成确认性算法证据：自动初始解使incumbent率提高48.33个百分点、PDI降低26.19\%，两项Holm校正后均显著。Sensitivity 80行证明预设OFAT场景均能产生经验证incumbent，但不证明跨方法排序稳健。OOD 729行全部触顶但均产生经验证incumbent；ACS平均OOD PDI最低且全局Holm校正差异均不显著，因此只主张分布外可行解交付，不主张RDMCT-HBS的OOD排序优势。
 
-`timelimit`行必须保留。存在incumbent时使用PDI、gap、上下界与解质量；无incumbent时进入incumbent-rate及预设惩罚/截尾分析，不能删行。最终先查看每个campaign的`submission_audit.json`是否`PASS`，再从`cie_submission_analysis.json`和配套CSV逐表回填中英文稿，任何手工挑选行或跨campaign混合都不允许。
+`timelimit`行必须保留。存在incumbent时使用PDI、gap、上下界与解质量；无incumbent时进入incumbent-rate及预设惩罚/截尾分析，不能删行。归档检查先核对每个campaign的`submission_audit.json`为`PASS`，再从`cie_submission_analysis.json`和配套CSV追溯中英文稿数值；任何手工挑选行或跨campaign混合都不允许。
 
 ## 8. 论文和Editorial Manager投稿包
 
-现有英文稿使用官方`elsarticle` class，基础模板正确；中英文正文均无`TBD`、仓库/运行器/活动/审计/检查点等过程性措辞。英文稿现有11张表、中文审查稿10张表，中英文正文均已插入DOE主效应图，并已回填SPBS和Sensitivity。MiKTeX工具链已安装，中文审查PDF可在每次改稿后重新编译。当前仍不是最终可上传包，原因是OOD尚未冻结、英文匿名PDF和独立title page尚未最终生成、数据永久链接与投稿型supplement尚未完成。
+现有分析导向英文稿使用官方`elsarticle` class，并有同步中文审查稿、独立匿名入口、title page、cover letter、highlights、figure captions和supplement。Main、Stability、DOE、SPBS、Sensitivity及OOD正式结果均已回填，MiKTeX工具链可生成英文和中文PDF。计算证据已经闭合；最终上传仍取决于作者补齐基金/致谢、逐作者CRediT、ORCID、全体作者原创性与投稿同意、通信作者完整邮寄地址和电话，以及匿名数据/代码评审链接，并完成最终匿名化与源包冻结。
 
 最终按“官方要求 + 本项目论文完整性门槛”准备：
 
@@ -484,38 +486,28 @@ Set-Location D:\git\git\RDMCT-A3C; $env:CUDA_MODULE_LOADING='LAZY'; $env:RDMCT_C
 
 方法命名已统一为`RDMCT-HBS`。正文准确表述其学习组件为“A3C启发的并行层次策略梯度”，并说明使用共享策略网络与指数移动平均基线；这与当前实现一致，不冒充含独立学习评论家的strict A3C。算法贡献由SPBS热启动、23维角色特征重构、层次策略与有限宽束搜索共同构成，SCIP负责可行性与证明。
 
-## 9. 剩余时间估算
+## 9. 实验闭合与上传前作者事项
 
-| 工作 | 三并发或单路现实估算 | 硬上限/保守估算 |
-| --- | ---: | ---: |
-| 新OOD warm-start收尾 | 已完成，报告failures=0 | 0小时，不重跑 |
-| checkpoint resolver与15模型冻结 | 已完成 | 最终commit后复核约数分钟 |
-| 三类模型训练 | 15/15已完成 | 0小时，不重跑 |
-| ACS validation网格 | 720/720已完成并冻结 | 0小时，不重跑 |
-| model-evidence、测试、冻结与Validation | 已完成且Validation审计PASS | 0小时，不重跑 |
-| Main | 2700/2700，独立验解与投稿审计`PASS` | 0小时，不重跑 |
-| Stability | 1500/1500，扩展制造指标、独立验解与投稿审计`PASS` | 0小时，不重跑 |
-| DOE | 300/300，独立验解与投稿审计`PASS`，两张程序图已生成 | 0小时，不重跑 |
-| SPBS | 960/960，独立验解、统计与审计`PASS` | 0小时，不重跑 |
-| Sensitivity | 80/80，独立验解、统计与审计`PASS` | 0小时，不重跑 |
-| OOD | 109/729；三路健康运行，错误日志0字节 | 按当前约31行/小时约20小时；全体余项触顶硬上限约69小时 |
-| 可选A2交互增量 | 约23--30小时 | 约61小时；仅保留协同声明时增加 |
-| 验解、统计、模型规模表、图表、论文与投稿包 | 4--7天 | 若返工则更长 |
+| 项目 | 最终状态 |
+| --- | --- |
+| Validation | 4/4，独立验解与投稿审计`PASS` |
+| 六组正式benchmark | 6269/6269；Main 2700、Stability 1500、DOE 300、SPBS 960、Sensitivity 80、OOD 729 |
+| 全部核心矩阵 | 含Validation为6273/6273，无重复键，七阶段审计均为`PASS` |
+| Incumbent验解 | 6041个incumbent全部独立验解通过，`invalid_count=0` |
+| 追加计算 | 当前论文主张不需要新增实验；A2只有在新增SPBS与学习策略协同/交互主张时才需要 |
 
-A2若选择执行，采用最短可识别设计：复用Main中相同20实例的auto行，只新增SCIP、HEM-13D和RDMCT-HBS的none行，共约1100行；不重复auto行。按旧Main约222秒/行估算三并发约23小时，全部触顶约61小时。默认最短投稿路线不执行A2，并在正文不作SPBS与学习策略的交互主张。
-
-按2026-08-14 11:34:26快照，核心矩阵只缺OOD 620个原子任务。三路自07:55起完成109行，当前吞吐约31行/小时；若后续难度相近，约20小时可完成，若全部剩余项均触及1200秒则三并发硬上限约69小时。完成后预留约1--2小时做合并、独立验解、审计和统计，再用1--2天完成论文终稿、匿名稿、title page和补充材料。24小时连续运行且无返工的现实剩余时间约2--4天；若每天只运行12小时或大量实例触顶，约4--7天。Main、Stability、DOE、SPBS和Sensitivity不得重跑。任何会改变正式结果签名的求解代码、协议、数据、模型或ACS修改，都必须先判断受影响范围，不能把新旧结果混合。
+当前没有待续跑的正式实验或后处理命令。上传前必须由作者确认或补齐：基金与基金号、致谢、逐作者CRediT、ORCID、全体作者原创性/独家投稿/最终版本同意、通信作者完整邮寄地址和电话，以及匿名数据/代码评审链接。上述项目依赖作者信息或外部归档服务，不以实验运行时长估算。
 
 ## 10. “可以投稿”的最终定义
 
 - [x] `model-evidence`、checkpoint选择规则和当前正文所需机制边界已冻结；M3/A2仅在增加对应主张时补充。
 - [ ] 工作区对应一个可复现commit，环境、LP、模型、ACS均有hash。
 - [x] 求解入口强制消费冻结checkpoint manifest；15个模型路径/hash与每行结果一致，正式命令没有`-AllowLegacyCheckpoints`。
-- [ ] 6273行核心矩阵完整、无重复，建模证据单独验收，错误处理和censoring规则可审计；若声称SPBS×策略协同，再要求约1100行A2增量。
-- [ ] Main、Stability、DOE、Validation、SPBS和Sensitivity的全部incumbent已独立验解通过；OOD完成后还需达到`invalid_count=0`。
-- [ ] Main、Stability、DOE、SPBS与Sensitivity实例级统计已完成；OOD及对应失败分析待完成。
+- [x] 6273行核心矩阵完整、无重复，建模证据单独验收，错误处理和censoring规则可审计；当前不声称SPBS×策略协同。
+- [x] 七阶段共6041个incumbent全部独立验解通过，`invalid_count=0`。
+- [x] Main、Stability、DOE、SPBS、Sensitivity与OOD实例级统计均已完成；七阶段投稿审计均为`PASS`。
 - [x] 算法名统一为RDMCT-HBS，A3C启发的并行层次策略梯度表述与实现一致。
-- [ ] 中英文稿当前无`TBD`或无来源结果；SPBS与Sensitivity已回填，OOD冻结后仍需最终逐数回填与追溯检查。
+- [x] 中英文分析导向稿无`TBD`或无来源结果；SPBS、Sensitivity与OOD均已回填并可追溯到正式分析产物。
 - [ ] 双匿名稿、title page、highlights、利益冲突、AI声明、CRediT、Funding、Data statement和LaTeX源包齐全；本项目内部要求的supplement齐全，cover letter按Editorial Manager字段准备。
 - [ ] 摘要、关键词、highlights、APA 7、术语表和匿名化检查通过。
 
