@@ -1,0 +1,84 @@
+{
+  "sources": [
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s1_t1to5\\runs\\cie_benchmark_stability_full_trainseed_1_20260806_234424.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s1_t1to5\\runs\\cie_benchmark_stability_full_trainseed_2_20260807_084729.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s1_t1to5\\runs\\cie_benchmark_stability_full_trainseed_3_20260807_100043.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s1_t1to5\\runs\\cie_benchmark_stability_full_trainseed_4_20260807_111442.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s1_t1to5\\runs\\cie_benchmark_stability_full_trainseed_5_20260807_122756.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s1_t1to5\\runs\\cie_benchmark_stability_linear_off_trainseed_1_20260807_202329.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s1_t1to5\\runs\\cie_benchmark_stability_linear_off_trainseed_2_20260807_213659.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s1_t1to5\\runs\\cie_benchmark_stability_linear_off_trainseed_3_20260807_225030.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s1_t1to5\\runs\\cie_benchmark_stability_linear_off_trainseed_4_20260808_000421.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s1_t1to5\\runs\\cie_benchmark_stability_linear_off_trainseed_5_20260810_090239.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s1_t1to5\\runs\\cie_benchmark_stability_stage2_off_trainseed_1_20260807_134707.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s1_t1to5\\runs\\cie_benchmark_stability_stage2_off_trainseed_2_20260807_150820.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s1_t1to5\\runs\\cie_benchmark_stability_stage2_off_trainseed_3_20260807_162933.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s1_t1to5\\runs\\cie_benchmark_stability_stage2_off_trainseed_4_20260807_175131.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s1_t1to5\\runs\\cie_benchmark_stability_stage2_off_trainseed_5_20260807_191244.json"
+  ],
+  "raw_unique_runs": 300,
+  "aggregation_unit": "manufacturing instance",
+  "reference_method": "proposed[full]",
+  "tests": [
+    {
+      "reference": "proposed[full]",
+      "comparison": "proposed[linear_off]",
+      "metric": "primal_dual_integral",
+      "n_instances": 20,
+      "reference_mean": 16109.331197278132,
+      "comparison_mean": 16429.130505910623,
+      "p_value": 0.052201543701691125,
+      "p_holm": 0.2610077185084556
+    },
+    {
+      "reference": "proposed[full]",
+      "comparison": "proposed[linear_off]",
+      "metric": "gap",
+      "n_instances": 20,
+      "reference_mean": 1.2388982227622323,
+      "comparison_mean": 1.1283733019070628,
+      "p_value": 0.8886378608950078,
+      "p_holm": 0.8886378608950078
+    },
+    {
+      "reference": "proposed[full]",
+      "comparison": "proposed[linear_off]",
+      "metric": "solving_time",
+      "n_instances": 20,
+      "reference_mean": 219.29844203900035,
+      "comparison_mean": 219.43396629500026,
+      "p_value": 0.24548721313476562,
+      "p_holm": 0.49097442626953125
+    },
+    {
+      "reference": "proposed[full]",
+      "comparison": "proposed[stage2_off]",
+      "metric": "primal_dual_integral",
+      "n_instances": 20,
+      "reference_mean": 16109.331197278132,
+      "comparison_mean": 17791.783889793496,
+      "p_value": 0.034669963150986444,
+      "p_holm": 0.20801977890591866
+    },
+    {
+      "reference": "proposed[full]",
+      "comparison": "proposed[stage2_off]",
+      "metric": "gap",
+      "n_instances": 20,
+      "reference_mean": 1.2388982227622323,
+      "comparison_mean": 1.237797522076804,
+      "p_value": 0.06788915486182899,
+      "p_holm": 0.27155661944731596
+    },
+    {
+      "reference": "proposed[full]",
+      "comparison": "proposed[stage2_off]",
+      "metric": "solving_time",
+      "n_instances": 20,
+      "reference_mean": 219.29844203900035,
+      "comparison_mean": 242.61929474399972,
+      "p_value": 0.11398696899414062,
+      "p_holm": 0.3419609069824219
+    }
+  ]
+}

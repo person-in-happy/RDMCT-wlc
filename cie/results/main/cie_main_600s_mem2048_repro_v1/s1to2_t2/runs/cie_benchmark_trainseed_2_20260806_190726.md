@@ -1,0 +1,71 @@
+# CIE Cut-Selection Benchmark Report
+
+This report is generated from raw per-instance, per-seed records. No missing or failed run is imputed.
+
+## Run configuration
+
+- Methods: `hem, rdmct_feature_only, hem_beam, hem_structure, proposed`
+- Seeds: `[1, 2]`
+- Time limit: `600.0 s` per run
+- Schedule-stability profile: `full`
+- Instances: `20`
+- Empty suites: `0`
+
+## Aggregated results
+
+| Method | Stability | Suite | Scale | Runs | Inc. rate | Opt. rate | SCIP time | End-to-end | Callback | PAR-2 | Best obj. | Gap | PDI | Max wait | Speedup vs SCIP (95% CI) |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| HEM | full | cie_core_nominal | 8_to_32_wafers_nominal_processing | 40 | 1 | 0.65 | 215.4+/-257.3 | 215.5 | 0.03212 | 446.5 | 4414 | 1.195 | 1.682e+04 | 274.2 | n/a |
+| HEM + Beam | full | cie_core_nominal | 8_to_32_wafers_nominal_processing | 40 | 1 | 0.65 | 218.3+/-259.5 | 218.5 | 0.04081 | 449.4 | 4414 | 1.195 | 1.705e+04 | 274.2 | n/a |
+| HEM + Structure | full | cie_core_nominal | 8_to_32_wafers_nominal_processing | 40 | 1 | 0.65 | 211.6+/-255.8 | 211.7 | 0.05268 | 442.7 | 4212 | 1.103 | 1.569e+04 | 270.9 | n/a |
+| Proposed | full | cie_core_nominal | 8_to_32_wafers_nominal_processing | 40 | 1 | 0.65 | 211.6+/-256 | 211.8 | 0.03735 | 442.7 | 4212 | 1.103 | 1.568e+04 | 270.9 | n/a |
+| 23D Features Only | full | cie_core_nominal | 8_to_32_wafers_nominal_processing | 40 | 1 | 0.65 | 215.8+/-257.6 | 215.9 | 0.03492 | 446.8 | 4414 | 1.195 | 1.685e+04 | 274 | n/a |
+
+## Paired evidence for the proposed method
+
+- Claim-ready gate: **NOT YET PASSED**
+- Rule: For every baseline: >=10 valid pairs, mean PDI improvement >=5%, win rate >=60%, no lower incumbent rate, and Holm-adjusted p<0.05.
+
+| Proposed vs. | All pairs | PDI pairs | Base/Prop incumbent rate | Wins | Win rate | Mean PDI improvement | Wilcoxon p | Holm p |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| HEM | 40 | 40 | 1/1 | 17 | 0.425 | 14.76 | 0.079 | 0.2085 |
+| HEM + Beam | 40 | 40 | 1/1 | 20 | 0.5 | 17.37 | 0.05099 | 0.2039 |
+| HEM + Structure | 40 | 40 | 1/1 | 15 | 0.375 | 16.6 | 0.2944 | 0.2944 |
+| 23D Features Only | 40 | 40 | 1/1 | 19 | 0.475 | 21.95 | 0.06949 | 0.2085 |
+
+## Paired secondary effects
+
+Positive objective/time improvement and positive absolute gap reduction favor Proposed.
+
+| Proposed vs. | Objective pairs | Mean objective improvement | Gap pairs | Mean absolute gap reduction | Both-optimal time pairs | Mean time improvement |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| HEM | 40 | -12.44% | 40 | 0.09233 | 24 | 6.526% |
+| HEM + Beam | 40 | -12.44% | 40 | 0.09233 | 24 | 8.832% |
+| HEM + Structure | 40 | 0% | 40 | 0 | 26 | 1.271% |
+| 23D Features Only | 40 | -12.44% | 40 | 0.09233 | 24 | 3.878% |
+
+## Controlled module effects (PDI)
+
+Each row changes one module while holding the paired checkpoint family and decode setting fixed where applicable.
+
+| Effect | Baseline -> Target | Pairs | Win rate | Mean improvement | Median improvement |
+| --- | --- | ---: | ---: | ---: | ---: |
+| beam_without_structure | HEM -> HEM + Beam | 31 | 0.4194 | -0.871% | 0% |
+| structure_with_greedy | HEM -> HEM + Structure | 31 | 0.5806 | 12.37% | 0.0832% |
+| structure_with_beam | HEM + Beam -> Proposed | 33 | 0.6061 | 17.37% | 0.04046% |
+| beam_with_structure | HEM + Structure -> Proposed | 33 | 0.4545 | 16.6% | 0% |
+
+## Interpretation guardrails
+
+- Compare methods only on identical instance-seed pairs.
+- Metric directions: solving time, PAR-2, best objective, gap, and PDI are all lower-is-better for these minimization models.
+- Best objective measures incumbent quality; gap measures remaining certificate uncertainty; PDI measures anytime primal-dual progress; time is a speed claim only when solve outcomes are comparable.
+- Mean node count is diagnostic, not a monotone quality metric: fewer nodes can mean an efficient tree or a stalled root relaxation.
+- Report timeout-aware gap and primal-dual integral beside wall-clock time.
+- `adaptive_cutsel` is the original four-parameter SCIP hybrid selector interface. It is the full learned ACS method only when `--acs_predictions` contains held-out predictions from a separately trained ACS model.
+- `hem` requires a separately trained 13-feature checkpoint; using the 23-feature checkpoint would invalidate the ablation.
+- `hem_beam` reuses the exact HEM checkpoint and changes only greedy to beam decoding.
+- `hem_structure` reuses the exact Proposed checkpoint and structure reranking, changing only beam to greedy decoding.
+- `a3c` and `beam_search` share the same independently trained flat-A3C checkpoint and differ only in greedy versus beam decoding.
+- `proposed` uses the separately trained 23-feature role-submodular checkpoint; every method receives the same SCIP, memory, warm-start, instance, and solver-seed limits.
+- Schedule wait and cadence metrics are observational in the benchmark; no method receives an extra postprocessing budget.

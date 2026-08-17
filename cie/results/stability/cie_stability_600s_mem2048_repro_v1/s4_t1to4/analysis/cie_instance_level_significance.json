@@ -1,0 +1,81 @@
+{
+  "sources": [
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s4_t1to4\\runs\\cie_benchmark_stability_full_trainseed_1_20260810_103709.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s4_t1to4\\runs\\cie_benchmark_stability_full_trainseed_2_20260810_114849.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s4_t1to4\\runs\\cie_benchmark_stability_full_trainseed_3_20260810_125707.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s4_t1to4\\runs\\cie_benchmark_stability_full_trainseed_4_20260810_141251.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s4_t1to4\\runs\\cie_benchmark_stability_linear_off_trainseed_1_20260810_205037.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s4_t1to4\\runs\\cie_benchmark_stability_linear_off_trainseed_2_20260810_220637.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s4_t1to4\\runs\\cie_benchmark_stability_linear_off_trainseed_3_20260810_232134.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s4_t1to4\\runs\\cie_benchmark_stability_linear_off_trainseed_4_20260811_084245.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s4_t1to4\\runs\\cie_benchmark_stability_stage2_off_trainseed_1_20260810_153438.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s4_t1to4\\runs\\cie_benchmark_stability_stage2_off_trainseed_2_20260810_165323.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s4_t1to4\\runs\\cie_benchmark_stability_stage2_off_trainseed_3_20260810_181208.json",
+    "D:\\git\\git\\RDMCT-A3C\\cie\\results\\stability\\cie_stability_600s_mem2048_repro_v1\\s4_t1to4\\runs\\cie_benchmark_stability_stage2_off_trainseed_4_20260810_193547.json"
+  ],
+  "raw_unique_runs": 240,
+  "aggregation_unit": "manufacturing instance",
+  "reference_method": "proposed[full]",
+  "tests": [
+    {
+      "reference": "proposed[full]",
+      "comparison": "proposed[linear_off]",
+      "metric": "primal_dual_integral",
+      "n_instances": 20,
+      "reference_mean": 16243.398453339067,
+      "comparison_mean": 17687.509987863126,
+      "p_value": 0.000133514404296875,
+      "p_holm": 0.0005340576171875
+    },
+    {
+      "reference": "proposed[full]",
+      "comparison": "proposed[linear_off]",
+      "metric": "gap",
+      "n_instances": 20,
+      "reference_mean": 1.1991321241435773,
+      "comparison_mean": 1.3896995048330387,
+      "p_value": 0.0499499764547464,
+      "p_holm": 0.0998999529094928
+    },
+    {
+      "reference": "proposed[full]",
+      "comparison": "proposed[linear_off]",
+      "metric": "solving_time",
+      "n_instances": 20,
+      "reference_mean": 216.76551948375018,
+      "comparison_mean": 226.15098930625027,
+      "p_value": 0.000850677490234375,
+      "p_holm": 0.002552032470703125
+    },
+    {
+      "reference": "proposed[full]",
+      "comparison": "proposed[stage2_off]",
+      "metric": "primal_dual_integral",
+      "n_instances": 20,
+      "reference_mean": 16243.398453339067,
+      "comparison_mean": 18153.918481142948,
+      "p_value": 8.20159912109375e-05,
+      "p_holm": 0.0004100799560546875
+    },
+    {
+      "reference": "proposed[full]",
+      "comparison": "proposed[stage2_off]",
+      "metric": "gap",
+      "n_instances": 20,
+      "reference_mean": 1.1991321241435773,
+      "comparison_mean": 1.2465788233609385,
+      "p_value": 0.10880943004054568,
+      "p_holm": 0.10880943004054568
+    },
+    {
+      "reference": "proposed[full]",
+      "comparison": "proposed[stage2_off]",
+      "metric": "solving_time",
+      "n_instances": 20,
+      "reference_mean": 216.76551948375018,
+      "comparison_mean": 241.82743712999954,
+      "p_value": 1.9073486328125e-05,
+      "p_holm": 0.00011444091796875
+    }
+  ]
+}
