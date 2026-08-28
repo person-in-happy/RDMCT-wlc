@@ -1,4 +1,5 @@
 import argparse
+import json
 import math
 import os
 import re
@@ -396,7 +397,7 @@ class PetriMIPConfig:
         if self.cleaning_interval <= 0:
             return 0
         layouts = _canonical_cleaning_layout(self)
-        return max(0, *(max(0, layout["last_epoch"] - 1) for layout in layouts.values()))
+        return max(0, *(layout["clean_count"] for layout in layouts.values()))
 
     @property
     def effective_cleaning_process_time(self) -> float:
@@ -807,9 +808,83 @@ def _canonical_cleaning_layout(cfg: PetriMIPConfig):
             "mix_count": mix_counts[m],
             "mix_cycle_count": next_cycle - 1,
             "last_epoch": epoch if (batches or segments) else 0,
+            # Every completed cleaning_interval-th process cycle triggers a
+            # cleaning batch, including when it is the chamber's final cycle.
+            # Earlier epoch boundaries also require cleaning when a 2x2
+            # segment needs two adjacent cycle slots but fewer than two remain.
+            "clean_count": (
+                max(0, epoch - 1)
+                + int(
+                    bool(batches or segments)
+                    and cfg.cleaning_interval > 0
+                    and used == cfg.cleaning_interval
+                )
+            ),
         }
     return layouts
 
+
+def _canonical_mix_slot_by_pair(cfg: PetriMIPConfig, cleaning_layout=None):
+    """Assign interchangeable 2x2 pair labels without stranding a partial pair.
+
+    A one-product ``product+PEC`` pair needs one embedded PEC token. If that
+    pair is the only product pair in a cleaning-separated segment, its bridge
+    simultaneously exchanges the two head and two tail PEC jobs. Placing the
+    partial pair in a multi-pair segment avoids requiring a fifth chamber-bound
+    PEC token. Only interchangeable pair labels are swapped, within one PM.
+    """
+    canonical_slots = [
+        (pm_id, position)
+        for position in range(1, cfg.num_mix_positions_per_pm + 1)
+        for pm_id in cfg.pm_ids
+    ]
+    slot_by_pair = {
+        pair_id: canonical_slots[pair_index]
+        for pair_index, pair_id in enumerate(cfg.mix_pair_ids)
+    }
+    partial_pair = next(
+        (
+            pair_id
+            for pair_id, load in cfg.mix_pair_product_loads.items()
+            if load == 1
+        ),
+        None,
+    )
+    if partial_pair is None:
+        return slot_by_pair
+
+    layouts = cleaning_layout or _canonical_cleaning_layout(cfg)
+    partial_pm, partial_position = slot_by_pair[partial_pair]
+    partial_segment = next(
+        (
+            segment
+            for segment in layouts[partial_pm]["segments"]
+            if partial_position in segment["positions"]
+        ),
+        None,
+    )
+    if partial_segment is None or len(partial_segment["positions"]) != 1:
+        return slot_by_pair
+
+    replacement_position = next(
+        (
+            position
+            for segment in reversed(layouts[partial_pm]["segments"])
+            if len(segment["positions"]) >= 2
+            for position in reversed(segment["positions"])
+        ),
+        None,
+    )
+    if replacement_position is None:
+        return slot_by_pair
+    replacement_pair = next(
+        pair_id
+        for pair_id, slot in slot_by_pair.items()
+        if slot == (partial_pm, replacement_position)
+    )
+    slot_by_pair[partial_pair] = (partial_pm, replacement_position)
+    slot_by_pair[replacement_pair] = (partial_pm, partial_position)
+    return slot_by_pair
 
 def build_petri_mip_model(cfg: PetriMIPConfig):
     cfg.validate()
@@ -825,7 +900,7 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
     mix_cycles = list(range(1, max_mix_cycles + 1))
     max_clean_slots = max(
         0,
-        *(max(0, layout["last_epoch"] - 1) for layout in cleaning_layout.values()),
+        *(layout["clean_count"] for layout in cleaning_layout.values()),
     )
     clean_slots = list(range(1, max_clean_slots + 1))
     chamber_epochs = list(range(1, len(clean_slots) + 2)) if clean_slots else []
@@ -1124,6 +1199,25 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
     }
     mix_bridge_end = {
         (m, c): model.addVar(vtype="C", lb=0.0, name=f"mix_bridge_end_{m}_{c}")
+        for m in pm_ids
+        for c in mix_cycles[1:]
+    }
+    # A 2x2 bridge can be performed as one four-gripper exchange when the
+    # incoming pair is ready, or split into an early CH->LLlower unload and a
+    # later LLupper->CH load.  The aggregate start/end remain the effective
+    # outgoing-pick and incoming-place window for backwards-compatible audit.
+    mix_bridge_unload_end = {
+        (m, c): model.addVar(vtype="C", lb=0.0, name=f"mix_bridge_unload_end_{m}_{c}")
+        for m in pm_ids
+        for c in mix_cycles[1:]
+    }
+    mix_bridge_load_start = {
+        (m, c): model.addVar(vtype="C", lb=0.0, name=f"mix_bridge_load_start_{m}_{c}")
+        for m in pm_ids
+        for c in mix_cycles[1:]
+    }
+    mix_bridge_combined = {
+        (m, c): model.addVar(vtype="B", name=f"mix_bridge_combined_{m}_{c}")
         for m in pm_ids
         for c in mix_cycles[1:]
     }
@@ -1538,19 +1632,11 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
     # free to occupy every chain position creates a factorial number of
     # identical solutions, and the generic resource model then fails to find
     # even a first incumbent at the root node.  Assign the interchangeable
-    # pairs to a canonical interleaved CH/position order.  This keeps both CHs
-    # balanced (P1->CH2-pos1, P2->CH3-pos1, P3->CH2-pos2, ...) while retaining
-    # all physically meaningful timing decisions.  The odd product+PEC pair,
-    # if present, naturally becomes the final product position.
-    canonical_mix_slots = [
-        (m, r)
-        for r in mix_positions
-        for m in pm_ids
-    ]
-    canonical_mix_slot_by_pair = {
-        p: canonical_mix_slots[p_index]
-        for p_index, p in enumerate(mix_pair_ids)
-    }
+    # pairs to a canonical interleaved CH/position order. This keeps both CHs
+    # balanced while moving an odd product+PEC pair out of a one-pair cleaning
+    # segment when possible; otherwise that segment would require five
+    # simultaneous chamber-bound PEC tokens during its bridge exchange.
+    canonical_mix_slot_by_pair = _canonical_mix_slot_by_pair(cfg, cleaning_layout)
     for p in mix_pair_ids:
         canonical_pm, canonical_pos = canonical_mix_slot_by_pair[p]
         for m in pm_ids:
@@ -1778,8 +1864,9 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
 
             for clean_slot in clean_slots:
                 model.addCons(
-                    clean_active[(m, clean_slot)] == process_epoch_used[(m, clean_slot + 1)],
-                    name=f"clean_active_from_next_epoch_{m}_{clean_slot}",
+                    clean_active[(m, clean_slot)]
+                    == int(clean_slot <= layout["clean_count"]),
+                    name=f"clean_active_from_trigger_{m}_{clean_slot}",
                 )
 
     for m in pm_ids:
@@ -2161,26 +2248,50 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
 
         for c in mix_cycles[1:]:
             used = mix_active[m] if mix_bridge_active[(m, c)] else 0
-            _add_duration_cons(
-                model,
-                mix_bridge_start[(m, c)],
-                mix_bridge_end[(m, c)],
-                cfg.pair_transfer_time,
-                f"mix_bridge_{m}_{c}",
-                used,
+            combined = mix_bridge_combined[(m, c)]
+            start = mix_bridge_start[(m, c)]
+            unload_end = mix_bridge_unload_end[(m, c)]
+            load_start = mix_bridge_load_start[(m, c)]
+            end = mix_bridge_end[(m, c)]
+            model.addCons(combined <= used, name=f"mix_bridge_combined_active_{m}_{c}")
+            for edge_name, edge in (
+                ("start", start),
+                ("unload_end", unload_end),
+                ("load_start", load_start),
+                ("end", end),
+            ):
+                model.addCons(
+                    edge <= 1000000.0 * used,
+                    name=f"mix_bridge_{edge_name}_cap_{m}_{c}",
+                )
+            model.addCons(
+                unload_end == start + cfg.pair_transfer_time * used,
+                name=f"mix_bridge_unload_duration_{m}_{c}",
             )
-            _add_residency_upper_bound(
-                model,
-                mix_bridge_start[(m, c)],
-                mix_bridge_end[(m, c)],
-                cfg.max_robot_residency_time,
-                f"mix_bridge_robot_residency_{m}_{c}",
-                used,
+            model.addCons(
+                end == load_start + cfg.pair_transfer_time * used,
+                name=f"mix_bridge_load_duration_{m}_{c}",
+            )
+            # combined=1 overlays the unload and load into one four-gripper
+            # exchange. combined=0 requires the VTR to return from LLlower to
+            # LLupper before the later load action.
+            model.addCons(
+                load_start >= start - big_m * (1 - combined),
+                name=f"mix_bridge_combined_start_lb_{m}_{c}",
+            )
+            model.addCons(
+                load_start <= start + big_m * (1 - combined),
+                name=f"mix_bridge_combined_start_ub_{m}_{c}",
+            )
+            model.addCons(
+                load_start
+                >= unload_end + cfg.pair_transfer_time * used - big_m * combined,
+                name=f"mix_bridge_split_reposition_{m}_{c}",
             )
             if mix_bridge_active[(m, c)]:
                 _add_precedence_lower_bound(
                     model,
-                    mix_bridge_start[(m, c)],
+                    start,
                     mix_cycle_end[(m, c - 1)],
                     big_m,
                     f"mix_cycle_to_bridge_lb_{m}_{c}",
@@ -2189,14 +2300,14 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 _add_optional_gap_slack(
                     model,
                     chamber_idle_slacks,
-                    mix_bridge_start[(m, c)],
+                    start,
                     mix_cycle_end[(m, c - 1)],
                     used,
                     big_m,
                     f"mix_cycle_to_bridge_idle_{m}_{c}",
                 )
                 model.addCons(
-                    mix_cycle_start[(m, c)] == mix_bridge_end[(m, c)],
+                    mix_cycle_start[(m, c)] == end,
                     name=f"mix_bridge_to_cycle_tight_{m}_{c}",
                 )
 
@@ -2255,7 +2366,7 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 model,
                 mix_tail_load_start[key],
                 mix_tail_load_end[key],
-                mix_bridge_start[(m, last_cycle)],
+                mix_bridge_load_start[(m, last_cycle)],
                 mix_bridge_end[(m, last_cycle)],
                 mix_active[m],
                 big_m,
@@ -2398,7 +2509,7 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                         model,
                         mix_pair_vtr_load_start[p],
                         mix_pair_vtr_load_end[p],
-                        mix_bridge_start[(m, first_cycle)],
+                        mix_bridge_load_start[(m, first_cycle)],
                         mix_bridge_end[(m, first_cycle)],
                         selector,
                         big_m,
@@ -2431,7 +2542,7 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                         mix_pair_vtr_unload_start[p],
                         mix_pair_vtr_unload_end[p],
                         mix_bridge_start[(m, first_cycle + 2)],
-                        mix_bridge_end[(m, first_cycle + 2)],
+                        mix_bridge_unload_end[(m, first_cycle + 2)],
                         selector,
                         big_m,
                         f"mix_pair_mid_unload_link_{p}_{m}_{r}",
@@ -2988,7 +3099,7 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                     mix_active[m],
                     (mix_head_start[key], mix_head_end[key]),
                     (mix_cycle_start[(m, first_cycle)], mix_cycle_end[(m, first_cycle)]),
-                    (mix_bridge_start[(m, first_cycle + 1)], mix_bridge_end[(m, first_cycle + 1)]),
+                    (mix_bridge_start[(m, first_cycle + 1)], mix_bridge_unload_end[(m, first_cycle + 1)]),
                 )
                 add_pec_job(
                     f"mix_tail_{m}_{segment_id}_{lane}",
@@ -3235,13 +3346,32 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
                 "PEC storage",
             )
         for c in mix_cycles[1:]:
+            used = mix_active[m] if mix_bridge_active[(m, c)] else 0
+            combined = mix_bridge_combined[(m, c)]
+            split = used - combined
             append_vtr_task(
                 f"mix_bridge_{m}_{c}",
                 mix_bridge_start[(m, c)],
                 mix_bridge_end[(m, c)],
-                mix_active[m] if mix_bridge_active[(m, c)] else 0,
+                combined,
                 "LLupper",
                 "LLlower",
+            )
+            append_vtr_task(
+                f"mix_bridge_unload_{m}_{c}",
+                mix_bridge_start[(m, c)],
+                mix_bridge_unload_end[(m, c)],
+                split,
+                f"CH{m}",
+                "LLlower",
+            )
+            append_vtr_task(
+                f"mix_bridge_load_{m}_{c}",
+                mix_bridge_load_start[(m, c)],
+                mix_bridge_end[(m, c)],
+                split,
+                "LLupper",
+                f"CH{m}",
             )
 
     def vtr_empty_transition(left_name, right_name):
@@ -3784,6 +3914,14 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
     c_max = model.addVar(vtype="C", lb=0.0, name="c_max")
     for w in product_wafers:
         model.addCons(c_max >= wafer_completion[w], name=f"makespan_lb_{w}")
+    for m in pm_ids:
+        for clean_slot in clean_slots:
+            model.addCons(
+                c_max
+                >= clean_front_unload_end[(m, clean_slot)]
+                - big_m * (1 - clean_active[(m, clean_slot)]),
+                name=f"makespan_clean_lb_{m}_{clean_slot}",
+            )
 
     # The generated LP has a pure makespan objective: minimizing c_max is
     # exactly maximizing WPH for a fixed wafer count. The runner may then fix
@@ -4040,7 +4178,7 @@ Embedded PEC wafers forced by odd product counts: `{embedded_pec}`.
 - downstream stages may wait, but they cannot start before the required transfer or process has finished. Every complete two-product PW pair uses ATR double-gripper transfer in pure and mixed production alike, while the two AL calibrations remain serial because AL has one physical slot. Between them, ATR explicitly picks the calibrated wafer and places the held companion into AL; this exchange is not a zero-time or double-place operation. An odd one-product tail pair remains a single-gripper action.
 - `ATR` and `VTR` each represent one physical robot. Their capacities describe how many wafers an atomic transfer can carry; they do not permit independent moves on different routes at the same time. Every ATR loaded transfer consists of load, route movement, and unload. Between consecutive ATR actions, the model inserts the empty movement required from the previous destination to the next source; in particular, `LL->LP` empty return takes two `LP->AL` route movements.
 - ATR has a two-gripper payload, while AL has one physical slot. Every complete two-product PW pair in `4x1`, `2x2`, or mixed production uses one shared `LP->AL` move, a single-wafer AL placement, serial calibration with an explicit AL wafer exchange while ATR retains the companion, one shared `AL->LLupper` move, and a shared `LLlower->LP` return. All ATR routes remain globally non-overlapping.
-- VTR `front/back load/unload` and `2x2` head/bridge/tail actions carry a two-product PW pair as one double-gripper action when both members are product wafers. Every loaded VTR action has exact duration `{cfg.pair_transfer_time:.1f}`. If one action's destination differs from the next action's source, an explicit `{cfg.pair_transfer_time:.1f}` empty reposition is required; for example, consecutive `LLupper->CH2` loads contain a `CH2->LLupper` return between them. Robot idle time carries no wafer and is not a VTR wait.
+- VTR `front/back load/unload` and `2x2` head/tail actions carry a two-product PW pair as one double-gripper action when both members are product wafers. An intermediate `2x2` bridge may use one four-gripper `LLupper -> CH -> LLlower` exchange when the incoming pair is ready; otherwise it splits into an early `CH -> LLlower` unload and a later `LLupper -> CH` load, with the required empty reposition. Every loaded VTR action has exact duration `{cfg.pair_transfer_time:.1f}`. Robot idle time carries no wafer and is not a VTR wait.
 - For a pure `4x1` input, product wafers and PW pairs are indistinguishable apart from their identifiers. The model uses one canonical pairing and batch placement, then writes the implied ATR action chain, VTR action chain, and two LL slot chains directly. This removes label symmetry while retaining synchronized pair-transfer stages and serial AL calibration.
 - chamber compactness slack measures avoidable gaps between adjacent `4x1` batches, between the tail `4x1` batch and the `2x2` block, and before `2x2` bridge/tail transfer actions. After a `2x2` head or bridge transfer has filled the chamber, the following exposure starts immediately by hard equality. In addition, every CH window that contains wafers but is not running a process recipe contributes a separate squared term to `chamber_nonprocess_wait_square_*`.
 - product wafers inherit chamber transfer/process timing from the PW pair to which they belong.
@@ -4053,7 +4191,7 @@ Embedded PEC wafers forced by odd product counts: `{embedded_pec}`.
   double-gripper variable, the two wafers enter or leave synchronously on two independent slots.
 - PEC wafers are modeled as reusable, chamber-bound tokens. Each active PEC job occupies exactly one token from its assigned chamber's PEC subset, from `vtr_load` start until `vtr_unload` end.
 - chamber cleaning is modeled as a pure `PEC+PEC` / `PEC+PEC` rotary batch. It uses the same VTR load/unload and chamber rotation semantics as `4x1`, occupies four PEC tokens, and adds a cleaning process interval.
-- per chamber, process epochs are separated by cleaning batches so that each epoch contains at most `{cfg.cleaning_interval}` full-chamber process cycles. A long `2x2` workload is split at an exposure boundary with PEC tail/head pairs; it no longer has to fit in one cleaning epoch.
+- per chamber, process epochs are separated by cleaning batches so that each epoch contains at most `{cfg.cleaning_interval}` full-chamber process cycles. Every completed interval-th cycle triggers cleaning, including a terminal cycle; every active cleaning completion is included in `c_max`. A long `2x2` workload is split at an exposure boundary with PEC tail/head pairs; it no longer has to fit in one cleaning epoch.
 
 ## Resource Constraints Added Explicitly
 
@@ -4159,6 +4297,50 @@ def _write_model_description(output_dir: str, instance_name: str, cfg: PetriMIPC
     return description_path
 
 
+def _warm_start_is_feasible_in_full_model(model, solution_path: str) -> bool:
+    """Fail-closed validation for a warm start against the unmodified model."""
+    try:
+        solution = model.readSolFile(str(solution_path))
+        return bool(
+            model.checkSol(
+                solution,
+                printreason=False,
+                completely=True,
+                original=True,
+            )
+        )
+    except Exception:
+        return False
+
+
+def _record_warm_start_polishing_fallback(
+    output_dir: str,
+    instance_name: str,
+    solution_path: str,
+    error,
+) -> None:
+    """Keep the fallback decision auditable without invalidating a feasible start."""
+    stem = os.path.splitext(os.path.basename(instance_name))[0]
+    metadata_path = os.path.join(output_dir, f"{stem}_warmstart.meta.json")
+    try:
+        metadata = {}
+        if os.path.isfile(metadata_path):
+            with open(metadata_path, "r", encoding="utf-8") as handle:
+                metadata = json.load(handle)
+        if error is None:
+            if metadata.pop("polishing_fallback", None) is None:
+                return
+        else:
+            metadata["polishing_fallback"] = {
+                "status": "retained_verified_full_model_warm_start",
+                "solution_file": os.path.basename(str(solution_path)),
+                "reason": f"{type(error).__name__}: {error}",
+            }
+        with open(metadata_path, "w", encoding="utf-8") as handle:
+            json.dump(metadata, handle, ensure_ascii=False, indent=2)
+    except Exception as metadata_error:
+        print(f"warning: could not record warm-start polishing status: {metadata_error}")
+
 def generate_petri_mip_instance(
     output_dir: str,
     instance_name: str,
@@ -4219,19 +4401,42 @@ def generate_petri_mip_instance(
                     1800.0,
                     max(60.0, 0.20 * float(warm_start_time_limit)),
                 )
-                polished_start = polish_mixed_warm_start(
-                    output_dir,
-                    dated_instance_name,
-                    cfg,
-                    time_limit=polish_budget,
-                )
-                if not polished_start:
-                    message = "compatible Petri warm start could not be schedule-polished"
-                    if require_warm_start:
-                        raise RuntimeError(message)
-                    print(f"warning: {message}")
+                try:
+                    polished_start = polish_mixed_warm_start(
+                        output_dir,
+                        dated_instance_name,
+                        cfg,
+                        time_limit=polish_budget,
+                    )
+                    if not polished_start:
+                        raise RuntimeError(
+                            "compatible Petri warm start could not be schedule-polished"
+                        )
+                except Exception as polish_error:
+                    if not _warm_start_is_feasible_in_full_model(model, warm_start):
+                        raise RuntimeError(
+                            "schedule polishing failed and the retained Petri warm start "
+                            "did not pass full-model feasibility validation"
+                        ) from polish_error
+                    _record_warm_start_polishing_fallback(
+                        output_dir,
+                        dated_instance_name,
+                        warm_start,
+                        polish_error,
+                    )
+                    print(
+                        "warning: optional Petri warm-start polishing failed; "
+                        "retaining the independently verified full-model warm start: "
+                        f"{polish_error}"
+                    )
                 else:
                     warm_start = polished_start
+                    _record_warm_start_polishing_fallback(
+                        output_dir,
+                        dated_instance_name,
+                        warm_start,
+                        None,
+                    )
                     print(f"polished Petri warm start: {warm_start}")
         except Exception as exc:
             if require_warm_start:

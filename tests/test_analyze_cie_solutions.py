@@ -126,6 +126,37 @@ def test_repeated_analysis_does_not_consume_its_own_output(tmp_path, monkeypatch
     assert second["rows"][0]["solver_seed"] == 1
 
 
+def test_latest_rerun_metadata_replaces_stale_status_for_same_solution(tmp_path):
+    solution_path = tmp_path / "case.sol"
+    instance_path = tmp_path / "case.lp"
+    old_row = _benchmark_row(instance_path, solution_path)
+    old_row.update({
+        "started_at": "2026-08-28T10:00:00",
+        "stability_status": "nodelimit",
+        "stability_primal_dual_gap": 0.23,
+    })
+    new_row = _benchmark_row(instance_path, solution_path)
+    new_row.update({
+        "started_at": "2026-08-28T11:00:00",
+        "stability_status": "optimal",
+        "stability_primal_dual_gap": 0.0,
+    })
+    (tmp_path / "z_old.json").write_text(
+        json.dumps({"meta": _original_meta(), "rows": [old_row]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "a_new.json").write_text(
+        json.dumps({"meta": _original_meta(), "rows": [new_row]}),
+        encoding="utf-8",
+    )
+
+    _, rows = MODULE._load_benchmark_rows(tmp_path)
+
+    assert len(rows) == 1
+    assert rows[0]["stability_status"] == "optimal"
+    assert rows[0]["stability_primal_dual_gap"] == 0.0
+
+
 def test_serialized_solution_allowance_is_tiny_and_explicit():
     assert MODULE.SCIP_FEASIBILITY_TOLERANCE == 1.0e-6
     assert MODULE.SOLUTION_SERIALIZATION_ALLOWANCE == 1.0e-12

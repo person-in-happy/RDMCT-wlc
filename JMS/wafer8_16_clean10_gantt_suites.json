@@ -1,0 +1,47 @@
+{
+  "description": "JMS 8/16-wafer three-mode Gantt evidence with the original ten-cycle chamber-cleaning interval.",
+  "suites": [
+    {
+      "name": "wafer8_pure22_clean10",
+      "family": "dual_source_cluster_tool",
+      "scale": "n008_f000_m008_proc180_clean10",
+      "split": "jms_clean10_small_gantt",
+      "root": "../generated_instances/jms_clean10_small/wafer8_22_clean10_20260826.lp"
+    },
+    {
+      "name": "wafer8_pure41_clean10",
+      "family": "dual_source_cluster_tool",
+      "scale": "n008_f008_m000_proc180_clean10",
+      "split": "jms_clean10_small_gantt",
+      "root": "../generated_instances/jms_clean10_small/wafer8_41_clean10_20260826.lp"
+    },
+    {
+      "name": "wafer8_mixed11_clean10",
+      "family": "dual_source_cluster_tool",
+      "scale": "n008_f004_m004_proc180_clean10",
+      "split": "jms_clean10_small_gantt",
+      "root": "../generated_instances/jms_clean10_small/wafer8_mix_4_4_clean10_20260826.lp"
+    },
+    {
+      "name": "wafer16_pure22_clean10",
+      "family": "dual_source_cluster_tool",
+      "scale": "n016_f000_m016_proc180_clean10",
+      "split": "jms_clean10_small_gantt",
+      "root": "../generated_instances/jms_clean10_small/wafer16_22_clean10_20260826.lp"
+    },
+    {
+      "name": "wafer16_pure41_clean10",
+      "family": "dual_source_cluster_tool",
+      "scale": "n016_f016_m000_proc180_clean10",
+      "split": "jms_clean10_small_gantt",
+      "root": "../generated_instances/jms_clean10_small/wafer16_41_clean10_20260826.lp"
+    },
+    {
+      "name": "wafer16_mixed11_clean10",
+      "family": "dual_source_cluster_tool",
+      "scale": "n016_f008_m008_proc180_clean10",
+      "split": "jms_clean10_small_gantt",
+      "root": "../generated_instances/jms_clean10_small/wafer16_mix_8_8_clean10_20260826.lp"
+    }
+  ]
+}

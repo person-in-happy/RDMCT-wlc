@@ -27,6 +27,7 @@ class SCIPCutSelEnv():
         scip_absolute_gap_limit=0.0,
         scip_emphasis="default",
         scip_heuristics_profile="default",
+        scip_nonroot_separation_rounds=0,
         scip_disable_expensive_heuristics=False,
         cutsel_max_candidates=128,
         cutsel_max_selected_cuts=16,
@@ -40,11 +41,13 @@ class SCIPCutSelEnv():
         schedule_stability_mode="linear",
         lexicographic_fix_discrete_decisions=True,
         lexicographic_free_double_decisions=True,
+        lexicographic_free_schedule_order_decisions=False,
         lexicographic_cmax_tolerance=1e-6,
         lexicographic_stability_time_limit=10.0,
         lexicographic_stability_node_limit=5000,
         schedule_linear_wait_weight=1.0,
         schedule_linear_max_wait_weight=10.0,
+        schedule_linear_physical_route_only=False,
         schedule_cadence_deviation_weight=25.0,
         schedule_max_wait_time=0.0,
         schedule_wait_cap_mode="hard",
@@ -79,6 +82,9 @@ class SCIPCutSelEnv():
         self.scip_absolute_gap_limit = scip_absolute_gap_limit
         self.scip_emphasis = scip_emphasis
         self.scip_heuristics_profile = scip_heuristics_profile
+        self.scip_nonroot_separation_rounds = max(
+            0, int(scip_nonroot_separation_rounds)
+        )
         self.scip_disable_expensive_heuristics = scip_disable_expensive_heuristics
         self.cutsel_max_candidates = cutsel_max_candidates
         self.cutsel_max_selected_cuts = cutsel_max_selected_cuts
@@ -92,11 +98,17 @@ class SCIPCutSelEnv():
         self.schedule_stability_mode = str(schedule_stability_mode or "linear").strip().lower()
         self.lexicographic_fix_discrete_decisions = lexicographic_fix_discrete_decisions
         self.lexicographic_free_double_decisions = lexicographic_free_double_decisions
+        self.lexicographic_free_schedule_order_decisions = (
+            lexicographic_free_schedule_order_decisions
+        )
         self.lexicographic_cmax_tolerance = lexicographic_cmax_tolerance
         self.lexicographic_stability_time_limit = lexicographic_stability_time_limit
         self.lexicographic_stability_node_limit = lexicographic_stability_node_limit
         self.schedule_linear_wait_weight = schedule_linear_wait_weight
         self.schedule_linear_max_wait_weight = schedule_linear_max_wait_weight
+        self.schedule_linear_physical_route_only = (
+            schedule_linear_physical_route_only
+        )
         self.schedule_cadence_deviation_weight = schedule_cadence_deviation_weight
         self.schedule_max_wait_time = schedule_max_wait_time
         self.schedule_wait_cap_mode = str(schedule_wait_cap_mode or "hard").strip().lower()
@@ -294,8 +306,17 @@ class SCIPCutSelEnv():
         # separators
         self._set_scip_separator_params(init_scip_kwargs['max_rounds_root'], 1, 10000, 1000, 10)
 
-        # separation only at root node
-        self.m.setIntParam('separating/maxrounds', 0)
+        # Root-only separation remains the default benchmark protocol.  Exact
+        # publication-certificate runs may explicitly request non-root rounds
+        # so SCIP can continue strengthening dual bounds after the learned
+        # root cut-selection pass.
+        self.m.setIntParam(
+            'separating/maxrounds', self.scip_nonroot_separation_rounds
+        )
+        self.m.setIntParam(
+            'separating/maxstallrounds',
+            min(1, self.scip_nonroot_separation_rounds),
+        )
 
         # no restart
         self.m.setIntParam('presolving/maxrestarts', 0)
@@ -419,7 +440,7 @@ class SCIPCutSelEnv():
             "mix_tail_idle_",
             "chamber_idle_total_",
         )
-        wait_variables = [
+        proxy_wait_variables = [
             variable
             for variable in self.m.getVars()
             if variable.name.startswith(wait_prefixes)
@@ -429,11 +450,60 @@ class SCIPCutSelEnv():
                 and not variable.name.startswith("schedule_wait_square_")
             )
         ]
-        individual_wait_variables = [
-            variable
-            for variable in wait_variables
-            if not variable.name.startswith("chamber_idle_total_")
-        ]
+        if self.schedule_linear_physical_route_only:
+            # Keep this list in lockstep with
+            # cie/code/analyze_cie_solutions.py::route_wait_pairs. The
+            # publication objective and the independent audit must measure the
+            # same six physical gaps, rather than optional proxy slacks.
+            route_wait_pairs = (
+                ("al", "atr_lp_al"),
+                ("atr_al_llupper", "al"),
+                ("vtr_load", "llupper"),
+                ("pm", "vtr_load"),
+                ("vtr_unload", "pm"),
+                ("atr_lllower_lp", "lllower"),
+            )
+            wafer_ids = sorted(
+                int(match.group(1))
+                for name in variables
+                if (match := re.match(r"^prod_stage_start_(\d+)_atr_lp_al$", name))
+            )
+            physical_route_waits = []
+            for wafer in wafer_ids:
+                for later_stage, earlier_stage in route_wait_pairs:
+                    later_start = variables.get(
+                        f"prod_stage_start_{wafer}_{later_stage}"
+                    )
+                    earlier_end = variables.get(
+                        f"prod_stage_end_{wafer}_{earlier_stage}"
+                    )
+                    if later_start is None or earlier_end is None:
+                        continue
+                    wait = self.m.addVar(
+                        vtype="C",
+                        lb=0.0,
+                        name=(
+                            f"schedule_physical_route_wait_{wafer}_"
+                            f"{later_stage}_after_{earlier_stage}"
+                        ),
+                    )
+                    self.m.addCons(
+                        wait == later_start - earlier_end,
+                        name=(
+                            f"schedule_physical_route_wait_def_{wafer}_"
+                            f"{later_stage}_after_{earlier_stage}"
+                        ),
+                    )
+                    physical_route_waits.append(wait)
+            wait_variables = physical_route_waits
+            individual_wait_variables = physical_route_waits
+        else:
+            wait_variables = proxy_wait_variables
+            individual_wait_variables = [
+                variable
+                for variable in wait_variables
+                if not variable.name.startswith("chamber_idle_total_")
+            ]
         max_wait = self.m.addVar(vtype="C", lb=0.0, name="schedule_linear_max_wait")
         for index, variable in enumerate(individual_wait_variables):
             self.m.addCons(
@@ -515,7 +585,8 @@ class SCIPCutSelEnv():
         logger.log(
             "configured linear schedule stability: "
             f"wait_vars={len(wait_variables)}, cadence_terms={len(cadence_deviations)}, "
-            f"cap_excess_terms={len(cap_excesses)}"
+            f"cap_excess_terms={len(cap_excesses)}, "
+            f"physical_route_only={self.schedule_linear_physical_route_only}"
         )
         return stability_var
         
@@ -624,6 +695,7 @@ class SCIPCutSelEnv():
             f"solutions={self.scip_solution_limit}, emphasis={self.scip_emphasis}, "
             f"gap={self.scip_relative_gap_limit}, absgap={self.scip_absolute_gap_limit}, "
             f"heuristics_profile={self.scip_heuristics_profile}, "
+            f"nonroot_separation_rounds={self.scip_nonroot_separation_rounds}, "
             f"rare_clock_check={self.scip_rare_clock_check}, "
             f"lp_iter={self.scip_lp_iteration_limit}, "
             f"root_lp_iter={self.scip_root_lp_iteration_limit}, "
@@ -777,6 +849,24 @@ class SCIPCutSelEnv():
                 return var
         return None
 
+    def _keep_discrete_decision_free_in_phase_two(self, variable_name):
+        if self.lexicographic_free_double_decisions and "_double_" in variable_name:
+            return True
+        return (
+            self.lexicographic_free_schedule_order_decisions
+            and variable_name.startswith(
+                (
+                    "seq_",
+                    "pec_token_order_",
+                    "pec_token_assign_",
+                    "al_slot_assign_",
+                    "llupper_slot_assign_",
+                    "lllower_slot_assign_",
+                    "mix_bridge_combined_",
+                )
+            )
+        )
+
     def _optimize_with_lexicographic_stability(self):
         """Maximize WPH first, then stabilize only an equally fast schedule."""
         stability_time_limit = float(self.lexicographic_stability_time_limit)
@@ -833,16 +923,32 @@ class SCIPCutSelEnv():
         if cmax_var is None or stability_var is None:
             self._lexicographic_info["stability_status"] = "skipped_non_petri_model"
             return
+        # A lexicographic secondary optimum is only meaningful after SCIP has
+        # certified the primary Cmax optimum. Switching objectives after a
+        # primary timeout weakens the audit claim and can discard the useful
+        # primary incumbent when freeTransform() rebuilds the problem.
+        if primary_status != "optimal":
+            self._lexicographic_info["stability_status"] = (
+                "skipped_primary_not_optimal"
+            )
+            logger.log(
+                "lexicographic phase 2 skipped because phase 1 did not prove "
+                f"optimality: status={primary_status}, c_max={primary_cmax}"
+            )
+            return
 
         fixed_discrete_values = {}
         if self.lexicographic_fix_discrete_decisions:
-            for var in self.m.getVars():
+            # Query original variables explicitly. After optimize(), the
+            # default getVars() view is transformed and may contain `t_` names
+            # that do not map back to original variables after freeTransform().
+            for var in self.m.getVars(transformed=False):
                 if var.vtype() in {"BINARY", "INTEGER", "IMPLINT"}:
-                    # Robot batching is part of schedule-quality optimization,
-                    # not a routing identity. Keep these choices free so phase
-                    # 2 can select double-gripper operation when it reduces
-                    # the global squared-wait objective.
-                    if self.lexicographic_free_double_decisions and "_double_" in var.name:
+                    # Robot batching, resource order and interchangeable
+                    # resource-slot assignment are schedule-quality decisions,
+                    # not product routing identity. Phase two must be able to
+                    # change them when the physical route waits improve.
+                    if self._keep_discrete_decision_free_in_phase_two(var.name):
                         continue
                     fixed_discrete_values[var.name] = round(
                         float(self.m.getSolVal(primary_solution, var))
@@ -1075,6 +1181,7 @@ class SCIPCutSelEnv():
         pm_wait_square = 0.0
         module_wait_square = 0.0
         robot_wait_square = 0.0
+        physical_route_waits = []
         atr_loaded_transfer_time = 2.0 * self.schedule_vtr_transfer_time + self.schedule_atr_transfer_time
         atr_loaded_return_time = 2.0 * self.schedule_vtr_transfer_time + self.schedule_atr_return_time
         wafer_ids = sorted({wafer_id for wafer_id, _, _ in stage_values})
@@ -1097,6 +1204,16 @@ class SCIPCutSelEnv():
                 positive_gap(stage_value(wafer_id, 'end', 'vtr_load'), stage_value(wafer_id, 'start', 'vtr_load'), self.schedule_vtr_transfer_time),
                 positive_gap(stage_value(wafer_id, 'end', 'vtr_unload'), stage_value(wafer_id, 'start', 'vtr_unload'), self.schedule_vtr_transfer_time),
                 positive_gap(stage_value(wafer_id, 'end', 'atr_lllower_lp'), stage_value(wafer_id, 'start', 'atr_lllower_lp'), atr_loaded_return_time),
+            )
+            physical_route_waits.extend(
+                (
+                    module_waits[0],
+                    module_waits[1],
+                    module_waits[3],
+                    pm_waits[0],
+                    pm_waits[1],
+                    module_waits[5],
+                )
             )
             pm_wait_square += sum(wait * wait for wait in pm_waits)
             module_wait_square += sum(wait * wait for wait in module_waits)
@@ -1141,6 +1258,9 @@ class SCIPCutSelEnv():
             )
             and not name.startswith('chamber_idle_total_')
         ]
+        if getattr(self, 'schedule_linear_physical_route_only', False):
+            linear_waits = physical_route_waits
+            individual_waits = physical_route_waits
 
         cadence_gaps = []
         cadence_deviations = []

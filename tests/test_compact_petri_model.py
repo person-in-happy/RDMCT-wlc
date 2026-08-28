@@ -5,6 +5,7 @@ import pytest
 pytest.importorskip("pyscipopt")
 
 from petri_mip_generator import PetriMIPConfig, build_petri_mip_model
+from environments import SCIPCutSelEnv
 from petri_warm_start import (
     _warm_start_profiles,
     _sha256_file,
@@ -79,6 +80,45 @@ def test_compact_secondary_has_constant_quadratic_auxiliary_count():
     assert any(name.startswith("schedule_wait_square_") for name in legacy_names)
     assert len(compact_names) < len(legacy_names)
 
+
+def test_2x2_model_contains_optional_combined_or_split_bridge_actions():
+    model = build_petri_mip_model(_config("2x2"))
+    variables = {variable.name: variable for variable in model.getVars()}
+    constraints = {constraint.name for constraint in model.getConss()}
+
+    assert variables["mix_bridge_combined_2_2"].vtype() == "BINARY"
+    assert "mix_bridge_unload_end_2_2" in variables
+    assert "mix_bridge_load_start_2_2" in variables
+    assert "mix_bridge_split_reposition_2_2" in constraints
+    assert "seq_vtr_action_lb_mix_bridge_unload_2_2_mix_bridge_load_2_2" in constraints
+
+
+def test_publication_linear_objective_matches_independent_physical_route_waits():
+    model = build_petri_mip_model(_config("2x2"))
+    env = object.__new__(SCIPCutSelEnv)
+    env.m = model
+    env.schedule_wait_cap_mode = "hard"
+    env.schedule_linear_physical_route_only = True
+    env.schedule_linear_wait_weight = 1.0
+    env.schedule_linear_max_wait_weight = 10.0
+    env.schedule_cadence_deviation_weight = 0.0
+    env.schedule_max_wait_time = 0.0
+    env.schedule_wait_cap_excess_weight = 1000.0
+
+    env._configure_linear_stability_objective({})
+
+    names = {variable.name for variable in model.getVars()}
+    constraints = {constraint.name for constraint in model.getConss()}
+    route_waits = {
+        name for name in names if name.startswith("schedule_physical_route_wait_")
+    }
+    assert len(route_waits) == 4 * 6
+    assert "schedule_physical_route_wait_1_pm_after_vtr_load" in route_waits
+    assert "schedule_physical_route_wait_4_atr_lllower_lp_after_lllower" in route_waits
+    assert "schedule_physical_route_wait_def_1_pm_after_vtr_load" in constraints
+    assert sum(
+        name.startswith("schedule_linear_max_wait_lb_") for name in constraints
+    ) == 24
 
 @pytest.mark.parametrize("mode", ["4x1", "2x2", "mixed"])
 def test_compact_and_legacy_preserve_primary_cmax(mode):

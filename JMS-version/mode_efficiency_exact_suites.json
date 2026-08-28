@@ -1,0 +1,47 @@
+{
+  "description": "Controlled exact mode-efficiency experiment for JMS Figure 4: matched 8- and 16-wafer pure 4x1, pure 2x2, and 1:1 mixed configurations.",
+  "suites": [
+    {
+      "name": "mode_n008_pure41",
+      "family": "dual_source_cluster_tool",
+      "scale": "n008_proc100",
+      "split": "experiment1",
+      "root": "../cie/data/core/pure41/cie_core_n008_f008_m000_proc100.lp"
+    },
+    {
+      "name": "mode_n008_pure22",
+      "family": "dual_source_cluster_tool",
+      "scale": "n008_proc100",
+      "split": "experiment1",
+      "root": "../cie/data/core/spbs/cie_core_n008_f000_m008_proc100.lp"
+    },
+    {
+      "name": "mode_n008_mixed11",
+      "family": "dual_source_cluster_tool",
+      "scale": "n008_proc100",
+      "split": "experiment1",
+      "root": "../cie/data/core/spbs/cie_core_n008_f004_m004_proc100.lp"
+    },
+    {
+      "name": "mode_n016_pure41",
+      "family": "dual_source_cluster_tool",
+      "scale": "n016_proc100",
+      "split": "experiment1",
+      "root": "../cie/data/core/pure41/cie_core_n016_f016_m000_proc100.lp"
+    },
+    {
+      "name": "mode_n016_pure22",
+      "family": "dual_source_cluster_tool",
+      "scale": "n016_proc100",
+      "split": "experiment1",
+      "root": "../cie/data/core/spbs/cie_core_n016_f000_m016_proc100.lp"
+    },
+    {
+      "name": "mode_n016_mixed11",
+      "family": "dual_source_cluster_tool",
+      "scale": "n016_proc100",
+      "split": "experiment1",
+      "root": "../cie/data/core/spbs/cie_core_n016_f008_m008_proc100.lp"
+    }
+  ]
+}

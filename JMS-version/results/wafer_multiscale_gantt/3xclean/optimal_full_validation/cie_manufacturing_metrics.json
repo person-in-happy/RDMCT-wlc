@@ -1,0 +1,48 @@
+{
+  "scip_feasibility_tolerance": 1e-06,
+  "solution_serialization_allowance": 1e-12,
+  "solution_feasibility_tolerance": 1.000001e-06,
+  "source_benchmarks": [
+    "D:\\git\\git\\RDMCT-A3C\\JMS\\results\\wafer_multiscale_gantt\\3xclean\\optimal_full_runs\\cie_benchmark_wafer17_pure22_clean3_optimal_full_v2_20260826_20260826_193527.json"
+  ],
+  "solution_count": 1,
+  "invalid_count": 0,
+  "rows": [
+    {
+      "suite": "wafer17_pure22_clean3",
+      "instance": "wafer17_22_clean3_20260826.lp",
+      "path": "D:\\git\\git\\RDMCT-A3C\\generated_instances\\jms_3xclean\\wafer17_22_clean3_20260826.lp",
+      "method": "proposed",
+      "run_label": "wafer17_pure22_clean3_optimal_full_v2_20260826",
+      "warm_start": "auto",
+      "solver_seed": 1,
+      "training_seed": 1,
+      "status": "optimal",
+      "solving_time": 9.341451699998288,
+      "gap": 0.0,
+      "pdi": 206.6346696085623,
+      "solution_file": "D:\\git\\git\\RDMCT-A3C\\JMS\\results\\wafer_multiscale_gantt\\3xclean\\optimal_full_solutions\\wafer17_pure22_clean3__wafer17_22_clean3_20260826__proposed__solverseed_1__trainseed_1__wafer17_pure22_clean3_optimal_full_v2_20260826.sol",
+      "physically_feasible": true,
+      "validation_note": "checked active primary model at feasibility tolerance 1.000001e-06; removed 13 inactive auxiliaries",
+      "total_wafers": 17,
+      "cmax": 2683.999998,
+      "throughput_wph": 22.80178839254977,
+      "mean_cycle_time": 551.705882235294,
+      "p95_cycle_time": 659.4999989999999,
+      "atr_utilization": 0.2537257826033724,
+      "vtr_utilization": 0.04619970197183321,
+      "al_utilization": 0.12667660218083204,
+      "llupper_capacity_utilization": 0.14204545446501146,
+      "lllower_capacity_utilization": 0.1500558866617405,
+      "pec_peak_in_tool": 8,
+      "clean_count": 3,
+      "clean_time_share": 0.27943368128124696,
+      "physical_route_total_wait": 1218.999998000004,
+      "physical_route_max_wait": 82.49999900000012,
+      "physical_cadence_cv": 2.270693490770078e-15,
+      "physical_cadence_deviation_sum": 2.2737367544323206e-13,
+      "ch2_utilization": 0.909090909768324,
+      "ch3_utilization": 0.5886736218991608
+    }
+  ]
+}

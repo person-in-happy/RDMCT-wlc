@@ -1,0 +1,47 @@
+{
+    "description":  "JMS 8/16-wafer Gantt evidence: 4x1=180 s, each 2x2 exposure=90 s, original ten-cycle chamber-cleaning interval.",
+    "suites":  [
+                   {
+                       "name":  "wafer8_pure22_clean10",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_f000_m008_p4x1_180_p2x2_90x2_clean10",
+                       "split":  "jms_clean10_small_half2x2_gantt",
+                       "root":  "../generated_instances/jms_clean10_small_2x2half/wafer8_22_clean10_2x2half_20260827.lp"
+                   },
+                   {
+                       "name":  "wafer8_pure41_clean10",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_f008_m000_p4x1_180_p2x2_90x2_clean10",
+                       "split":  "jms_clean10_small_half2x2_gantt",
+                       "root":  "../generated_instances/jms_clean10_small_2x2half/wafer8_41_clean10_2x2half_20260827.lp"
+                   },
+                   {
+                       "name":  "wafer8_mixed11_clean10",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_f004_m004_p4x1_180_p2x2_90x2_clean10",
+                       "split":  "jms_clean10_small_half2x2_gantt",
+                       "root":  "../generated_instances/jms_clean10_small_2x2half/wafer8_mix_4_4_clean10_2x2half_20260827.lp"
+                   },
+                   {
+                       "name":  "wafer16_pure22_clean10",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_f000_m016_p4x1_180_p2x2_90x2_clean10",
+                       "split":  "jms_clean10_small_half2x2_gantt",
+                       "root":  "../generated_instances/jms_clean10_small_2x2half/wafer16_22_clean10_2x2half_20260827.lp"
+                   },
+                   {
+                       "name":  "wafer16_pure41_clean10",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_f016_m000_p4x1_180_p2x2_90x2_clean10",
+                       "split":  "jms_clean10_small_half2x2_gantt",
+                       "root":  "../generated_instances/jms_clean10_small_2x2half/wafer16_41_clean10_2x2half_20260827.lp"
+                   },
+                   {
+                       "name":  "wafer16_mixed11_clean10",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_f008_m008_p4x1_180_p2x2_90x2_clean10",
+                       "split":  "jms_clean10_small_half2x2_gantt",
+                       "root":  "../generated_instances/jms_clean10_small_2x2half/wafer16_mix_8_8_clean10_2x2half_20260827.lp"
+                   }
+               ]
+}

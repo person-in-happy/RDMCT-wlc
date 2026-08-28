@@ -1,0 +1,48 @@
+{
+  "scip_feasibility_tolerance": 1e-06,
+  "solution_serialization_allowance": 1e-12,
+  "solution_feasibility_tolerance": 1.000001e-06,
+  "source_benchmarks": [
+    "D:\\git\\git\\RDMCT-A3C\\JMS\\results\\wafer_multiscale_gantt\\3xclean\\runs\\jms3clean_half2x2_legacy50_probe120_20260827\\cie_benchmark_jms3clean_half2x2_legacy50_probe120_20260827_20260827_135232.json"
+  ],
+  "solution_count": 1,
+  "invalid_count": 0,
+  "rows": [
+    {
+      "suite": "wafer20_pure22_clean3",
+      "instance": "wafer20_22_clean3_2x2half_20260827.lp",
+      "path": "D:\\git\\git\\RDMCT-A3C\\generated_instances\\jms_3xclean_2x2half\\wafer20_22_clean3_2x2half_20260827.lp",
+      "method": "proposed",
+      "run_label": "jms3clean_half2x2_legacy50_probe120_20260827",
+      "warm_start": "auto",
+      "solver_seed": 1,
+      "training_seed": 1,
+      "status": "timelimit",
+      "solving_time": 119.56679619999704,
+      "gap": 0.013345994756916403,
+      "pdi": 169.42557923375358,
+      "solution_file": "D:\\git\\git\\RDMCT-A3C\\JMS\\results\\wafer_multiscale_gantt\\3xclean\\solutions\\jms3clean_half2x2_legacy50_probe120_20260827\\wafer20_pure22_clean3__wafer20_22_clean3_2x2half_202608__proposed__s1_t1__e0911a3035e65f4f.sol",
+      "physically_feasible": true,
+      "validation_note": "checked active primary model at feasibility tolerance 1.000001e-06; removed 13 inactive auxiliaries",
+      "total_wafers": 20,
+      "cmax": 2125.99989700001,
+      "throughput_wph": 33.866417445080266,
+      "mean_cycle_time": 536.899979400002,
+      "p95_cycle_time": 935.9998970000099,
+      "atr_utilization": 0.38099719625715306,
+      "vtr_utilization": 0.07149577016183613,
+      "al_utilization": 0.18814676358377916,
+      "llupper_capacity_utilization": 0.6585136240954405,
+      "lllower_capacity_utilization": 0.578080882663375,
+      "pec_peak_in_tool": 8,
+      "clean_count": 4,
+      "clean_time_share": 0.47036690895944816,
+      "physical_route_total_wait": 4717.99958800004,
+      "physical_route_max_wait": 607.9998970000099,
+      "physical_cadence_cv": 0.031578947368421054,
+      "physical_cadence_deviation_sum": 0.0,
+      "ch2_utilization": 0.8090310834102508,
+      "ch3_utilization": 0.809031083410251
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 # RDMCT-A3C 完整运行与结果复现指南
 
 > 面向第一次接触半导体组合设备调度、MIP、SCIP 或强化学习割选择的读者。
-> 本文按当前代码审计更新于 2026-07-31；命令默认在 Windows PowerShell、仓库根目录执行。
+> 本文按当前代码审计更新于 2026-08-27；命令默认在 Windows PowerShell、仓库根目录执行。
 
 ## 1. 先选择你的目标
 
@@ -18,8 +18,8 @@
 
 系统有两种产品工艺：
 
-- `4x1`：同一 PW 对在一个四口腔体内完成相应处理；
-- `2x2`：PW 对跨 CH2/CH3 形成混流加工。
+- `4x1`：两个 PW 对占满同一个四口腔体，并行完成一次加工；
+- `2x2`：同一个腔体内形成 PEC 边界的连续链，每个产品 PW 对参与相邻两次加工；CH2/CH3 是两台可分配腔体，不是同一 PW 对必须跨越的两道工序。
 
 模型同时描述产品晶圆、PEC 晶圆、清洗作业和搬运资源，优化最后一片产品晶圆返回 LP 的时刻：
 
@@ -62,7 +62,16 @@ throughput_wph = 3600 × completed_product_wafers / c_max
 - NumPy、SciPy、PyTorch 等 `requirements.txt` 中依赖；
 - 训练和学习策略推理需要 CUDA；实例生成、SCIP 默认求解和分析可用 CPU。
 
-当前机器已验证的一个快照是 Python 3.13.5、PySCIPOpt 6.1.0、PyTorch 2.11.0+cu130。它不是强制版本组合；正式实验应保存自己的环境。
+当前用于 JMS 50-wafer 补充证据的 `a3cenv` 快照是 Python 3.12.12、
+PySCIPOpt 6.1.0、PyTorch 2.11.0+cu130、NumPy 2.4.4、SciPy 1.18.0，
+CUDA 可用。它不是强制版本组合；正式实验应保存自己的环境。
+
+已有环境直接激活：
+
+```powershell
+conda activate a3cenv
+Set-Location D:\git\git\RDMCT-A3C
+```
 
 ```powershell
 Set-Location <你的路径>\RDMCT-A3C
@@ -284,7 +293,7 @@ effective_cleaning_process_time = 2 × full_process_time
 运行时两阶段逻辑是：
 
 1. 阶段 1 最小化 `c_max`；
-2. 阶段 2 固定阶段 1 的 `c_max`（允许数值容差），再改善等待/节拍。
+2. 仅当阶段 1 已证明 `status=optimal` 时，阶段 2 才固定该最优 `c_max`（允许数值容差）并改善等待/节拍；阶段 1 超时则保留 incumbent，阶段 2 记为 `skipped_primary_not_optimal`。
 
 阶段 2只有开关为 true 且时间大于 0 才运行：
 
@@ -308,6 +317,8 @@ smoke 预留 2 秒、30 秒 C&IE 训练预留 5 秒，一般 45–300 秒配置�
 `min(60 s, 10% × 本实例总时限)`。最终仍应以 raw/meta 中记录的
 effective runtime config 为准。
 
+不得把阶段 1 的 optimal 解释为‘所有机器人空闲都已消除’：它只证明 c_max 在当前动作模型中最优。投稿甘特图还必须要求线性等待压缩阶段也为 optimal/gap=0。此外，阶段 2 从原问题变量（getVars(transformed=False)）冻结路由决策，避免把 presolve 后的 	_ 变量名错误映射回原模型。
+
 ### 9.3 要压缩 chamber 组间空闲，用 linear 模式
 
 ```json
@@ -318,6 +329,7 @@ effective runtime config 为准。
     "lexicographic_stability_time_limit": 60.0,
     "schedule_linear_wait_weight": 1.0,
     "schedule_linear_max_wait_weight": 10.0,
+    "schedule_linear_physical_route_only": true,
     "schedule_cadence_deviation_weight": 25.0,
     "schedule_max_wait_time": 0.0,
     "schedule_wait_cap_mode": "hard"
@@ -334,7 +346,7 @@ wait_weight × sum(selected waits)
 + optional soft-cap excess penalty
 ```
 
-`schedule_linear_wait_weight` 压缩总等待，`schedule_linear_max_wait_weight` 防止少数极长等待，`schedule_cadence_deviation_weight` 改善相邻批次节拍。权重只决定第二阶段内部取舍，不允许无界牺牲主目标。
+`schedule_linear_physical_route_only=true` 时，“等待”严格取自产品物理事件的六段差值：ATR→AL、AL→LLupper、LLupper→VTR、VTR→PM、PM→VTR、LLlower→ATR，与 `analyze_cie_solutions.py` 的独立统计完全相同；AL/LL/PEC token 的可互换时隙分配也在第二阶段释放。`schedule_linear_wait_weight` 压缩总物理路线等待，`schedule_linear_max_wait_weight` 防止少数极长等待，`schedule_cadence_deviation_weight` 改善相邻批次节拍。权重只决定第二阶段内部取舍，不允许牺牲主目标。
 
 ### 9.4 两种等待硬上限不要混淆
 
@@ -595,7 +607,173 @@ solver seed 和 training seed 是同一制造实例上的重复，不可当作�
 
 投稿前按 [C&IE 官方作者指南](https://www.sciencedirect.com/journal/computers-and-industrial-engineering/publish/guide-for-authors) 再核对格式、匿名审稿和研究数据要求。当前官方要求研究数据 deposit/citation/linking；不能共享时解释原因，并在投稿时提交 data statement。
 
-## 15. 常见错误
+## 15. JMS 甘特图证据与历史口径
+
+> 本节 15.1–15.3 记录的是 2026-08-25 的历史 50-wafer 流程，其中 2×2 的两次曝光曾各设为 180 s。按 2026-08-27 修正后的物理口径，每次应为 90 s、两次合计 180 s；因此 15.1–15.3 的旧 LP、哈希和出图命令只保留用于追溯，不能作为当前投稿证据。当前命令见 15.4。
+
+### 15.1 先澄清 wafer17 文件
+
+`22` 和 `41` 是工艺标签，分别表示纯 `2x2` 和纯 `4x1`，不是晶圆数；
+本次口误中的 `14` 应为 `22`。仓库文件及模型说明已经确认：
+
+| 文件 | 4x1/2x2 数量 | SHA-256 |
+| --- | --- | --- |
+| `wafer17_22_20260711.lp` | 0/17 | `98fe307172a020c37ffb6921c2a0544695f5bd30f87371aa084f6d89c706528a` |
+| `wafer17_41_fixed_20260711.lp` | 17/0 | `272659b0a5bf13ffb13973de1e4e48bc497d1f7bd68bdda003eb67bbe3c61377` |
+
+旧的 `wafer17_41_20260711.lp` 实际是 0/17，且与
+`wafer17_22_20262711.lp` 同哈希
+`b14acbbfcce9a9d11fc193bae6d56a43e45a371ddea9c2bd9b637f8fa766949f`；
+它是标签错误文件，不能作为 pure-4x1 证据。原始 2026-07-11 shell 命令未被
+保存，因此不能声称恢复了逐字符相同的历史命令；可确认的是 `_model.md`
+记录的语义和参数。用当前代码重建时必须显式传参并重新冻结哈希。
+
+wafer17 两个正确实例共享：2 个 PM、8 个 PEC、batch size 4、工艺时间
+180 s、cleaning interval 10、cleaning time 500 s、AL 20 s、LLupper 30 s、
+LLlower 25 s、VTR 4 s、ATR route 3 s、模块/机器人驻留上限 10000 s。
+50-wafer 补充实例继承这些参数，只改变工艺数量：0/50、50/0、25/25。
+
+### 15.2 环境与模型
+
+```powershell
+conda activate a3cenv
+Set-Location D:\git\git\RDMCT-A3C
+
+python -c 'import sys,numpy,torch,pyscipopt,scipy; print(sys.version); print(numpy.__version__,torch.__version__,torch.cuda.is_available(),pyscipopt.__version__,scipy.__version__)'
+if ($LASTEXITCODE -ne 0) { throw 'a3cenv preflight failed.' }
+
+$Checkpoint = 'cie\models\proposed\cie_proposed_all_cie_proposed\cie_proposed_all_cie_proposed_2026_08_02_14_55_21_0000--s-1\itr_60.pkl'
+if (-not (Test-Path -LiteralPath $Checkpoint -PathType Leaf)) { throw 'Frozen Proposed checkpoint missing.' }
+Get-FileHash -LiteralPath $Checkpoint -Algorithm SHA256
+```
+
+本次使用的 checkpoint SHA-256 是
+`23961d2d9f09473982a79271642fca1d6e76cd0bf3837240d5e38a2361d824ce`。
+它是 23D Proposed、training seed 1、60 epochs 的冻结模型；推理配置为高层
+割数量策略、pointer beam size 3、结构重排、128 个候选和最多 16 个选中割。
+历史 wafer17 结果目录只留下结果 JSON/NPY 和简写模型名，没有 checkpoint
+哈希与完整 `variant.json` provenance；因此新 JMS 证据不继续引用该旧模型，
+而使用 `selected_checkpoint_manifest.csv` 中可审计的冻结 Proposed 模型。
+直接制作这三张补充图不需要重新训练。若要从当前训练集重训五个 Proposed
+重复，应执行正式入口，而不是覆盖上述冻结文件：
+
+```powershell
+.\cie\run_cie_single.ps1 -Stage train-all `
+    -Seeds '1,2,3,4,5' -GpuDevice cuda:0 `
+    -LogId cie_train_all_jms_reproduction
+```
+
+该入口同时重训 HEM、feature-only、Proposed 各 5 seeds。Proposed 配置为
+60 epochs、每 epoch 8 samples、2 workers、样本总时限 30 s、linear 二阶段
+5 s、PDI reward、23D 输入、128/16 割预算。新模型必须重新记录路径、
+`variant.json` 与 SHA-256，不能继续引用上面的旧哈希。
+
+### 15.3 完整生成、求解、验解与出图命令
+
+完整显式参数已冻结在 [`JMS/run_wafer50_gantt_evidence.ps1`](../../JMS/run_wafer50_gantt_evidence.ps1)。
+脚本依次生成 0/50、50/0、25/25 三个 LP；为含 2x2 的实例构造 SPBS；
+用 seed-1 Proposed checkpoint、solver seed 1、128/16 割预算、beam search
+和结构重排求解；随后保存 `.sol`、独立执行 SCIP `checkSol`，最后生成
+full/chambers/resources 三种 SVG。正式运行：
+
+```powershell
+conda activate a3cenv
+Set-Location D:\git\git\RDMCT-A3C
+
+.\JMS\run_wafer50_gantt_evidence.ps1 -TimeLimit 1200
+```
+
+若三份冻结 LP 与 SPBS 已存在且哈希未变，可跳过重新生成：
+
+```powershell
+.\JMS\run_wafer50_gantt_evidence.ps1 -SkipGeneration -TimeLimit 1200
+```
+
+本次冻结 LP SHA-256：
+
+- pure-2x2：`e014946329b62cca8e3b6c22d55c9466df93e7591207a10e44f1da532fdfe9b8`；
+- pure-4x1：`4d247de564690a718139616be86e87b94220f64dd7373e71898930d776280484`；
+- 25+25：`85b8f087837d195eb1958a6da4ff5d224fc1001c3f9b8d8e3557d94ea2107873`。
+
+三种构型共享 50 片、2 个 PM、8 个 PEC、工艺时间 180 s、清洗间隔
+10、清洗时间 500 s、AL/LL/VTR/ATR 与 wafer17 相同的参数；因此图可以
+作为大规模可行排程示例，但单个 solver/training seed 的甘特图不能替代
+多实例、多训练种子和多求解器种子的算法显著性证据。
+
+### 15.4 2026-08-27 当前 2×2/clean10/3xclean 证据
+
+当前物理口径为 `4×1=180 s`、`2×2=90 s + 90 s`。2×2 中间换手允许 combined 或 split：来片未就绪时，可以先把已完成 pair 从 CH 卸到 LLlower，之后再从 LLupper 装入新 pair。旧原子 bridge 解即使显示 `optimal`，也只能说明旧受限动作集合中的 `c_max` 最优，不能证明中间等待已压紧。
+
+当前使用可审计的旧 50-epoch checkpoint：
+
+```text
+data\mip_20260710\_mix_wafer18_20260710.lp_mix_wafer18\_mix_wafer18_20260710.lp_mix_wafer18_2026_07_10_10_19_40_0000--s-1\params.pkl
+SHA-256: 0895a8ad74c745591bc1bbc21bafa77b4df1d7b83c3a4f07494e35118005fdec
+```
+
+历史根文件 `data/mip_20260710/params.pkl` 已不存在，所以只能把上述文件称为“当前可审计的旧训练代理”，不能声称它与丢失文件逐字节相同。正式导图门禁为：`schedule_linear_physical_route_only=true`、`lexicographic_free_schedule_order_decisions=true`、主阶段 `optimal/gap<=1e-8`、等待压缩阶段 `optimal/gap<=1e-8`、独立物理 `checkSol` 通过。等待压缩阶段仅在主阶段已证最优后运行。
+
+clean10（8/16 片，默认纯 2×2 与 1:1 混跑）的完整命令：
+
+```powershell
+conda activate a3cenv
+Set-Location 'D:\git\git\RDMCT-A3C'
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File '.\JMS\run_wafer8_16_clean10_gantt_evidence.ps1' `
+  -SkipGeneration `
+  -TimeLimit 9000 `
+  -StabilityTimeLimit 3600 `
+  -StabilityNodeLimit -1 `
+  -WarmStartTimeLimit 1200 `
+  -MemoryLimitMB 4096 `
+  -ScipVerbosity 4 `
+  -ScipHeuristicsProfile aggressive `
+  -ScipNonrootSeparationRounds 0 `
+  -RunLabel 'jms_clean10_half2x2_splitbridge_physicalwait_rootonly_legacy50_20260827' `
+  -Checkpoint 'data\mip_20260710\_mix_wafer18_20260710.lp_mix_wafer18\_mix_wafer18_20260710.lp_mix_wafer18_2026_07_10_10_19_40_0000--s-1\params.pkl' `
+  -Python 'G:\conda\envs\a3cenv\python.exe'
+```
+
+如需同时重跑纯 4×1，追加 `-IncludeUnchanged4x1`。
+
+clean10 与 3xclean 都固定 `ScipNonrootSeparationRounds=0`：旧 checkpoint 只在根节点推理；曾测试的非根候选顺序实验不属于旧训练策略，且没有形成统一的证明进度优势，相关实验代码已撤销。
+
+两个正式脚本都启用逐实例 checkpoint、`solve.log` 和已有输出解复用。已有 `.sol` 必须先通过当前 LP 的完整 `checkSol` 才会作为 incumbent 加入 SCIP；它只用于加速，不能替代新的 `optimal/gap=0` 证明。指定旧批次时，当前 RunLabel 的解优先，只有当前解不存在才回退到旧解。正式等待阶段使用 `StabilityNodeLimit=-1`，只由阶段时间控制；分析器按 `started_at` 选取同一解路径的最新重跑元数据，防止新一轮已最优却继续读取旧 `nodelimit` 行。Windows 路径接近 260 字符时，汇总和 checkpoint 文件名自动改用确定性 SHA-256 短名，完整 `RunLabel` 保留在结果内容中。
+
+3xclean（8/16/17/20 片 × 三种模式）的完整命令：
+
+```powershell
+conda activate a3cenv
+Set-Location 'D:\git\git\RDMCT-A3C'
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File '.\JMS\run_wafer_3xclean_gantt_evidence.ps1' `
+  -SkipGeneration `
+  -TimeLimit 16200 `
+  -StabilityTimeLimit 3600 `
+  -StabilityNodeLimit -1 `
+  -WarmStartTimeLimit 1200 `
+  -MemoryLimitMB 4096 `
+  -ScipVerbosity 4 `
+  -StabilityProfile full `
+  -ScipHeuristicsProfile off `
+  -ScipNonrootSeparationRounds 0 `
+  -ReuseSolutionRunLabel 'jms3clean_half2x2_opt_20260827' `
+  -RunLabel 'jms3clean_half2x2_full_reproof_20260828' `
+  -Checkpoint 'data\mip_20260710\_mix_wafer18_20260710.lp_mix_wafer18\_mix_wafer18_20260710.lp_mix_wafer18_2026_07_10_10_19_40_0000--s-1\params.pkl' `
+  -Python 'G:\conda\envs\a3cenv\python.exe'
+```
+
+clean10 的 `9000=5400+3600`，3xclean 的 `16200=12600+3600`，所以两者主阶段预算均未减少，只增加等待压缩证明时间。clean10 旧运行中 `wafer16_mixed11_clean10` 在 794 s 达到 500000 节点，尚未耗尽原 1800 s，因此旧 `nodelimit/gap=0.2344139152119702` 不是“模型已无法证明”，而是人为节点停止条件先触发。
+
+3xclean 是针对已失败批次的恢复命令：旧 RunLabel 的 12 个解会先经当前 LP 的完整 `checkSol`，再作为 incumbent。旧批次使用 `stage2_off`，所以其中 12 个 `stability_status=not_run` 不能用于投稿；脚本现在会直接拒绝非 `full` 的发布运行。旧批次中 `wafer20_pure22_clean3` 的主阶段仍是 `timelimit`、gap `0.005200896926719607`，因此恢复运行仍必须重新证明主阶段和等待压缩阶段都为 `optimal`。若该实例再次超时，应增加 `-TimeLimit`，不能放宽发布门槛。
+
+详细参数、路径和单例验证结果分别见：
+
+- `JMS/results/wafer_multiscale_gantt/gantt/config.md`
+- `JMS/results/wafer_multiscale_gantt/3xclean/config.md`
+## 16. 常见错误
 
 | 现象/错误 | 原因 | 处理 |
 | --- | --- | --- |
@@ -615,7 +793,7 @@ solver seed 和 training seed 是同一制造实例上的重复，不可当作�
 | PowerShell 多行命令解析失败 | 使用了 cmd 的 `^` 或漏写续行符 | PowerShell 使用反引号 `` ` ``，且其后不能有空格 |
 | 无甘特图 | 没有 incumbent/solution JSON | 先解决求解或初解问题，确认控制台打印 solution 路径 |
 
-## 16. 正式归档检查表
+## 17. 正式归档检查表
 
 - [ ] 记录 Git commit、未提交改动和环境版本。
 - [ ] 保存 OS/CPU/RAM/GPU/CUDA/SCIP 机器清单。

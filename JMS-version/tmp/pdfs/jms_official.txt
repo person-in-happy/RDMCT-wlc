@@ -1,0 +1,564 @@
+                                                             Journal of Manufacturing Systems 63 (2022) 15–22
+
+
+                                                                  Contents lists available at ScienceDirect
+
+
+                                                     Journal of Manufacturing Systems
+                                                       journal homepage: www.elsevier.com/locate/jmansys
+
+
+Technical Paper
+
+Processing indoor positioning data by goal-oriented supervised fuzzy
+clustering for tool management
+András Darányi a, Gyula Dörgő a, Tamás Ruppert a, b, *, János Abonyi a
+a
+  MTA-PE Lendület Complex Systems Monitoring Research Group, Department of Process Engineering, University of Pannonia, Egyetem u. 10, H-8200 Veszprem,
+Hungary
+b
+  Sunstone-RTLS Ltd., Kevehaza u., 1-3, H-1115 Budapest, Hungary
+
+
+
+
+A R T I C L E I N F O                                    A B S T R A C T
+
+Keywords:                                                Indoor positioning systems allow real-time tracking of tool locations. Tool utilization can be calculated based on
+Crimping tool                                            positional data of the storage and manufacturing areas. Due to the uncertainty of the position measurements,
+Indoor positioning system                                estimation of the state of the tools is problematic when the distance between the examined zones is less than the
+Real-time locating system
+                                                         estimation error. We propose a goal-oriented supervised fuzzy clustering algorithm that utilizes the activity state
+Supervised fuzzy clustering
+                                                         of the tool, as the algorithm simultaneously maximizes the spatial distribution probability and the probability of
+Tool utilization
+Position data clustering                                 a specific activity state occurring in a cluster. By weighting data points according to the time spent in the related
+                                                         states and positions, the resulting cluster weights can be interpreted as tool utilizations. The applicability of the
+                                                         developed method is presented through the processing of position data from crimping tools used by a wire
+                                                         harness manufacturer.
+
+
+
+
+1. Introduction                                                                              information on the tool location and condition and utilization of tools as
+                                                                                             well as the production schedule, necessitating an integrated database
+    Modern and flexible manufacturing systems (FMSs) utilize multi­                          and tool tracking system [11]. Perera et al. [12] highlighted that the
+functional machines with the help of various replaceable tools. As a                         companies which do not have sufficient data about their tooling are
+result, the number of tools in a medium-sized factory can exceed the                         unaware of tooling problems, so there is a significant loss if the neces­
+order of a thousand [1]. Tooling costs can be responsible for 25–30% of                      sary information is not available.
+the overall manufacturing costs [2]. Tooling cost can be reduced by the                          This work aims to present an algorithm that enables the utilization of
+careful selection of the number of tools [3], by the optimization of the                     the uncertain measurements of indoor positioning systems (IPS) in tool
+manufacturing process [4,5], and by the application of tool management                       management.
+systems. Due to the importance and complexity of these problems, tool                            When tool positional information is not available, workers have to
+management is an essential and long-studied area of production man­                          search the tools for over 20% of their working hours [11] and produc­
+agement [6].                                                                                 tion is stopped for nearly 15% of the time due to the unavailability of
+    In the future, tool management should be integrated into Industry                        tools [2]. When the tools circulating in the factory cannot be found, the
+4.0 framework. Industry 4.0-based tool management should not only                            workers increase the size of the local inventory to enhance availability at
+utilize quality and production management methods, such as Six Sigma,                        their workstations. In such cases, the tool concerned does not return to
+Lean, Lean Six Sigma, the Theory of Constraints, and Total Quality                           its storage location but stays at the machine remains poorly utilized,
+Management. The need for sustainability has led to the Zero-Defect                           which is responsible for 15% of the tool inventory [11]. Furthermore,
+Manufacturing (ZDM) concept [7] that aims to improve quality in                              changeover times and downtimes can also significantly increase [13].
+manufacturing systems with a goal-oriented prediction-prevention                             Therefore, in some companies, the amount of time spent finding the
+strategy [8].                                                                                right tool can constitute 30% of the total preparation time of the tool
+    Effective tool management requires computer support [9] and in­                          [11].
+formation integration [10]. Tool management requires important                                   IPSs can generate valuable tracking data about the position of tools
+
+
+ * Corresponding author at: MTA-PE Lendület Complex Systems Monitoring Research Group, Department of Process Engineering, University of Pannonia, Egyetem
+u. 10, H-8200 Veszprem, Hungary.
+    E-mail address: ruppert@abonyilab.com (T. Ruppert).
+
+https://doi.org/10.1016/j.jmsy.2022.02.010
+Received 25 November 2021; Received in revised form 21 February 2022; Accepted 22 February 2022
+Available online 26 February 2022
+0278-6125/© 2022 The Author(s). Published by Elsevier Ltd on behalf of The Society of Manufacturing Engineers. This is an open access article under the CC
+BY-NC-ND license (http://creativecommons.org/licenses/by-nc-nd/4.0/).
+A. Darányi et al.                                                                                                       Journal of Manufacturing Systems 63 (2022) 15–22
+
+
+[14]. In the case of flexible production systems, the application of an IPS         of an internal positioning system, at time t, the position estimation of
+is crucial for production monitoring [15]. Real-time tracking data can be           tool l (l = 1, …, L) is recorded. The timestamp of the nth record on tool l is
+converted into information that helps to control cycle times [16],                  denoted by tln . The position of tool l at time tln is stored in the vector xln . In
+explore the value streams [17] and integrate digital twins [18].                    our example, the position vector consists of the raw horizontal (x1,n) and
+                                                                                                                                                     [        ]
+    The data-based identification of the production zones and the
+                                                                                    vertical (x2,n) coordinates of the located position xln = xl1,n , xl2,n . The
+calculation of tool utilization are not straightforward tasks. The first
+problem is related to data uncertainty. In workshops and production                 set of the Nl observations of the lth tool is stored in a matrix of the
+                                                                                                              [        ]
+halls, the layout can constantly change so that tracked tools can be                observation data Xl = xl1 …, xlNl . The matrix containing the observa­
+obscured by high shelves, machines, and metal surfaces. Consequently,                                                       [                  ]T
+some non-line-of-sight (NLOS) places often have no direct view from the             tion data of all tools is denoted as X = [X1 ]T , …, [XL ]T .
+IPS anchor points. As a result, position data are scattered depending on                 However, as the recorded position information is obtained based on
+the accuracy of the IPS at specific locations. This measurement noise               the wireless communication of the receiver unit and a small tag fixed on
+introduces uncertainty inherent to these systems, so IPS applications               the monitored tool, the recorded position data are somewhat inaccurate,
+often require advanced data-processing solutions, like Kalman filters               the inaccuracy of which is a function of its actual position (mainly due to
+[19] or clustering algorithms [20]. Fuzzy logic can also handle mea­                radio frequency interference). This inaccuracy, paired with the sto­
+surement imprecision of localization [21]. Since imprecision is con­                chastic working habits of the human workforce (moving the tools,
+nected mainly to measurement errors, the probabilistic approach of the              placing them at arbitrary places based on the convenience of the
+problem is also beneficial [22].                                                    workers, taking breaks, etc.), makes the monitoring of tool usage an
+    In this work, we present a method that integrates the benefits of               extremely complex task. Due to these problems the usage of a tool
+fuzzy logic and probabilistic approach with the help of probabilistic               cannot be measured simply according to its position or movement, as
+Gaussian mixture models that can be interpreted as fuzzy rules [23]. The            neither of these pieces of information clearly determines the working
+key idea is that the Gaussian mixture model can approximate the spatial             conditions. However, besides the recorded position, the activity state of
+distribution of the tools, so the model can be used to segment the shop             the monitored tool can be derived from the sampling time and the speed
+floor into zones. When information about the activity of tools is also              at which the tool moves as will be discussed in the following section. The
+available, we can use this during the clustering resulting in conditional           activity state of tool l during the nth observation is marked as yln ∈ {r1 ,
+cluster probabilities that can be interpreted as tool utilizations.                 …, rR } and describes whether the tool is stationary, being moved or
+    The novelty of this work is a new clustering algorithm that is suitable         actively in use at the time.
+to convert noisy tracking data into business value by segmentation of the                Due to the inaccurate nature of the information, instead of the simple
+shop floor and calculation of the tool utilization at the identified                analysis of the raw position data to monitor tool usage, an advanced
+locations.                                                                          clustering algorithm is proposed to obtain accurate information on tool
+    The structure of the paper and the main contributions of the work are           activities. Our task is to partition the data in matrix Zl = [zl1 , …, zln , …,
+as follows. We propose a supervised fuzzy clustering-based tool moni­                                                                             [ T ]
+toring method in Section 2. After problem formulation is presented in               zlN ] into C clusters. The data matrix Zl consists of zln = xln , yln row
+Section 2.1, the determination of tool activity is discussed in Section 2.2,        vectors, which include the input xln and output data (activity class labels)
+which will be followed by the mathematical formalization of the fuzzy               yln of the nth observation on the lth tool.
+clustering problem in Section 2.3. The methodological introduction ends                 By applying the proposed SFC approach, the time-weighted activity
+with the discussion of the practical applicability of the results con­              rate of a specific zone in the production directly represents the utiliza­
+cerning clustering in Section 2.4 and finally with the definition of the            tion of the applied tool in the related zone. As a result, the active and
+number of clusters in Section 2.5. The effectiveness of the proposed                inactive zones are identified simultaneously according to the activity
+methodology is presented in terms of the analysis of the position data of           rate of the tool in the related zone, moreover, a more accurate evalua­
+crimping tools used in cable manufacturing machines in Section 3.                   tion of tool usage is made. For the sake of simplicity, the feature trans­
+Section 4 presents the potential applications of the method. Finally,               formation and clustering algorithms are given in the case of one tool
+some concluding remarks are made.                                                   (X = Xl),therefore, the l superscript is omitted in the following
+                                                                                    subsections.
+2. The supervised fuzzy clustering-based tool monitoring
+method
+                                                                                    2.2. Feature transformation – the determination of tool activity
+    The identification of relevant operations or operating zones from
+noisy position data can be interpreted as finding the distinct distribu­                Even though an IPS primarily records the position of the monitored
+tions generating a mixture of data distributions. The positioning system            tag, further information can be derived from the recorded data.
+allows activities of tools that can be used during this identification                  The Δt sampling time, namely the time difference between two
+process to be determined.                                                           consecutive position measurements on the same tag, is a function of the
+                                                                                    activity of the tag due to energy-saving considerations: each tag is
+2.1. Problem formulation                                                            equipped with a gyroscope sensor, which indicates whether the tool is
+                                                                                    actively moved or not. If the tag is moved (or subject to vibrations), its
+    By turning this problem into a data-related task, we propose a su­              sampling frequency is much higher, 2–10 s, while if the tag is inactive,
+pervised fuzzy clustering (SFC)-based method for the detection of                   its sampling frequency is reduced to ~ 30 s. The time difference be­
+distinct clusters of manufacturing position data. The methodology is                tween two consecutive measurements is simply formulated as Δtn = tn
+summarised in the following points:                                                 − tn− 1. Similarly, the Euclidean distance between two consecutive po­
+                                                                                    sition points can be calculated as well: Δxn = D(xn, xn− 1). As we obtained
+1. Feature transformation: determination of tool activity.                          the time and distance between two consecutive data points on the same
+2. SFC-based modelling of tool positions.                                           tool, naturally the speed of the tag can be subsequently calculated as
+3. Zone categorization and utilization calculation.                                 follows: vn = Δx
+                                                                                                   Δtn .
+                                                                                                     n
+
+
+4. Validation of the number of clusters.                                                Based on the available and derived variables, R number of different
+                                                                                    states are assigned to the monitored tool. In the present work, utilising
+    The problem is formalized as follows. It is assumed that with the help          the time difference between the recorded positions before (Δtn− 1) and
+
+                                                                               16
+A. Darányi et al.                                                                                                                       Journal of Manufacturing Systems 63 (2022) 15–22
+
+
+                                                                                            cluster and p(ci) stands for the prior probability of distribution compo­
+                                                                                            nent ci, representing the probability that an arbitrary data point is
+                                                                                            generated by the distribution ci, which is calculated as the ratio of the
+                                                                                            data points in this cluster to the whole data set. Since the probability of
+                                                                                            finding a data point with a specific class label depends on the local
+                                                                                            distribution that generated it rather than its exact position: p(yn∣xn, ci) =
+                                                                                            p(yn∣ci).
+                                                                                                The p(xn∣ci) conditional probability models the density of data point
+                                                                                            xn belonging to distribution component ci. It can be expressed as:
+                                                                                                         (           (                                     ))
+                                                                                                             1           1
+                                                                                            p(xn |ci ) =               −  (x n − vi )T
+                                                                                                                                       (Fi )− 1
+                                                                                                                                                (xn − v i )            (2)
+                                                                                                          |2πFi |d∕2     2
+
+                                                                                                where d denotes the number of dimensions, vi (Eq. (4)) stands for the
+                                                                                            cluster center, which is a d element vector, and Fi (Eq. (5)) represents the
+                                                                                            covariance matrix of the distribution, which is a matrix with dimensions
+                                                                                            d × d.
+                                                                                                The parameters of the joint distribution model of Eq. (1) can be
+                                                                                            obtained by the Expectation-Maximization (EM) algorithm. First, the
+                                                                                            model is initialized by assigning random values to the parameters. In the
+                                                                                            Expectation step, assuming the values these parameter are correct, the p
+                                                                                            (ci∣xn, yn) posterior probability is computed, which can be expressed by
+                                                                                            Bayes rule:
+                                                                                                                p(xn , yn |ci )p(ci )    p(xn , yn |ci )p(ci )
+                                                                                            p(ci |xn , yn ) =                         = ∑C                                           (3)
+                                                                                                                   p(xn , yn )           i=1 p(xn , yn |ci )p(ci )
+
+                                                                                                In the Maximization step, the current distribution model is assumed
+                                                                                            to be correct and the parameters that maximize its likelihood are
+                     Fig. 1. A crimping tool used in cable production.                      calculated as follows:
+                                                                                                 ∑N
+                                                                                                       p(ci |xn , yn )xn
+after (Δtn) the data point on the same tag, the arriving (vn− 1) and leaving                vi = ∑n=1N                                                           (4)
+(vn) speed of the tag at the recorded position as well as the corresponding                          n=1 p(ci |xn , yn )
+
+user-defined thresholds (Δtthr and vthr for the sampling time and the                              ∑N
+                                                                                                       n=1 p(ci |xn , yn )(xn − vi )(xn −   vi )T
+speed of the tag, respectively), three states (R = 3) are defined, sym­                     Fi =                ∑N                                                                   (5)
+bolizing the activity of the monitored tool:                                                                       n=1 p(ci |xn , yn )
+
+
+                                                                                                       1 ∑N
+ • The tool is stationary and is not being actively used (yn = r1∣Δtn− 1                    p(ci ) =           p(ci |xn , yn )                                                       (6)
+                                                                                                       N   n=1
+   > Δtthr, Δtn > Δtthr).
+ • The tool is stationary, but is actively being used (yn = r2∣Δtn− 1                                    ∑
+                                                                                                          n|y =r p(ci |xn , yn )
+   < Δtthr, Δtn < Δtthr, vn− 1 ≤ vthr, vn ≤ vthr).                                          p(yn |ci ) = ∑Nn l                                                                       (7)
+ • The tool is moving (or position data of the tag is noisy, showing quick                                  n=1 p(ci |xn , yn )
+
+   jumps over long distances) (yn = r3∣vn− 1 > Δvthr, vn > Δvthr).
+                                                                                            The expectation and maximization steps iterate until the parameters
+                                                                                            converge to a certain value.
+   From the aforementioned list of activity states, only the ones where
+                                                                                               This alternating optimization can be interpreted as an SFC task [23].
+the tool is stationary or being used are of primary interest, therefore, in
+                                                                                            The fuzzy partition represented by U = [μi,n ]C×N matrix, where the de­
+our analysis, the first two states, r1 and r2, are considered.
+                                                                                            gree of membership (μi,n) represents, how the zn measurement is in ci
+                                                                                            cluster. The degree of membership can be expressed as the posterior
+2.3. Supervised fuzzy clustering for tool monitoring                                        probability p(ci |xn ) of the cluster given the data point. The clustering
+                                                                                            algorithm minimizes the sum of weighted D2i,n squared distances be­
+    The methodology is based on the idea that the spatial distribution of
+                                                                                            tween the data points and the ith cluster centroid represented by ηi.
+position data originating from different sources (with optimally
+                                                                                                         ∑C ∑N
+different statistical characteristics) represents the probability of finding                J(Z, U, η) =               (μ )m D2i,n (zn , ci )                      (8)
+a given tool at a given position in a given state represented by a specific                                 i=1     n=1 i,n
+
+class label. Our goal is to determine the distribution of the data. For this                    Where m denotes the fuzzy weighting exponent determining the
+purpose, a clustering algorithm is applied. The number of clusters is                       fuzziness of the resulting clusters: m = 1 means a hard partition of the
+denoted by C, which describes the spatial distribution of the data                          data points and the cluster centroid is the mean of the cluster members.
+considering the R number of states.                                                         As m increases, the partition becomes fuzzy and the cluster means are
+    The probability distribution of finding that particular tool at a given                 equal to the grand mean of Z. Conventionally, m = 2. The cost function
+position in a given state (p(xn, yn)) is approximated by elementary                         is subject to the restrictions on the μi,n membership values:
+Gaussian distributions. Furthermore, the joint distribution of these local
+                                                                                            μi,n ∈ [0, 1]∀i, n;
+distributions can be broken down further into conditional probabilities:
+                                                                                            ∑
+                                                                                            C
+               ∑C                          ∑C                                                      μi,n = 1∀n;
+p(xn , yn ) =           p(xn , yn , ci ) =        p(xn , yn |ci )p(ci ) =                                                                                                            (9)
+                                                                                 (1)
+                   i=1                        i=1                                            i=1
+   ∑C                                         ∑C                                                   ∑
+                                                                                                   N
+=       i=1
+            p(yn |xn , ci )p(xn |ci )p(ci ) =     i=1
+                                                      p(yn |ci )p(xn |ci )p(ci )            0<           μi,n < N∀i
+                                                                                                   n=1
+    where ci (i = 1. . . C) denotes the ith distribution component or
+
+                                                                                       17
+A. Darányi et al.                                                                                                                  Journal of Manufacturing Systems 63 (2022) 15–22
+
+
+
+
+                                                            Fig. 2. The live map of the positioning system.
+
+
+                                                                                              The membership values can be interpreted as probabilities: μi,n ≅ p
+                                                                                          (ci∣xn, yn). The positional data is not equally sampled in time, so the μi,n
+                                                                                          membership degrees should be weighted by Δtn time to represent tem­
+                                                                                          poral probability.
+                                                                                              The distance is based on the joint probability of finding a data point
+                                                                                          in a given position with a given class label (Eq. (1)):
+                                                                                                 1
+                                                                                                           = p(yn |ci )p(xn |ci )p(ci ) = (                                       )
+                                                                                          D2i,n (zn , ci )                                        1
+                                                                                                                                              −    (xn − vi )T (Fi )− 1 (xn − vi ) p(yn |ci )
+                                                                                                               p(ci )                             2
+                                                                                                         =
+                                                                                                             |2πFi |d∕2
+                                                                                                                                                                                      (10)
+                                                                                              The alternating optimization algorithm includes the following steps:
+                                                                                              Initialization: Given a dataset Z, determine the C number of clus­
+                                                                                          ters, the termination tolerance ϵ > 0 and the weighting exponent m
+                                                                                          (which is equal to 2 in our case). Initialize the U = [μi,n ]C×N .
+                                                                                              Repeat for k = 1, 2… (k is the iteration counter).
+                                                                                              Step 1 Parameter estimation
+
+                                                                                           • Calculate the mean vectors, covariance matrices and prior proba­
+Fig. 3. Determination of the number of clusters. The upper plot shows the
+partition index values as a function of the number of clusters and the curve has
+                                                                                             bility of the Gaussian components.
+a local maximum at 22. The lower plot shows the separation index as a function                     ∑N      (k− 1) m
+                                                                                                    n=1 (μi,n     ) xn Δtn
+of number of clusters, where the curve starts to flatten out at 22. Based on these            v(k)
+                                                                                               i = ∑N                                                                                 (11)
+                                                                                                             (k− 1) m
+plots, 22 seems to be the optimal number of clusters.                                                    (μ
+                                                                                                      n=1 i,n      ) Δtn
+
+
+
+
+                                                                                     18
+A. Darányi et al.                                                                                                                Journal of Manufacturing Systems 63 (2022) 15–22
+
+
+
+
+Fig. 4. The results of the SFC of tool position data: the cluster centers are indicated by black stars, while the zones with equal probability of tools being located there
+are represented by the contour plots. The position data of different tools are denoted by lines in different colors and styles. Some clusters are so close to each other
+that they overlap, which may be caused by these clusters representing different locations on the same desktop storage.
+
+
+
+
+Fig. 5. The utilization values of the machines in percentage. The columns illustrate the temporal probability of finding active data points in a cluster repre­
+sents machine.
+
+                                                                                                   ∑N         (k− 1) m
+                                                                                                             μ
+                                                                                                        n=1 ( i,n   ) (xn − vi )(xn −     vi )T Δtn
+                                                                                            F(k)
+                                                                                             i =                 ∑N       (k− 1) m
+                                                                                                                                                                            (12)
+                                                                                                                         μ
+                                                                                                                    n=1 ( i,n   ) Δtn
+
+                                                                                                          ∑N      (k− 1) m
+                                                                                                                 μ
+                                                                                                            n=1 ( i,n   ) Δtn
+                                                                                            p(ci )(k) =       ∑N                                                            (13)
+                                                                                                                 n=1 Δtn
+
+
+
+
+                                                                                          • Calculate the consequent probability parameters.
+                                                                                                                  ∑             (k− 1) m
+                                                                                                                             μ
+                                                                                                                     n|y =rl ( i,n     ) Δtn
+                                                                                            p(yn = rl |ci )(k) = ∑Nn          (k− 1) m
+                                                                                                                                                                            (14)
+                                                                                                                          (  μ
+                                                                                                                       n=1 i,n       )  Δtn
+
+
+
+
+                                                                                         Step 2 Compute the distances according to Eq. (10).
+                                                                                            Step 3 Update the partitioned matrix
+                                                                                                                      1
+                                                                                         μ(k)
+                                                                                          i,n = ∑C (                   )                      (m − 1)                       (15)
+                                                                                                  j=1   Di,n (zn , ci ) ∕(Dj,n (zn , cj ))2 ∕
+
+Fig. 6. The heat map of the utilization values of tools on the different ma­             Until ∣∣U(k) − U(k− 1)∣∣ < ϵ.
+chines. The darker the color, the higher the utilization of the tool.
+
+
+
+                                                                                    19
+A. Darányi et al.                                                                                                      Journal of Manufacturing Systems 63 (2022) 15–22
+
+
+
+
+                       Fig. 7. The path of tool with ID 12. The blue circles represent the different cluster centers where the tool has been.
+
+
+2.4. Zone categorization and calculation of tool utilization                           number of clusters. The optimal number of clusters can be evaluated by
+                                                                                       running the algorithm multiple times with different numbers of clusters
+    The p(yn = r2∣ci) conditional probability carries important informa­               and the monitoring cluster validity measures, like partition index (SC)
+tion. Based on the probability of finding a data point in an active state in           and the separation index (S) [24]. The partition index is the ratio of the
+a given environment represented by ci cluster, this environment can be                 sum of the compactness of the clusters to their separation. It is expressed
+categorized according to its function. For example, if a specific place                by:
+represents a machine, this probability will be higher. In contrast, the                             ∑ Nl           ⃒⃒
+                                                                                                                 m ⃒⃒
+                                                                                                                              ⃒⃒
+probability of a storage-type cluster finding data points with active class
+                                                                                            ∑C        n=1 (μi,n )     xn − vi ⃒⃒
+                                                                                       SC =     i=1 ∑Nl       ∑C ⃒⃒  ⃒ ⃒       ⃒⃒
+                                                                                                                               ⃒⃒                             (20)
+label (while p(yn =r1∣ci) takes a higher value) will be low. For the pur­                            n=1 μi,n    j=1 ⃒⃒vj − vi ⃒⃒
+pose of categorization, a decision threshold value α should be deter­
+mined. If the conditional probability of finding an active data point in               While the partition index uses the fuzzy cardinality as the separation of
+the given cluster is higher than this value, this cluster can be considered            clusters, the separation index uses the minimum distance:
+to be a machine. If not, it should be regarded as a storage area. If p(yn                                       ⃒⃒       ⃒⃒
+                                                                                           ∑C ∑Nl             2 ⃒⃒       ⃒⃒
+= r2∣ci) > α ⇒ ci is considered to be machine.                                                i=1  n=1 (μi,n ) ⃒⃒xn − vi ⃒⃒
+    In the case of clustering the position data of all the tools together, this        S=               ⃒⃒
+                                                                                                        ⃒⃒
+                                                                                                                   ⃒⃒
+                                                                                                                   ⃒⃒                                       (21)
+probability will represent the utilization of the tools available in the                          Nmin⃒⃒⃒⃒vj − vi ⃒⃒⃒⃒
+                                                                                                    i,j
+vicinity of that machine which can be interpreted as the utilization of
+that machine:
+                                                                                       3. Application of the method
+Ui = p(yn = r2 |ci )                                                      (16)
+                                                                                          The development of the methodology was motivated by an industrial
+     It should be noted that cases can occur when inactive and active tools
+                                                                                       case study where the crimping tools of cable manufacturing machines
+are in the machine simultaneously (due to operators having left a tool
+                                                                                       were tracked by an IPS.
+there following the previous operation), which decreases the value of
+this probability. It can be said that when there is an active tool in the
+                                                                                       3.1. Description of the tool-management problem
+vicinity of the machine over a given period, then only that tool is
+counted. This method allows the utilization of a machine to be calcu­
+                                                                                           The factory that defined the research and development task produces
+lated but this is not our goal. We aim to calculate the utilization of
+                                                                                       wire harnesses for the car industry. The harnesses are composed of single
+specific tools in specific regions. The utilization of a single tool can be
+                                                                                       wires which are attached to different terminals. The machines crimp the
+calculated as the ratio of its working hours to the whole period (T =
+ ∑Nl                                                                                   terminals onto the end of wires using tools (Fig. 1). Different tools are
+    n=1 Δt n ). The working hours are known as the summation of the time
+           l
+                                                                                       designed for different terminals. Since its establishment, the plant has
+differences related to data points with active class label:                            manufactured a wide range of products, including 1820 different types
+        ∑Nl
+               I(yn l = r2 )Δtn l                                                      of terminals. 2698 crimping tools have been involved in the production
+U l = n=1                                                              (17)            of these products, however, the number of tools used simultaneously
+                   T
+                                                                                       over a specific period is less than one thousand.
+     The utilization value of tool l can be determined for machine ci in two               We analysed one of the two production halls of the plant containing
+ways. On the one hand, it can be calculated as the ratio of the summation              23 machines and their associated storage areas. The tools may be located
+of time-weighted posterior probabilities of ci to the whole time period,               in these storage areas or at the machines, or being carried between them.
+but on the other hand, if we build the model from the data of one single               Due to the high quantity of tools, their positions are tracked by an UWB-
+tool, p(yn = r2∣ci) can be interpreted as the utilization of tool l on ma­             based IPS developed by Sunstone-RTLS Ltd.
+chine ci:                                                                                  Tool management requires information related to position data: .
+      ∑Nl        ⃒
+            p(ci ⃒xln , yln )Δtln
+U li = n=1                        ≅p(yn = r2 |ci )                      (18)            • Where was each tool located and for how long was it?
+                T
+                                                                                        • Do these locations represent a machine or a storage area?
+     By totaling this for all clusters, the utilization of that particular tool         • To what extent were the individual tools are used in the specific
+can be determined:                                                                        locations?
+     ∑C
+U l ≅ i=1 U li                                                            (19)
+                                                                                       3.2. Data generation and transformation
+
+2.5. Definition of the number of clusters                                                 The positioning system generates data that contains the horizontal
+                                                                                       and vertical coordinates (xn = [x1,n, x2,n]), a timestamp (tn),and the IDs
+    The application of the algorithm requires the careful selection of the             of the monitored tools. The system also provides continuous visual
+
+                                                                                  20
+A. Darányi et al.                                                                                                    Journal of Manufacturing Systems 63 (2022) 15–22
+
+
+information on the positions of tools according to an IPS real-time map               learning algorithms.
+(Fig. 2).                                                                                 The extracted information can be used to support the lean
+    In our investigation, the recorded data of 15 tools between 4:50 a.m.             methodology-based improvement of the production process, e.g., the
+on 01/03/2019 and 4:50 a.m. on 05/03/2019 were used. Only the data                    application of the 5S (Sort, Set in Order, Shine, Standardize, Sustain)
+concerning the area of the smaller production hall were investigated,                 methodology. According to 5S, tools should be assigned to the storage
+which included a data set of 195, 404 data points. To extract the                     area nearest to the machines with the highest utilization levels. There­
+required information from the position data, the described SFC algo­                  fore, it is worth examining the distance between machines and tools. The
+rithm was applied.                                                                    proposed spaghetti diagrams can provide valuable information in this
+    Supervised clustering needs training data. The training data is ob­               task.
+tained by labeling each position according to its activity status. The                    The presented method could also be used to support the work of
+activity statuses were defined as described in Section 2.2. We set Δtthr to           operators. The information extracted from the position data can
+20 s and vthr to 0.1 m/s. First, data points representing moving tool (e.g.,          implement the Smart Operator concept [27] within Operator 4.0. An
+between machines or storage areas) were removed. This represented                     intelligent personal assistant can provide the operator with helpful in­
+~ 58.5% of the data or 114, 221 data points. Second, inactive states                  formation to support his work, reducing production, learning, testing,
+were defined. This represented ~ 8.4% of the original dataset, or 16, 502             and changeover times, reducing human error, and ultimately increasing
+data points. Thirdly, the active status was defined. 64, 681 data points, i.          worker efficiency [28]. When starting production on a given machine,
+e., ~ 33.1% of the total dataset, were labeled as active.                             based on the distances of the tools from that machine and their utili­
+                                                                                      zation level can be decided which tool is best to use during production.
+3.3. Position data-based calculation of tool utilization                              This information can be made readily available to the operator via
+                                                                                      mobile devices or smart glasses. In addition to tools, it is also worth
+    The optimal number of clusters were determined according to the                   measuring the utilization of human labor. In a case study [29], job
+methodology presented in Section 2.5. Based on the cluster validity                   rotation was shown to impact work performance positively, both at the
+measures depicted in Fig. 3, the optimal number of clusters was set to 22.            individual and company level. By tracking the position of workers, it is
+The value of the weighting exponent m and termination tolerance ϵ were                possible to determine how much time they spend on each machine, and
+set at 2 and 10− 3, respectively. Fig. 4 illustrates the results of clustering        by linking this to tool position data, the extent to which they are
+the data. The position data of different tools are represented by lines in            involved in each type of production. This information can be used to
+different styles and colors. The resultant cluster centers are represented            develop an optimal job rotation plan. These techniques can increase the
+by black stars, while the zones with the equal probabilities of occurrence            resilience of workers as it is introduced in the Operator 5.0 concept by
+are represented by the contour plots. As can be seen, it is possible that             making human workers more resilient against a range of factors
+the different clusters can be very close to each other and their recorded             affecting their work [30].
+position data can easily overlap due to inaccuracies in their
+measurement.                                                                          5. Conclusion
+    The activity levels of the clusters were obtained as the probability of
+finding active data point in that cluster (Eq. (16)). The location of ma­                Advanced tool management requires accurate position-relevant in­
+chines and storage areas was identified based on these probabilities,                 formation about the state of the tools. For Lean Six Sigma improvement
+while 0.15 was chosen as the value of threshold α: cluster in which this              projects, the KPIs of tools can be derived and the tool-related processes
+probability was higher than the chosen value of α were considered to be               identified. Although IPS can facilitate position tracking, the accuracy of
+machine while all the others were considered to be storage areas. 7 lo­               position data is not always sufficient for direct application. Therefore,
+cations were identified as machines in this way. In these cases, these                the processing and cleaning of the position data are necessary.
+probabilities directly calculate the utilization values at those locations,              The proposed time-weighted supervised fuzzy clustering can simul­
+which are presented in Fig. 5.                                                        taneously explore the relevant tool locations, categorize their functions,
+    The validity of the results is validated by engineering knowledge                 and calculate the utilization of the tools and the machines.
+about layout and processes. From a perspective of the positioning sys­                   The obtained information can be used in Digital Lean developments.
+tem, the hall can be divided into zones along the horizontal axis of the              Therefore, the positioning system can contribute towards tool manage­
+system, and the zones can be divided into machine and storage areas                   ment much more than shortening the time spent searching for tools and
+along the vertical axis. The storage areas are “above", and the machines              changeovers between them by facilitating the identification of under­
+are “below". Therefore, it is expected that the found machine type                    used tools, thereby reducing the extent to which they are hoarded.
+clusters are also located below in Fig. 4, which is largely fulfilled.                Furthermore, bottlenecks can be detected as evidence of overused tools,
+    The utilization of a single tool on a single machine can be calculated            and the early detection of their overuse helps avoid or shorten unex­
+as the ratio of its working hours at that machine to the whole period. The            pected stoppages due to tool failures by balancing the utilization or
+utilization values of different tools in different clusters are shown on a            acquisition of spare tools at an appropriate time.
+heatmap (Fig. 6). With the help of the proposed system, the paths of the                 The proposed method opens new research directions pointing toward
+tools can be tracked, so the networks of the stations can be generated                the development of Industry 5.0 solutions. Therefore, we believe it
+and visualized as a spaghetti diagram illustrated in Fig. 7.                          worth examining how the information extracted from positional data
+                                                                                      can improve product quality, process efficiency, sustainability, and
+4. Discussion: applicability of the results and suggestions for                       support the work of the operators.
+future research and development
+                                                                                      Declaration of Competing Interest
+    The results illustrated the the method provides reliable information
+about the location-dependent utilisation of the tools. Knowledge about                    The authors declare that they have no known competing financial
+the utilization of the tools and machines can support scheduling main­                interests or personal relationships that could have appeared to influence
+tenance activities, which can provide significant economic benefit as                 the work reported in this paper.
+tool condition affects the production performance, product quality
+deterioration, and energy consumption [25,26]. Real-time tool moni­                   Acknowledgements
+toring can provide excellent support for zero defect manufacturing
+(ZDM) [8], which the help of advanced sensor technology and machine                      This work was supported by the 2019-1.1.1-PIACI-KFI-2019-00312
+
+                                                                                 21
+A. Darányi et al.                                                                                                                     Journal of Manufacturing Systems 63 (2022) 15–22
+
+
+Project (Mobilized collaborative robot-based development of a modular                           [15] Rácz-Szabó A, Ruppert T, Bántay L, Löcklin A, Jakab L, Abonyi J. Real-time
+                                                                                                     locating system in production management. Sensors 2020;20:1–21.
+Industry 4.0 production system with quality management functions).
+                                                                                                [16] T.Ruppert, J.Abonyi, Industrial internet of things based cycle time control of
+Gyula Dörgő was supported by the ÚNKP-20-3 New National Excellence                                 assembly lines, in: Proceedings of the 2018 IEEE International Conference on
+Program of the Ministry for Innovation and Technology.                                               Future IoT Technologies (Future IoT), IEEE, 2018, pp. 1–4.
+                                                                                                [17] Tran T-A, Ruppert T, Abonyi J. Indoor positioning systems can revolutionise digital
+                                                                                                     lean. Appl. Sci. 2021;11:1–14.
+References                                                                                      [18] Ruppert T, Abonyi J. Integration of real-time locating systems into digital twins.
+                                                                                                     J. Ind. Inf. Integr. 2020;20:100174.
+ [1] ElMaraghy HA. Automated tool management in flexible manufacturing. J. Manuf.               [19] Frankó A, Vida G, Varga P. Reliable identification schemes for asset and production
+     Syst. 1985;4:1–13.                                                                              tracking in industry 4.0. Sensors 2020;20:1–24.
+ [2] Veeramani D, Upton DM, Barash MM. Cutting-tool management in computer-                     [20] M.Chau, R.Cheng, B.Kao, J.Ng, Uncertain data mining: an example in clustering
+     integrated manufacturing. Int. J. Flex. Manuf. Syst. 1992;4:237–65.                             location data, in: Proceedings of the Pacific-Asia Conference on Knowledge
+ [3] Binghai Z, Lifeng X, Jianguo C. Knowledge-based decision support system for tool                Discovery and Data Mining, Springer, 2006, pp. 199–204.
+     management in flexible manufacturing system. J. Syst. Eng. Electron. 2004;15:              [21] Alakhras M, Oussalah M, Hussein M. A survey of fuzzy logic in wireless
+     537–41.                                                                                         localization. EURASIP J. Wirel. Commun. Netw. 2020;2020:1–45.
+ [4] Jain V, Raj T. Study of issues related to constraints in fms by ism, fuzzy ism and         [22] Cai M, Lin Y, Han B, Liu C, Zhang W. On a simple and efficient approach to
+     tism. Int. J. Ind. Syst. Eng. 2021;37:197–221.                                                  probability distribution function aggregation. IEEE Trans. Syst. Man Cyber.: Syst.
+ [5] Calmels D. The job sequencing and tool switching problem: state-of-the-art                      2016;47:2444–53.
+     literature review, classification, and trends. Int. J. Prod. Res. 2019;57:5005–25.         [23] Abonyi J, Szeifert F. Supervised fuzzy clustering for the identification of fuzzy
+ [6] Eversheim W, Kals H, König W, van Luttervelt C-A, Milberg J, Storr A, et al. Tool              classifiers. Pattern Recognit. Lett. 2003;24:2195–207.
+     management: the present and the future. CIRP Ann. 1991;40:631–9.                           [24] Bensaid AM, Hall LO, Bezdek JC, Clarke LP, Silbiger ML, Arrington JA, et al.
+ [7] Psarommatis F, Sousa J, Mendonça JP, Kiritsis D. Zero-defect manufacturing the                  Validity-guided (re)-clustering with applications to image segmentation. IEEE
+     approach for higher manufacturing sustainability in the era of industry 4.0: a                  Trans. Fuzzy Syst. 1996;4:112–23.
+     position paper. Int. J. Prod. Res. 2021:1–19.                                              [25] A.Adetunla, N.Madonsela, Harnessing industry 4.0 technology to improve
+ [8] Psarommatis F, May G, Dreyfus P-A, Kiritsis D. Zero defect manufacturing: state-of-             productivity in manufacturing industries: a case of cnc based welding factory, in:
+     the-art review, shortcomings and future directions in research. Int. J. Prod. Res.              Proceedings of the 2021 IEEE 12th International Conference on Mechanical and
+     2020;58:1–17.                                                                                   Intelligent Manufacturing Technologies (ICMIMT), IEEE, 2021, pp. 180–5.
+ [9] Zhang W, Zhang D. Design principles for the architecture of tool integration               [26] Denkena B, Krüger M, Schmidt J. Condition-based tool management for small
+     software environment: in the case of production machines design. J. Mater.                      batch production. Int. J. Adv. Manuf. Technol. 2014;74:471–80.
+     Process. Technol. 1996;61:154–9.                                                           [27] D.Romero, J.Stahre, T.Wuest, O.Noran, P.Bernus, A.Fast-Berglund, D.Gorecky,
+[10] Subrahmanyam G, Gunasekaran A, Arunachalam S, Radhakrishnan P.                                  Towards an operator 4.0 typology: a human-centric perspective on the fourth
+     Development of a tool database management system. Int. J. Adv. Manuf. Technol.                  industrial revolution technologies, in: Proceedings of the International Conference
+     1999;15:562–5.                                                                                  on Computers and Industrial Engineering (CIE46), Tianjin, China, 2016, pp. 29–31.
+[11] Schaupp E, Abele E, Metternich J. Potentials of digitalization in tool management.         [28] Ruppert T, Jaskó S, Holczinger T, Abonyi J. Enabling technologies for operator 4.0:
+     Proc. CIRP 2017;63:144–9.                                                                       a survey. Appl. Sci. 2018;8:1650.
+[12] Perera T, Shafaghi M. Analysis of tooling problems in discrete manufacturing               [29] Ogbeyemi A, Lin W, Zhang F, Zhang W. Human factors among workers in a small
+     industry. Int. J. Oper. Prod. Manag. 1995;15:76–85.                                             manufacturing enterprise: a case study. Enterp. Inf. Syst. 2021;15:888–908.
+[13] Ruppert T, Csalodi R, Abonyi J. Estimation of machine setup and changeover times           [30] Romero D, Stahre J. Towards the resilient operator 5.0: the future of work in smart
+     by survival analysis. Comput. Ind. Eng. 2021;153:1–12.                                          resilient manufacturing systems. Proc. CIRP 2021;104:1089–94.
+[14] Tap M, Hewit J, Meeran S. An active tool-tracking system for increased
+     productivity. Int. J. Prod. Res. 2000;38:3889–98.
+
+
+
+
+                                                                                           22
+

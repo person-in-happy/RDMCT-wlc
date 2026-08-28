@@ -16,7 +16,12 @@ import time
 from collections import OrderedDict
 from pathlib import Path
 
-from petri_mip_generator import PetriMIPConfig, _canonical_cleaning_layout, build_petri_mip_model
+from petri_mip_generator import (
+    PetriMIPConfig,
+    _canonical_cleaning_layout,
+    _canonical_mix_slot_by_pair,
+    build_petri_mip_model,
+)
 from scip_imports import scip
 
 SPBS_ROLE_NAMES = (
@@ -319,11 +324,13 @@ def _pair_members(cfg, mode, pair_id):
 
 
 def _canonical_pairs_by_pm(cfg):
-    pairs_by_pm = {pm_id: [] for pm_id in cfg.pm_ids}
-    for pair_id in cfg.mix_pair_ids:
-        pm_id = cfg.pm_ids[(pair_id - 1) % len(cfg.pm_ids)]
-        pairs_by_pm[pm_id].append(pair_id)
-    return pairs_by_pm
+    positioned_pairs = {pm_id: [] for pm_id in cfg.pm_ids}
+    for pair_id, (pm_id, position) in _canonical_mix_slot_by_pair(cfg).items():
+        positioned_pairs[pm_id].append((position, pair_id))
+    return {
+        pm_id: [pair_id for _, pair_id in sorted(items)]
+        for pm_id, items in positioned_pairs.items()
+    }
 
 
 def _canonical_full_pairs_by_batch(cfg):
@@ -375,6 +382,7 @@ def _fix_cleaning_epochs(model, variables, cfg, full_pairs_by_batch, mix_pairs_b
             "mix_epoch": segments[0]["epoch"] if segments else 0,
             "segments": segments,
             "last_used_epoch": canonical["last_epoch"],
+            "clean_count": canonical["clean_count"],
         }
     if cfg.cleaning_interval <= 0 or cfg.num_clean_slots_per_pm <= 0:
         return layouts
@@ -384,6 +392,7 @@ def _fix_cleaning_epochs(model, variables, cfg, full_pairs_by_batch, mix_pairs_b
         batch_epoch = layouts[pm_id]["batch_epoch"]
         segments = layouts[pm_id]["segments"]
         last_used_epoch = layouts[pm_id]["last_used_epoch"]
+        clean_count = layouts[pm_id]["clean_count"]
         mix_epochs = {segment["epoch"] for segment in segments}
 
         for epoch_id in range(1, epoch_count + 1):
@@ -404,7 +413,7 @@ def _fix_cleaning_epochs(model, variables, cfg, full_pairs_by_batch, mix_pairs_b
                 model,
                 variables,
                 f"clean_active_{pm_id}_{clean_slot}",
-                clean_slot < last_used_epoch,
+                clean_slot <= clean_count,
             )
         for batch in range(1, cfg.num_full_batches_per_pm + 1):
             for epoch_id in range(1, epoch_count + 1):

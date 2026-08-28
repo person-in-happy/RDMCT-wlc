@@ -5,7 +5,7 @@ import math
 import os
 import re
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from path_utils import is_latest_keyword, latest_matching_file, resolve_path
 
@@ -43,6 +43,8 @@ VTR_SLOT_ASSIGN_RE = re.compile(r"vtr_slot_assign_(.+)_(\d+)$")
 FULL_PAIR_VTR_WINDOW_RE = re.compile(r"full_pair_vtr_(load|unload)_(start|end)_(\d+)$")
 CLEAN_START_RE = re.compile(r"clean_start_(\d+)_(\d+)$")
 CLEAN_END_RE = re.compile(r"clean_end_(\d+)_(\d+)$")
+CLEAN_WINDOW_START_RE = re.compile(r"clean_front_load_start_(\d+)_(\d+)$")
+CLEAN_WINDOW_END_RE = re.compile(r"clean_front_unload_end_(\d+)_(\d+)$")
 
 LEGACY_FULL_ASSIGN_RE = re.compile(r"assign_full_(\d+)_(\d+)_(\d+)$")
 LEGACY_FULL_PEC_RE = re.compile(r"full_pec_pairs_(\d+)_(\d+)$")
@@ -66,6 +68,28 @@ LABEL_ROW_HEIGHT = 24
 LABEL_ROW_GAP = 6.0
 SECONDS_PER_HOUR = 3600.0
 PATH_TIME_TOLERANCE = 1e-3
+CLEAN_COLOR = "#2A9D8F"
+
+
+def _subtract_blocked_intervals(
+    start: float,
+    end: float,
+    blocked: List[Tuple[float, float]],
+) -> List[Tuple[float, float]]:
+    """Return the visible pieces of [start, end] outside blocked windows."""
+    pieces = [(start, end)]
+    for blocked_start, blocked_end in blocked:
+        next_pieces: List[Tuple[float, float]] = []
+        for piece_start, piece_end in pieces:
+            if blocked_end <= piece_start + 1e-9 or blocked_start >= piece_end - 1e-9:
+                next_pieces.append((piece_start, piece_end))
+                continue
+            if blocked_start > piece_start + 1e-9:
+                next_pieces.append((piece_start, min(piece_end, blocked_start)))
+            if blocked_end < piece_end - 1e-9:
+                next_pieces.append((max(piece_start, blocked_end), piece_end))
+        pieces = next_pieces
+    return [(left, right) for left, right in pieces if right > left + 1e-9]
 
 NEW_PRODUCT_STAGE_ORDER = [
     "atr_lp_al",
@@ -298,7 +322,36 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
     if new_product_model:
         lanes: List[str] = []
         tasks: List[Dict[str, object]] = []
+        validation_tasks: List[Dict[str, object]] = []
         time_candidates = [c_max]
+        clean_process_windows = [
+            (
+                _float(solution.get(f"clean_start_{pm_id}_{clean_id}", 0.0)),
+                _float(solution.get(f"clean_end_{pm_id}_{clean_id}", 0.0)),
+            )
+            for name, value in solution.items()
+            for match in [NEW_CLEAN_ACTIVE_RE.match(name)]
+            if match and _bool(value)
+            for pm_id, clean_id in [(int(match.group(1)), int(match.group(2)))]
+        ]
+
+        clean_windows = [
+            (
+                _float(solution.get(f"clean_front_load_start_{pm_id}_{clean_id}", 0.0)),
+                _float(solution.get(f"clean_front_unload_end_{pm_id}_{clean_id}", 0.0)),
+            )
+            for name, value in solution.items()
+            for match in [NEW_CLEAN_ACTIVE_RE.match(name)]
+            if match and _bool(value)
+            for pm_id, clean_id in [(int(match.group(1)), int(match.group(2)))]
+        ]
+
+        def is_clean_process(start: float, end: float) -> bool:
+            return any(
+                abs(start - clean_start) <= PATH_TIME_TOLERANCE
+                and abs(end - clean_end) <= PATH_TIME_TOLERANCE
+                for clean_start, clean_end in clean_process_windows
+            )
 
         def add_path_task(
             lane: str,
@@ -311,17 +364,30 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
         ) -> None:
             if end <= start + 1e-9:
                 return
-            tasks.append(
-                {
-                    "lane": lane,
-                    "start": start,
-                    "end": end,
-                    "label": f"{label}\n{entity}",
-                    "short_label": short_label or entity,
-                    "color": color,
-                }
-            )
-            time_candidates.extend([start, end])
+            base_task = {
+                "lane": lane,
+                "start": start,
+                "end": end,
+                "label": f"{label}\n{entity}",
+                "short_label": short_label or entity,
+                "color": color,
+            }
+            validation_tasks.append(base_task)
+            is_wait = "wait" in label.lower()
+            is_pec = entity.startswith("PEC") or re.search(r"(?:^|/)E\d+$", entity) is not None
+            visible_intervals = []
+            if not (is_wait and is_pec):
+                visible_intervals = (
+                    _subtract_blocked_intervals(start, end, clean_windows)
+                    if is_wait
+                    else [(start, end)]
+                )
+            for visible_start, visible_end in visible_intervals:
+                task = dict(base_task)
+                task["start"] = visible_start
+                task["end"] = visible_end
+                tasks.append(task)
+                time_candidates.extend([visible_start, visible_end])
 
         def product_start(wafer_id: int, stage_name: str) -> float:
             return prod_stage_start.get((wafer_id, stage_name), 0.0)
@@ -763,14 +829,17 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                     )
                 add_path_task(lane_name, load_start, load_end, "VTR PEC storage->CH", entity, "#72B7B2")
                 add_path_task(lane_name, load_end, pm_start, "CH wait", entity, "#F2A09A")
-                add_path_task(lane_name, pm_start, pm_end, "CH process", entity, "#E45756")
+                if is_clean_process(pm_start, pm_end):
+                    add_path_task(lane_name, pm_start, pm_end, "CH cleaning", entity, CLEAN_COLOR)
+                else:
+                    add_path_task(lane_name, pm_start, pm_end, "CH process", entity, "#E45756")
                 add_path_task(lane_name, pm_end, unload_start, "CH wait", entity, "#F2A09A")
                 add_path_task(lane_name, unload_start, unload_end, "VTR CH->PEC storage", entity, "#B279A2")
                 previous_return = unload_end
         if not lanes:
             return {}
 
-        _validate_continuous_entity_lanes(lanes, tasks)
+        _validate_continuous_entity_lanes(lanes, validation_tasks)
         horizon = max(time_candidates) if time_candidates else 0.0
         return {
             "is_petri": True,
@@ -1329,6 +1398,16 @@ def _collect_chamber_schedule(solution: Dict[str, float]) -> Dict[str, object]:
         return {}
 
     ordered_pm_ids = [2, 3] if not pm_ids or pm_ids.issubset({2, 3}) else sorted(pm_ids)
+    clean_windows = [
+        (
+            time_var(f"clean_front_load_start_{pm_id}_{clean_id}"),
+            time_var(f"clean_front_unload_end_{pm_id}_{clean_id}"),
+        )
+        for (pm_id, clean_id), active in clean_active.items()
+        if active
+        and time_var(f"clean_front_unload_end_{pm_id}_{clean_id}")
+        > time_var(f"clean_front_load_start_{pm_id}_{clean_id}") + 1e-9
+    ]
     lanes = [f"CH{pm_id} four-pocket module" for pm_id in ordered_pm_ids]
     tasks: List[Dict[str, object]] = []
     time_candidates: List[float] = []
@@ -1398,7 +1477,11 @@ def _collect_chamber_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                 cycle1_start,
                 cycle1_end,
                 time_var(f"mix_bridge_start_{pm_id}_2"),
-                time_var(f"mix_bridge_end_{pm_id}_2"),
+                time_var(
+                    f"mix_bridge_unload_end_{pm_id}_2"
+                    if f"mix_bridge_unload_end_{pm_id}_2" in solution
+                    else f"mix_bridge_end_{pm_id}_2"
+                ),
             )
             last_cycle_id = max_pos + 1 if max_pos > 0 else 0
             tail_pec = pec_entities_for_refs(
@@ -1411,19 +1494,20 @@ def _collect_chamber_schedule(solution: Dict[str, float]) -> Dict[str, object]:
             )
 
             def add_mix_wait(start: float, end: float, label: str) -> None:
-                if end <= start + 1e-9:
-                    return
-                tasks.append(
-                    {
-                        "lane": lane_name,
-                        "start": start,
-                        "end": end,
-                        "label": label,
-                        "short_label": "wait",
-                        "color": "#BAB0AC",
-                    }
-                )
-                time_candidates.extend([start, end])
+                for visible_start, visible_end in _subtract_blocked_intervals(
+                    start, end, clean_windows
+                ):
+                    tasks.append(
+                        {
+                            "lane": lane_name,
+                            "start": visible_start,
+                            "end": visible_end,
+                            "label": label,
+                            "short_label": "wait",
+                            "color": "#BAB0AC",
+                        }
+                    )
+                    time_candidates.extend([visible_start, visible_end])
 
             first_pair = mix_pair_by_pos.get((pm_id, 1))
             if head_end > head_start + 1e-9:
@@ -1455,21 +1539,34 @@ def _collect_chamber_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                 if cycle_id >= 2:
                     bridge_start = time_var(f"mix_bridge_start_{pm_id}_{cycle_id}")
                     bridge_end = time_var(f"mix_bridge_end_{pm_id}_{cycle_id}")
+                    unload_name = f"mix_bridge_unload_end_{pm_id}_{cycle_id}"
+                    load_name = f"mix_bridge_load_start_{pm_id}_{cycle_id}"
+                    combined_name = f"mix_bridge_combined_{pm_id}_{cycle_id}"
+                    unload_end = time_var(unload_name) if unload_name in solution else bridge_end
+                    load_start = time_var(load_name) if load_name in solution else bridge_start
+                    has_split_schema = unload_name in solution or load_name in solution
+                    combined = (
+                        _float(solution.get(combined_name, 0.0)) >= 0.5
+                        if has_split_schema
+                        else True
+                    )
                     previous_cycle_end = time_var(f"mix_cycle_end_{pm_id}_{cycle_id - 1}")
-                    add_mix_wait(previous_cycle_end, bridge_start, "2x2 wait before bridge")
-                    if bridge_end > bridge_start + 1e-9:
-                        bridge_parts = []
-                        if cycle_id == 2:
-                            bridge_parts.append(f"{pec_text(head_pec)} out")
-                        out_pair = mix_pair_by_pos.get((pm_id, cycle_id - 2))
-                        in_pair = mix_pair_by_pos.get((pm_id, cycle_id))
-                        if out_pair is not None:
-                            bridge_parts.append(f"{mix_pair_label(out_pair)} 2nd out")
-                        if in_pair is not None:
-                            bridge_parts.append(f"{mix_pair_label(in_pair)} 1st in")
-                        if cycle_id == last_cycle_id:
-                            bridge_parts.append(f"{pec_text(tail_pec)} in")
-                        bridge_label = f"2x2 bridge {cycle_id}"
+                    add_mix_wait(previous_cycle_end, bridge_start, "2x2 wait before unload")
+                    outgoing_parts = []
+                    incoming_parts = []
+                    if cycle_id == 2:
+                        outgoing_parts.append(f"{pec_text(head_pec)} out")
+                    out_pair = mix_pair_by_pos.get((pm_id, cycle_id - 2))
+                    in_pair = mix_pair_by_pos.get((pm_id, cycle_id))
+                    if out_pair is not None:
+                        outgoing_parts.append(f"{mix_pair_label(out_pair)} 2nd out")
+                    if in_pair is not None:
+                        incoming_parts.append(f"{mix_pair_label(in_pair)} 1st in")
+                    if cycle_id == last_cycle_id:
+                        incoming_parts.append(f"{pec_text(tail_pec)} in")
+                    if combined or load_start <= bridge_start + 1e-9:
+                        bridge_parts = outgoing_parts + incoming_parts
+                        bridge_label = f"2x2 combined bridge {cycle_id}"
                         if bridge_parts:
                             bridge_label += "\n" + " + ".join(bridge_parts)
                         tasks.append(
@@ -1482,7 +1579,35 @@ def _collect_chamber_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                                 "color": "#9C755F",
                             }
                         )
-                        time_candidates.extend([bridge_start, bridge_end])
+                    else:
+                        unload_label = f"2x2 early unload {cycle_id}"
+                        if outgoing_parts:
+                            unload_label += "\n" + " + ".join(outgoing_parts)
+                        load_label = f"2x2 later load {cycle_id}"
+                        if incoming_parts:
+                            load_label += "\n" + " + ".join(incoming_parts)
+                        tasks.extend(
+                            [
+                                {
+                                    "lane": lane_name,
+                                    "start": bridge_start,
+                                    "end": unload_end,
+                                    "label": unload_label,
+                                    "short_label": f"U{cycle_id}",
+                                    "color": "#B279A2",
+                                },
+                                {
+                                    "lane": lane_name,
+                                    "start": load_start,
+                                    "end": bridge_end,
+                                    "label": load_label,
+                                    "short_label": f"L{cycle_id}",
+                                    "color": "#72B7B2",
+                                },
+                            ]
+                        )
+                        add_mix_wait(unload_end, load_start, "2x2 chamber vacant / waiting for incoming pair")
+                    time_candidates.extend([bridge_start, unload_end, load_start, bridge_end])
 
                 start = time_var(f"mix_cycle_start_{pm_id}_{cycle_id}")
                 end = time_var(f"mix_cycle_end_{pm_id}_{cycle_id}")
@@ -1564,7 +1689,7 @@ def _collect_chamber_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                     "end": end,
                     "label": f"cleaning {clean_id}\n{pec_text(clean_pec, 'PEC')}",
                     "short_label": f"Clean {clean_id}",
-                    "color": "#79706E",
+                    "color": CLEAN_COLOR,
                 }
             )
             time_candidates.extend([start, end])
@@ -1629,6 +1754,8 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
     mix_cycle_end: Dict[Tuple[int, int], float] = {}
     clean_start: Dict[Tuple[int, int], float] = {}
     clean_end: Dict[Tuple[int, int], float] = {}
+    clean_window_start: Dict[Tuple[int, int], float] = {}
+    clean_window_end: Dict[Tuple[int, int], float] = {}
     pm_ids = set()
 
     for name, value in solution.items():
@@ -1740,11 +1867,36 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
             clean_end[key] = _float(value)
             pm_ids.add(key[0])
             continue
+        m = CLEAN_WINDOW_START_RE.match(name)
+        if m:
+            key = (int(m.group(1)), int(m.group(2)))
+            clean_window_start[key] = _float(value)
+            pm_ids.add(key[0])
+            continue
+        m = CLEAN_WINDOW_END_RE.match(name)
+        if m:
+            key = (int(m.group(1)), int(m.group(2)))
+            clean_window_end[key] = _float(value)
+            pm_ids.add(key[0])
+            continue
 
     if not (prod_stage_start or pec_stage_start):
         return _collect_chamber_schedule(solution)
 
+    clean_windows_by_key = {
+        key: (
+            clean_window_start.get(key, clean_start.get(key, 0.0)),
+            clean_window_end.get(key, clean_end.get(key, 0.0)),
+        )
+        for key in set(clean_start) | set(clean_end) | set(clean_window_start) | set(clean_window_end)
+    }
+    clean_windows = sorted(
+        (start, end)
+        for start, end in clean_windows_by_key.values()
+        if end > start + 1e-9
+    )
     pm_process_intervals: List[Tuple[int, float, float]] = []
+    ordinary_pm_process_intervals: List[Tuple[int, float, float]] = []
 
     def add_pm_interval(pm_id: int, start: float, end: float) -> None:
         if end > start + 1e-9:
@@ -1752,9 +1904,15 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
             pm_ids.add(pm_id)
 
     for key in set(full_process_start) | set(full_process_end):
-        add_pm_interval(key[0], full_process_start.get(key, 0.0), full_process_end.get(key, 0.0))
+        interval = (key[0], full_process_start.get(key, 0.0), full_process_end.get(key, 0.0))
+        add_pm_interval(*interval)
+        if interval[2] > interval[1] + 1e-9:
+            ordinary_pm_process_intervals.append(interval)
     for key in set(mix_cycle_start) | set(mix_cycle_end):
-        add_pm_interval(key[0], mix_cycle_start.get(key, 0.0), mix_cycle_end.get(key, 0.0))
+        interval = (key[0], mix_cycle_start.get(key, 0.0), mix_cycle_end.get(key, 0.0))
+        add_pm_interval(*interval)
+        if interval[2] > interval[1] + 1e-9:
+            ordinary_pm_process_intervals.append(interval)
     for key in set(clean_start) | set(clean_end):
         add_pm_interval(key[0], clean_start.get(key, 0.0), clean_end.get(key, 0.0))
 
@@ -1926,23 +2084,49 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
     time_candidates: List[float] = []
     chamber_wait_intervals: List[Tuple[str, float, float, str, str, str]] = []
 
-    def add_task(lane: str, start: float, end: float, action: str, entity: str, color: str) -> None:
+    def add_task(
+        lane: str,
+        start: float,
+        end: float,
+        action: str,
+        entity: str,
+        color: str,
+        detail_lines: Optional[List[str]] = None,
+    ) -> None:
         if end <= start + 1e-9:
             return
-        key = (lane, round(start, 6), round(end, 6), action, color)
-        item = aggregated.setdefault(
-            key,
-            {
-                "lane": lane,
-                "start": start,
-                "end": end,
-                "action": action,
-                "color": color,
-                "entities": [],
-            },
+        is_wait = "wait" in action.lower()
+        is_pec = entity.startswith("PEC") or re.fullmatch(r"E\d+", entity) is not None
+        if is_wait and is_pec:
+            return
+        visible_intervals = (
+            _subtract_blocked_intervals(start, end, clean_windows)
+            if is_wait
+            else [(start, end)]
         )
-        item["entities"].append(entity)
-        time_candidates.extend([start, end])
+        for visible_start, visible_end in visible_intervals:
+            key = (
+                lane,
+                round(visible_start, 6),
+                round(visible_end, 6),
+                action,
+                color,
+            )
+            item = aggregated.setdefault(
+                key,
+                {
+                    "lane": lane,
+                    "start": visible_start,
+                    "end": visible_end,
+                    "action": action,
+                    "color": color,
+                    "entities": [],
+                },
+            )
+            item["entities"].append(entity)
+            if detail_lines:
+                item["detail_lines"] = list(detail_lines)
+            time_candidates.extend([visible_start, visible_end])
 
     def add_chamber_wait(
         lane: str,
@@ -1952,8 +2136,12 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
         entity: str,
         color: str,
     ) -> None:
-        if end > start + 1e-9:
-            chamber_wait_intervals.append((lane, start, end, action, entity, color))
+        for visible_start, visible_end in _subtract_blocked_intervals(
+            start, end, clean_windows
+        ):
+            chamber_wait_intervals.append(
+                (lane, visible_start, visible_end, action, entity, color)
+            )
 
     def product_start(wafer_id: int, stage_name: str) -> float:
         return prod_stage_start.get((wafer_id, stage_name), 0.0)
@@ -2331,6 +2519,16 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
         token_id = pec_token_by_job.get(job_id)
         return f"PEC{token_id}" if token_id is not None else f"E{job_id}"
 
+    for (pm_id, clean_id), (start, end) in sorted(clean_windows_by_key.items()):
+        add_task(
+            pm_lane(pm_id),
+            start,
+            end,
+            f"CH cleaning {clean_id}",
+            "cleaning",
+            CLEAN_COLOR,
+        )
+
     for job_id in pec_job_ids:
         entity = pec_entity(job_id)
         pm_id = pec_pm_by_job.get(job_id, 0)
@@ -2345,14 +2543,21 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
             entity,
             "#F58518",
         )
-        add_task(
-            pm_lane(pm_id),
-            pec_stage_start.get((job_id, "pm"), 0.0),
-            pec_stage_end.get((job_id, "pm"), 0.0),
-            "PEC chamber support",
-            entity,
-            "#E45756",
-        )
+        pec_pm_start = pec_stage_start.get((job_id, "pm"), 0.0)
+        pec_pm_end = pec_stage_end.get((job_id, "pm"), 0.0)
+        for process_pm, process_start, process_end in ordinary_pm_process_intervals:
+            if process_pm != pm_id:
+                continue
+            visible_start = max(pec_pm_start, process_start)
+            visible_end = min(pec_pm_end, process_end)
+            add_task(
+                pm_lane(pm_id),
+                visible_start,
+                visible_end,
+                "PEC chamber support",
+                entity,
+                "#E45756",
+            )
         pec_unload_start = pec_stage_start.get((job_id, "vtr_unload"), 0.0)
         pec_unload_end = pec_stage_end.get((job_id, "vtr_unload"), 0.0)
         add_task(
@@ -2365,14 +2570,15 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
         )
 
     # Several wafers can wait concurrently in different pockets of one CH.
-    # Convert their overlapping residence intervals into non-overlapping
-    # segments with the active wafer set, so one chamber lane stays readable.
+    # Treat a time-contiguous wait as one resource-state bar even when a subset
+    # of its wafers unloads partway through. Keep changing occupancy in the
+    # tooltip so the compact view remains truthful.
     chamber_wait_groups: Dict[Tuple[str, str, str], List[Tuple[float, float, str]]] = {}
     for lane, start, end, action, entity, color in chamber_wait_intervals:
         chamber_wait_groups.setdefault((lane, action, color), []).append((start, end, entity))
     for (lane, action, color), intervals in chamber_wait_groups.items():
         boundaries = sorted({point for start, end, _entity in intervals for point in (start, end)})
-        merged_segments: List[Tuple[float, float, Tuple[str, ...]]] = []
+        atomic_segments: List[Tuple[float, float, Tuple[str, ...]]] = []
         for start, end in zip(boundaries, boundaries[1:]):
             if end <= start + 1e-9:
                 continue
@@ -2383,14 +2589,35 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
             ))
             if not entities:
                 continue
-            if merged_segments and merged_segments[-1][2] == entities and abs(merged_segments[-1][1] - start) <= 1e-6:
-                previous_start, _previous_end, previous_entities = merged_segments[-1]
-                merged_segments[-1] = (previous_start, end, previous_entities)
+            if atomic_segments and atomic_segments[-1][2] == entities and abs(atomic_segments[-1][1] - start) <= 1e-6:
+                previous_start, _previous_end, previous_entities = atomic_segments[-1]
+                atomic_segments[-1] = (previous_start, end, previous_entities)
             else:
-                merged_segments.append((start, end, entities))
-        for start, end, entities in merged_segments:
+                atomic_segments.append((start, end, entities))
+
+        continuous_runs: List[List[Tuple[float, float, Tuple[str, ...]]]] = []
+        for segment in atomic_segments:
+            if continuous_runs and abs(continuous_runs[-1][-1][1] - segment[0]) <= 1e-6:
+                continuous_runs[-1].append(segment)
+            else:
+                continuous_runs.append([segment])
+
+        for run in continuous_runs:
+            start = run[0][0]
+            end = run[-1][1]
+            entities = tuple(sorted(
+                {entity for _left, _right, active in run for entity in active},
+                key=_entity_sort_key,
+            ))
+            detail_lines: List[str] = []
+            if len({active for _left, _right, active in run}) > 1:
+                occupancy = '; '.join(
+                    f'{left:.3f}-{right:.3f}: {_format_entity_list(list(active))}'
+                    for left, right, active in run
+                )
+                detail_lines.append(f'occupancy by interval: {occupancy}')
             for entity in entities:
-                add_task(lane, start, end, action, entity, color)
+                add_task(lane, start, end, action, entity, color, detail_lines)
 
     # A 2x2 bridge (and a product+PEC side) is one VTR motion that can unload
     # and load different wafers in the same interval.  Collapse those exact
@@ -2508,6 +2735,8 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
             elif action.startswith("VTR unload"):
                 action = action.replace("VTR unload", "VTR double unload", 1)
         label = f"{action}\n{entities}" if entities else action
+        if item.get('detail_lines'):
+            label = '\n'.join([action, entities] + list(item['detail_lines']))
         tasks.append(
             {
                 "lane": item["lane"],
@@ -2930,7 +3159,7 @@ def _render_svg(record: Dict[str, object], schedule: Dict[str, object], output_f
         '</style>',
         f'<rect x="0" y="0" width="{SVG_WIDTH}" height="{height}" fill="#ffffff"/>',
         f'<text class="title" x="{LEFT_MARGIN}" y="38">{_escape(Path(str(record.get("instance", "instance"))).stem)} {_escape(title_suffix)}</text>',
-        f'<text class="subtitle" x="{LEFT_MARGIN}" y="66">method={_escape(record.get("method", "single_result"))} | status={_escape(record.get("status", "unknown"))} | best_obj={_escape(_format_meta_value(record.get("best_obj")))}</text>',
+        f'<text class="subtitle" x="{LEFT_MARGIN}" y="66">method={_escape(record.get("method", "single_result"))} | status={_escape(record.get("status", "unknown"))} | gap={_escape(_format_meta_value(record.get("gap")))} | best_obj={_escape(_format_meta_value(record.get("best_obj")))}</text>',
         f'<text class="subtitle" x="{LEFT_MARGIN}" y="88">c_max={c_max:.3f} | horizon={horizon:.3f} | view={_escape(schedule.get("layout", "full"))}</text>',
     ]
 

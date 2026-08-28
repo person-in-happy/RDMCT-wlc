@@ -1,0 +1,89 @@
+{
+    "description":  "JMS 8/16/17/20-wafer three-mode Gantt evidence: 4x1=180 s, each 2x2 exposure=90 s, chamber cleaning every three full process cycles.",
+    "suites":  [
+                   {
+                       "name":  "wafer8_pure22_clean3",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_f000_m008_p4x1_180_p2x2_90x2_clean3",
+                       "split":  "jms_3xclean_half2x2_gantt",
+                       "root":  "../generated_instances/jms_3xclean_2x2half/wafer8_22_clean3_2x2half_20260827.lp"
+                   },
+                   {
+                       "name":  "wafer8_pure41_clean3",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_f008_m000_p4x1_180_p2x2_90x2_clean3",
+                       "split":  "jms_3xclean_half2x2_gantt",
+                       "root":  "../generated_instances/jms_3xclean_2x2half/wafer8_41_clean3_2x2half_20260827.lp"
+                   },
+                   {
+                       "name":  "wafer8_mixed11_clean3",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_f004_m004_p4x1_180_p2x2_90x2_clean3",
+                       "split":  "jms_3xclean_half2x2_gantt",
+                       "root":  "../generated_instances/jms_3xclean_2x2half/wafer8_mix_4_4_clean3_2x2half_20260827.lp"
+                   },
+                   {
+                       "name":  "wafer16_pure22_clean3",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_f000_m016_p4x1_180_p2x2_90x2_clean3",
+                       "split":  "jms_3xclean_half2x2_gantt",
+                       "root":  "../generated_instances/jms_3xclean_2x2half/wafer16_22_clean3_2x2half_20260827.lp"
+                   },
+                   {
+                       "name":  "wafer16_pure41_clean3",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_f016_m000_p4x1_180_p2x2_90x2_clean3",
+                       "split":  "jms_3xclean_half2x2_gantt",
+                       "root":  "../generated_instances/jms_3xclean_2x2half/wafer16_41_clean3_2x2half_20260827.lp"
+                   },
+                   {
+                       "name":  "wafer16_mixed11_clean3",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_f008_m008_p4x1_180_p2x2_90x2_clean3",
+                       "split":  "jms_3xclean_half2x2_gantt",
+                       "root":  "../generated_instances/jms_3xclean_2x2half/wafer16_mix_8_8_clean3_2x2half_20260827.lp"
+                   },
+                   {
+                       "name":  "wafer17_pure22_clean3",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n017_f000_m017_p4x1_180_p2x2_90x2_clean3",
+                       "split":  "jms_3xclean_half2x2_gantt",
+                       "root":  "../generated_instances/jms_3xclean_2x2half/wafer17_22_clean3_2x2half_20260827.lp"
+                   },
+                   {
+                       "name":  "wafer17_pure41_clean3",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n017_f017_m000_p4x1_180_p2x2_90x2_clean3",
+                       "split":  "jms_3xclean_half2x2_gantt",
+                       "root":  "../generated_instances/jms_3xclean_2x2half/wafer17_41_clean3_2x2half_20260827.lp"
+                   },
+                   {
+                       "name":  "wafer17_mixed11_clean3",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n017_f009_m008_p4x1_180_p2x2_90x2_clean3",
+                       "split":  "jms_3xclean_half2x2_gantt",
+                       "root":  "../generated_instances/jms_3xclean_2x2half/wafer17_mix_9_8_clean3_2x2half_20260827.lp"
+                   },
+                   {
+                       "name":  "wafer20_pure22_clean3",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n020_f000_m020_p4x1_180_p2x2_90x2_clean3",
+                       "split":  "jms_3xclean_half2x2_gantt",
+                       "root":  "../generated_instances/jms_3xclean_2x2half/wafer20_22_clean3_2x2half_20260827.lp"
+                   },
+                   {
+                       "name":  "wafer20_pure41_clean3",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n020_f020_m000_p4x1_180_p2x2_90x2_clean3",
+                       "split":  "jms_3xclean_half2x2_gantt",
+                       "root":  "../generated_instances/jms_3xclean_2x2half/wafer20_41_clean3_2x2half_20260827.lp"
+                   },
+                   {
+                       "name":  "wafer20_mixed11_clean3",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n020_f010_m010_p4x1_180_p2x2_90x2_clean3",
+                       "split":  "jms_3xclean_half2x2_gantt",
+                       "root":  "../generated_instances/jms_3xclean_2x2half/wafer20_mix_10_10_clean3_2x2half_20260827.lp"
+                   }
+               ]
+}

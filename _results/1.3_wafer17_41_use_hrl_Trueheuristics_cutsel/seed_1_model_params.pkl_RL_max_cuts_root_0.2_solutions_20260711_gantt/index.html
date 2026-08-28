@@ -37,6 +37,11 @@ main { display: grid; gap: 18px; padding: 18px 24px 28px; }
 object { display: block; width: 100%; border: 0; background: #ffffff; }
 .chart-object { width: 100%; height: 100%; min-height: 100%; }
 .comparison-object { height: 520px; min-height: 420px; }
+.metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 14px; padding: 14px; }
+.metric-card { margin: 0; min-width: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #ffffff; }
+.metric-card figcaption { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 13px; font-weight: 700; }
+.metric-card a { color: var(--accent); text-decoration: none; white-space: nowrap; }
+.metric-card img { display: block; width: 100%; height: auto; min-height: 250px; object-fit: contain; background: #ffffff; }
 .empty { padding: 36px 16px; color: var(--muted); font-weight: 700; text-align: center; }
 [hidden] { display: none !important; }
 @media (max-width: 860px) { .toolbar { grid-template-columns: 1fr; } .topbar { align-items: flex-start; flex-direction: column; } .button { width: 100%; } .chart-viewport { height: 68vh; min-height: 420px; } .section-head { align-items: flex-start; flex-direction: column; } }
@@ -65,12 +70,17 @@ object { display: block; width: 100%; border: 0; background: #ffffff; }
 <div class="section-head"><h2>Ablation Comparison</h2><a id="comparisonLink" class="button" href="#" target="_blank" rel="noopener">Open SVG</a></div>
 <div class="viewport"><object id="comparisonObject" class="comparison-object" type="image/svg+xml"></object></div>
 </section>
+<section id="metricsSection" class="section" hidden>
+<div class="section-head"><h2>Ablation Metrics</h2><span>Raw values, valid-run counts, and change versus SCIP</span></div>
+<div id="metricGrid" class="metric-grid"></div>
+</section>
 </main>
 </div>
 <script>
 var CHARTS = [{"path": "wafer17_41_fixed_20260711_gantt.svg", "view": "full", "view_label": "Full process", "method": "single_result", "instance": "wafer17_41_fixed_20260711.lp", "status": "optimal", "best_obj": "1002.000", "solving_time": "3.000", "c_max": "1002.000", "horizon": "1002.000", "wph": "61.078", "title": "wafer17_41_fixed_20260711 / single_result / Full process"}, {"path": "wafer17_41_fixed_20260711_chambers_gantt.svg", "view": "chambers", "view_label": "Chamber modules", "method": "single_result", "instance": "wafer17_41_fixed_20260711.lp", "status": "optimal", "best_obj": "1002.000", "solving_time": "3.000", "c_max": "1002.000", "horizon": "966.000", "wph": "61.078", "title": "wafer17_41_fixed_20260711 / single_result / Chamber modules"}, {"path": "wafer17_41_fixed_20260711_resources_gantt.svg", "view": "resources", "view_label": "Resources", "method": "single_result", "instance": "wafer17_41_fixed_20260711.lp", "status": "optimal", "best_obj": "1002.000", "solving_time": "3.000", "c_max": "1002.000", "horizon": "1020.000", "wph": "61.078", "title": "wafer17_41_fixed_20260711 / single_result / Resources"}];
 var VIEW_LABELS = {"full": "Full process", "chambers": "Chamber modules", "resources": "Resources"};
 var COMPARISON_SVG = "";
+var METRIC_SVGS = [];
 (function () {
   var charts = CHARTS || [];
   var viewSelect = document.getElementById('viewSelect');
@@ -217,6 +227,31 @@ var COMPARISON_SVG = "";
     document.getElementById('comparisonSection').hidden = false;
     document.getElementById('comparisonObject').data = COMPARISON_SVG;
     document.getElementById('comparisonLink').href = COMPARISON_SVG;
+  }
+  if (METRIC_SVGS && METRIC_SVGS.length) {
+    var metricsSection = document.getElementById('metricsSection');
+    var metricGrid = document.getElementById('metricGrid');
+    metricsSection.hidden = false;
+    METRIC_SVGS.forEach(function (entry) {
+      var card = document.createElement('figure');
+      var caption = document.createElement('figcaption');
+      var title = document.createElement('span');
+      var link = document.createElement('a');
+      var image = document.createElement('img');
+      card.className = 'metric-card';
+      title.textContent = entry.title;
+      link.textContent = 'Open SVG';
+      link.href = entry.path;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      image.src = entry.path;
+      image.alt = entry.title;
+      caption.appendChild(title);
+      caption.appendChild(link);
+      card.appendChild(caption);
+      card.appendChild(image);
+      metricGrid.appendChild(card);
+    });
   }
 }());
 </script>

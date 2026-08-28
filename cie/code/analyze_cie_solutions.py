@@ -317,7 +317,8 @@ def _is_benchmark_payload(payload):
 
 def _load_benchmark_rows(input_root):
     benchmark_files = []
-    rows = []
+    latest_rows = {}
+    rows_without_solution_identity = []
     for path in sorted(input_root.rglob("*.json")):
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
@@ -326,7 +327,29 @@ def _load_benchmark_rows(input_root):
         if not _is_benchmark_payload(payload):
             continue
         benchmark_files.append(str(path))
-        rows.extend(payload["rows"])
+        try:
+            source_mtime_ns = path.stat().st_mtime_ns
+        except OSError:
+            source_mtime_ns = 0
+        for row_index, row in enumerate(payload["rows"]):
+            solution_text = row.get("solution_file")
+            instance_text = row.get("path")
+            if not solution_text or not instance_text:
+                rows_without_solution_identity.append(row)
+                continue
+            key = (str(solution_text), str(instance_text))
+            rank = (
+                str(row.get("started_at") or ""),
+                source_mtime_ns,
+                str(path),
+                row_index,
+            )
+            previous = latest_rows.get(key)
+            if previous is None or rank > previous[0]:
+                latest_rows[key] = (rank, row)
+    rows = rows_without_solution_identity + [
+        row for _, row in latest_rows.values()
+    ]
     return benchmark_files, rows
 
 
@@ -339,17 +362,12 @@ def main():
 
     output_rows = []
     invalid = []
-    seen = set()
     for row in rows:
         solution_text = row.get("solution_file")
         if not solution_text:
             continue
         solution_path = Path(solution_text)
         instance_path = Path(row["path"])
-        key = (str(solution_path), str(instance_path))
-        if key in seen:
-            continue
-        seen.add(key)
         values = _parse_solution(solution_path)
         feasible, reason = (True, "not_checked")
         if args.validate:
@@ -360,7 +378,17 @@ def main():
             "run_label": row.get("run_label"), "warm_start": row.get("warm_start"),
             "solver_seed": row.get("seed"), "training_seed": row.get("training_seed"),
             "status": row.get("status"), "solving_time": row.get("solving_time"),
-            "gap": row.get("gap"), "pdi": row.get("primal_dual_integral"),
+            "primary_status": row.get("primary_status"),
+            "stability_status": row.get("stability_status"),
+            "schedule_linear_physical_route_only": row.get(
+                "schedule_linear_physical_route_only"
+            ),
+            "lexicographic_free_schedule_order_decisions": row.get(
+                "lexicographic_free_schedule_order_decisions"
+            ),
+            "gap": row.get("gap"),
+            "stability_gap": row.get("stability_primal_dual_gap"),
+            "pdi": row.get("primal_dual_integral"),
             "solution_file": str(solution_path), "physically_feasible": feasible,
             "validation_note": reason,
             **_metrics(row, values),

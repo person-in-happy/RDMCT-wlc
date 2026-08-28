@@ -1,0 +1,26 @@
+{
+  "description": "Frozen 50-wafer schedules for the JMS supplementary Gantt evidence. All three configurations share the wafer17 timing parameters and differ only in recipe counts.",
+  "suites": [
+    {
+      "name": "wafer50_pure22",
+      "family": "dual_source_cluster_tool",
+      "scale": "n050_f000_m050_proc180_clean10",
+      "split": "wafer50_gantt",
+      "root": "../generated_instances/jms_wafer50/wafer50_22_20260825.lp"
+    },
+    {
+      "name": "wafer50_pure41",
+      "family": "dual_source_cluster_tool",
+      "scale": "n050_f050_m000_proc180_clean10",
+      "split": "wafer50_gantt",
+      "root": "../generated_instances/jms_wafer50/wafer50_41_20260825.lp"
+    },
+    {
+      "name": "wafer50_mixed11",
+      "family": "dual_source_cluster_tool",
+      "scale": "n050_f025_m025_proc180_clean10",
+      "split": "wafer50_gantt",
+      "root": "../generated_instances/jms_wafer50/wafer50_mix_25_25_20260825.lp"
+    }
+  ]
+}

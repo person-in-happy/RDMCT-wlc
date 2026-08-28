@@ -1,0 +1,165 @@
+\relax 
+\emailauthor{lshao@ustb.edu.cn}{Lizhen Shao\corref {cor1}}
+\emailauthor{m202420836@xs.ustb.edu.cn}{Lincong Wei}
+\Newlabel{cor1}{1}
+\def\@LN@column{1}
+\Newlabel{ustb}{a}
+\citation{chien2021drlhga,hong2026ddpgct}
+\citation{qiao2022binary,li2022conditioncleaning,wang2023optimalcyclic,li2025cyclicmultitype,yang2025miptwowafers,gu2024multifinger}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{2}{}\protected@file@percent }
+\newlabel{sec:intro-new}{{1}{2}{}{section.1}{}}
+\citation{liu2022cnna3c,zhang2024qeda,kim2025adaptivecluster,kim2025noncyclic}
+\citation{hong2026ddpgct}
+\def\@LN@column{1}
+\citation{kim2021integrated,ko2021wafer,zhu2022twotypes}
+\citation{li2025cyclicmultitype,yang2025miptwowafers}
+\citation{qiao2022binary,lee2023cleaningplan,yuan2023purge,zhu2023postprocess,pan2024cycletime}
+\citation{gu2024multifinger}
+\citation{chien2021drlhga,liu2022cnna3c,zhang2024qeda,li2022hybridfeedback}
+\citation{bengio2021machine,khalil2022mipgnn,scavuzzo2024mlbb}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Research background and positioning}{4}{}\protected@file@percent }
+\newlabel{sec:background-new}{{2}{4}{}{section.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Cluster-tool scheduling models}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Learning-enhanced scheduling and exact optimization}{4}{}\protected@file@percent }
+\citation{tang2020cut,huang2022cutranking,paulus2022looking,turner2023adaptive}
+\citation{wang2023hem,wang2024hemtpami}
+\citation{qiao2022binary}
+\citation{gu2024multifinger}
+\citation{yang2025miptwowafers}
+\citation{kim2025adaptivecluster}
+\citation{hong2026ddpgct}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Industrial problem and two-stage MILP}{5}{}\protected@file@percent }
+\newlabel{sec:model-new}{{3}{5}{}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}System logic and material interaction}{5}{}\protected@file@percent }
+\def\@LN@column{1}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Research positioning relative to representative cluster-tool studies.}}{6}{}\protected@file@percent }
+\newlabel{tab:position-new}{{1}{6}{}{table.1}{}}
+\def\@LN@column{1}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Dual-source material flows and shared resources. Solid arrows denote the product-wafer route; dashed arrows denote reusable vacuum-zone dummy wafers.}}{7}{}\protected@file@percent }
+\newlabel{fig:system-new}{{1}{7}{}{figure.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Decision structure and principal constraints}{7}{}\protected@file@percent }
+\citation{nishi2015deadlock}
+\def\@LN@column{1}
+\newlabel{eq:new-assign}{{1}{8}{}{equation.1}{}}
+\newlabel{eq:new-fixed-map}{{2}{8}{}{equation.2}{}}
+\newlabel{eq:new-map-activate}{{3}{8}{}{equation.3}{}}
+\newlabel{eq:new-activate}{{4}{8}{}{equation.4}{}}
+\newlabel{eq:new-duration}{{5}{8}{}{equation.5}{}}
+\newlabel{eq:new-prec}{{6}{8}{}{equation.6}{}}
+\newlabel{eq:new-res1}{{7}{8}{}{equation.7}{}}
+\newlabel{eq:new-res2}{{8}{8}{}{equation.8}{}}
+\newlabel{eq:new-dummy}{{9}{8}{}{equation.9}{}}
+\newlabel{eq:new-epoch-assign}{{10}{8}{}{equation.10}{}}
+\newlabel{eq:new-epoch-cap}{{11}{8}{}{equation.11}{}}
+\newlabel{eq:new-epoch-order}{{12}{8}{}{equation.12}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Industrial rules represented by the MILP.}}{9}{}\protected@file@percent }
+\newlabel{tab:rule-map-new}{{2}{9}{}{table.2}{}}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Throughput first, schedule quality second}{10}{}\protected@file@percent }
+\newlabel{eq:new-stage1}{{14}{10}{}{equation.14}{}}
+\newlabel{eq:new-fix}{{15}{10}{}{equation.15}{}}
+\newlabel{eq:new-stage2}{{16}{10}{}{equation.16}{}}
+\def\@LN@column{1}
+\newlabel{eq:new-wait-epi}{{17}{11}{}{equation.17}{}}
+\newlabel{eq:new-cad-pos}{{18}{11}{}{equation.18}{}}
+\newlabel{eq:new-cad-neg}{{19}{11}{}{equation.19}{}}
+\newlabel{eq:new-cad-sum}{{20}{11}{}{equation.20}{}}
+\newlabel{eq:new-cap-epi}{{21}{11}{}{equation.21}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Modeling advance}{11}{}\protected@file@percent }
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Structure-aware learning-enhanced exact solution}{12}{}\protected@file@percent }
+\newlabel{sec:method-new}{{4}{12}{}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}From model structure to solver guidance}{12}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Structure-preserving binary-skeleton warm start}{12}{}\protected@file@percent }
+\citation{vinyals2015pointer}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Variable-role reconstruction and hierarchical decoding}{13}{}\protected@file@percent }
+\newlabel{eq:new-role}{{22}{13}{}{equation.22}{}}
+\citation{williams1992reinforce}
+\citation{mnih2016a3c}
+\citation{choo2022beam}
+\citation{nemhauser1978analysis}
+\citation{achterberg2009scip,bestuzheva2023scip}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Exactness and computational scope}{14}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Computational results and analysis}{14}{}\protected@file@percent }
+\newlabel{sec:results-new}{{5}{14}{}{section.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Evidence structure}{14}{}\protected@file@percent }
+\citation{gleixner2021miplib}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Exact solves and post-solve checks establish internal consistency}{15}{}\protected@file@percent }
+\def\@LN@column{1}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Exactly solved cases used for internal formulation-consistency checks.}}{16}{}\protected@file@percent }
+\newlabel{tab:new-validation}{{3}{16}{}{table.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}RDMCT-HBS{} attains the lowest observed nominal mean PDI and time}{16}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Nominal comparison under a common SPBS start; statistics are first averaged within 20 manufacturing instances.}}{16}{}\protected@file@percent }
+\newlabel{tab:new-main}{{4}{16}{}{table.4}{}}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Precomputed SPBS improves downstream solver-phase outcomes}{17}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Downstream SCIP comparison over 48 instances and ten matched seeds; SPBS construction time is excluded.}}{17}{}\protected@file@percent }
+\newlabel{tab:new-spbs}{{5}{17}{}{table.5}{}}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Equal-budget refinement workflows improve operational metrics}{18}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Operational metrics for equal-600-s-budget refinement workflows.}}{18}{}\protected@file@percent }
+\newlabel{tab:new-stability}{{6}{18}{}{table.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}Difficulty rises with scale and mixed-flow interaction}{18}{}\protected@file@percent }
+\def\@LN@column{1}
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Computational transition by wafer count.}}{19}{}\protected@file@percent }
+\newlabel{tab:new-doe}{{7}{19}{}{table.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.7}Sensitivity study retains feasible-schedule delivery}{19}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.8}OOD stress test retains feasible-schedule delivery}{19}{}\protected@file@percent }
+\def\@LN@column{1}
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces OOD stress test; statistics are first averaged within nine manufacturing instances.}}{20}{}\protected@file@percent }
+\newlabel{tab:new-ood}{{8}{20}{}{table.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.9}Industrial implications}{20}{}\protected@file@percent }
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusions}{21}{}\protected@file@percent }
+\newlabel{sec:conclusion-new}{{6}{21}{}{section.6}{}}
+\bibcite{achterberg2009scip}{{1}{2009}{{Achterberg}}{{}}}
+\bibcite{bengio2021machine}{{2}{2021}{{Bengio et~al.}}{{Bengio, Lodi and Prouvost}}}
+\bibcite{bestuzheva2023scip}{{3}{2023}{{Bestuzheva et~al.}}{{Bestuzheva, Besan{\c {c}}on, Chen, Chmiela, Donkiewicz, van Doornmalen, Eifler, Gaul, Gamrath, Gleixner, Gottwald, Graczyk, Halbig, Hoen, Hojny, van~der Hulst, Koch, L{\"u}bbecke, Maher, Matter, M{\"u}hmer, M{\"u}ller, Pfetsch, Schl{\"o}sser, Serrano, Shinano, Sofranac, Turner, Vigerske, Wegscheider, Wellner, Weninger and Witzig}}}
+\def\@LN@column{1}
+\bibcite{chien2021drlhga}{{4}{2021}{{Chien and Lan}}{{}}}
+\bibcite{choo2022beam}{{5}{2022}{{Choo et~al.}}{{Choo, Kwon, Kim, Jae, Hottung, Tierney and Gwon}}}
+\bibcite{gleixner2021miplib}{{6}{2021}{{Gleixner et~al.}}{{Gleixner, Hendel, Gamrath, Achterberg, Bastubbe, Berthold, Christophel, Jarck, Koch, Linderoth, Lubbecke, Mittelmann, Ozyurt, Ralphs, Salvagnin and Shinano}}}
+\bibcite{gu2024multifinger}{{7}{2024}{{Gu et~al.}}{{Gu, Wu, Qiao and Zhang}}}
+\bibcite{hong2026ddpgct}{{8}{2026}{{Hong et~al.}}{{Hong, Hsu and Chen}}}
+\bibcite{huang2022cutranking}{{9}{2022}{{Huang et~al.}}{{Huang, Wang, Liu, Zhen, Zhang, Yuan, Hao, Yu and Wang}}}
+\def\@LN@column{1}
+\bibcite{khalil2022mipgnn}{{10}{2022}{{Khalil et~al.}}{{Khalil, Morris and Lodi}}}
+\bibcite{kim2025noncyclic}{{11}{2025}{{Kim and Kim}}{{}}}
+\bibcite{kim2025adaptivecluster}{{12}{2025}{{Kim and Lee}}{{}}}
+\bibcite{kim2021integrated}{{13}{2021}{{Kim et~al.}}{{Kim, Yu and Lee}}}
+\bibcite{ko2021wafer}{{14}{2021}{{Ko et~al.}}{{Ko, Yu and Lee}}}
+\bibcite{lee2023cleaningplan}{{15}{2023}{{Lee et~al.}}{{Lee, Yu and Lee}}}
+\bibcite{li2022hybridfeedback}{{16}{2022}{{Li and Chang}}{{}}}
+\bibcite{li2022conditioncleaning}{{17}{2022}{{Li et~al.}}{{Li, Yang and Zhen}}}
+\def\@LN@column{1}
+\bibcite{li2025cyclicmultitype}{{18}{2025}{{Li and Yang}}{{}}}
+\bibcite{liu2022cnna3c}{{19}{2022}{{Liu et~al.}}{{Liu, Qiao, Zou, Zinn, Ma and Vogel-Heuser}}}
+\bibcite{mnih2016a3c}{{20}{2016}{{Mnih et~al.}}{{Mnih, Badia, Mirza, Graves, Lillicrap, Harley, Silver and Kavukcuoglu}}}
+\bibcite{nemhauser1978analysis}{{21}{1978}{{Nemhauser et~al.}}{{Nemhauser, Wolsey and Fisher}}}
+\bibcite{nishi2015deadlock}{{22}{2015}{{Nishi and Matsumoto}}{{}}}
+\bibcite{pan2024cycletime}{{23}{2024}{{Pan et~al.}}{{Pan, Lai, Qiao, Wu and Luo}}}
+\bibcite{paulus2022looking}{{24}{2022}{{Paulus et~al.}}{{Paulus, Zarpellon, Krause, Charlin and Maddison}}}
+\bibcite{qiao2022binary}{{25}{2022}{{Qiao et~al.}}{{Qiao, Lu, Li, Zhang, Wu and Liu}}}
+\def\@LN@column{1}
+\bibcite{scavuzzo2024mlbb}{{26}{2024}{{Scavuzzo et~al.}}{{Scavuzzo, Aardal, Lodi and Yorke-Smith}}}
+\bibcite{tang2020cut}{{27}{2020}{{Tang et~al.}}{{Tang, Agrawal and Faenza}}}
+\bibcite{turner2023adaptive}{{28}{2023}{{Turner et~al.}}{{Turner, Koch, Serrano and Winkler}}}
+\bibcite{vinyals2015pointer}{{29}{2015}{{Vinyals et~al.}}{{Vinyals, Fortunato and Jaitly}}}
+\bibcite{wang2023optimalcyclic}{{30}{2023a}{{Wang et~al.}}{{Wang, Liu, Zhou, Leng and Albeshri}}}
+\bibcite{wang2024hemtpami}{{31}{2024}{{Wang et~al.}}{{Wang, Wang, Li, Kuang, Shi, Zhu, Yuan, Zeng, Zhang and Wu}}}
+\bibcite{wang2023hem}{{32}{2023b}{{Wang et~al.}}{{Wang, Li, Wang, Kuang, Yuan, Zeng, Zhang and Wu}}}
+\bibcite{williams1992reinforce}{{33}{1992}{{Williams}}{{}}}
+\def\@LN@column{1}
+\bibcite{yang2025miptwowafers}{{34}{2025}{{Yang et~al.}}{{Yang, Li, Zhen, Zhang and Wu}}}
+\bibcite{yuan2023purge}{{35}{2023}{{Yuan et~al.}}{{Yuan, Zhao, Huang and Pan}}}
+\bibcite{zhang2024qeda}{{36}{2024}{{Zhang et~al.}}{{Zhang, Lin, Xu and Liu}}}
+\bibcite{zhu2023postprocess}{{37}{2023}{{Zhu et~al.}}{{Zhu, Li, Hou, Li and Wu}}}
+\bibcite{zhu2022twotypes}{{38}{2022}{{Zhu et~al.}}{{Zhu, Wang, Hou, Wu and Qiao}}}
+\def\@LN@column{1}
+\gdef \@abspage@last{27}

@@ -5,6 +5,7 @@ import pytest
 
 import cutsel_agent_parallel as cutsel
 import run_ablation_experiments as ablation
+from environments import SCIPCutSelEnv
 from petri_mip_generator import get_petri_model_description_path
 
 
@@ -380,3 +381,92 @@ def test_zero_metrics_are_visible_and_equal_values_are_labeled_as_ties(tmp_path)
     assert "tie vs SCIP" in gap_svg
     assert ">n/a (" not in gap_svg
     assert "TIE: all valid values equal" in objective_svg
+
+
+class _TimedOutPrimaryModel:
+    def __init__(self, cmax_var, primary_solution):
+        self.cmax_var = cmax_var
+        self.primary_solution = primary_solution
+        self.free_transform_called = False
+        self.time_limit = None
+
+    def setRealParam(self, name, value):
+        assert name == "limits/time"
+        self.time_limit = value
+
+    def getStatus(self):
+        return "timelimit"
+
+    def getBestSol(self):
+        return self.primary_solution
+
+    def getSolVal(self, solution, variable):
+        assert solution is self.primary_solution
+        return 578.0 if variable is self.cmax_var else 0.0
+
+    def getSolvingTime(self):
+        return 1.0
+
+    def getNTotalNodes(self):
+        return 2
+
+    def getGap(self):
+        return 0.1
+
+    def freeTransform(self):
+        self.free_transform_called = True
+
+
+def test_lexicographic_phase_two_requires_certified_primary_optimum():
+    env = object.__new__(SCIPCutSelEnv)
+    cmax_var = object()
+    stability_var = object()
+    primary_solution = object()
+    env.m = _TimedOutPrimaryModel(cmax_var, primary_solution)
+    env._var_by_name = lambda name: {
+        "c_max": cmax_var,
+        "schedule_stability": stability_var,
+    }.get(name)
+    env._optimize_with_watchdog = lambda phase: None
+    env._safe_get_primal_dual_integral = lambda: 0.0
+    env.lexicographic_schedule_stability = True
+    env.lexicographic_stability_time_limit = 5.0
+    env.lexicographic_stability_node_limit = 100
+    env.lexicographic_fix_discrete_decisions = True
+    env.lexicographic_free_double_decisions = True
+    env.lexicographic_free_schedule_order_decisions = True
+    env.scip_time_limit = 10.0
+    env._lexicographic_info = {}
+
+    env._optimize_with_lexicographic_stability()
+
+    assert env._lexicographic_info["primary_status"] == "timelimit"
+    assert env._lexicographic_info["primary_cmax"] == 578.0
+    assert (
+        env._lexicographic_info["stability_status"]
+        == "skipped_primary_not_optimal"
+    )
+    assert env.m.free_transform_called is False
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("full_vtr_load_double_1", True),
+        ("seq_vtr_action_a_b", True),
+        ("pec_token_order_1_2", True),
+        ("pec_token_assign_1_2", True),
+        ("al_slot_assign_1_1", True),
+        ("llupper_slot_assign_1_1", True),
+        ("lllower_slot_assign_1_1", True),
+        ("mix_bridge_combined_2_2", True),
+        ("assign_mix_1_1", False),
+        ("wafer_to_mix_pair_1_1", False),
+    ],
+)
+def test_phase_two_releases_schedule_choices_but_keeps_route_identity(name, expected):
+    env = object.__new__(SCIPCutSelEnv)
+    env.lexicographic_free_double_decisions = True
+    env.lexicographic_free_schedule_order_decisions = True
+
+    assert env._keep_discrete_decision_free_in_phase_two(name) is expected

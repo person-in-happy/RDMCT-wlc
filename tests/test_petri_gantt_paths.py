@@ -72,7 +72,7 @@ def test_shared_al_exchange_is_projected_to_both_product_wafers():
     assert [(task["start"], task["end"]) for task in projected] == [(20.0, 24.0)]
 
 
-def test_reused_pec_token_has_one_continuous_physical_lane():
+def test_reused_pec_token_hides_storage_and_chamber_waits():
     solution = _base_product_solution()
     for job_id, times in {
         5: ((5.0, 9.0), (9.0, 19.0), (19.0, 23.0)),
@@ -87,9 +87,19 @@ def test_reused_pec_token_has_one_continuous_physical_lane():
     pec_lanes = [lane for lane in schedule["lanes"] if lane.startswith("PEC ")]
 
     assert pec_lanes == ["PEC P1 | jobs E5,E25"]
-    _, tasks = _assert_lane_is_continuous(schedule, "PEC P1 ")
-    storage_waits = [task for task in tasks if task["label"].startswith("PEC storage wait")]
-    assert [(task["start"], task["end"]) for task in storage_waits] == [(23.0, 40.0)]
+    tasks = sorted(
+        (task for task in schedule["tasks"] if task["lane"] == pec_lanes[0]),
+        key=lambda task: (task["start"], task["end"]),
+    )
+    assert not any("wait" in task["label"].lower() for task in tasks)
+    assert [(task["start"], task["end"]) for task in tasks] == [
+        (5.0, 9.0),
+        (9.0, 19.0),
+        (19.0, 23.0),
+        (40.0, 44.0),
+        (44.0, 54.0),
+        (54.0, 58.0),
+    ]
 
 
 def test_anonymous_pec_tokens_use_round_robin_and_wrap_after_pool_size():
@@ -116,8 +126,57 @@ def test_anonymous_pec_tokens_use_round_robin_and_wrap_after_pool_size():
         f"PEC P{token_id}" for token_id in range(1, 9)
     ]
     assert pec_lanes[0] == "PEC P1 | jobs E1,E9"
-    _assert_lane_is_continuous(schedule, "PEC P1 ")
+    assert not any(
+        "wait" in task["label"].lower()
+        for task in schedule["tasks"]
+        if task["lane"].startswith("PEC ")
+    )
 
+
+def test_sparse_split_bridge_solution_renders_early_unload_and_later_load():
+    solution = {
+        "c_max": 238.0,
+        "mix_active_2": 1.0,
+        "mix_pos_used_2_1": 1.0,
+        "mix_last_pos_2_1": 1.0,
+        "assign_mix_1_2_1": 1.0,
+        "wafer_to_mix_pair_1_1": 1.0,
+        "wafer_to_mix_pair_2_1": 1.0,
+        "mix_head_start_2": 10.0,
+        "mix_head_end_2": 14.0,
+        "mix_cycle_used_2_1": 1.0,
+        "mix_cycle_start_2_1": 14.0,
+        "mix_cycle_end_2_1": 104.0,
+        "mix_cycle_used_2_2": 1.0,
+        "mix_bridge_start_2_2": 104.0,
+        "mix_bridge_unload_end_2_2": 108.0,
+        # SCIP sparse .sol output omits mix_bridge_combined_2_2=0.
+        "mix_bridge_load_start_2_2": 140.0,
+        "mix_bridge_end_2_2": 144.0,
+        "mix_cycle_start_2_2": 144.0,
+        "mix_cycle_end_2_2": 234.0,
+        "mix_tail_start_2": 234.0,
+        "mix_tail_end_2": 238.0,
+    }
+
+    schedule = petri_gantt._collect_chamber_schedule(solution)
+    tasks = [task for task in schedule["tasks"] if task["lane"].startswith("CH2 ")]
+
+    assert any(
+        task["label"].startswith("2x2 early unload")
+        and (task["start"], task["end"]) == (104.0, 108.0)
+        for task in tasks
+    )
+    assert any(
+        task["label"].startswith("2x2 chamber vacant")
+        and (task["start"], task["end"]) == (108.0, 140.0)
+        for task in tasks
+    )
+    assert any(
+        task["label"].startswith("2x2 later load")
+        and (task["start"], task["end"]) == (140.0, 144.0)
+        for task in tasks
+    )
 
 def test_mix_product_cycles_are_selected_by_pm_window_across_epoch_reset():
     solution = _base_product_solution()
@@ -164,6 +223,124 @@ def test_mix_product_cycles_are_selected_by_pm_window_across_epoch_reset():
         (70.0, 78.0),
     ]
     _assert_lane_is_continuous(schedule, "Product W1 ")
+
+
+def test_resource_chamber_wait_merges_contiguous_occupancy_changes():
+    solution = {'c_max': 102.0}
+    for wafer_id, pair_id in ((1, 1), (2, 1), (3, 2), (4, 2)):
+        solution[f'wafer_to_full_pair_{wafer_id}_{pair_id}'] = 1.0
+        for stage_name, (start, end) in {
+            'vtr_load': (54.0, 58.0),
+            'pm': (58.0, 78.0),
+            'vtr_unload': (88.0, 92.0) if pair_id == 1 else (98.0, 102.0),
+        }.items():
+            solution[f'prod_stage_start_{wafer_id}_{stage_name}'] = start
+            solution[f'prod_stage_end_{wafer_id}_{stage_name}'] = end
+    solution['assign_full_1_2_1_1'] = 1.0
+    solution['assign_full_2_2_1_2'] = 1.0
+
+    schedule = petri_gantt._collect_resource_schedule(solution)
+    waits = [
+        task
+        for task in schedule['tasks']
+        if task['lane'] == 'CH2 PM'
+        and task['label'].startswith('CH wait for VTR unload')
+    ]
+
+    assert [(task['start'], task['end']) for task in waits] == [(78.0, 98.0)]
+    assert '78.000-88.000: W1, W2, W3, W4' in waits[0]['label']
+    assert '88.000-98.000: W3, W4' in waits[0]['label']
+
+def test_cleaning_hides_waits_and_uses_teal_in_path_view():
+    solution = _base_product_solution()
+    solution.update(
+        {
+            "clean_active_3_1": 1.0,
+            "clean_front_load_start_3_1": 40.0,
+            "clean_start_3_1": 44.0,
+            "clean_end_3_1": 54.0,
+            "clean_front_unload_end_3_1": 58.0,
+            "pec_token_assign_25_1": 1.0,
+            "pec_stage_start_25_vtr_load": 40.0,
+            "pec_stage_end_25_vtr_load": 44.0,
+            "pec_stage_start_25_pm": 44.0,
+            "pec_stage_end_25_pm": 54.0,
+            "pec_stage_start_25_vtr_unload": 54.0,
+            "pec_stage_end_25_vtr_unload": 58.0,
+        }
+    )
+
+    schedule = petri_gantt._collect_path_schedule(solution)
+    cleaning = [
+        task for task in schedule["tasks"]
+        if task["label"].startswith("CH cleaning")
+    ]
+
+    assert [(task["start"], task["end"], task["color"]) for task in cleaning] == [
+        (44.0, 54.0, petri_gantt.CLEAN_COLOR)
+    ]
+    assert petri_gantt.CLEAN_COLOR != "#E45756"
+    assert not any(
+        "wait" in task["label"].lower()
+        and task["start"] < 58.0
+        and task["end"] > 40.0
+        for task in schedule["tasks"]
+    )
+    assert not any(
+        "wait" in task["label"].lower()
+        for task in schedule["tasks"]
+        if task["lane"].startswith("PEC ")
+    )
+
+
+def test_resource_cleaning_clips_other_module_waits_and_has_no_red_pec_overlay():
+    solution = _base_product_solution()
+    for wafer_id in (1, 2):
+        solution[f"prod_stage_start_{wafer_id}_vtr_unload"] = 98.0
+        solution[f"prod_stage_end_{wafer_id}_vtr_unload"] = 102.0
+    solution.update(
+        {
+            "clean_front_load_start_3_1": 80.0,
+            "clean_start_3_1": 82.0,
+            "clean_end_3_1": 86.0,
+            "clean_front_unload_end_3_1": 88.0,
+            "pec_job_chamber_90_3": 1.0,
+            "pec_token_assign_90_1": 1.0,
+            "pec_stage_start_90_vtr_load": 80.0,
+            "pec_stage_end_90_vtr_load": 82.0,
+            "pec_stage_start_90_pm": 82.0,
+            "pec_stage_end_90_pm": 86.0,
+            "pec_stage_start_90_vtr_unload": 86.0,
+            "pec_stage_end_90_vtr_unload": 88.0,
+        }
+    )
+
+    schedule = petri_gantt._collect_resource_schedule(solution)
+    cleaning = [
+        task for task in schedule["tasks"]
+        if task["label"].startswith("CH cleaning 1")
+    ]
+    waits = [
+        task for task in schedule["tasks"]
+        if "wait" in task["label"].lower()
+    ]
+
+    assert [(task["lane"], task["start"], task["end"], task["color"]) for task in cleaning] == [
+        ("CH3 PM", 80.0, 88.0, petri_gantt.CLEAN_COLOR)
+    ]
+    assert not any(task["start"] < 88.0 and task["end"] > 80.0 for task in waits)
+    assert not any(
+        task["label"].startswith("PEC chamber support")
+        and task["start"] < 88.0
+        and task["end"] > 80.0
+        for task in schedule["tasks"]
+    )
+    assert not any(
+        "wait" in task["label"].lower()
+        and ("PEC" in task["label"] or "\nE" in task["label"])
+        for task in schedule["tasks"]
+    )
+
 
 def test_lane_validator_rejects_source_overlap():
     tasks = [

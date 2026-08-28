@@ -165,6 +165,25 @@ def _parse_args():
         default=5000,
     )
     parser.add_argument(
+        "--lexicographic_free_schedule_order_decisions",
+        action="store_true",
+        help=(
+            "Keep routing/slot identities from phase one but let phase two "
+            "reorder robot, module, load-lock, PEC-token, and split-bridge actions."
+        ),
+    )
+    parser.add_argument("--schedule_linear_wait_weight", type=float, default=1.0)
+    parser.add_argument("--schedule_linear_max_wait_weight", type=float, default=10.0)
+    parser.add_argument(
+        "--schedule_linear_physical_route_only",
+        action="store_true",
+        help=(
+            "Make phase two minimize exactly the six per-wafer physical route "
+            "gaps reconstructed by the independent manufacturing analyzer."
+        ),
+    )
+    parser.add_argument("--schedule_cadence_deviation_weight", type=float, default=25.0)
+    parser.add_argument(
         "--device",
         default="cuda:0",
         help="Torch device for learned policies. CUDA is required when a learned method is selected.",
@@ -177,7 +196,54 @@ def _parse_args():
         default="auto",
         help="Load a compatible SPBS solution automatically, or disable warm starts.",
     )
+    parser.add_argument(
+        "--reuse_existing_solution_as_warm_start",
+        action="store_true",
+        help=(
+            "If the deterministic output .sol already exists, validate and "
+            "load it as the incumbent for a rerun. SCIP must still re-prove "
+            "all requested optimality conditions."
+        ),
+    )
+    parser.add_argument(
+        "--reuse_solution_dir",
+        default="",
+        help=(
+            "Optional directory containing deterministic output .sol files "
+            "from an earlier run."
+        ),
+    )
+    parser.add_argument(
+        "--reuse_solution_run_label",
+        default="",
+        help=(
+            "Run label used to derive deterministic .sol names in "
+            "--reuse_solution_dir."
+        ),
+    )
     parser.add_argument("--scip_verbosity", type=int, default=0)
+    parser.add_argument(
+        "--scip_emphasis",
+        choices=("default", "optimality", "feasibility"),
+        default="default",
+        help="SCIP search emphasis; optimality prioritizes exact primal/dual proof.",
+    )
+    parser.add_argument(
+        "--scip_heuristics_profile",
+        choices=("default", "fast", "aggressive", "off"),
+        default="default",
+        help="SCIP primal-heuristic intensity.",
+    )
+    parser.add_argument(
+        "--scip_nonroot_separation_rounds",
+        type=int,
+        default=0,
+        help=(
+            "Maximum SCIP separation rounds at non-root nodes. Zero preserves "
+            "the root-only benchmark protocol; a positive value is intended "
+            "for exact publication-certificate runs."
+        ),
+    )
     parser.add_argument("--sel_cuts_percent", type=float, default=0.2)
     parser.add_argument("--decode_type", choices=("greedy", "beam_search"), default="greedy")
     parser.add_argument("--policy_type", choices=("with_token", "without_token"), default="with_token")
@@ -477,6 +543,13 @@ def _env_kwargs(args, instance=None):
     return {
         "scip_time_limit": time_limit,
         "scip_verbosity": args.scip_verbosity,
+        "scip_emphasis": getattr(args, "scip_emphasis", "default"),
+        "scip_heuristics_profile": getattr(
+            args, "scip_heuristics_profile", "default"
+        ),
+        "scip_nonroot_separation_rounds": max(
+            0, int(getattr(args, "scip_nonroot_separation_rounds", 0))
+        ),
         "scip_memory_limit_mb": args.memory_limit_mb,
         "scip_node_limit": args.node_limit,
         "cutsel_max_candidates": args.cutsel_max_candidates,
@@ -490,14 +563,26 @@ def _env_kwargs(args, instance=None):
         "schedule_stability_mode": stability_mode,
         "lexicographic_fix_discrete_decisions": True,
         "lexicographic_free_double_decisions": True,
+        "lexicographic_free_schedule_order_decisions": bool(
+            getattr(args, "lexicographic_free_schedule_order_decisions", False)
+        ),
         "lexicographic_cmax_tolerance": 1e-6,
         "lexicographic_stability_time_limit": stability_time,
         "lexicographic_stability_node_limit": getattr(
             args, "lexicographic_stability_node_limit", 5000
         ),
-        "schedule_linear_wait_weight": 1.0,
-        "schedule_linear_max_wait_weight": 10.0,
-        "schedule_cadence_deviation_weight": 25.0,
+        "schedule_linear_wait_weight": float(
+            getattr(args, "schedule_linear_wait_weight", 1.0)
+        ),
+        "schedule_linear_max_wait_weight": float(
+            getattr(args, "schedule_linear_max_wait_weight", 10.0)
+        ),
+        "schedule_linear_physical_route_only": bool(
+            getattr(args, "schedule_linear_physical_route_only", False)
+        ),
+        "schedule_cadence_deviation_weight": float(
+            getattr(args, "schedule_cadence_deviation_weight", 25.0)
+        ),
         "schedule_max_wait_time": 0.0,
         "schedule_wait_cap_mode": "hard",
         "schedule_wait_cap_excess_weight": 1000.0,
@@ -594,6 +679,61 @@ def _safe_label(text):
     )
 
 
+def _benchmark_artifact_prefix(
+    output_dir, run_label, timestamp, max_path_chars=240
+):
+    """Return a deterministic Windows-safe prefix for all benchmark artifacts."""
+    output_dir = Path(output_dir)
+    safe_label = _safe_label(run_label)
+    label_part = f"_{safe_label}" if safe_label else ""
+    logical_stem = f"cie_benchmark{label_part}_{timestamp}"
+    candidate = output_dir / logical_stem
+    if len(f"{candidate}_summary.csv") < int(max_path_chars):
+        return candidate
+
+    digest = hashlib.sha256(logical_stem.encode("utf-8")).hexdigest()[:16]
+    readable_stem = f"cie_benchmark_{safe_label[:24]}_{digest}_{timestamp}"
+    candidate = output_dir / readable_stem
+    if len(f"{candidate}_summary.csv") < int(max_path_chars):
+        return candidate
+    return output_dir / f"cie_{digest}_{timestamp}"
+
+
+def _solution_output_path(
+    solution_root,
+    *,
+    suite,
+    instance_stem,
+    method,
+    seed,
+    training_seed,
+    run_label,
+    max_path_chars=240,
+):
+    """Return a traceable solution path with a deterministic short fallback."""
+    safe_suite = _safe_label(suite or "suite")
+    safe_instance = _safe_label(instance_stem or "instance")
+    safe_method = _safe_label(method or "method")
+    safe_label = _safe_label(run_label or "unlabeled")
+    logical_stem = (
+        f"{safe_suite}__{safe_instance}__{safe_method}__"
+        f"solverseed_{int(seed)}__trainseed_{int(training_seed)}__{safe_label}"
+    )
+    candidate = Path(solution_root) / f"{logical_stem}.sol"
+    if len(str(candidate)) < int(max_path_chars):
+        return candidate
+
+    digest = hashlib.sha256(logical_stem.encode("utf-8")).hexdigest()[:16]
+    short_stem = (
+        f"{safe_suite[:24]}__{safe_instance[:32]}__{safe_method[:12]}__"
+        f"s{int(seed)}_t{int(training_seed)}__{digest}"
+    )
+    short_candidate = Path(solution_root) / f"{short_stem}.sol"
+    if len(str(short_candidate)) < int(max_path_chars):
+        return short_candidate
+    return Path(solution_root) / f"solution_{digest}.sol"
+
+
 def _file_identity(path):
     if not path:
         return None
@@ -665,7 +805,11 @@ def _checkpoint_path(args, signature):
     filename = (
         f"{safe_label}__trainseed_{args.training_seed}__{signature[:16]}.jsonl"
     )
-    return output_dir / ".checkpoints" / filename
+    candidate = output_dir / ".checkpoints" / filename
+    if len(str(candidate)) < 240:
+        return candidate
+    digest = hashlib.sha256(filename.encode("utf-8")).hexdigest()[:16]
+    return output_dir / ".checkpoints" / f"checkpoint_{digest}.jsonl"
 
 
 def _write_checkpoint_header(path, signature):
@@ -755,27 +899,44 @@ def _run_one(method, instance, seed, args, bundles, acs_weights, predictions):
     weights = None
     weight_source = None
     requested_solution = None
+    reused_solution_warm_start = None
     bundle = None
     decode_type = None
     if args.solution_dir:
         solution_root = Path(resolve_path(args.solution_dir))
         solution_root.mkdir(parents=True, exist_ok=True)
-        safe_suite = "".join(
-            char if char.isalnum() or char in "-_" else "_"
-            for char in str(instance.get("suite", "suite"))
-        )
-        safe_instance = "".join(
-            char if char.isalnum() or char in "-_" else "_" for char in path.stem
-        )
         training_seed = int(getattr(args, "training_seed", -1))
-        safe_label = "".join(
-            char if char.isalnum() or char in "-_" else "_"
-            for char in str(getattr(args, "run_label", "") or "unlabeled")
+        requested_solution = _solution_output_path(
+            solution_root,
+            suite=instance.get("suite", "suite"),
+            instance_stem=path.stem,
+            method=method,
+            seed=seed,
+            training_seed=training_seed,
+            run_label=getattr(args, "run_label", "") or "unlabeled",
         )
-        requested_solution = solution_root / (
-            f"{safe_suite}__{safe_instance}__{method}__"
-            f"solverseed_{seed}__trainseed_{training_seed}__{safe_label}.sol"
-        )
+        if getattr(args, "reuse_existing_solution_as_warm_start", False):
+            reuse_solution = requested_solution
+            if (
+                not reuse_solution.is_file()
+                and getattr(args, "reuse_solution_dir", "")
+            ):
+                reuse_solution = _solution_output_path(
+                    Path(resolve_path(args.reuse_solution_dir)),
+                    suite=instance.get("suite", "suite"),
+                    instance_stem=path.stem,
+                    method=method,
+                    seed=seed,
+                    training_seed=training_seed,
+                    run_label=(
+                        getattr(args, "reuse_solution_run_label", "")
+                        or getattr(args, "run_label", "")
+                        or "unlabeled"
+                    ),
+                )
+            if reuse_solution.is_file():
+                reused_solution_warm_start = str(reuse_solution.resolve())
+                env.warm_start_solution_file = reused_solution_warm_start
     try:
         env.reset()
         if method == "scip_default":
@@ -834,6 +995,19 @@ def _run_one(method, instance, seed, args, bundles, acs_weights, predictions):
         "training_seed": getattr(args, "training_seed", -1),
         "run_label": getattr(args, "run_label", ""),
         "stability_profile": getattr(args, "stability_profile", "full"),
+        "lexicographic_free_schedule_order_decisions": env_kwargs[
+            "lexicographic_free_schedule_order_decisions"
+        ],
+        "schedule_linear_wait_weight": env_kwargs["schedule_linear_wait_weight"],
+        "schedule_linear_max_wait_weight": env_kwargs[
+            "schedule_linear_max_wait_weight"
+        ],
+        "schedule_linear_physical_route_only": env_kwargs[
+            "schedule_linear_physical_route_only"
+        ],
+        "schedule_cadence_deviation_weight": env_kwargs[
+            "schedule_cadence_deviation_weight"
+        ],
         "lexicographic_schedule_stability": env_kwargs[
             "lexicographic_schedule_stability"
         ],
@@ -842,6 +1016,13 @@ def _run_one(method, instance, seed, args, bundles, acs_weights, predictions):
             "lexicographic_stability_time_limit"
         ],
         "warm_start": getattr(args, "warm_start", "none"),
+        "reuse_existing_solution_as_warm_start": bool(
+            getattr(args, "reuse_existing_solution_as_warm_start", False)
+        ),
+        "reused_solution_warm_start": reused_solution_warm_start,
+        "scip_nonroot_separation_rounds": env_kwargs[
+            "scip_nonroot_separation_rounds"
+        ],
         "time_limit": float(env_kwargs["scip_time_limit"]),
         "started_at": started,
         "status": stats.get("status"),
@@ -859,6 +1040,7 @@ def _run_one(method, instance, seed, args, bundles, acs_weights, predictions):
         "cutsel_nonroot_calls": cutsel_telemetry.get("nonroot_calls", 0),
         "nodes": stats.get("ntotal_nodes"),
         "gap": stats.get("primal_dual_gap"),
+        "stability_primal_dual_gap": stats.get("stability_primal_dual_gap"),
         "primal_dual_integral": stats.get("primaldualintegral"),
         "best_objective": stats.get("best_obj"),
         "schedule_total_wait": stats.get("schedule_total_wait"),
@@ -1593,9 +1775,9 @@ def main():
     output_dir = Path(resolve_path(args.output_dir))
     output_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe_label = _safe_label(args.run_label)
-    label_part = f"_{safe_label}" if safe_label else ""
-    prefix = output_dir / f"cie_benchmark{label_part}_{timestamp}"
+    prefix = _benchmark_artifact_prefix(
+        output_dir, args.run_label, timestamp
+    )
     # Persist the expensive per-run observations before importing/statistically
     # analysing SciPy. This keeps a recoverable raw artifact even if the process
     # is under memory pressure after a long SCIP campaign.
