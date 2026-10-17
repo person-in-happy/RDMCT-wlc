@@ -71,6 +71,31 @@ PATH_TIME_TOLERANCE = 1e-3
 CLEAN_COLOR = "#2A9D8F"
 
 
+def _mix_exchange_segments(solution, pm_id, cycle_id, previous_end, next_start):
+    """Separate actual VTR exchange legs from in-chamber idle time."""
+    prefix = f"{pm_id}_{cycle_id}"
+    start = float(solution.get(f"mix_bridge_start_{prefix}", previous_end))
+    end = float(solution.get(f"mix_bridge_end_{prefix}", start))
+    combined = float(solution.get(f"mix_bridge_combined_{prefix}", 0)) > 0.5
+    unload_end = float(solution.get(f"mix_bridge_unload_end_{prefix}", end))
+    load_start = float(solution.get(f"mix_bridge_load_start_{prefix}", start))
+    legs = [(start, end, "2x2 combined exchange")] if combined else [
+        (start, unload_end, "2x2 exchange unload"),
+        (load_start, end, "2x2 exchange load"),
+    ]
+    cursor = previous_end
+    for a, b, label in sorted(legs):
+        a, b = max(a, previous_end, cursor), min(b, next_start)
+        if b <= a + 1e-7:
+            continue
+        if a > cursor + 1e-7:
+            yield cursor, a, "2x2 in-chamber wait", "#F2A09A"
+        yield a, b, label, "#BAB0AC"
+        cursor = b
+    if next_start > cursor + 1e-7:
+        yield cursor, next_start, "2x2 in-chamber wait", "#F2A09A"
+
+
 def _subtract_blocked_intervals(
     start: float,
     end: float,
@@ -540,14 +565,11 @@ def _collect_path_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                             cycle_end = pm_window_end
                         if cycle_index > 1:
                             previous_end = matching_cycles[cycle_index - 2][1]
-                            add_path_task(
-                                lane_name,
-                                previous_end,
-                                cycle_start,
-                                "2x2 in-chamber bridge/wait",
-                                entity,
-                                "#BAB0AC",
-                            )
+                            for a, b, label, color in _mix_exchange_segments(
+                                solution, pm_id, matching_cycles[cycle_index - 1][2],
+                                previous_end, cycle_start
+                            ):
+                                add_path_task(lane_name, a, b, label, entity, color)
                         add_path_task(
                             lane_name,
                             cycle_start,
@@ -2287,11 +2309,23 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
         location = mix_pair_location.get(mix_pair) if mix_pair is not None else None
         if location is not None:
             mix_pm_id, pos_id = location
-            first_start = mix_cycle_start.get((mix_pm_id, pos_id), 0.0)
-            first_end = mix_cycle_end.get((mix_pm_id, pos_id), 0.0)
-            second_start = mix_cycle_start.get((mix_pm_id, pos_id + 1), 0.0)
-            second_end = mix_cycle_end.get((mix_pm_id, pos_id + 1), 0.0)
-            if first_end > first_start + 1e-9 and second_end > second_start + 1e-9:
+            # PW position is not a cycle index once cleaning splits the chain.
+            # Match the exported wafer processing window to actual PM cycles.
+            window_start = product_start(wafer_id, "pm")
+            window_end = product_end(wafer_id, "pm")
+            cycles = sorted(
+                (start, mix_cycle_end.get((pm, cycle), start), cycle)
+                for (pm, cycle), start in mix_cycle_start.items()
+                if pm == mix_pm_id
+                and start >= window_start - PATH_TIME_TOLERANCE
+                and mix_cycle_end.get((pm, cycle), start) <= window_end + PATH_TIME_TOLERANCE
+                and mix_cycle_end.get((pm, cycle), start) > start + 1e-9
+            )
+            if (len(cycles) == 2
+                    and abs(cycles[0][0] - window_start) <= PATH_TIME_TOLERANCE
+                    and abs(cycles[1][1] - window_end) <= PATH_TIME_TOLERANCE):
+                first_start, first_end, _ = cycles[0]
+                second_start, second_end, second_cycle = cycles[1]
                 lane = pm_lane(mix_pm_id)
                 add_chamber_wait(
                     lane,
@@ -2302,14 +2336,10 @@ def _collect_resource_schedule(solution: Dict[str, float]) -> Dict[str, object]:
                     "#F2A09A",
                 )
                 add_task(lane, first_start, first_end, "2x2 PM process", entity, "#E45756")
-                add_task(
-                    lane,
-                    first_end,
-                    second_start,
-                    "2x2 in-chamber bridge/wait",
-                    entity,
-                    "#BAB0AC",
-                )
+                for a, b, label, color in _mix_exchange_segments(
+                    solution, mix_pm_id, second_cycle, first_end, second_start
+                ):
+                    add_task(lane, a, b, label, entity, color)
                 add_task(lane, second_start, second_end, "2x2 PM process", entity, "#E45756")
                 add_chamber_wait(
                     lane,

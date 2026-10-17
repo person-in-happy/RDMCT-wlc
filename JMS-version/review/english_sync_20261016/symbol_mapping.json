@@ -1,0 +1,389 @@
+[
+  {
+    "table": 1,
+    "row": 1,
+    "symbol": "$\\mathcal W,\\mathcal I$",
+    "cn_type": "集合",
+    "cn_definition": "$\\mathcal W$为产品晶圆集合，$w$为产品编号；$\\mathcal I$为晶圆路线任务集合，$i$为任务编号，包括产品路线和辅助晶圆每次借用路线。",
+    "en_type": "Sets",
+    "en_definition": "$\\mathcal W$: products, indexed by $w$; $\\mathcal I$: wafer-route tasks, indexed by $i$, including each product route and each auxiliary-wafer loan route."
+  },
+  {
+    "table": 1,
+    "row": 2,
+    "symbol": "$\\mathcal S,\\sigma,\\chi_{is}$",
+    "cn_type": "集合/0--1参数",
+    "cn_definition": "$\\mathcal S=\\{A,V\\}$为来源区域集合，$s$为区域索引；$A,V$分别为大气区、真空区。$\\sigma=0/1$表示单源/双源；$\\chi_{is}=1$表示任务$i$来自区域$s$。",
+    "en_type": "Set/binary inputs",
+    "en_definition": "$\\mathcal S=\\{A,V\\}$: source regions, indexed by $s$ (atmospheric/vacuum). $\\sigma=0/1$: single/dual source. $\\chi_{is}=1$: task $i$ originates in region $s$."
+  },
+  {
+    "table": 1,
+    "row": 3,
+    "symbol": "$\\ell_w,m_w,\\mathcal C(m)$",
+    "cn_type": "输入参数/集合",
+    "cn_definition": "$\\ell_w$为产品$w$所在LP编号；$m_w\\in\\{\\zeta,\\psi\\}$为其给定工艺模式；$\\mathcal C(m)$为可执行加工类型$m$的腔室集合。",
+    "en_type": "Inputs/set",
+    "en_definition": "$\\ell_w$: LP of product $w$; $m_w\\in\\{\\zeta,\\psi\\}$: its prescribed recipe; $\\mathcal C(m)$: chambers compatible with operation type $m$."
+  },
+  {
+    "table": 1,
+    "row": 4,
+    "symbol": "$N$",
+    "cn_type": "整数参数",
+    "cn_definition": "产品晶圆总数，$N=|\\mathcal W|=N_{\\zeta}+N_{\\psi}$，不含辅助晶圆。",
+    "en_type": "Integer input",
+    "en_definition": "Number of product wafers, $N=|\\mathcal W|=N_\\zeta+N_\\psi$; excludes auxiliary wafers."
+  },
+  {
+    "table": 1,
+    "row": 5,
+    "symbol": "$\\mathcal P,\\mathcal M$",
+    "cn_type": "集合",
+    "cn_definition": "$\\mathcal P$为候选PW对集合，$p$为对编号；$\\mathcal M=\\{\\zeta,\\psi,\\mathrm{cl}\\}$为加工类型集合，$m$为类型索引；三种标签依次为$4\\times1$、$2\\times2$生产和清洁。",
+    "en_type": "Sets",
+    "en_definition": "$\\mathcal P$: candidate PW pairs, indexed by $p$; $\\mathcal M=\\{\\zeta,\\psi,\\mathrm{cl}\\}$: operation types, indexed by $m$, denoting $4\\times1$ production, $2\\times2$ production, and cleaning."
+  },
+  {
+    "table": 1,
+    "row": 6,
+    "symbol": "$\\mathcal C$",
+    "cn_type": "集合",
+    "cn_definition": "$\\mathcal C=\\{\\mathrm{CH1,CH2}\\}$为工艺腔室集合，$c$为腔室编号。",
+    "en_type": "Set",
+    "en_definition": "$\\mathcal C=\\{\\mathrm{CH1,CH2}\\}$: process chambers, indexed by $c$."
+  },
+  {
+    "table": 1,
+    "row": 7,
+    "symbol": "$\\mathcal Q_c$",
+    "cn_type": "索引集合",
+    "cn_definition": "$\\mathcal Q_c=\\{1,\\ldots,Q_{\\max}\\}$为腔室$c$的候选加工周期集合，$q$为周期编号。",
+    "en_type": "Index set",
+    "en_definition": "$\\mathcal Q_c=\\{1,\\ldots,Q_{\\max}\\}$: candidate chamber cycles in chamber $c$, indexed by $q$."
+  },
+  {
+    "table": 1,
+    "row": 8,
+    "symbol": "$N_{\\zeta},N_{\\psi};\\ T,J_{\\max}$",
+    "cn_type": "整数参数/上界",
+    "cn_definition": "$N_{\\zeta},N_{\\psi}$分别为两种工艺的产品数量，下标为工艺标签；$T$为全设备生产周期总数上界；$J_{\\max}$为全设备清洁总次数上界。",
+    "en_type": "Counts/bounds",
+    "en_definition": "$N_\\zeta,N_\\psi$: product counts by recipe (recipe-label subscripts). $T$: upper bound on total production cycles; $J_{\\max}$: upper bound on total cleanings across the tool."
+  },
+  {
+    "table": 1,
+    "row": 9,
+    "symbol": "$P_{\\max},Q_{\\max}$",
+    "cn_type": "整数容量上界",
+    "cn_definition": "$P_{\\max}$为全批次候选PW对容量；$Q_{\\max}$为全设备加工周期总数上界，并用作每腔候选容量；下标$\\max$表示上界，加工周期含生产与清洁。",
+    "en_type": "Capacity bounds",
+    "en_definition": "$P_{\\max}$: candidate-pair capacity for the entire lot. $Q_{\\max}$: tool-wide bound on production-plus-cleaning cycles, also used as each chamber\\textquotesingle s candidate capacity. The label max denotes an upper bound."
+  },
+  {
+    "table": 1,
+    "row": 10,
+    "symbol": "$H$",
+    "cn_type": "整数参数",
+    "cn_definition": "单腔自初始洁净状态或上次清洁后累计生产周期数的上限；累计1至$H-1$个生产周期后可在合法工艺边界选择清洁，达到$H$时必须清洁。",
+    "en_type": "Integer input",
+    "en_definition": "Maximum production count in one chamber since its initially clean state or latest cleaning. Cleaning is optional at a valid boundary after 1 to $H-1$ cycles and mandatory at $H$."
+  },
+  {
+    "table": 1,
+    "row": 11,
+    "symbol": "$\\mathcal O,\\mathcal A$",
+    "cn_type": "集合",
+    "cn_definition": "$\\mathcal O$为候选物理动作集合，$o,o^{\\prime}$为两个动作的编号；$\\mathcal A$为动作先后弧集合，$(o,o^{\\prime})$表示动作$o$先于$o^{\\prime}$。",
+    "en_type": "Sets",
+    "en_definition": "$\\mathcal O$: candidate physical actions, indexed by $o,o^{\\prime}$; $\\mathcal A$: precedence arcs, where $(o,o^{\\prime})$ requires $o$ before $o^{\\prime}$."
+  },
+  {
+    "table": 1,
+    "row": 12,
+    "symbol": "$\\mathcal A^{\\rm int},\\mathcal A_{is}(\\gamma)$",
+    "cn_type": "条件弧集合",
+    "cn_definition": "$\\mathcal A^{\\rm int}$为共同腔内先后弧集合，上标int表示腔内；$\\mathcal A_{is}(\\gamma)$为任务$i$从区域$s$供回晶圆时、在搬运选择$\\gamma$下启用的路线弧集合。",
+    "en_type": "Conditional arc sets",
+    "en_definition": "$\\mathcal A^{\\rm int}$: common chamber-internal arcs (int is a label); $\\mathcal A_{is}(\\gamma)$: supply/return arcs for task $i$ from region $s$, activated by transfer choices $\\gamma$."
+  },
+  {
+    "table": 1,
+    "row": 13,
+    "symbol": "$d_o,r_c$",
+    "cn_type": "时间参数",
+    "cn_definition": "$d_o$为动作$o$的给定持续时间；$r_c$为腔室$c$半周旋转的给定持续时间，单位均为s。",
+    "en_type": "Time inputs",
+    "en_definition": "$d_o$: fixed duration of action $o$; $r_c$: half-turn duration of chamber $c$, both in seconds."
+  },
+  {
+    "table": 1,
+    "row": 14,
+    "symbol": "$\\delta_{oo'},\\rho^r_{oo'},\\rho^{\\rm VTR}_{cc'}$",
+    "cn_type": "时间参数",
+    "cn_definition": "$\\delta_{oo^{\\prime}}$为先后动作$o,o^{\\prime}$之间的最小间隔；$\\rho^r_{oo^{\\prime}}$为资源$r$从$o$转至$o^{\\prime}$所需换位或复位时间；$\\rho^{\\rm VTR}_{cc^{\\prime}}$为VTR从腔室$c$至$c^{\\prime}$的移动时间。",
+    "en_type": "Time inputs",
+    "en_definition": "$\\delta_{oo^{\\prime}}$: minimum precedence gap; $\\rho^r_{oo^{\\prime}}$: repositioning/reset time on resource $r$ between tasks $o,o^{\\prime}$; $\\rho^{\\rm VTR}_{cc^{\\prime}}$: VTR travel time from chamber $c$ to $c^{\\prime}$."
+  },
+  {
+    "table": 1,
+    "row": 15,
+    "symbol": "$M,\\overline R_{wr}$",
+    "cn_type": "时间界参数",
+    "cn_definition": "$M$为条件时间约束使用的有效大常数；$\\overline R_{wr}$为晶圆$w$在受限设备或路线区段$r$内的最大驻留时间，单位为s。",
+    "en_type": "Time bounds",
+    "en_definition": "$M$: valid large constant for conditional timing constraints; $\\overline R_{wr}$: maximum residency of wafer $w$ in constrained equipment or route region $r$, in seconds."
+  },
+  {
+    "table": 1,
+    "row": 16,
+    "symbol": "$\\overline T,d_m$",
+    "cn_type": "时间参数",
+    "cn_definition": "$\\overline T$为排程时刻的有效上界；$d_m$为加工类型$m$的固定持续时间，单位为s；上横线表示上界。",
+    "en_type": "Time inputs",
+    "en_definition": "$\\overline T$: valid schedule-time horizon; $d_m$: fixed duration of operation type $m$, in seconds. An overbar denotes an upper bound."
+  },
+  {
+    "table": 1,
+    "row": 17,
+    "symbol": "$\\mathcal E_c,\\mathcal V_c$",
+    "cn_type": "集合",
+    "cn_definition": "$\\mathcal E_c$为腔室$c$的清洁区段集合，$e$为区段编号；$\\mathcal V_c$为该腔生产任务集合，$v$为任务编号，任务为一个$4\\times1$批次或$2\\times2$生产周期。",
+    "en_type": "Sets",
+    "en_definition": "$\\mathcal E_c$: cleaning segments of chamber $c$, indexed by $e$; $\\mathcal V_c$: its production tasks, indexed by $v$, each a $4\\times1$ batch or $2\\times2$ production cycle."
+  },
+  {
+    "table": 1,
+    "row": 18,
+    "symbol": "$\\mathcal J_c^D,\\mathcal T_c$",
+    "cn_type": "集合",
+    "cn_definition": "$\\mathcal J_c^D$为分配至腔室$c$的辅助晶圆借用需求集合，$j=(p,r)$表示对$p$第$r$个成员位的需求，上标D表示辅助需求；$\\mathcal T_c$为该腔可访问的实体辅助晶圆集合，$\\tau$为实体编号。",
+    "en_type": "Sets",
+    "en_definition": "$\\mathcal J_c^D$: auxiliary-loan requests assigned to chamber $c$; $j=(p,r)$ identifies pair $p$ and member position $r$ (D labels auxiliary demand). $\\mathcal T_c$: accessible physical auxiliary identities, indexed by $\\tau$."
+  },
+  {
+    "table": 1,
+    "row": 19,
+    "symbol": "$\\mathcal R$",
+    "cn_type": "集合",
+    "cn_definition": "共享物理资源集合，$r$为资源编号，涵盖机械手执行机构、承片手、模块槽位、腔室及实体辅助晶圆。",
+    "en_type": "Set",
+    "en_definition": "$\\mathcal R$: shared physical resources, indexed by $r$, including robot actuators, hands, module slots, chambers, and physical auxiliary wafers."
+  },
+  {
+    "table": 1,
+    "row": 20,
+    "symbol": "$\\Gamma_o$",
+    "cn_type": "集合参数",
+    "cn_definition": "资源占用任务$o$允许选择的物理单元集合，$\\ell$为单元编号；VTR的$D_1,D_2$表示两只脏手，$C_1,C_2$表示两只洁净手，数字为同类手编号。",
+    "en_type": "Allowed-unit set",
+    "en_definition": "$\\Gamma_o$: physical units eligible for occupancy task $o$, indexed by $\\ell$. VTR units $D_1,D_2$ are dirty hands and $C_1,C_2$ clean hands; digits distinguish hands of one class."
+  },
+  {
+    "table": 1,
+    "row": 21,
+    "symbol": "$\\operatorname{in}(w,r),\\operatorname{out}(w,r)$",
+    "cn_type": "事件映射",
+    "cn_definition": "$\\operatorname{in}(w,r)$、$\\operatorname{out}(w,r)$分别给出晶圆$w$进入、离开受限区段$r$的动作编号，用于引用相应起止时刻。",
+    "en_type": "Event maps",
+    "en_definition": "$\\operatorname{in}(w,r),\\operatorname{out}(w,r)$: action indices for wafer $w$ entering/leaving constrained region $r$, used to reference event times."
+  },
+  {
+    "table": 1,
+    "row": 22,
+    "symbol": "$\\mathcal D_{\\rm fix},\\mathcal Q^w,\\mathcal I_h$",
+    "cn_type": "索引集合",
+    "cn_definition": "$\\mathcal D_{\\rm fix}$为第二阶段固定分量的索引集合（索引$d$）；$\\mathcal Q^w$为等待项集合（索引$\\alpha$，上标$w$为等待标签）；$\\mathcal I_h$为同腔、同一$2\\times2$链内连续三个生产周期的中心索引$(c,q)$集合。",
+    "en_type": "Index sets",
+    "en_definition": "$\\mathcal D_{\\rm fix}$: fixed second-stage components, indexed by $d$; $\\mathcal Q^w$: waiting items, indexed by $\\alpha$ (w labels waiting); $\\mathcal I_h$: central indices $(c,q)$ of three consecutive production cycles in one chamber and $2\\times2$ chain."
+  },
+  {
+    "table": 1,
+    "row": 23,
+    "symbol": "$\\lambda_1,\\ldots,\\lambda_4$",
+    "cn_type": "非负权重",
+    "cn_definition": "$\\lambda_1,\\lambda_2,\\lambda_3,\\lambda_4$依次为总等待、最大单项等待、节拍变化、软等待超额的非负权重；数字下标表示目标项类别。",
+    "en_type": "Nonnegative weights",
+    "en_definition": "$\\lambda_1,\\lambda_2,\\lambda_3,\\lambda_4$: weights on total waiting, maximum individual waiting, cadence variation, and soft-limit excess, respectively. Numeric subscripts identify objective terms."
+  },
+  {
+    "table": 1,
+    "row": 24,
+    "symbol": "$\\bar\\omega_\\alpha,\\varepsilon_C$",
+    "cn_type": "非负时间参数",
+    "cn_definition": "$\\bar\\omega_\\alpha$为等待项$\\alpha$的软上限；$\\varepsilon_C$为第二阶段产品完工时间上界的非负容差，下标C表示完工时间，单位均为s。",
+    "en_type": "Time inputs",
+    "en_definition": "$\\bar\\omega_\\alpha$: soft upper limit of waiting item $\\alpha$; $\\varepsilon_C$: nonnegative second-stage makespan tolerance (C labels completion time), in seconds."
+  },
+  {
+    "table": 2,
+    "row": 1,
+    "symbol": "$a_{wpr},v_p;\\ d_{pr}$",
+    "cn_type": "二元决策/派生量",
+    "cn_definition": "$a_{wpr}=1$表示产品$w$占对$p$的成员位$r\\in\\{0,1\\}$；$v_p=1$表示启用该对。$d_{pr}=v_p-\\sum_w a_{wpr}$表示该位置由辅助晶圆补齐，不是额外的成员选择。",
+    "en_type": "Binary/derived",
+    "en_definition": "$a_{wpr}=1$: product $w$ occupies member position $r\\in\\{0,1\\}$ of pair $p$; $v_p=1$: pair $p$ is active. Derived $d_{pr}=v_p-\\sum_w a_{wpr}$ indicates auxiliary filling of that position."
+  },
+  {
+    "table": 2,
+    "row": 2,
+    "symbol": "$\\mu_{pm},z_{pc}$",
+    "cn_type": "二元变量",
+    "cn_definition": "$\\mu_{pm}=1$表示对$p$采用加工类型$m$；$z_{pc}=1$表示对$p$分配至腔室$c$，否则为0；产品自身配方$m_w$为输入。",
+    "en_type": "Binary",
+    "en_definition": "$\\mu_{pm}=1$: pair $p$ has operation type $m$; $z_{pc}=1$: it is assigned to chamber $c$, otherwise 0. Product recipe $m_w$ remains an input."
+  },
+  {
+    "table": 2,
+    "row": 3,
+    "symbol": "$B_p,B_p^{\\psi}$",
+    "cn_type": "二元辅助变量",
+    "cn_definition": "$B_p=1$表示对$p$至少含一片产品；$B_p^{\\psi}=1$表示该对含采用$2\\times2$工艺的产品，否则为0；上标$\\psi$为工艺标签。",
+    "en_type": "Binary auxiliaries",
+    "en_definition": "$B_p=1$: pair $p$ contains a product; $B_p^\\psi=1$: it contains $2\\times2$ products, otherwise 0. Superscript $\\psi$ is a recipe label."
+  },
+  {
+    "table": 2,
+    "row": 4,
+    "symbol": "$K_{cqm},X_{pcq};\\ U_{cq}$",
+    "cn_type": "二元决策/派生量",
+    "cn_definition": "$K_{cqm}=1$表示腔室$c$周期$q$采用加工类型$m$；$X_{pcq}=1$表示对$p$参加该周期。$U_{cq}=\\sum_mK_{cqm}\\in\\{0,1\\}$为周期启用标记。",
+    "en_type": "Binary/derived",
+    "en_definition": "$K_{cqm}=1$: cycle $q$ in chamber $c$ has type $m$; $X_{pcq}=1$: pair $p$ participates. Derived $U_{cq}=\\sum_mK_{cqm}\\in\\{0,1\\}$ indicates cycle activation."
+  },
+  {
+    "table": 2,
+    "row": 5,
+    "symbol": "$X^P_{pcq},A^{\\psi}_{pcq},Z^{\\psi}_{pcq}$",
+    "cn_type": "二元辅助变量",
+    "cn_definition": "$X^P_{pcq}=1$表示含产品对$p$参加腔室$c$的周期$q$，上标P表示产品；$A^{\\psi}_{pcq},Z^{\\psi}_{pcq}=1$分别表示该周期为$2\\times2$含产品对$p$的首次、末次工艺处理，否则为0。",
+    "en_type": "Binary auxiliaries",
+    "en_definition": "$X^P_{pcq}=1$: product-containing pair $p$ occupies cycle $(c,q)$ (P labels products). $A^\\psi_{pcq},Z^\\psi_{pcq}=1$: its first/last exposure as a $2\\times2$ product pair, respectively; otherwise 0."
+  },
+  {
+    "table": 2,
+    "row": 6,
+    "symbol": "$b_o$",
+    "cn_type": "0--1辅助量",
+    "cn_definition": "$b_o=1$表示候选动作或资源占用任务$o$启用，$b_o=0$表示不启用；其取值由布局及可选搬运关系联结。",
+    "en_type": "Binary indicator",
+    "en_definition": "$b_o=1$: candidate action or occupancy task $o$ is active, otherwise 0; activation is linked to layout and optional transfers."
+  },
+  {
+    "table": 2,
+    "row": 7,
+    "symbol": "$s_o,e_o$",
+    "cn_type": "事件时刻",
+    "cn_definition": "动作或资源占用任务$o$的开始、结束时刻（s）。固定时长动作的$e_o$由$s_o+d_ob_o$确定；占用区间端点由对应物理事件联结。",
+    "en_type": "Event times",
+    "en_definition": "$s_o,e_o$: start/end of action or occupancy task $o$, in seconds. For fixed-duration actions, $e_o=s_o+d_ob_o$; holding endpoints are linked to physical events."
+  },
+  {
+    "table": 2,
+    "row": 8,
+    "symbol": "$\\gamma^{\\rm early}_p,\\gamma^{\\rm late}_p$",
+    "cn_type": "二元变量",
+    "cn_definition": "$\\gamma^{\\rm early}_p=1$表示单源产品--辅助对$p$中辅助晶圆先行直接入锁；$\\gamma^{\\rm late}_p=1$表示产品放至AL后再取辅助晶圆；上标early、late标记两种入片方式，否则为0。",
+    "en_type": "Binary",
+    "en_definition": "$\\gamma_p^{\\rm early}=1$: single-source auxiliary wafer in product--auxiliary pair $p$ enters the lock first. $\\gamma_p^{\\rm late}=1$: it is picked up after product placement on AL. Superscripts label entry options; otherwise 0."
+  },
+  {
+    "table": 2,
+    "row": 9,
+    "symbol": "$A_{pcq},Z_{pcq}$",
+    "cn_type": "二元辅助变量",
+    "cn_definition": "$A_{pcq}=1$表示周期$(c,q)$是对$p$在腔室$c$的首个参与周期；$Z_{pcq}=1$表示该周期是其末个参与周期，否则为0。",
+    "en_type": "Binary auxiliaries",
+    "en_definition": "$A_{pcq}=1$: cycle $(c,q)$ is the first occupied by pair $p$ in chamber $c$; $Z_{pcq}=1$: it is the last, otherwise 0."
+  },
+  {
+    "table": 2,
+    "row": 10,
+    "symbol": "$S_{cq},E_{cq};\\ n_{cq}$",
+    "cn_type": "时刻别名/计数",
+    "cn_definition": "$S_{cq},E_{cq}$为腔室$c$周期$q$的加工起止事件时刻（s）；$n_{cq}\\in\\{0,\\ldots,H\\}$为该周期结束后的累计生产周期数，清洁后归零。",
+    "en_type": "Aliases/count",
+    "en_definition": "$S_{cq},E_{cq}$: start/end event times of chamber cycle $(c,q)$, in seconds. $n_{cq}\\in\\{0,\\ldots,H\\}$: cumulative production count after that cycle, reset by cleaning."
+  },
+  {
+    "table": 2,
+    "row": 11,
+    "symbol": "$f_{pcq};\\ \\kappa_{cq},\\upsilon_{cq}$",
+    "cn_type": "二元决策/派生量",
+    "cn_definition": "$f_{pcq}=1$表示对$p$位于腔室$c$周期$q$的访问前侧。$\\kappa_{cq}=\\sum_p(X_{pcq}-A_{pcq})$标记保留上一周期的一个对；$\\upsilon_{cq}=U_{cq}-\\sum_p(X_{pcq}-Z_{pcq})$标记本周期后全部退出，二者由占位及首末周期标记确定。",
+    "en_type": "Binary/derived",
+    "en_definition": "$f_{pcq}=1$: pair $p$ occupies the accessible front side in cycle $(c,q)$. Derived $\\kappa_{cq}=\\sum_p(X_{pcq}-A_{pcq})$ marks one retained pair; $\\upsilon_{cq}=U_{cq}-\\sum_p(X_{pcq}-Z_{pcq})$ marks complete departure after the cycle."
+  },
+  {
+    "table": 2,
+    "row": 12,
+    "symbol": "$a_{vce},q^{\\rm cl}_{ce}$",
+    "cn_type": "区段标记",
+    "cn_definition": "$a_{vce}=1$表示生产任务$v$属于腔室$c$的清洁区段$e$；$q^{\\rm cl}_{ce}=1$表示该段后有清洁。二者由周期序列联结，用于表达清洁动作窗口；此处$q^{\\rm cl}$是标记名，不是周期索引。",
+    "en_type": "Segment indicators",
+    "en_definition": "$a_{vce}=1$: production task $v$ belongs to segment $e$ of chamber $c$; $q^{\\rm cl}_{ce}=1$: cleaning follows that segment. Both link to the cycle sequence; $q^{\\rm cl}$ is an indicator name, not a cycle index."
+  },
+  {
+    "table": 2,
+    "row": 13,
+    "symbol": "$g_{j\\tau}$",
+    "cn_type": "二元变量",
+    "cn_definition": "$g_{j\\tau}=1$表示借用需求$j=(p,r)$使用实体辅助晶圆$\\tau$，否则为0；需求编号与实体编号分别表示一次使用任务和一片可复用晶圆。",
+    "en_type": "Binary",
+    "en_definition": "$g_{j\\tau}=1$: loan request $j=(p,r)$ uses physical auxiliary wafer $\\tau$, otherwise 0. Request and identity indices distinguish one use from one reusable wafer."
+  },
+  {
+    "table": 2,
+    "row": 14,
+    "symbol": "$h_{o\\ell},\\gamma_{pa}$",
+    "cn_type": "二元变量",
+    "cn_definition": "$h_{o\\ell}=1$表示占用任务$o$选择单元$\\ell$，否则为0；$\\gamma_{pa}=1$表示对$p$在允许的同地点原子搬运段$a$上同步搬运。特殊下标$a=\\mathrm{in}$时表示单源产品--辅助对随行入片选择。",
+    "en_type": "Binary",
+    "en_definition": "$h_{o\\ell}=1$: task $o$ selects physical unit $\\ell$; $\\gamma_{pa}=1$: pair $p$ is transferred synchronously on eligible atomic leg $a$ at a common location. Special $a=\\mathrm{in}$ denotes single-source accompanying entry."
+  },
+  {
+    "table": 2,
+    "row": 15,
+    "symbol": "$y^r_{oo'}$",
+    "cn_type": "二元变量",
+    "cn_definition": "当动作$o,o^{\\prime}$争用资源$r$的同一单元时，$y^r_{oo^{\\prime}}=1$表示$o$先于$o^{\\prime}$，取0表示反向次序；上标$r$标识资源，撇号区分两个动作。",
+    "en_type": "Binary",
+    "en_definition": "For tasks $o,o^{\\prime}$ sharing a unit of resource $r$, $y^r_{oo^{\\prime}}=1$ selects $o$ before $o^{\\prime}$; 0 selects the reverse. Superscript $r$ identifies the resource; the prime distinguishes tasks."
+  },
+  {
+    "table": 2,
+    "row": 16,
+    "symbol": "$C_{\\max}$",
+    "cn_type": "非负辅助量",
+    "cn_definition": "所有产品$w$回到原LP的时刻$e_{w,\\mathrm{return}}$的共同上界（s）；第一阶段最小化该上界，return、max为语义标签。",
+    "en_type": "Nonnegative bound",
+    "en_definition": "$C_{\\max}$: common upper bound on all product-return times $e_{w,\\mathrm{return}}$, in seconds, minimized in stage one. The labels return and max are semantic."
+  },
+  {
+    "table": 2,
+    "row": 17,
+    "symbol": "$\\omega_\\alpha,L_{\\max}$",
+    "cn_type": "等待表达式/辅助量",
+    "cn_definition": "$\\omega_\\alpha$为等待项$\\alpha$中对应事件间隔扣除必要时长后的非负余量（s），由事件时刻计算；$L_{\\max}$为所有单项等待的共同上界（s）。",
+    "en_type": "Expression/bound",
+    "en_definition": "$\\omega_\\alpha$: nonnegative event-time gap minus necessary duration for waiting item $\\alpha$; $L_{\\max}$: common upper bound on all individual waits, in seconds."
+  },
+  {
+    "table": 2,
+    "row": 18,
+    "symbol": "$v_{cq}$",
+    "cn_type": "非负线性化辅助量",
+    "cn_definition": "腔室$c$内以周期$q$为中心的连续三个生产周期的节拍变化上界（s），即$|S_{c,q+1}-2S_{cq}+S_{c,q-1}|$的上界；仅对$(c,q)\\in\\mathcal I_h$定义。",
+    "en_type": "Nonnegative auxiliary",
+    "en_definition": "$v_{cq}$: upper bound on cadence variation $|S_{c,q+1}-2S_{cq}+S_{c,q-1}|$, in seconds, for three consecutive production cycles centered at $q$ in chamber $c$; defined only for $(c,q)\\in\\mathcal I_h$."
+  },
+  {
+    "table": 2,
+    "row": 19,
+    "symbol": "$\\eta_\\alpha$",
+    "cn_type": "非负连续辅助量（s）",
+    "cn_definition": "等待项$\\alpha$超出软上限$\\bar\\omega_\\alpha$的非负超额上界（s），满足$\\eta_\\alpha\\ge\\max\\{0,\\omega_\\alpha-\\bar\\omega_\\alpha\\}$。",
+    "en_type": "Nonnegative auxiliary",
+    "en_definition": "$\\eta_\\alpha$: upper bound on waiting above soft limit $\\bar\\omega_\\alpha$, in seconds; $\\eta_\\alpha\\ge\\max\\{0,\\omega_\\alpha-\\bar\\omega_\\alpha\\}$."
+  }
+]

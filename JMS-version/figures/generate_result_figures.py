@@ -10,36 +10,39 @@ from __future__ import annotations
 
 import csv
 import re
+import sys
 from pathlib import Path
 
 import matplotlib as mpl
+mpl.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.lines import Line2D
+from matplotlib.transforms import ScaledTranslation
 
 
 OUT = Path(__file__).resolve().parent
+QA = OUT / "qa_nature"
+NATURE_SKILL_SCRIPTS = (
+    Path(__file__).resolve().parents[3]
+    / "nature-skills"
+    / "skills"
+    / "nature-figure"
+    / "scripts"
+)
+sys.path.insert(0, str(NATURE_SKILL_SCRIPTS))
+from audit_panel_alignment import require_matplotlib_panel_alignment
 
-BLUE = "#4A4A4A"
-ORANGE = "#111111"
-CYAN = "#777777"
-TEAL = "#A0A0A0"
-GREY = "#888888"
-LIGHT_GREY = "#D9D9D9"
-PALE_GREY = "#F2F2F2"
-BLACK = "#111111"
-
-
-BLUE = '#0072B2'
-ORANGE = '#D55E00'
-CYAN = '#56B4E9'
-TEAL = '#009E73'
-PURPLE = '#CC79A7'
-GREY = '#6B7280'
-LIGHT_GREY = '#DCE3EA'
-PALE_GREY = '#EAF4FB'
-PALE_ORANGE = '#FBEFE8'
-BLACK = '#1F2933'
+BLUE = "#0F4D92"
+ORANGE = "#B64342"
+CYAN = "#B4C0E4"
+TEAL = "#42949E"
+PURPLE = "#9A4D8E"
+GREY = "#767676"
+LIGHT_GREY = "#D8D8D8"
+PALE_GREY = "#EEF3F8"
+PALE_ORANGE = "#F6E7E5"
+BLACK = "#272727"
 
 
 def configure(lang: str) -> None:
@@ -58,6 +61,7 @@ def configure(lang: str) -> None:
             "xtick.labelsize": 6.5,
             "ytick.labelsize": 6.5,
             "legend.fontsize": 6.5,
+            "svg.fonttype": "none",
             "axes.linewidth": 0.55,
             "xtick.major.width": 0.55,
             "ytick.major.width": 0.55,
@@ -82,11 +86,12 @@ def clean_axis(ax: plt.Axes) -> None:
 
 
 def panel(ax: plt.Axes, letter: str) -> None:
+    offset = ScaledTranslation(-4 / 72, 11 / 72, ax.figure.dpi_scale_trans)
     ax.text(
-        -0.13,
-        1.06,
+        0,
+        1,
         letter,
-        transform=ax.transAxes,
+        transform=ax.transAxes + offset,
         fontsize=9,
         fontweight="bold",
         va="top",
@@ -96,7 +101,18 @@ def panel(ax: plt.Axes, letter: str) -> None:
 
 
 def save(fig: plt.Figure, stem: str) -> None:
-    fig.savefig(OUT / f"{stem}.pdf", bbox_inches="tight", pad_inches=0.03)
+    QA.mkdir(exist_ok=True)
+    nature_stem = f"{stem}_nature"
+    require_matplotlib_panel_alignment(
+        fig,
+        json_out=QA / f"{nature_stem}.alignment.json",
+        overlay_svg=QA / f"{nature_stem}.alignment.svg",
+        require_panel_labels=True,
+        strict=True,
+    )
+    fig.savefig(OUT / f"{nature_stem}.svg", bbox_inches="tight", pad_inches=0.025)
+    fig.savefig(OUT / f"{nature_stem}.pdf", bbox_inches="tight", pad_inches=0.025)
+    fig.savefig(OUT / f"{nature_stem}.png", dpi=600, bbox_inches="tight", pad_inches=0.025)
     plt.close(fig)
 
 
@@ -181,9 +197,9 @@ def validation(lang: str) -> None:
         else {"pure41": "Pure 4×1", "pure22": "Pure 2×2", "mixed11": "1:1 mixed"}
     )
     titles = (
-        [r"最优最大完工时间 $C_{\max}$ (s)", "等效吞吐率 (片/h)", "相对纯4×1的完工时间增幅 (%)"]
+        ["最优最大完工时间 Cmax (s)", "等效吞吐率 (片/h)", "相对纯4×1的完工时间增幅 (%)"]
         if lang == "cn"
-        else [r"Optimal makespan $C_{\max}$ (s)", "Effective throughput (wafers/h)", "Makespan increase over pure 4×1 (%)"]
+        else ["Optimal makespan, Cmax (s)", "Effective throughput (wafers/h)", "Makespan increase over pure 4×1 (%)"]
     )
     banner = (
         "实验1｜相同晶圆数与时间参数下，纯4×1取得最短完工时间和最高吞吐率"
@@ -199,7 +215,6 @@ def validation(lang: str) -> None:
     style['pure22'].update(color=ORANGE, markerfacecolor='white')
     style['mixed11'].update(color=TEAL, markerfacecolor='white')
     fig, axes = plt.subplots(3, 1, figsize=(3.5, 5.6))
-    fig.text(0.18, 0.992, banner, ha="left", va="top", fontsize=8.1, fontweight="bold", color=BLACK)
 
     offsets_a = {"pure41": (0, -13), "pure22": (-7, 8), "mixed11": (8, 8)}
     offsets_b = {"pure41": (0, 8), "pure22": (-7, 8), "mixed11": (8, -13)}
@@ -225,9 +240,9 @@ def validation(lang: str) -> None:
     x = np.arange(len(sizes))
     width = 0.34
     bars22 = axes[2].bar(x - width / 2, overhead["pure22"], width, facecolor="white",
-                         edgecolor=BLACK, linewidth=0.7, hatch="////", label=labels["pure22"])
+                         edgecolor=BLACK, linewidth=0.7, label=labels["pure22"])
     barsmix = axes[2].bar(x + width / 2, overhead["mixed11"], width, facecolor="#B8B8B8",
-                          edgecolor=BLACK, linewidth=0.7, hatch="xx", label=labels["mixed11"])
+                          edgecolor=BLACK, linewidth=0.7, label=labels["mixed11"])
     for item in bars22:
         item.set_facecolor(PALE_ORANGE)
         item.set_edgecolor(ORANGE)
@@ -271,16 +286,6 @@ def dot_panel(
     pad = span * 0.14 if span else max(abs(values[0]) * 0.05, 1)
     focus_index = len(values) - 1
     ax.axhspan(focus_index - 0.38, focus_index + 0.38, color=PALE_GREY, zorder=0)
-    for baseline_index in baseline_indices:
-        ax.axhspan(
-            baseline_index - 0.34,
-            baseline_index + 0.34,
-            facecolor="white",
-            edgecolor=GREY,
-            linewidth=0.55,
-            hatch="////",
-            zorder=0,
-        )
     ax.hlines(y, min(values) - pad * 0.2, values, color=LIGHT_GREY, linewidth=0.7, zorder=1)
     for idx, (xv, yv) in enumerate(zip(values, y)):
         is_focus = idx == focus_index
@@ -290,7 +295,7 @@ def dot_panel(
         if is_focus:
             face = BLUE
         elif is_baseline:
-            face = ORANGE if idx == baseline_indices[0] else TEAL
+            face = GREY if idx == baseline_indices[0] else ORANGE
         else:
             face = CYAN
         ax.scatter(
@@ -303,10 +308,11 @@ def dot_panel(
             linewidths=1.05 if is_baseline else (0.8 if is_focus else 0.35),
             zorder=4 if is_focus else 3,
         )
-        ax.text(
-            xv + pad * (0.24 if is_focus else 0.10),
-            yv,
+        ax.annotate(
             f"{xv:.{decimals}f}",
+            xy=(xv, yv),
+            xytext=(6.5 if is_focus else 5.5, 0),
+            textcoords="offset points",
             va="center",
             ha="left",
             fontsize=6.35 if is_focus else 6.0,
@@ -322,19 +328,6 @@ def dot_panel(
         ax.get_yticklabels()[-1].set_fontweight("bold")
     ax.invert_yaxis()
     ax.set_title(title, loc="left", fontweight="bold", pad=5, color=BLACK)
-    if claim:
-        ax.text(
-            0.98,
-            0.055,
-            claim,
-            transform=ax.transAxes,
-            ha="right",
-            va="bottom",
-            fontsize=6.4,
-            fontweight="bold",
-            color=BLACK,
-            bbox=dict(boxstyle="round,pad=0.25", facecolor=PALE_GREY, edgecolor=BLACK, linewidth=0.55),
-        )
     clean_axis(ax)
 
 def nominal(lang: str) -> None:
@@ -401,13 +394,10 @@ def spbs(lang: str) -> None:
         else "SPBS: 100% complete-schedule availability with substantially lower in-window PDI"
     )
     fig, axes = plt.subplots(2, 1, figsize=(3.5, 3.8))
-    fig.text(0.18, 0.992, banner, ha="left", va="top", fontsize=8.2, fontweight="bold", color=BLACK)
     for idx, (ax, title, data) in enumerate(zip(axes, titles, datasets)):
         values, texts = data
         bars = ax.bar(np.arange(2), values, width=0.58, color=["white", "#D0D0D0"],
                       edgecolor=BLACK, linewidth=0.7)
-        bars[0].set_hatch("////")
-        bars[1].set_hatch("..")
         bars[0].set_facecolor(BLUE)
         bars[0].set_edgecolor(BLUE)
         bars[1].set_facecolor(PALE_ORANGE)
@@ -417,14 +407,9 @@ def spbs(lang: str) -> None:
         ax.set_ylim(0, max(values) * 1.26)
         ax.set_title(title, loc="left", fontweight="bold", pad=5)
         annotate_bars(ax, bars, texts)
-        ax.text(
-            0.97, 0.90, callouts[idx], transform=ax.transAxes, ha="right", va="top",
-            fontsize=7.0, fontweight="bold", color=BLACK,
-            bbox=dict(boxstyle="round,pad=0.25", facecolor=PALE_GREY, edgecolor=BLACK, linewidth=0.55),
-        )
         clean_axis(ax)
         panel(ax, "ab"[idx])
-    fig.subplots_adjust(left=0.18, right=0.98, bottom=0.10, top=0.86, hspace=0.50)
+    fig.subplots_adjust(left=0.18, right=0.98, bottom=0.10, top=0.97, hspace=0.50)
     save(fig, f"fig03_spbs_{lang}")
 
 
@@ -449,33 +434,27 @@ def workflow(lang: str) -> None:
         else "Same 600-s budget: the full two-stage workflow improves all four operational metrics over single-stage"
     )
     fig, axes = plt.subplots(2, 2, figsize=(3.5, 4.5))
-    fig.text(0.16, 0.992, banner, ha="left", va="top", fontsize=8.2, fontweight="bold", color=BLACK)
     for idx, (ax, title, data) in enumerate(zip(axes.flat, titles, datasets)):
         values, texts = data
         bars = ax.bar(np.arange(3), values, width=0.62, color=["white", "#A0A0A0", "#D6D6D6"],
                       edgecolor=BLACK, linewidth=0.7)
-        for bar, hatch in zip(bars, ("////", "xx", "")):
-            bar.set_hatch(hatch)
         for bar, face, edge in zip(
             bars, (BLUE, TEAL, PALE_ORANGE), (BLUE, TEAL, ORANGE)
         ):
             bar.set_facecolor(face)
             bar.set_edgecolor(edge)
         ax.set_xticks(np.arange(3), labels)
-        plt.setp(ax.get_xticklabels(), rotation=18, ha="right")
+        plt.setp(
+            ax.get_xticklabels(), rotation=32, ha="right",
+            rotation_mode="anchor", fontsize=5.6,
+        )
         ax.get_xticklabels()[0].set_fontweight("bold")
         ax.set_ylim(0, max(values) * 1.29)
         ax.set_title(title, loc="left", fontweight="bold", pad=5)
         annotate_bars(ax, bars, texts)
-        ax.text(
-            0.96, 0.90, ("相对单阶段 " if lang == "cn" else "vs single-stage ") + reductions[idx],
-            transform=ax.transAxes, ha="right", va="top", fontsize=6.8,
-            fontweight="bold", color=BLACK,
-            bbox=dict(boxstyle="round,pad=0.23", facecolor=PALE_GREY, edgecolor=BLACK, linewidth=0.5),
-        )
         clean_axis(ax)
         panel(ax, "abcd"[idx])
-    fig.subplots_adjust(left=0.16, right=0.98, bottom=0.14, top=0.89, wspace=0.34, hspace=0.58)
+    fig.subplots_adjust(left=0.16, right=0.98, bottom=0.14, top=0.97, wspace=0.34, hspace=0.58)
     save(fig, f"fig04_workflow_{lang}")
 
 
@@ -487,9 +466,9 @@ def line_panel(ax: plt.Axes, x, y, title: str, texts: list[str]) -> None:
         line.set_markerfacecolor('white')
         line.set_markeredgecolor(BLUE)
     for xv, yv, text_value in zip(x, y, texts):
-        ax.annotate(text_value, (xv, yv), xytext=(0, 7), textcoords="offset points", ha="center", fontsize=6.0)
+        ax.annotate(text_value, (xv, yv), xytext=(0, 12), textcoords="offset points", ha="center", fontsize=6.0)
     ax.set_xticks(x)
-    ax.set_ylim(0, max(y) * 1.23)
+    ax.set_ylim(0, max(y) * 1.35)
     ax.set_title(title, loc="left", fontweight="bold", pad=5)
     clean_axis(ax)
 
@@ -538,7 +517,6 @@ def ood(lang: str) -> None:
         else "Scale-up evidence: all 729 OOD runs with 40-64 wafers return checked feasible schedules"
     )
     fig, axes = plt.subplots(2, 1, figsize=(3.5, 4.7))
-    fig.text(0.31, 0.992, banner, ha="left", va="top", fontsize=8.1, fontweight="bold", color=BLACK)
     for idx, (ax, title, data) in enumerate(zip(axes, titles, datasets)):
         values, decimals, best_idx = data
         dot_panel(ax, values, labels, title, decimals, best_idx, show_ylabels=True, baseline_indices=(0, 2))
@@ -552,12 +530,11 @@ def ood(lang: str) -> None:
                label="完整RDMCT-HBS" if lang == "cn" else "Complete RDMCT-HBS"),
     ]
     fig.legend(handles=legend, loc="lower center", ncol=1, frameon=False, bbox_to_anchor=(0.5, -0.002))
-    fig.subplots_adjust(left=0.40, right=0.98, bottom=0.14, top=0.88, hspace=0.50)
+    fig.subplots_adjust(left=0.40, right=0.98, bottom=0.14, top=0.97, hspace=0.50)
     save(fig, f"fig06_ood_{lang}")
 
 def main() -> None:
     for lang in ("cn", "en"):
-        validation(lang)
         nominal(lang)
         spbs(lang)
         workflow(lang)

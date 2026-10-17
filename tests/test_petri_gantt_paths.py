@@ -376,3 +376,53 @@ def test_interactive_frontend_lists_every_ablation_metric(tmp_path):
     assert "Ablation Metrics" in html
     assert "case_gap.svg" in html
     assert "case_pdi.svg" in html
+
+
+@pytest.mark.parametrize("combined,start,unload_end,load_start,end,expected_wait", [
+    (1, 159, 163, 159, 163, 59),
+    (0, 100, 104, 159, 163, 55),
+])
+def test_exchange_projection_does_not_color_idle_as_exchange(
+    combined, start, unload_end, load_start, end, expected_wait
+):
+    solution = {
+        "mix_bridge_combined_2_2": combined,
+        "mix_bridge_start_2_2": start,
+        "mix_bridge_unload_end_2_2": unload_end,
+        "mix_bridge_load_start_2_2": load_start,
+        "mix_bridge_end_2_2": end,
+    }
+    segments = list(petri_gantt._mix_exchange_segments(solution, 2, 2, 100, 163))
+    assert segments[0][0] == 100 and segments[-1][1] == 163
+    assert all(a[1] == b[0] for a, b in zip(segments, segments[1:]))
+    exchanges = [b-a for a, b, _, color in segments if color == "#BAB0AC"]
+    assert exchanges and all(duration == 4 for duration in exchanges)
+    assert sum(b-a for a, b, _, color in segments if color == "#F2A09A") == expected_wait
+
+
+def test_resource_cycles_follow_wafer_windows_across_cleaning():
+    """A second chain starts at cycle 4 although its first PW is position 3."""
+    solution = _base_product_solution()
+    for k in list(solution):
+        if k.startswith(('wafer_to_full_pair_', 'assign_full_')):
+            del solution[k]
+    solution.update({
+        'wafer_to_mix_pair_1_5': 1, 'wafer_to_mix_pair_2_5': 1,
+        'assign_mix_5_2_3': 1,
+        'mix_cycle_start_2_3': 292, 'mix_cycle_end_2_3': 382,
+        'mix_cycle_start_2_4': 922, 'mix_cycle_end_2_4': 1012,
+        'mix_cycle_start_2_5': 1016, 'mix_cycle_end_2_5': 1106,
+        'mix_bridge_start_2_5': 1012, 'mix_bridge_end_2_5': 1016,
+        'mix_bridge_combined_2_5': 1, 'c_max': 1200,
+    })
+    for wafer in (1, 2):
+        solution[f'prod_stage_end_{wafer}_vtr_load'] = 922
+        solution[f'prod_stage_start_{wafer}_pm'] = 922
+        solution[f'prod_stage_end_{wafer}_pm'] = 1106
+        solution[f'prod_stage_start_{wafer}_vtr_unload'] = 1106
+        solution[f'prod_stage_end_{wafer}_vtr_unload'] = 1110
+    schedule = petri_gantt._collect_schedule(solution, 'resources')
+    process = [t for t in schedule['tasks'] if t['lane'] == 'CH2 PM' and '2x2 PM process' in t['label']]
+    assert [(t['start'],t['end']) for t in process] == [(922,1012),(1016,1106)]
+    assert not any(t['lane']=='CH2 PM' and 'wait' in t['label'].lower()
+                   and t['start'] < 1106 and t['end'] > 1016 for t in schedule['tasks'])

@@ -46,7 +46,7 @@ def test_no_terminal_clean_before_interval_is_completed():
     assert cfg.num_clean_slots_per_pm == 0
 
 
-def test_production_model_forces_terminal_clean_activation():
+def test_production_model_excludes_terminal_clean_from_product_makespan():
     cfg = _pure_4x1_config(wafers=20, cleaning_interval=3)
     model = build_petri_mip_model(cfg)
     try:
@@ -58,8 +58,8 @@ def test_production_model_forces_terminal_clean_activation():
         assert model.getRhs(triggered) == 1.0
         assert model.getLhs(inactive) == 0.0
         assert model.getRhs(inactive) == 0.0
-        assert "makespan_clean_lb_2_1" in constraints
-        assert "makespan_clean_lb_3_1" in constraints
+        assert "makespan_lb_1" in constraints
+        assert not any(name.startswith("makespan_clean_lb_") for name in constraints)
     finally:
         model.freeProb()
 

@@ -1,0 +1,22 @@
+\usepackage{amsmath,amssymb}
+\usepackage{needspace}
+\usepackage{etoolbox}
+\usepackage{fancyhdr}
+\newcommand{\pdi}{\mathrm{PDI}}
+\setlength{\emergencystretch}{3em}
+\setlength{\parskip}{0.45em}
+\setlength{\parindent}{0pt}
+\linespread{1.12}
+\raggedbottom
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small 稿件模型与公式逐项实例说明}
+\fancyhead[R]{\small 2026-10-16}
+\fancyfoot[C]{\small\thepage}
+\setlength{\headheight}{15pt}
+\renewcommand{\headrulewidth}{0.3pt}
+\pretocmd{\subsection}{\Needspace{26\baselineskip}}{}{}
+\pretocmd{\subsubsection}{\Needspace{20\baselineskip}}{}{}
+\widowpenalty=10000
+\clubpenalty=10000
+\AtBeginDocument{\hypersetup{bookmarksnumbered=false}}

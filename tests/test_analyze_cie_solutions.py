@@ -197,3 +197,41 @@ def test_physical_stability_metrics_ignore_floating_auxiliary_slacks(tmp_path):
     assert metrics["physical_route_max_wait"] == 5.0
     assert metrics["physical_cadence_cv"] == 0.2
     assert metrics["physical_cadence_deviation_sum"] == 5.0
+
+
+def test_product_cmax_excludes_terminal_cleaning_and_clips_utilization():
+    values = {
+        "c_max": 150.0,
+        "wafer_completion_1": 100.0,
+        "clean_active_2_1": 1.0,
+        "clean_start_2_1": 90.0,
+        "clean_end_2_1": 140.0,
+    }
+
+    metrics = MODULE._metrics({"best_objective": 150.0}, values)
+
+    assert metrics["cmax"] == 100.0
+    assert metrics["model_objective_cmax"] == 150.0
+    assert metrics["cmax_matches_last_product_return"] is False
+    assert metrics["throughput_wph"] == 36.0
+    assert metrics["clean_time_share"] == 0.05
+    assert metrics["ch2_utilization"] == 0.1
+    assert metrics["clean_internal_count"] == 0
+    assert metrics["clean_terminal_count"] == 1
+
+
+def test_cleaning_is_internal_when_same_chamber_process_resumes():
+    values = {
+        "c_max": 120.0,
+        "wafer_completion_1": 120.0,
+        "clean_active_2_1": 1.0,
+        "clean_start_2_1": 50.0,
+        "clean_end_2_1": 80.0,
+        "full_start_2_2": 90.0,
+        "full_end_2_2": 110.0,
+    }
+
+    metrics = MODULE._metrics({"best_objective": 120.0}, values)
+
+    assert metrics["clean_internal_count"] == 1
+    assert metrics["clean_terminal_count"] == 0

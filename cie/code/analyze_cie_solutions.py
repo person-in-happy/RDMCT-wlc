@@ -127,12 +127,13 @@ def _validate(instance_path: Path, solution_path: Path) -> tuple[bool, str]:
 
 
 def _metrics(row: dict, values: dict[str, float]) -> dict:
-    cmax = float(values.get("c_max", row.get("best_objective") or 0.0))
+    model_cmax = float(values.get("c_max", row.get("best_objective") or 0.0))
     completions = {
         int(match.group(1)): value
         for name, value in values.items()
         if (match := WAFER_RE.match(name))
     }
+    cmax = max(completions.values(), default=model_cmax)
     product_stages = defaultdict(dict)
     for name, value in values.items():
         match = PROD_STAGE_RE.match(name)
@@ -242,22 +243,52 @@ def _metrics(row: dict, values: dict[str, float]) -> dict:
             clean_count += 1
     chamber_busy = defaultdict(list)
     chamber_clean = defaultdict(list)
+    chamber_process = defaultdict(list)
     for (chamber, kind, _), edges in chamber_edges.items():
         interval = (edges.get("start", 0.0), edges.get("end", 0.0))
         chamber_busy[chamber].append(interval)
         if kind == "clean":
             chamber_clean[chamber].append(interval)
+        elif kind in {"full", "mix_cycle"}:
+            chamber_process[chamber].append(interval)
+
+    # A cleaning action is internal only when processing resumes in the same
+    # chamber after that action.  A terminal clean may still be present in the
+    # physical event plan to restore equipment state, but it occurs after the
+    # last product return and must not extend product-lot Cmax or reduce WPH.
+    clean_internal_count = 0
+    clean_terminal_count = 0
+    for chamber, intervals in chamber_clean.items():
+        later_process_starts = [
+            start
+            for start, end in chamber_process.get(chamber, [])
+            if end > start + 1.0e-9
+        ]
+        for start, end in intervals:
+            if end <= start + 1.0e-9:
+                continue
+            if any(process_start >= end - 1.0e-6 for process_start in later_process_starts):
+                clean_internal_count += 1
+            else:
+                clean_terminal_count += 1
 
     pec_intervals = [
         (edges.get("vtr_load_start", 0.0), edges.get("vtr_unload_end", 0.0))
         for edges in pec_residence.values()
     ]
+    def clipped_union_length(intervals):
+        return _union_length(
+            (max(0.0, start), min(cmax, end))
+            for start, end in intervals
+            if min(cmax, end) > max(0.0, start)
+        )
+
     denom = cmax if cmax > 1e-9 else math.nan
     ch_utils = {
-        f"ch{chamber}_utilization": _union_length(intervals) / denom
+        f"ch{chamber}_utilization": clipped_union_length(intervals) / denom
         for chamber, intervals in chamber_busy.items()
     }
-    clean_time = sum(_union_length(items) for items in chamber_clean.values())
+    clean_time = sum(clipped_union_length(items) for items in chamber_clean.values())
     mean_cycle = statistics.fmean(cycle_times) if cycle_times else None
     p95_cycle = None
     if cycle_times:
@@ -266,16 +297,24 @@ def _metrics(row: dict, values: dict[str, float]) -> dict:
     return {
         "total_wafers": len(completions),
         "cmax": cmax,
+        "model_objective_cmax": model_cmax,
+        "cmax_matches_last_product_return": abs(model_cmax - cmax) <= 1.0e-6,
         "throughput_wph": None if not completions or cmax <= 0 else 3600.0 * len(completions) / cmax,
         "mean_cycle_time": mean_cycle,
         "p95_cycle_time": p95_cycle,
-        "atr_utilization": _union_length(atr_intervals) / denom,
-        "vtr_utilization": _union_length(vtr_intervals) / denom,
-        "al_utilization": _union_length(al_intervals) / denom,
-        "llupper_capacity_utilization": sum(max(0.0, b - a) for a, b in llupper_intervals) / (2.0 * denom),
-        "lllower_capacity_utilization": sum(max(0.0, b - a) for a, b in lllower_intervals) / (2.0 * denom),
+        "atr_utilization": clipped_union_length(atr_intervals) / denom,
+        "vtr_utilization": clipped_union_length(vtr_intervals) / denom,
+        "al_utilization": clipped_union_length(al_intervals) / denom,
+        "llupper_capacity_utilization": sum(
+            max(0.0, min(cmax, b) - max(0.0, a)) for a, b in llupper_intervals
+        ) / (2.0 * denom),
+        "lllower_capacity_utilization": sum(
+            max(0.0, min(cmax, b) - max(0.0, a)) for a, b in lllower_intervals
+        ) / (2.0 * denom),
         "pec_peak_in_tool": _peak_overlap(pec_intervals),
         "clean_count": clean_count,
+        "clean_internal_count": clean_internal_count,
+        "clean_terminal_count": clean_terminal_count,
         "clean_time_share": clean_time / (2.0 * denom),
         "physical_route_total_wait": sum(route_waits),
         "physical_route_max_wait": max(route_waits, default=0.0),

@@ -125,8 +125,8 @@ def replace_display_equations(text: str) -> str:
 def replace_figures(text: str) -> str:
     pattern = re.compile(r"\\begin\{figure\}\[.*?\\end\{figure\}", re.S)
     figures = list(pattern.finditer(text))
-    if len(figures) != 9:
-        raise RuntimeError(f"Expected 9 figures; found {len(figures)}")
+    if len(figures) != 10:
+        raise RuntimeError(f"Expected 10 figures; found {len(figures)}")
     replacements: list[tuple[int, int, str]] = []
     for index, match in enumerate(figures, start=1):
         block = match.group(0)

@@ -1,0 +1,729 @@
+--- before
++++ after
+@@ -111,11 +111,15 @@
+ \section{问题描述与两阶段调度模型}
+ \setcounter{equation}{0}
+ 
+-\subsection{设备配置与调度任务}
+-
+ 本文涉及的物料均为晶圆，分为产品晶圆和辅助晶圆。产品晶圆按给定配方完成工艺处理；辅助晶圆用于生产补位或清洁占位，并在归还后循环复用。工艺腔室内的加工分为生产与清洁两类：生产指按产品配方执行的工艺处理，包括$4\times1$与$2\times2$两种工艺模式；清洁指仅由辅助晶圆占位的腔室清洁处理。一次生产或清洁处理对应一个加工周期，其中生产周期仅指执行工艺处理的周期。装卸与旋转由独立动作表示，等待由相邻动作间的时间间隔表示。
+ 
+-表~\ref{tab:symbol-cn-a}列出集合与输入参数，表~\ref{tab:symbol-cn-b}列出决策变量与辅助变量。晶圆配对、腔室分配和周期占位共同确定加工结构，辅助变量用于联结位置、属性与时序。各动作的起止时刻统一记为$s_o,e_o$；周期、装卸及清洁阶段的时刻符号均对应相应物理事件的起止时刻。
++给定LP1--LP4的产品晶圆数量与工艺模式、辅助晶圆库存和设备初始状态，调度任务是联合确定晶圆配对、腔室分配、加工周期、共享资源次序与动作时刻。模型依次描述物理路径、晶圆与周期的匹配关系、动作时间逻辑、工艺与清洁规则、资源占用，以及两阶段优化目标。
++
++模型输入包括动作时长、资源容量、驻留上限、清洁阈值和辅助晶圆数量。第一阶段最小化最后一片产品返回LP的时刻，第二阶段在给定完工时间上界下改善等待与生产节拍。每个可行排程表示为包含晶圆、资源及起止时刻的动作序列，用于计算运行指标并核查操作先后与资源冲突。
++
++清洁阈值$H\ge2$，共享辅助库存至少为4片。模型在单次求解中采用确定性动作时长，不设置LP、对准器、装载锁、旋转腔及真空存储区以外的缓冲。
++
++表~\ref{tab:symbol-cn-a}与表~\ref{tab:symbol-cn-b}分别汇总集合、参数与决策变量，符号按下文建模顺序排列。各物理动作统一使用起止时刻$s_o,e_o$，周期、装卸及清洁阶段的时刻符号对应相应物理事件。
+ 
+ \begin{table*}[t]
+ \centering
+@@ -127,34 +131,34 @@
+ \toprule
+ 符号 & 类型 & 定义与作用 \\
+ \midrule
++$\mathcal W,\mathcal I$ & 集合 & 产品晶圆集合与晶圆路线任务集合；索引为$w,i$，辅助晶圆按借用任务计。\\
++$\mathcal S,\sigma,\chi_{is}$ & 集合/0--1参数 & 晶圆来源区域$\mathcal S=\{A,V\}$；$\sigma=0/1$表示单源/双源；$\chi_{is}$标识晶圆来源。\\
++$\ell_w,m_w,\mathcal C(m)$ & 输入参数/集合 & 产品晶圆所在LP、工艺模式$m_w\in\{\zeta,\psi\}$及加工类型$m$的兼容腔室集合。\\
++$N$ & 整数参数 & 产品晶圆总数，$N=|\mathcal W|=N_{\zeta}+N_{\psi}$，不含辅助晶圆。\\
+ $\mathcal P,\mathcal M$ & 集合 & 候选PW对与加工类型集合；$\zeta:4\times1$，$\psi:2\times2$，$\mathrm{cl}$为清洁。\\
+-$\ell_w,m_w,\mathcal C(m)$ & 输入参数/集合 & 产品晶圆所在LP、工艺模式$m_w\in\{\zeta,\psi\}$及加工类型$m$的兼容腔室集合。\\
+-$\mathcal W,\mathcal I$ & 集合 & 产品晶圆集合与晶圆路线任务集合；索引为$w,i$，辅助晶圆按借用任务计。\\
+-$N$ & 整数参数 & 产品晶圆总数，$N=|\mathcal W|=N_{\zeta}+N_{\psi}$，不含辅助晶圆。\\
+-$\mathcal S,\sigma,\chi_{is}$ & 集合/0--1参数 & 晶圆来源区域$\mathcal S=\{A,V\}$；$\sigma=0/1$表示单源/双源；$\chi_{is}$标识晶圆来源。\\
++$\mathcal C,\mathcal L$ & 集合 & 工艺腔室集合$\{\mathrm{CH1,CH2}\}$（索引$c$）与两侧位置$\mathcal L=\{1,2\}$（索引$l$）。\\
+ $\mathcal P^{\zeta},\mathcal P^{\psi}$ & 集合 & 采用$4\times1$和$2\times2$工艺的含产品PW对，索引为$p$。\\
+-$\mathcal C,\mathcal L$ & 集合 & 工艺腔室集合$\{\mathrm{CH1,CH2}\}$（索引$c$）与两侧位置$\mathcal L=\{1,2\}$（索引$l$）。\\
+ $\mathcal B_c,\mathcal K_c,\mathcal Q_c$ & 集合 & 腔室生产批次、链位置及候选加工周期，索引$b,k,q$。\\
+-$\mathcal E_c,\mathcal V_c$ & 集合 & 清洁区段与生产任务集合；索引为$e,v$。\\
++$N_{\zeta},N_{\psi};\ T,J_{\max}$ & 整数参数/上界 & 两种配方产品数量；全设备生产周期总数与清洁总次数上界。\\
++$P_{\max},Q_{\max}$ & 整数容量上界 & 全批次候选PW对数、每腔候选加工周期数；加工周期含生产与清洁。\\
++$H$ & 整数参数 & 单腔两次清洁间生产周期数上限；允许在$H-1$后为下一段$2\times2$生产提前清洁。\\
+ $\mathcal O,\mathcal A$ & 集合 & 物理动作与动作先后弧集合；动作索引为$o$。\\
+-$\mathcal R$ & 集合 & 共享资源集合，索引为$r$。\\
+-$\mathcal J_c^D,\mathcal T_c$ & 集合 & 辅助晶圆需求与可复用实体辅助晶圆；索引为$j,\tau$。\\
+-$H$ & 整数参数 & 单腔两次清洁间生产周期数上限；允许在$H-1$后为下一段$2\times2$生产提前清洁。\\
++$\mathcal A^{\rm int},\mathcal A_{is}(\gamma)$ & 条件弧集合 & 共同腔内先后关系及晶圆任务$i$按来源$s$、搬运选择$\gamma$启用的路线。\\
+ $d_o,r_c$ & 时间参数 & 动作时长与腔室半周旋转时长。\\
+ $\delta_{oo'},\rho^r_{oo'},\rho^{\rm VTR}_{cc'}$ & 时间参数 & 操作先后动作的最小间隔，以及共享资源换位或复位时间。\\
+ $M,\overline R_{wr}$ & 时间界参数 & 有效大常数与晶圆在受限区段的最大驻留时间。\\
++$\overline T,d_m$ & 时间参数 & 时间上界与加工类型$m$的持续时间。\\
++$\mathrm{pick,ALput,ALpick,LLput}$ & 事件标签 & 源端取片、放至AL、从AL取回及放入上装载锁；用于$s_{wa},e_{wa}$的阶段下标。\\
++$\mathcal E_c,\mathcal V_c$ & 集合 & 清洁区段与生产任务集合；索引为$e,v$。\\
++$\nu;\ FL,BL,P,BU,FU$ & 阶段索引 & 依次表示前装、后装、加工、后卸和前卸。\\
++$\mathcal J_c^D,\mathcal T_c$ & 集合 & 辅助晶圆需求与可复用实体辅助晶圆；索引为$j,\tau$。\\
++$\mathcal R$ & 集合 & 共享资源集合，索引为$r$。\\
+ $\Gamma_o$ & 集合参数 & 资源占用任务$o$允许使用的单元集合；VTR脏手$D_1,D_2$，洁净手$C_1,C_2$。\\
++$\operatorname{in}(w,r),\operatorname{out}(w,r)$ & 事件映射 & 晶圆$w$进入、离开受限区段$r$的事件。\\
++$\mathcal F$ & 可行域 & 配对、周期、完整晶圆路线与资源约束共同定义的联合可行域。\\
++$\mathcal D_{\rm fix},\mathcal Q^w,\mathcal I_h$ & 索引集合 & 第二阶段固定变量、等待项及节拍差分的索引。\\
+ $\lambda_1,\ldots,\lambda_4$ & 非负权重 & 总等待、最大等待、节拍偏差和软等待超额的目标权重。\\
+ $\bar\omega_\alpha,\varepsilon_C$ & 非负时间参数 & 等待软上限与第二阶段完工时间容差。\\
+-$\mathcal A^{\rm int},\mathcal A_{is}(\gamma)$ & 条件弧集合 & 共同腔内先后关系及晶圆$i$按来源$s$、搬运选择$\gamma$启用的路线。\\
+-$\mathcal F$ & 可行域 & 配对、周期、完整晶圆路线与资源约束共同定义的联合可行域。\\
+-$\mathcal D_{\rm fix},\mathcal Q^w,\mathcal I_h$ & 索引集合 & 第二阶段固定变量、等待项及节拍差分的索引。\\
+-$\nu;\ FL,BL,P,BU,FU$ & 阶段索引 & 依次表示前装、后装、加工、后卸和前卸。\\
+-$\mathrm{pick,ALput,ALpick,LLput}$ & 事件标签 & 源端取片、放至AL、从AL取回及放入上装载锁；用于$s_{wa},e_{wa}$的阶段下标。\\
+-$\operatorname{in}(w,r),\operatorname{out}(w,r)$ & 事件映射 & 晶圆$w$进入、离开受限区段$r$的事件。\\
+-$N_{\zeta},N_{\psi};\ T,J_{\max}$ & 整数参数/上界 & 两种配方产品数量；全设备生产周期总数与清洁总次数上界。\\
+-$P_{\max},Q_{\max}$ & 整数容量上界 & 全批次候选PW对数、每腔候选加工周期数；加工周期含生产与清洁。\\
+-$\overline T,d_m$ & 时间参数 & 时间上界与加工类型$m$的持续时间。\\
+ \bottomrule
+ \end{tabular}
+ \end{table*}
+@@ -171,49 +175,65 @@
+ \midrule
+ $a_{wpr},d_{pr},v_p$ & 二元变量 & 产品晶圆、辅助占位与对启用；晶圆位置$r=0,1$。\\
+ $\mu_{pm},z_{pc}$ & 二元变量 & 对的加工类型与腔室选择；产品配方由输入给定。\\
+-$x^{\zeta}_{pcbl},x^{\psi}_{pck}$ & 二元辅助变量 & 由周期占位与侧位确定的批次、链位置；固定布局基准中额外固定。\\
+-$g_{j\tau}$ & 二元变量 & 需求$j$是否使用实体辅助晶圆$\tau$。\\
+-$y^r_{oo'}$ & 二元变量 & 共享资源$r$上动作$o$是否先于$o'$。\\
+-$h_{o\ell},\gamma_{pa}$ & 二元变量 & 物理槽位或手$\ell$的占用与路线段$a$的成对搬运；$w_1,w_2$为对内晶圆，$a=\mathrm{in}$表示共同入片。\\
++$B_p,B_p^{\psi}$ & 二元辅助变量 & 对$p$含产品、含$2\times2$产品的指示量。\\
++$U_{cq},K_{cqm},X_{pcq}$ & 二元变量 & 加工周期启用、加工类型及对$p$参加周期$(c,q)$。\\
++$X^P_{pcq},A^{\psi}_{pcq},Z^{\psi}_{pcq}$ & 二元辅助变量 & 含产品对占位及$2\times2$含产品对的首次、末次工艺处理。\\
+ $b_o$ & 0--1辅助量 & 0--1动作启用量，由布局与可选搬运关系约束。\\
+ $s_o,e_o$ & 非负连续变量 & 动作开始与结束时刻，满足$e_o=s_o+d_ob_o$。\\
+-$C_w,C_{\max}$ & 非负连续量 & 产品回片时刻$C_w=e_{w,\mathrm{return}}$与批次最大完工时间。\\
+-$\omega_\alpha,L_{\rm sum},L_{\max}$ & 非负连续量（s） & 等待项$\alpha$的等待时长、这些等待的总和及最大单项等待的上界。\\
+-$\Delta_{ceq}$ & 实数辅助变量（s） & 同一腔室$c$、清洁区段$e$中，以生产周期$q$为中心的相邻开始间隔之差，可正可负。\\
+-$v_{ceq}$ & 非负连续辅助量（s） & $|\Delta_{ceq}|$的上界，用于线性表示节拍变化幅度。\\
+-$\eta_\alpha$ & 非负连续辅助量（s） & 等待项$\alpha$超过软上限$\bar\omega_\alpha$的非负超额上界。\\
+-$\xi,\widehat\xi,\widehat C$ & 向量/阶段常量 & 全部变量向量、第一阶段可行解及其产品完工时间；后两者作为精修参考。\\
+-$z_{ce},a^{\zeta}_{cbe},a^{\psi}_{cqe}$ & 二元辅助变量 & 清洁区段启用及生产批次/周期所属区段。\\
+-$a_{vce},N_{ce},q^{\rm cl}_{ce}$ & 0--1量/整数计数 & 任务$v$的区段归属、区段生产周期数与清洁启用。\\
+-$s^{\rm cl}_{ce},e^{\rm cl}_{ce};\ s^{\rm cl,\nu}_{ce},e^{\rm cl,\nu}_{ce}$ & 连续时间变量 & 完整清洁任务及其阶段的起止时刻。\\
++$x,s^{\rm ref},e^{\rm ref}$ & 选择量/时刻 & 通用阶段选择指示量与被选阶段的参考起止时刻。\\
++$\gamma^{\rm early}_p,\gamma^{\rm late}_p$ & 二元变量 & 单源产品--辅助对的先行直接入锁、产品放至AL后再取辅助晶圆。\\
+ $s_v,e_v,s_{wa},e_{wa}$ & 连续时间变量 & 生产任务$v$与晶圆$w$在路线段$a$上的动作时刻。\\
+-$x,s^{\rm ref},e^{\rm ref}$ & 选择量/时刻 & 通用阶段选择指示量与被选阶段的参考起止时刻。\\
+-$h_{ceq}$ & 非负时刻（s） & 腔室$c$、清洁区段$e$内生产周期$q$的开始时刻，沿用对应$s_o$。\\
+-$\Phi$ & 目标表达式 & 第二阶段等待、最大等待、节拍变化与可选超额项的加权和。\\
+-$B_p,B_p^{\psi}$ & 二元辅助变量 & 对$p$含产品、含$2\times2$产品的指示量。\\
+-$U_{cq},K_{cqm},X_{pcq}$ & 二元变量 & 加工周期启用、加工类型及对$p$参加周期$(c,q)$。\\
+ $A_{pcq},Z_{pcq}$ & 二元辅助变量 & 周期是否为对$p$的首个、末个参与周期。\\
+-$X^P_{pcq},A^{\psi}_{pcq},Z^{\psi}_{pcq}$ & 二元辅助变量 & 含产品对占位及$2\times2$含产品对的首次、末次工艺处理。\\
+ $S_{cq},E_{cq},n_{cq}$ & 连续时刻/整数计数 & 加工周期起止时刻与自上次清洁后的累计生产周期数。\\
+ $f_{pcq},\kappa_{cq},\upsilon_{cq}$ & 二元量 & 前侧对选择、保留上一周期一对、当前周期后全部退出。\\
+ $\begin{gathered}s^{\rm load}_p,e^{\rm load}_p,\\s^{\rm unload}_p,e^{\rm unload}_p\end{gathered}$ & 连续时间变量 & 对$p$的VTR装片与卸片事件起止时刻。\\
+ $s^{\rm rot\pm}_{cq},e^{\rm rot\pm}_{cq}$ & 连续时间变量 & 周期前、周期后半周旋转的起止时刻。\\
+-$\gamma^{\rm early}_p,\gamma^{\rm late}_p$ & 二元变量 & 单源产品--辅助对的先行直接入锁、产品放至AL后再取辅助晶圆。\\
++$z_{ce},a^{\zeta}_{cbe},a^{\psi}_{cqe}$ & 二元辅助变量 & 清洁区段启用及生产批次/周期所属区段。\\
++$a_{vce},N_{ce},q^{\rm cl}_{ce}$ & 0--1量/整数计数 & 任务$v$的区段归属、区段生产周期数与清洁启用。\\
++$s^{\rm cl}_{ce},e^{\rm cl}_{ce};\ s^{\rm cl,\nu}_{ce},e^{\rm cl,\nu}_{ce}$ & 连续时间变量 & 完整清洁任务及其阶段的起止时刻。\\
++$x^{\zeta}_{pcbl},x^{\psi}_{pck}$ & 二元辅助变量 & 由周期占位与侧位确定的批次、链位置；固定布局基准中额外固定。\\
++$g_{j\tau}$ & 二元变量 & 需求$j$是否使用实体辅助晶圆$\tau$。\\
++$h_{o\ell},\gamma_{pa}$ & 二元变量 & 物理槽位或手$\ell$的占用与路线段$a$的成对搬运；$w_1,w_2$为对内晶圆，$a=\mathrm{in}$表示共同入片。\\
++$y^r_{oo'}$ & 二元变量 & 共享资源$r$上动作$o$是否先于$o'$。\\
++$C_w,C_{\max}$ & 非负连续量 & 产品回片时刻$C_w=e_{w,\mathrm{return}}$与批次最大完工时间。\\
++$\xi,\widehat\xi,\widehat C$ & 向量/阶段常量 & 全部变量向量、第一阶段可行解及其产品完工时间；后两者作为精修参考。\\
++$\omega_\alpha,L_{\rm sum},L_{\max}$ & 非负连续量（s） & 等待项$\alpha$的等待时长、这些等待的总和及最大单项等待的上界。\\
++$h_{ceq}$ & 非负时刻（s） & 腔室$c$、清洁区段$e$内生产周期$q$的开始时刻，沿用对应$s_o$。\\
++$\Delta_{ceq}$ & 实数辅助变量（s） & 同一腔室$c$、清洁区段$e$中，以生产周期$q$为中心的相邻开始间隔之差，可正可负。\\
++$v_{ceq}$ & 非负连续辅助量（s） & $|\Delta_{ceq}|$的上界，用于线性表示节拍变化幅度。\\
++$\eta_\alpha$ & 非负连续辅助量（s） & 等待项$\alpha$超过软上限$\bar\omega_\alpha$的非负超额上界。\\
++$\Phi$ & 目标表达式 & 第二阶段等待、最大等待、节拍变化与可选超额项的加权和。\\
+ \bottomrule
+ \end{tabular}
+ \end{table*}
+ 
+-
+-给定LP1--LP4的产品晶圆数量与工艺模式、辅助晶圆库存和设备初始状态，调度任务是联合确定晶圆配对、腔室分配、共享资源次序，以及装载、对准、搬运、旋转、加工与回片动作的起止时刻。产品晶圆从LP出发，完成工艺处理后返回原LP；辅助晶圆从配置指定的存储区出发，完成生产补位或清洁任务后返回。单源配置的辅助晶圆存储区位于LP4旁的大气区，双源配置的辅助晶圆存储区位于真空区。两类晶圆的路线通过机械手服务、腔室占位和辅助晶圆库存耦合。
+-
+-模型输入包括动作时长、资源容量、驻留上限、清洁阈值和辅助晶圆数量。第一阶段最小化最后一片产品返回LP的时刻，第二阶段在给定完工时间上界下改善等待与生产节拍。每个可行排程表示为包含晶圆、资源及起止时刻的动作序列，用于计算运行指标并核查操作先后与资源冲突。
+-
+-清洁阈值$H\ge2$，共享辅助库存至少为4片。模型在单次求解中采用确定性动作时长，不设置LP、对准器、装载锁、旋转腔及真空存储区以外的缓冲。
+-
+-\subsection{晶圆配对与工艺模式约束}
+-
+-为同时表示单片驻留与成对搬运，模型以晶圆对描述共享装卸和腔室占位，以单片事件描述对准与路线时间。
+-
++\subsection{单源与双源物理加工路径}
++\label{sec:model-path-cn}
++
++产品晶圆集合记为$\mathcal W$，晶圆路线任务集合记为$\mathcal I$。每片产品晶圆对应一条完整路线，辅助晶圆每次借用对应一条供回路线；同一实体辅助晶圆可先后承担多个借用任务。
++
++设$\mathcal S=\{A,V\}$分别表示大气区和真空区供给，来源配置参数$\sigma\in\{0,1\}$分别表示单源和双源。LP1--LP4是大气区的具体晶圆盒位置，晶圆的LP归属由输入给定。产品晶圆始终满足$\chi_{iA}=1$、$\chi_{iV}=0$；辅助晶圆满足$\chi_{iA}=1-\sigma$、$\chi_{iV}=\sigma$。来源归属参数满足
++
++\begin{equation}
++\sum_{s\in\mathcal S}\chi_{is}=1,
++\qquad i\in\mathcal I.
++\label{eq:source-membership-cn}
++\end{equation}
++
++式~\eqref{eq:source-membership-cn}规定每个晶圆路线任务的来源区域。单源配置下，产品位于LP1--LP4，辅助晶圆位于LP4旁的大气存储区，两者共享ATR和装载锁接口，但只有产品需要AL对准。双源配置下，产品晶圆仍来自LP1--LP4，辅助晶圆则由真空区存储位供给。单源与双源由两类晶圆的来源区域关系区分，与LP数量无关。
++
++产品晶圆在两种来源配置下均沿“LP--ATR--AL--ATR--上装载锁--VTR--工艺腔室--VTR--下装载锁--ATR--原LP”运行。产品先经AL对准，再由装载锁完成压力转换，进入工艺腔室完成给定配方。
++
++单源辅助晶圆从LP4旁的大气存储区出发，经ATR、上装载锁和VTR进入工艺腔室，使用后经VTR、下装载锁和ATR返回原存储区。辅助晶圆单独供给时不经过AL；与产品晶圆随行入片时，在产品对准期间保持在ATR上，待产品取回后共同入锁。两种方式均不对辅助晶圆执行AL对准。
++
++双源辅助晶圆从真空存储区出发，经VTR进入工艺腔室，使用后由VTR返回真空存储区。两种来源配置分别见图~\ref{fig:single-source-cn}与图~\ref{fig:system-zh-new}。上述路径确定晶圆必须经历的物理环节，成对搬运选择及其时间条件在第~\ref{sec:model-time-cn}节给出。
++
++\subsection{晶圆、PW对与腔室周期的匹配关系}
++\label{sec:model-assignment-cn}
++
++本节将单片晶圆组织为PW对，再将PW对分配到兼容腔室及其加工周期。生产周期与清洁周期共用候选加工周期集合，具体生产次数和清洁触发规则在第~\ref{sec:model-process-cn}节规定。
++
++\noindent\textbf{晶圆配对与腔室选择。}
+ PW对（wafer pair）由两片晶圆构成，可分别由两片产品晶圆、一片产品晶圆与一片辅助晶圆，或两片辅助晶圆组成。产品晶圆在LP中的存放位置$\ell_w$与模式$m_w$由输入给定，同模式产品可跨LP配对。候选集合$\mathcal P$中各PW对的晶圆成员由模型决定；二元量$a_{wpr}$表示产品$w$进入对$p$的位置$r\in\{0,1\}$，$d_{pr}$表示辅助占位，$v_p$表示PW对启用。配对约束为
+ \begin{equation}
+ \begin{aligned}
+@@ -244,6 +264,7 @@
+ \label{eq:pair-type-cn}
+ \end{equation}
+ 
++\noindent\textbf{候选容量上界。}
+ 纯辅助对可用于补位或清洁，含产品对不能执行清洁。令$N=|\mathcal W|=N_{\zeta}+N_{\psi}$为待处理产品晶圆总数，不含可复用辅助晶圆；$N_{\zeta},N_{\psi}$分别为$4\times1$和$2\times2$配方的产品晶圆数量。为给联合配对与周期决策预留足够的候选编号，取以下保守容量上界：
+ \begin{equation}
+ \begin{gathered}
+@@ -258,44 +279,32 @@
+ 
+ 每个PW对对应一次装入至卸出的连续占位任务；$2\times2$含产品对连续参加两个生产周期，仍只占用一个PW对编号。同一实体辅助晶圆归还后可供其他PW对再次借用，故候选对容量与实体辅助晶圆库存分别计量。$Q_{\max}=T+J_{\max}$为全设备加工周期总数的保守上界，并作为每腔候选加工周期的容量，以容纳所有可能的生产与清洁安排。
+ 
+-$4\times1$模式的常规满产品批次由两个产品PW对组成，四片产品晶圆同步完成一次工艺处理，再按后装先卸次序退出；产品晶圆不足时由辅助晶圆补位。$2\times2$模式中，每个含产品PW对连续参加同腔相邻两个生产周期，使其中每片产品晶圆完成两次工艺处理。以三个产品PW对为例，链首装入辅助PW对D，经腔室旋转后装入P1并完成“D+P1”工艺处理；随后通过旋转与链式换片，依次形成“P1+P2”“P2+P3”和“P3+D”的占位组合，并在每次换片后执行工艺处理。P1、P2和P3均完成两次工艺处理，链尾辅助晶圆用于保持四工位满片。图~\ref{fig:chain-zh}和图~\ref{fig:parallel-zh}给出两种工艺模式的事件顺序。
+-
+-\begin{figure}[t]
+-\centering
+-\includegraphics[width=0.93\linewidth]{fig_chain_cn_nature}
+-\caption{$2\times2$链式生产过程。辅助PW对D在链首与链尾保持腔室满片；产品晶圆随腔室旋转和链式换片参加相邻两个生产周期，每片产品晶圆完成两次工艺处理。}
+-\label{fig:chain-zh}
+-\end{figure}
+-
+-\begin{figure}[t]
+-\centering
+-\includegraphics[width=\linewidth]{fig_parallel_cn_nature}
+-\caption{$4\times1$并行生产过程。两组PW对依次装入旋转腔，四个工位满片后同步执行一次工艺处理，再按后装先卸次序退出；末批不足时由辅助晶圆补位。}
+-\label{fig:parallel-zh}
+-\end{figure}
+-
+-
+-\subsection{晶圆来源配置与基本时间关系}
+-
+-设$\mathcal S=\{A,V\}$分别表示大气区和真空区供给，来源配置参数$\sigma\in\{0,1\}$分别表示单源和双源。LP1--LP4是大气区的具体晶圆盒位置，晶圆的LP归属由输入给定。产品晶圆始终满足$\chi_{iA}=1$、$\chi_{iV}=0$；辅助晶圆满足$\chi_{iA}=1-\sigma$、$\chi_{iV}=\sigma$。来源归属参数满足
+-\begin{equation}
+-\sum_{s\in\mathcal S}\chi_{is}=1,
+-\qquad i\in\mathcal I.
+-\label{eq:source-membership-cn}
+-\end{equation}
+-式~\eqref{eq:source-membership-cn}规定每个晶圆路线任务的来源区域。单源配置下，产品位于LP1--LP4，辅助晶圆位于LP4旁的大气存储区，两者共享ATR和装载锁接口，但只有产品需要AL对准。双源配置下，产品晶圆仍来自LP1--LP4，辅助晶圆则由真空区存储位供给。单源与双源由两类晶圆的来源区域关系区分，与LP数量无关。
+-
+-令$\mathcal I$为晶圆路线任务集合，其中每片产品晶圆对应一条完整路线，辅助晶圆每次借用对应一条供回路线。$\mathcal A^{\rm int}$表示共同的腔内先后关系，$\mathcal A_{is}(\gamma)$表示任务$i$在来源$s$及搬运选择$\gamma$下的供回片先后弧。晶圆类别与成对搬运选择共同决定具体路线，启用的先后弧为
+-\begin{equation}
+-\mathcal A=\mathcal A^{\rm int}\cup
+-\bigcup_{i\in\mathcal I}\ \bigcup_{\substack{s\in\mathcal S:\\ \chi_{is}=1}}\mathcal A_{is}(\gamma).
+-\label{eq:route-union-cn}
+-\end{equation}
+-式~\eqref{eq:route-union-cn}按晶圆任务选择路线。产品依次经过LP、ATR、AL、ATR、上装载锁、VTR和旋转腔。单源辅助晶圆单独供给时经过大气存储位、ATR、上装载锁、VTR和旋转腔；与产品共同取片时，其AL附近的停留计入ATR承片占用，而不产生辅助晶圆的AL装卸或对准事件。共同入锁须等待产品从AL取回。两类大气来源晶圆均经VTR、下装载锁及ATR返回原存储位。双源辅助晶圆仅经真空存储位、VTR和旋转腔往返。
+-
+-
+-
+-对任一候选物理操作$o$，开始、结束和持续时间满足
++\noindent\textbf{PW对与加工周期匹配。}
++令$\mathcal Q_c=\{1,\ldots,Q_{\max}\}$为腔室$c$的候选加工周期集合，周期类型包括$4\times1$生产、$2\times2$生产与清洁。二元量$U_{cq}$标识周期启用，$K_{cqm}$选择周期类型，$X_{pcq}$选择参加该周期的PW对，$X^P_{pcq}$标识该占位是否来自含产品对。每个启用周期容纳两个对，且对的加工类型与腔室必须相容：
++\begin{equation}
++\begin{aligned}
++\sum_mK_{cqm}&=U_{cq}, &\sum_pX_{pcq}&=2U_{cq},\\
++X_{pcq}&\le z_{pc}, &X_{pcq}+\mu_{pm}&\le1+K_{cqm},\\
++\sum_pX^P_{pcq}&\ge K_{cq\zeta}+K_{cq\psi}, &U_{c,q+1}&\le U_{cq},\\
++\sum_{c,q}U_{cq}&\le Q_{\max}, &\sum_{c,q}K_{cq,\mathrm{cl}}&\le J_{\max}.
++\end{aligned}
++\label{eq:cycle-capacity-cn}
++\end{equation}
++其中$X^P_{pcq}$标识含产品对参加该周期，其线性联结为
++\begin{equation}
++X^P_{pcq}\le X_{pcq},\quad X^P_{pcq}\le B_p,\quad
++X^P_{pcq}\ge X_{pcq}+B_p-1.
++\label{eq:cycle-products-cn}
++\end{equation}
++因此，生产周期至少含一个产品对，清洁周期仅含辅助对。周期前缀约束消除空编号，不预设不同模式的执行次序。
++
++\subsection{动作时间与先后逻辑}
++\label{sec:model-time-cn}
++
++在物理路径与配对关系确定后，以动作启用、持续时间、前后衔接和同步条件描述路线的时间可行性。动作间的技术先后关系由本节规定，共享资源冲突引起的待定次序在第~\ref{sec:model-resource-cn}节处理。
++
++\noindent\textbf{动作启用与持续时间。}
++令$\mathcal O$为候选动作集合。对动作$o\in\mathcal O$，$b_o$表示启用状态，$s_o,e_o$分别为起止时刻，$d_o$为给定持续时间，$M$为有效大常数。各动作满足
+ \begin{equation}
+ 0\le s_o\le Mb_o,\qquad
+ 0\le e_o\le Mb_o,\qquad
+@@ -304,6 +313,17 @@
+ \end{equation}
+ 式~\eqref{eq:operation-time-cn}表示未激活操作的时刻为零，激活操作持续$d_o$；该统一形式用于机械手搬运、对准、抽气、放气、旋转、产品工艺处理、辅助晶圆搬运和清洁。
+ 
++\noindent\textbf{路径对应的动作先后关系。}
++令$\mathcal A^{\rm int}$为腔内共同先后弧集合，$\mathcal A_{is}(\gamma)$为晶圆任务$i$在来源$s$及搬运选择$\gamma$下的供回片先后弧集合；$\gamma$统称成对搬运与单源随行入片等离散选择。完整先后弧集合为
++
++\begin{equation}
++\mathcal A=\mathcal A^{\rm int}\cup
++\bigcup_{i\in\mathcal I}\ \bigcup_{\substack{s\in\mathcal S:\\ \chi_{is}=1}}\mathcal A_{is}(\gamma).
++\label{eq:route-union-cn}
++\end{equation}
++
++式~\eqref{eq:route-union-cn}按晶圆来源和搬运选择启用对应路径，将产品路线、辅助晶圆供回路线与腔内动作链连接起来。
++
+ 对必须依次执行的操作先后弧$(o,o')\in\mathcal A$，有
+ \begin{equation}
+ b_{o'}\le b_o,\qquad
+@@ -312,176 +332,7 @@
+ \end{equation}
+ 式~\eqref{eq:precedence-cn}表示后继动作只有在前驱存在时才可执行；当两者均激活时，后继必须在前驱结束并经过最小操作间隔后开始。产品路线、辅助晶圆路线和装载--加工--卸载事件链均由该约束连接。
+ 
+-\subsection{联合周期占位与旋转装卸}
+-
+-令$\mathcal Q_c=\{1,\ldots,Q_{\max}\}$为腔室$c$的候选加工周期集合，周期类型包括$4\times1$生产、$2\times2$生产与清洁。二元量$U_{cq}$标识周期启用，$K_{cqm}$选择周期类型，$X_{pcq}$选择参加该周期的PW对。每个启用周期容纳两个对，且对的加工类型与腔室必须相容：
+-\begin{equation}
+-\begin{aligned}
+-\sum_mK_{cqm}&=U_{cq}, &\sum_pX_{pcq}&=2U_{cq},\\
+-X_{pcq}&\le z_{pc}, &X_{pcq}+\mu_{pm}&\le1+K_{cqm},\\
+-\sum_pX^P_{pcq}&\ge K_{cq\zeta}+K_{cq\psi}, &U_{c,q+1}&\le U_{cq},\\
+-\sum_{c,q}U_{cq}&\le Q_{\max}, &\sum_{c,q}K_{cq,\mathrm{cl}}&\le J_{\max}.
+-\end{aligned}
+-\label{eq:cycle-capacity-cn}
+-\end{equation}
+-其中$X^P_{pcq}$标识含产品对参加该周期，其线性联结为
+-\begin{equation}
+-X^P_{pcq}\le X_{pcq},\quad X^P_{pcq}\le B_p,\quad
+-X^P_{pcq}\ge X_{pcq}+B_p-1.
+-\label{eq:cycle-products-cn}
+-\end{equation}
+-因此，生产周期至少含一个产品对，清洁周期仅含辅助对。周期前缀约束消除空编号，不预设不同模式的执行次序。
+-
+-二元量$A_{pcq},Z_{pcq}$分别标识对$p$在腔室$c$的首次和末次参加周期。取边界$X_{pc0}=X_{pc,Q_{\max}+1}=0$，有
+-\begin{equation}
+-\begin{aligned}
+-A_{pcq}&\ge X_{pcq}-X_{pc,q-1}, &A_{pcq}&\le X_{pcq},\\
+-A_{pcq}&\le1-X_{pc,q-1},\\
+-Z_{pcq}&\ge X_{pcq}-X_{pc,q+1}, &Z_{pcq}&\le X_{pcq},\\
+-Z_{pcq}&\le1-X_{pc,q+1},\\
+-\sum_{c,q}X_{pcq}&=v_p+B_p^{\psi}, &\sum_{c,q}A_{pcq}&=\sum_{c,q}Z_{pcq}=v_p,\\
+-\sum_pA^{\psi}_{pcq}&\le1, &\sum_pZ^{\psi}_{pcq}&\le1.
+-\end{aligned}
+-\label{eq:cycle-exposures-cn}
+-\end{equation}
+-其中$A^{\psi}_{pcq}=A_{pcq}\land B_p^{\psi}$、$Z^{\psi}_{pcq}=Z_{pcq}\land B_p^{\psi}$，均按式~\eqref{eq:cycle-products-cn}的三条不等式线性化。一个启用对仅有一次进入和一次退出，因此其占位连续。总占位为$v_p+B_p^{\psi}$，使$4\times1$含产品对参加一个生产周期，$2\times2$含产品对参加同腔相邻两个生产周期。每个$2\times2$生产周期至多包含一个首次参加工艺处理的产品对和一个末次参加工艺处理的产品对，从而形成交替换片链。纯辅助补位对参加一个生产周期，清洁对参加一个清洁周期。
+-
+-加工周期的起止时刻为$S_{cq},E_{cq}$，$d_m$为加工类型$m$的持续时间，$\overline T$为有效时间上界：
+-\begin{equation}
+-\begin{aligned}
+-E_{cq}-S_{cq}&=\sum_m d_mK_{cqm},\\
+-0\le S_{cq},E_{cq}&\le\overline T U_{cq},\\
+-S_{cq}&\ge E_{c,q-1}-M(1-U_{cq})\quad(q>1).
+-\end{aligned}
+-\label{eq:cycle-time-cn}
+-\end{equation}
+-该约束固定各类加工周期的持续时间，等待仅发生在动作之间。默认$4\times1$生产周期为180~s，$2\times2$生产周期为90~s，清洁周期为500~s；装卸与旋转的持续时间由相应事件单独计入。
+-
+-令$f_{pcq}$表示加工时位于机械手访问前侧的对，$\kappa_{cq}$表示保留上一周期的一个对，$\upsilon_{cq}$表示本周期后全部退出；三者均为二元量：
+-\begin{equation}
+-\begin{aligned}
+-\kappa_{cq}&=\sum_p(X_{pcq}-A_{pcq}),\\
+-\upsilon_{cq}&=U_{cq}-\sum_p(X_{pcq}-Z_{pcq}),\\
+-f_{pcq}&\le A_{pcq},\qquad\sum_pf_{pcq}=U_{cq},\\
+-f_{pc,q-1}&\ge X_{pcq}-A_{pcq}\quad(q>1),\\
+-f_{pcq}&\ge B_p+K_{cq\psi}+X_{pcq}-2-\kappa_{cq}.
+-\end{aligned}
+-\label{eq:cycle-side-cn}
+-\end{equation}
+-新装对位于前侧；保留对经旋转转到后侧，且上一周期必须在前侧。新链首的$2\times2$产品对最后装入前侧。每对的装卸时刻沿用其物理动作，周期前后半周旋转记为$\mathrm{rot-}$和$\mathrm{rot+}$，分别由$U_{cq}$和$\upsilon_{cq}$启用，持续$r_c$。装载联结为
+-\begin{equation}
+-\begin{aligned}
+-X_{pcq}=1&\Rightarrow S_{cq}\ge e^{\rm load}_p,\quad
+-s^{\rm unload}_p\ge E_{cq},\\
+-A_{pcq}=1,\ f_{pcq}=0&\Rightarrow e^{\rm load}_p\le s^{\rm rot-}_{cq},\\
+-A_{pcq}=1,\ f_{pcq}=1&\Rightarrow s^{\rm load}_p\ge e^{\rm rot-}_{cq},\quad
+-S_{cq}=e^{\rm load}_p,\\
+-\kappa_{cq}=1&\Rightarrow s^{\rm rot-}_{cq}\ge E_{c,q-1}.
+-\end{aligned}
+-\label{eq:cycle-load-cn}
+-\end{equation}
+-全部退出时，周期后旋转在加工结束后开始。最后一次加工后的卸片关系为
+-\begin{equation}
+-\begin{aligned}
+-Z_{pcq}=1,\ f_{pcq}=1&\Rightarrow e^{\rm unload}_p\le s^{\rm rot+}_{cq},\\
+-Z_{pcq}=1,\ f_{pcq}=0,\ \upsilon_{cq}=1
+-&\Rightarrow s^{\rm unload}_p\ge e^{\rm rot+}_{cq},\\
+-Z_{pcq}=1,\ f_{pcq}=0,\ \upsilon_{cq}=0
+-&\Rightarrow s^{\rm unload}_p\ge e^{\rm rot-}_{c,q+1}.
+-\end{aligned}
+-\label{eq:cycle-unload-cn}
+-\end{equation}
+-若下一周期保留一个对，则新对的装载须等待被替换的后侧对完成卸载；若不保留，则下一周期装载须等待上一周期的两个对均卸完。上述条件均以指示约束或有效大常数线性化，并与VTR动作互斥共同约束换片。它们允许真实等待，不把等待并入固定旋转或取放时长。
+-
+-给定解后，$x^{\zeta}_{pcbl},x^{\psi}_{pck}$分别记录$4\times1$批次侧位与$2\times2$产品对链位置，均由$X,A,Z,f$及周期类型导出。相应批次、链段与清洁区段用于解释排程与固定布局基准，不另设一套独立配对。固定布局实验额外固定这些位置及服务次序，并采用仅末批补位规则：若后续同类批次存在，当前$4\times1$批次含两个产品对。联合模型允许在任一合法生产周期采用辅助补位。
+-
+-
+-\subsection{清洁与可复用辅助晶圆}
+-
+-整数$n_{cq}$记录周期$q$结束后自上次清洁以来的生产周期数。取候选尾部$U_{c,Q_{\max}+1}=K_{c,Q_{\max}+1,\psi}=0$，清洁计数与触发满足
+-\begin{equation}
+-\begin{aligned}
+-0\le n_{cq}&\le H U_{cq},\qquad n_{c0}=0,\\
+-K_{cq,\mathrm{cl}}=1&\Rightarrow n_{cq}=0,\\
+-U_{cq}=1,\ K_{cq,\mathrm{cl}}=0
+-&\Rightarrow n_{cq}=n_{c,q-1}+1,\quad n_{c,q-1}\le H-1,\\
+-K_{cq,\mathrm{cl}}=1&\Rightarrow n_{c,q-1}\ge H-1,\quad
+-n_{c,q-1}+K_{c,q+1,\psi}\ge H,\\
+-n_{cq}&\le H-1+H U_{c,q+1},\\
+-K_{c1,\mathrm{cl}}&=0,\qquad
+-K_{cq,\mathrm{cl}}+K_{c,q-1,\mathrm{cl}}\le1\quad(q>1).
+-\end{aligned}
+-\label{eq:clean-counter-cn}
+-\end{equation}
+-每完成一个生产周期，计数增加1；清洁使计数归零。累计生产周期数达到$H$后必须清洁。若清洁后的下一周期采用$2\times2$模式，则允许在累计$H-1$个生产周期后提前清洁。因此，相邻两次清洁之间包含$H$个生产周期，或在上述提前清洁条件下包含$H-1$个生产周期。末段不足$H$时无需追加清洁，达到$H$时须追加末端清洁。由式~\eqref{eq:cycle-capacity-cn}和式~\eqref{eq:cycle-exposures-cn}，同一产品对必须连续参加两个$2\times2$生产周期，清洁不能插入其间。
+-
+-清洁区段$e$由上述周期类型序列中的清洁边界导出。$z_{ce}$标识生产段启用，$a^{\zeta}_{cbe},a^{\psi}_{cqe}$标识生产批次或生产周期的区段归属，$N_{ce}$为其生产周期数；$q^{\rm cl}_{ce}$标识段后清洁。内部段以清洁结束，末段达到$H$也以清洁结束。这些量用于表示事件窗口，均随周期决策变化。
+-
+-
+-
+-把$\mathcal V_c$记为腔室$c$的$4\times1$生产批次和$2\times2$生产周期并集，$a_{vce}$为相应的$a^{\zeta}$或$a^{\psi}$。对区段$e$中的任务$v$，清洁前后关系及清洁动作链为
+-\begin{equation}
+-\begin{aligned}
+-s_v&\ge e^{\rm cl}_{c,e-1}-M(1-a_{vce}) &&(e>1),\\
+-e_v&\le s^{\rm cl}_{ce}+M(1-a_{vce})+M(1-q^{\rm cl}_{ce}),\\
+-s^{\rm cl,BL}_{ce}&\ge e^{\rm cl,FL}_{ce}+r_c-M(1-q^{\rm cl}_{ce}),\\
+-s^{\rm cl,P}_{ce}&\ge e^{\rm cl,BL}_{ce}-M(1-q^{\rm cl}_{ce}),\\
+-s^{\rm cl,BU}_{ce}&\ge e^{\rm cl,P}_{ce}-M(1-q^{\rm cl}_{ce}),\\
+-s^{\rm cl,FU}_{ce}&\ge e^{\rm cl,BU}_{ce}+r_c-M(1-q^{\rm cl}_{ce}).
+-\end{aligned}
+-\label{eq:clean-time-cn}
+-\end{equation}
+-式~\eqref{eq:clean-time-cn}表示第$e$区段只能在前一次清洁完成后开始，并须在下一次清洁开始前结束。一次完整清洁任务包含两侧辅助晶圆装载、腔室旋转、清洁处理和反向卸载，其持续时间与资源占用共同约束VTR、旋转腔及四片辅助晶圆的可用时刻。
+-
+-每个辅助晶圆位置对应借用需求$j=(p,r)$，其启用直接由$d_{pr}$表示，覆盖产品--辅助对、纯辅助补位对及清洁对。晶圆占位与周期选择联结供片与返回事件，实体辅助晶圆的占用区间从存储取出延续至归还完成。
+-
+-各腔室可访问同一物理辅助库存，$\mathcal T_c$为共享库存对腔室$c$的可用身份集合；相同身份在不同腔室的借用也必须互斥。每个有效需求必须选择一片库存中的物理辅助晶圆：
+-\begin{equation}
+-\sum_{\tau\in\mathcal T_c}g_{j\tau}=d_{pr},
+-\qquad j=(p,r)\in\mathcal J_c^D.
+-\label{eq:dummy-assign-cn}
+-\end{equation}
+-式~\eqref{eq:dummy-assign-cn}表示有效需求恰好分配一次；辅助身份选择$g_{j\tau}$同时作为对应借用区间的资源占用标记；同一物理辅助晶圆的两次借用由共享资源互斥约束排序，因此只有在前一次卸载并返回存储区后才能复用。辅助身份选择决定哪些跨腔借用需要排序：即使产品配对、分腔和周期结构相同，不同辅助身份安排仍可改变两腔的并行生产区间。第~\ref{sec:joint-evidence-cn}节通过控制产品结构的对照量化这一影响。
+-
+-\subsection{机械手、腔室与时间资源占用}
+-
+-共享资源的先后关系分为给定次序和待定次序。操作先后弧及预设服务链中的操作按指定次序执行，其余冲突操作通过次序变量协调。固定布局的纯$4\times1$实验采用预设的对准和装载锁服务次序；当候选批次数不超过清洁阈值时，VTR也采用预设的批次装卸服务链。这些预设关系仅用于固定布局实验；联合模型由资源次序变量决定其余冲突动作的顺序。
+-
+-ATR为双手机械手、VTR为四手机械手，旋转腔内部含四个晶圆工位，其承载能力分别为2片、4片和4片。同一时刻一台ATR或VTR只能执行一个协调搬运动作，同一旋转腔也只能执行一个统一的装卸、旋转或加工阶段。因此，在资源排序层面，ATR、VTR和每个旋转腔的执行机构均建模为一个独占动作资源（单位并发资源），其承片能力由逐片物理手分配与PW对占位关系共同表达，旋转腔的四工位容量由批次/链式占位状态保证。AL同样作为独占动作资源；上装载锁含U1、U2，下装载锁含L1、L2两个独立物理槽位；辅助晶圆库存则把每片晶圆视为一个可复用物理身份。资源分配以单个占用区间为单位：一次单片承片位置占用、一次辅助晶圆借用或一次执行机构互斥占用均选择一个允许的单元。以$o$表示该资源占用任务，有
+-\begin{equation}
+-\sum_{\ell\in\Gamma_o}h_{o\ell}=b_o.
+-\label{eq:slot-select-cn}
+-\end{equation}
+-式~\eqref{eq:slot-select-cn}表示每个启用的资源占用任务恰好选择一个允许的单元。$b_o\in\{0,1\}$表示任务是否启用，$h_{o\ell}\in\{0,1\}$表示是否选择单元$\ell$，$\Gamma_o$为允许的单元集合；未启用时所有$h_{o\ell}$均为零。两片晶圆成对搬运时，各自保留承片位置占用，动作同步由式~\eqref{eq:double-transfer-cn}协调。腔室四工位的满片条件由PW对占位关系保证，执行机构的互斥单元不代表承片数量。同一单元的占用区间不能重叠，由式~\eqref{eq:resource-order-cn}保证。当$\Gamma_o$仅含一个单元时，$h_{o\ell}=b_o$可直接代入，无需另设独立分配变量。辅助身份占用沿用$g_{j\tau}$，不重复引入另一套身份分配决策。
+-
+-上装载锁槽位占用从ATR放片开始，持续至VTR取片完成并加上复位时间；下装载锁槽位占用从VTR放片开始，持续至ATR取片完成并加上复位时间。复位只限制该槽位的再次使用，可与取片后机械手的继续运输重叠。
+-
+-VTR的四只手分为两只脏手$D_1,D_2$和两只洁净手$C_1,C_2$。对于未完成工艺处理的产品晶圆从上装载锁取片至放入腔室的承片任务，$\Gamma_o=\{D_1,D_2\}$；对于完成全部工艺处理的产品晶圆从腔室取片至放入下装载锁的承片任务，$\Gamma_o=\{C_1,C_2\}$。辅助晶圆的输入与返回均允许$\Gamma_o=\{D_1,D_2,C_1,C_2\}$。每项承片任务从取片动作开始持续至放片动作完成，式~\eqref{eq:slot-select-cn}选择的物理手在此区间内保持不变。相同手上的占用按式~\eqref{eq:resource-order-cn}互斥，其承片区间的换位间隔取零，机械手整体移动仍由动作资源的换位约束计入。因而脏手与洁净手各自最多承载两片，辅助晶圆同时竞争这两类空闲承片位置。$2\times2$产品在两个连续生产周期之间留在腔内，完成第二次工艺处理后才由洁净手取出。成对交换允许脏手持有待进行工艺处理的PW对、洁净手取出已完成工艺处理的PW对，但每片辅助晶圆也必须分配到当时空闲的具体手。
+-
+-若操作$o$和$o'$可能竞争资源$r$的同一槽位$\ell$，则
+-\begin{equation}
+-\begin{aligned}
+-s_{o'}&\ge e_o+\rho^r_{oo'}-M(1-y^r_{oo'})
+--M(1-h_{o\ell})-M(1-h_{o'\ell}),\\
+-s_o&\ge e_{o'}+\rho^r_{o'o}-My^r_{oo'}
+--M(1-h_{o\ell})-M(1-h_{o'\ell}).
+-\end{aligned}
+-\label{eq:resource-order-cn}
+-\end{equation}
+-式~\eqref{eq:resource-order-cn}表示当两项操作竞争同一资源占用单元时，二元变量$y^r_{oo'}$必须选择一种先后顺序；$\rho^r_{oo'}$同时计入机械手换位或设备复位时间。该式统一用于ATR、AL、上下装载锁、VTR、旋转腔和同一片辅助晶圆，因而既禁止机械手或腔室执行机构并发执行冲突动作，也禁止物理槽位或辅助晶圆在释放前被再次使用。
+-
+-换位时间按地点对给定。对于腔室由$z_{pc}$决定的动作，按候选腔室组合启用相应移动时间间隔，而不预先固定其地点。例如，$o,o'$分别服务于对$p,p'$的互斥腔室动作且均启用时，有
+-\begin{equation}
+-\begin{aligned}
+-z_{pc}=z_{p'c'}=1,\ y^{\rm VTR}_{oo'}=1
+-\ \Rightarrow\ s_{o'}\ge e_o+\rho^{\rm VTR}_{cc'}.
+-\end{aligned}
+-\label{eq:location-travel-cn}
+-\end{equation}
+-其中$\rho^{\rm VTR}_{cc'}$是两个腔室间的给定移动时间；反向次序同理。对固定地点的动作，直接使用式~\eqref{eq:resource-order-cn}。
+-
+-上述操作先后约束~\eqref{eq:precedence-cn}与资源排序约束~\eqref{eq:resource-order-cn}共同构成本文的死锁避免机制。对任一候选排程，把已激活操作作为节点，把操作先后关系和求解器选择的共享资源先后关系作为有向弧；若机械手、装载锁、旋转腔或辅助晶圆之间出现循环等待，则该操作--资源图中必然出现有向环。对于实际资源占用操作，沿环累加相应时间约束会产生正的持续时间或切换时间增量，从而要求某一操作的开始时刻严格晚于自身，违反时间可行性。因此，只有不存在循环等待、且所有晶圆都能沿完整路线从释放推进到返回的资源次序才能成为MILP可行解。结合装载锁槽位、旋转腔满片占位以及辅助晶圆返回后才能复用的显式建模，所建模动作中的循环等待通过时间可行性约束排除。
+-
++\noindent\textbf{阶段联结与成对动作同步。}
+ 产品晶圆或辅助晶圆的个体阶段必须与其被选中的批次、链位置或清洁任务时间窗一致。若选择量为$x$，对应参考阶段为$[s^{\rm ref},e^{\rm ref}]$，则
+ \begin{equation}
+ \begin{aligned}
+@@ -492,7 +343,7 @@
+ \end{equation}
+ 式~\eqref{eq:stage-link-cn}表示$x=1$时个体动作与其物理批次阶段同步；$x=0$时该候选对应不施加限制。它把PW对位置、产品路线、辅助晶圆需求和腔室加工窗口连接成同一时间模型。
+ 
+-当PW对$p$在同地点、同动作的原子搬运段$a$上选择一次成对搬运时，两片晶圆的搬运阶段同步：
++令$w_1,w_2$为PW对$p$中的两片晶圆，$\gamma_{pa}$表示在同地点原子搬运段$a$上选择成对搬运。$s_{wa},e_{wa}$为晶圆$w$在该段的起止时刻。成对搬运要求两片晶圆的对应动作同步：
+ \begin{equation}
+ \begin{aligned}
+ -M(1-\gamma_{pa})&\le s_{w_1a}-s_{w_2a}\le M(1-\gamma_{pa}),\\
+@@ -502,6 +353,7 @@
+ \end{equation}
+ 式~\eqref{eq:double-transfer-cn}表示$\gamma_{pa}=1$时，机械手用一次不可中断动作搬运完整PW对；$\gamma_{pa}=0$时，两片晶圆仍分别占用同一机械手并由式~\eqref{eq:resource-order-cn}排序。执行机构互斥按协调动作计数：成对搬运的两条晶圆事件属于同一个动作，不在两者之间启用式~\eqref{eq:resource-order-cn}；该共同动作仍与其他动作互斥。每片晶圆的承片区间独立保留，物理手互斥始终生效，因此动作同步不合并承片容量。
+ 
++\noindent\textbf{单源产品--辅助对的入片逻辑。}
+ 对于单源产品--辅助对，令$w_1$为产品、$w_2$为辅助晶圆，$\gamma_{p,\mathrm{in}}$表示共同取片后的随行入片选择。共同入片是路线联结选择，不要求不同存储位置的源端取片同时发生。源端取片、放至AL、从AL取回和放入上装载锁分别记为$\mathrm{pick,ALput,ALpick,LLput}$。令$\gamma^{\rm early}_p,\gamma^{\rm late}_p$分别选择辅助晶圆先行入锁，或产品放至AL后再取辅助晶圆；与随行入片三者择一：
+ \begin{equation}
+ \begin{gathered}
+@@ -519,6 +371,183 @@
+ \end{equation}
+ 该条件表示辅助晶圆在产品放至AL前已由ATR承载，并与完成对准的产品同时放入上装载锁。辅助晶圆从源端取片至入锁结束持续占用一个ATR承片位置；产品占用AL期间不占用ATR承片位置，取回后恢复占用。若辅助晶圆单独供给，则直接连接其源端取片与入锁事件。两种情形均不启用辅助晶圆的AL对准事件。
+ 
++\subsection{两种工艺模式与清洁处理}
++\label{sec:model-process-cn}
++
++第~\ref{sec:model-assignment-cn}节确定周期中有哪些PW对，本节进一步规定各对参与生产的次数、相邻周期的保留与退出、旋转装卸次序及清洁边界。所有时刻均沿用第~\ref{sec:model-time-cn}节的动作时间表示。
++
++\noindent\textbf{生产模式与连续占位。}
++$4\times1$模式的常规满产品批次由两个产品PW对组成，四片产品晶圆同步完成一次工艺处理，再按后装先卸次序退出；产品晶圆不足时由辅助晶圆补位。$2\times2$模式中，每个含产品PW对连续参加同腔相邻两个生产周期，使其中每片产品晶圆完成两次工艺处理。以三个产品PW对为例，链首装入辅助PW对D，经腔室旋转后装入P1并完成“D+P1”工艺处理；随后通过旋转与链式换片，依次形成“P1+P2”“P2+P3”和“P3+D”的占位组合，并在每次换片后执行工艺处理。P1、P2和P3均完成两次工艺处理，链尾辅助晶圆用于保持四工位满片。图~\ref{fig:chain-zh}和图~\ref{fig:parallel-zh}给出两种工艺模式的事件顺序。
++
++\begin{figure}[t]
++\centering
++\includegraphics[width=0.93\linewidth]{fig_chain_cn_nature}
++\caption{$2\times2$链式生产过程。辅助PW对D在链首与链尾保持腔室满片；产品晶圆随腔室旋转和链式换片参加相邻两个生产周期，每片产品晶圆完成两次工艺处理。}
++\label{fig:chain-zh}
++\end{figure}
++
++\begin{figure}[t]
++\centering
++\includegraphics[width=\linewidth]{fig_parallel_cn_nature}
++\caption{$4\times1$并行生产过程。两组PW对依次装入旋转腔，四个工位满片后同步执行一次工艺处理，再按后装先卸次序退出；末批不足时由辅助晶圆补位。}
++\label{fig:parallel-zh}
++\end{figure}
++
++二元量$A_{pcq},Z_{pcq}$分别标识对$p$在腔室$c$的首次和末次参加周期。取边界$X_{pc0}=X_{pc,Q_{\max}+1}=0$，有
++\begin{equation}
++\begin{aligned}
++A_{pcq}&\ge X_{pcq}-X_{pc,q-1}, &A_{pcq}&\le X_{pcq},\\
++A_{pcq}&\le1-X_{pc,q-1},\\
++Z_{pcq}&\ge X_{pcq}-X_{pc,q+1}, &Z_{pcq}&\le X_{pcq},\\
++Z_{pcq}&\le1-X_{pc,q+1},\\
++\sum_{c,q}X_{pcq}&=v_p+B_p^{\psi}, &\sum_{c,q}A_{pcq}&=\sum_{c,q}Z_{pcq}=v_p,\\
++\sum_pA^{\psi}_{pcq}&\le1, &\sum_pZ^{\psi}_{pcq}&\le1.
++\end{aligned}
++\label{eq:cycle-exposures-cn}
++\end{equation}
++其中$A^{\psi}_{pcq}=A_{pcq}\land B_p^{\psi}$、$Z^{\psi}_{pcq}=Z_{pcq}\land B_p^{\psi}$，均按式~\eqref{eq:cycle-products-cn}的三条不等式线性化。一个启用对仅有一次进入和一次退出，因此其占位连续。总占位为$v_p+B_p^{\psi}$，使$4\times1$含产品对参加一个生产周期，$2\times2$含产品对参加同腔相邻两个生产周期。每个$2\times2$生产周期至多包含一个首次参加工艺处理的产品对和一个末次参加工艺处理的产品对，从而形成交替换片链。纯辅助补位对参加一个生产周期，清洁对参加一个清洁周期。
++
++\noindent\textbf{加工时长与周期衔接。}
++加工周期的起止时刻为$S_{cq},E_{cq}$，$d_m$为加工类型$m$的持续时间，$\overline T$为有效时间上界：
++\begin{equation}
++\begin{aligned}
++E_{cq}-S_{cq}&=\sum_m d_mK_{cqm},\\
++0\le S_{cq},E_{cq}&\le\overline T U_{cq},\\
++S_{cq}&\ge E_{c,q-1}-M(1-U_{cq})\quad(q>1).
++\end{aligned}
++\label{eq:cycle-time-cn}
++\end{equation}
++该约束固定各类加工周期的持续时间，等待仅发生在动作之间。默认$4\times1$生产周期为180~s，$2\times2$生产周期为90~s，清洁周期为500~s；装卸与旋转的持续时间由相应事件单独计入。
++
++\noindent\textbf{前后侧占位与旋转装卸。}
++令$f_{pcq}$表示加工时位于机械手访问前侧的对，$\kappa_{cq}$表示保留上一周期的一个对，$\upsilon_{cq}$表示本周期后全部退出；三者均为二元量：
++\begin{equation}
++\begin{aligned}
++\kappa_{cq}&=\sum_p(X_{pcq}-A_{pcq}),\\
++\upsilon_{cq}&=U_{cq}-\sum_p(X_{pcq}-Z_{pcq}),\\
++f_{pcq}&\le A_{pcq},\qquad\sum_pf_{pcq}=U_{cq},\\
++f_{pc,q-1}&\ge X_{pcq}-A_{pcq}\quad(q>1),\\
++f_{pcq}&\ge B_p+K_{cq\psi}+X_{pcq}-2-\kappa_{cq}.
++\end{aligned}
++\label{eq:cycle-side-cn}
++\end{equation}
++新装对位于前侧；保留对经旋转转到后侧，且上一周期必须在前侧。新链首的$2\times2$产品对最后装入前侧。每对的装卸时刻沿用其物理动作，周期前后半周旋转记为$\mathrm{rot-}$和$\mathrm{rot+}$，分别由$U_{cq}$和$\upsilon_{cq}$启用，持续$r_c$。装载联结为
++\begin{equation}
++\begin{aligned}
++X_{pcq}=1&\Rightarrow S_{cq}\ge e^{\rm load}_p,\quad
++s^{\rm unload}_p\ge E_{cq},\\
++A_{pcq}=1,\ f_{pcq}=0&\Rightarrow e^{\rm load}_p\le s^{\rm rot-}_{cq},\\
++A_{pcq}=1,\ f_{pcq}=1&\Rightarrow s^{\rm load}_p\ge e^{\rm rot-}_{cq},\quad
++S_{cq}=e^{\rm load}_p,\\
++\kappa_{cq}=1&\Rightarrow s^{\rm rot-}_{cq}\ge E_{c,q-1}.
++\end{aligned}
++\label{eq:cycle-load-cn}
++\end{equation}
++全部退出时，周期后旋转在加工结束后开始。最后一次加工后的卸片关系为
++\begin{equation}
++\begin{aligned}
++Z_{pcq}=1,\ f_{pcq}=1&\Rightarrow e^{\rm unload}_p\le s^{\rm rot+}_{cq},\\
++Z_{pcq}=1,\ f_{pcq}=0,\ \upsilon_{cq}=1
++&\Rightarrow s^{\rm unload}_p\ge e^{\rm rot+}_{cq},\\
++Z_{pcq}=1,\ f_{pcq}=0,\ \upsilon_{cq}=0
++&\Rightarrow s^{\rm unload}_p\ge e^{\rm rot-}_{c,q+1}.
++\end{aligned}
++\label{eq:cycle-unload-cn}
++\end{equation}
++若下一周期保留一个对，则新对的装载须等待被替换的后侧对完成卸载；若不保留，则下一周期装载须等待上一周期的两个对均卸完。上述条件均以指示约束或有效大常数线性化，并与VTR动作互斥共同约束换片。它们允许真实等待，不把等待并入固定旋转或取放时长。
++
++\noindent\textbf{清洁触发与清洁动作链。}
++整数$n_{cq}$记录周期$q$结束后自上次清洁以来的生产周期数。取候选尾部$U_{c,Q_{\max}+1}=K_{c,Q_{\max}+1,\psi}=0$，清洁计数与触发满足
++\begin{equation}
++\begin{aligned}
++0\le n_{cq}&\le H U_{cq},\qquad n_{c0}=0,\\
++K_{cq,\mathrm{cl}}=1&\Rightarrow n_{cq}=0,\\
++U_{cq}=1,\ K_{cq,\mathrm{cl}}=0
++&\Rightarrow n_{cq}=n_{c,q-1}+1,\quad n_{c,q-1}\le H-1,\\
++K_{cq,\mathrm{cl}}=1&\Rightarrow n_{c,q-1}\ge H-1,\quad
++n_{c,q-1}+K_{c,q+1,\psi}\ge H,\\
++n_{cq}&\le H-1+H U_{c,q+1},\\
++K_{c1,\mathrm{cl}}&=0,\qquad
++K_{cq,\mathrm{cl}}+K_{c,q-1,\mathrm{cl}}\le1\quad(q>1).
++\end{aligned}
++\label{eq:clean-counter-cn}
++\end{equation}
++每完成一个生产周期，计数增加1；清洁使计数归零。累计生产周期数达到$H$后必须清洁。若清洁后的下一周期采用$2\times2$模式，则允许在累计$H-1$个生产周期后提前清洁。因此，相邻两次清洁之间包含$H$个生产周期，或在上述提前清洁条件下包含$H-1$个生产周期。末段不足$H$时无需追加清洁，达到$H$时须追加末端清洁。由式~\eqref{eq:cycle-capacity-cn}和式~\eqref{eq:cycle-exposures-cn}，同一产品对必须连续参加两个$2\times2$生产周期，清洁不能插入其间。
++
++清洁区段$e$由上述周期类型序列中的清洁边界导出。$z_{ce}$标识生产段启用，$a^{\zeta}_{cbe},a^{\psi}_{cqe}$标识生产批次或生产周期的区段归属，$N_{ce}$为其生产周期数；$q^{\rm cl}_{ce}$标识段后清洁。内部段以清洁结束，末段达到$H$也以清洁结束。这些量用于表示事件窗口，均随周期决策变化。
++
++
++
++把$\mathcal V_c$记为腔室$c$的$4\times1$生产批次和$2\times2$生产周期并集，$a_{vce}$为相应的$a^{\zeta}$或$a^{\psi}$。对区段$e$中的任务$v$，清洁前后关系及清洁动作链为
++\begin{equation}
++\begin{aligned}
++s_v&\ge e^{\rm cl}_{c,e-1}-M(1-a_{vce}) &&(e>1),\\
++e_v&\le s^{\rm cl}_{ce}+M(1-a_{vce})+M(1-q^{\rm cl}_{ce}),\\
++s^{\rm cl,BL}_{ce}&\ge e^{\rm cl,FL}_{ce}+r_c-M(1-q^{\rm cl}_{ce}),\\
++s^{\rm cl,P}_{ce}&\ge e^{\rm cl,BL}_{ce}-M(1-q^{\rm cl}_{ce}),\\
++s^{\rm cl,BU}_{ce}&\ge e^{\rm cl,P}_{ce}-M(1-q^{\rm cl}_{ce}),\\
++s^{\rm cl,FU}_{ce}&\ge e^{\rm cl,BU}_{ce}+r_c-M(1-q^{\rm cl}_{ce}).
++\end{aligned}
++\label{eq:clean-time-cn}
++\end{equation}
++式~\eqref{eq:clean-time-cn}表示第$e$区段只能在前一次清洁完成后开始，并须在下一次清洁开始前结束。一次完整清洁任务包含两侧辅助晶圆装载、腔室旋转、清洁处理和反向卸载，其持续时间与资源占用共同约束VTR、旋转腔及四片辅助晶圆的可用时刻。
++
++给定解后，$x^{\zeta}_{pcbl},x^{\psi}_{pck}$分别记录$4\times1$批次侧位与$2\times2$产品对链位置，均由$X,A,Z,f$及周期类型导出。相应批次、链段与清洁区段用于解释排程与固定布局基准，不另设一套独立配对。固定布局实验额外固定这些位置及服务次序，并采用仅末批补位规则：若后续同类批次存在，当前$4\times1$批次含两个产品对。联合模型允许在任一合法生产周期采用辅助补位。
++
++\subsection{辅助晶圆复用与机械手、模块资源}
++\label{sec:model-resource-cn}
++
++晶圆路线和腔内加工规则还需满足实体资源的可用性。本节先为辅助晶圆借用任务选择实体身份，再分配机械手承片位置和模块槽位，最后通过互斥次序及驻留上限协调资源占用。
++
++\noindent\textbf{辅助晶圆身份与循环复用。}
++每个辅助晶圆位置对应借用需求$j=(p,r)$，其启用直接由$d_{pr}$表示，覆盖产品--辅助对、纯辅助补位对及清洁对。晶圆占位与周期选择联结供片与返回事件，实体辅助晶圆的占用区间从存储取出延续至归还完成。
++
++各腔室可访问同一物理辅助库存，$\mathcal T_c$为共享库存对腔室$c$的可用身份集合；相同身份在不同腔室的借用也必须互斥。每个有效需求必须选择一片库存中的物理辅助晶圆：
++\begin{equation}
++\sum_{\tau\in\mathcal T_c}g_{j\tau}=d_{pr},
++\qquad j=(p,r)\in\mathcal J_c^D.
++\label{eq:dummy-assign-cn}
++\end{equation}
++式~\eqref{eq:dummy-assign-cn}表示有效需求恰好分配一次；辅助身份选择$g_{j\tau}$同时作为对应借用区间的资源占用标记；同一物理辅助晶圆的两次借用由共享资源互斥约束排序，因此只有在前一次卸载并返回存储区后才能复用。辅助身份选择决定哪些跨腔借用需要排序：即使产品配对、分腔和周期结构相同，不同辅助身份安排仍可改变两腔的并行生产区间。第~\ref{sec:joint-evidence-cn}节通过控制产品结构的对照量化这一影响。
++
++\noindent\textbf{机械手承片与模块容量。}
++ATR为双手机械手、VTR为四手机械手，旋转腔内部含四个晶圆工位，其承载能力分别为2片、4片和4片。同一时刻一台ATR或VTR只能执行一个协调搬运动作，同一旋转腔也只能执行一个统一的装卸、旋转或加工阶段。因此，在资源排序层面，ATR、VTR和每个旋转腔的执行机构均建模为一个独占动作资源（单位并发资源），其承片能力由逐片物理手分配与PW对占位关系共同表达，旋转腔的四工位容量由批次/链式占位状态保证。AL同样作为独占动作资源；上装载锁含U1、U2，下装载锁含L1、L2两个独立物理槽位；辅助晶圆库存则把每片晶圆视为一个可复用物理身份。资源分配以单个占用区间为单位：一次单片承片位置占用、一次辅助晶圆借用或一次执行机构互斥占用均选择一个允许的单元。以$o$表示该资源占用任务，有
++\begin{equation}
++\sum_{\ell\in\Gamma_o}h_{o\ell}=b_o.
++\label{eq:slot-select-cn}
++\end{equation}
++式~\eqref{eq:slot-select-cn}表示每个启用的资源占用任务恰好选择一个允许的单元。$b_o\in\{0,1\}$表示任务是否启用，$h_{o\ell}\in\{0,1\}$表示是否选择单元$\ell$，$\Gamma_o$为允许的单元集合；未启用时所有$h_{o\ell}$均为零。两片晶圆成对搬运时，各自保留承片位置占用，动作同步由式~\eqref{eq:double-transfer-cn}协调。腔室四工位的满片条件由PW对占位关系保证，执行机构的互斥单元不代表承片数量。同一单元的占用区间不能重叠，由式~\eqref{eq:resource-order-cn}保证。当$\Gamma_o$仅含一个单元时，$h_{o\ell}=b_o$可直接代入，无需另设独立分配变量。辅助身份占用沿用$g_{j\tau}$，不重复引入另一套身份分配决策。
++
++上装载锁槽位占用从ATR放片开始，持续至VTR取片完成并加上复位时间；下装载锁槽位占用从VTR放片开始，持续至ATR取片完成并加上复位时间。复位只限制该槽位的再次使用，可与取片后机械手的继续运输重叠。
++
++VTR的四只手分为两只脏手$D_1,D_2$和两只洁净手$C_1,C_2$。对于未完成工艺处理的产品晶圆从上装载锁取片至放入腔室的承片任务，$\Gamma_o=\{D_1,D_2\}$；对于完成全部工艺处理的产品晶圆从腔室取片至放入下装载锁的承片任务，$\Gamma_o=\{C_1,C_2\}$。辅助晶圆的输入与返回均允许$\Gamma_o=\{D_1,D_2,C_1,C_2\}$。每项承片任务从取片动作开始持续至放片动作完成，式~\eqref{eq:slot-select-cn}选择的物理手在此区间内保持不变。相同手上的占用按式~\eqref{eq:resource-order-cn}互斥，其承片区间的换位间隔取零，机械手整体移动仍由动作资源的换位约束计入。因而脏手与洁净手各自最多承载两片，辅助晶圆同时竞争这两类空闲承片位置。$2\times2$产品在两个连续生产周期之间留在腔内，完成第二次工艺处理后才由洁净手取出。成对交换允许脏手持有待进行工艺处理的PW对、洁净手取出已完成工艺处理的PW对，但每片辅助晶圆也必须分配到当时空闲的具体手。
++
++\noindent\textbf{资源互斥与地点相关换位。}
++共享资源的先后关系分为给定次序和待定次序。操作先后弧及预设服务链中的操作按指定次序执行，其余冲突操作通过次序变量协调。固定布局的纯$4\times1$实验采用预设的对准和装载锁服务次序；当候选批次数不超过清洁阈值时，VTR也采用预设的批次装卸服务链。这些预设关系仅用于固定布局实验；联合模型由资源次序变量决定其余冲突动作的顺序。
++
++若操作$o$和$o'$可能竞争资源$r$的同一槽位$\ell$，则
++\begin{equation}
++\begin{aligned}
++s_{o'}&\ge e_o+\rho^r_{oo'}-M(1-y^r_{oo'})
++-M(1-h_{o\ell})-M(1-h_{o'\ell}),\\
++s_o&\ge e_{o'}+\rho^r_{o'o}-My^r_{oo'}
++-M(1-h_{o\ell})-M(1-h_{o'\ell}).
++\end{aligned}
++\label{eq:resource-order-cn}
++\end{equation}
++式~\eqref{eq:resource-order-cn}表示当两项操作竞争同一资源占用单元时，二元变量$y^r_{oo'}$必须选择一种先后顺序；$\rho^r_{oo'}$同时计入机械手换位或设备复位时间。该式统一用于ATR、AL、上下装载锁、VTR、旋转腔和同一片辅助晶圆，因而既禁止机械手或腔室执行机构并发执行冲突动作，也禁止物理槽位或辅助晶圆在释放前被再次使用。
++
++换位时间按地点对给定。对于腔室由$z_{pc}$决定的动作，按候选腔室组合启用相应移动时间间隔，而不预先固定其地点。例如，$o,o'$分别服务于对$p,p'$的互斥腔室动作且均启用时，有
++\begin{equation}
++\begin{aligned}
++z_{pc}=z_{p'c'}=1,\ y^{\rm VTR}_{oo'}=1
++\ \Rightarrow\ s_{o'}\ge e_o+\rho^{\rm VTR}_{cc'}.
++\end{aligned}
++\label{eq:location-travel-cn}
++\end{equation}
++其中$\rho^{\rm VTR}_{cc'}$是两个腔室间的给定移动时间；反向次序同理。对固定地点的动作，直接使用式~\eqref{eq:resource-order-cn}。
++
++\noindent\textbf{驻留限制与时序可行性。}
+ 对晶圆$w$进入和离开受限设备区段$r$的事件，有
+ \begin{equation}
+ 0\le s_{\operatorname{out}(w,r)}-e_{\operatorname{in}(w,r)}
+@@ -527,8 +556,14 @@
+ \end{equation}
+ 式~\eqref{eq:residence-cn}表示晶圆在上装载锁、工艺腔室、下装载锁或受限制搬运区段中的物理停留时间不得超过上限，即驻留时间约束。装载锁的晶圆槽位占用在另一侧取片动作完成时结束，随后压力复位可与机械手继续运输并行；装载锁下一次不兼容操作须等待复位完成。
+ 
++上述操作先后约束~\eqref{eq:precedence-cn}与资源排序约束~\eqref{eq:resource-order-cn}共同构成本文的死锁避免机制。对任一候选排程，把已激活操作作为节点，把操作先后关系和求解器选择的共享资源先后关系作为有向弧；若机械手、装载锁、旋转腔或辅助晶圆之间出现循环等待，则该操作--资源图中必然出现有向环。对于实际资源占用操作，沿环累加相应时间约束会产生正的持续时间或切换时间增量，从而要求某一操作的开始时刻严格晚于自身，违反时间可行性。因此，只有不存在循环等待、且所有晶圆都能沿完整路线从释放推进到返回的资源次序才能成为MILP可行解。结合装载锁槽位、旋转腔满片占位以及辅助晶圆返回后才能复用的显式建模，所建模动作中的循环等待通过时间可行性约束排除。
++
+ \subsection{完工时间优先的两阶段优化}
+-
++\label{sec:model-objective-cn}
++
++前述约束共同定义联合可行域$\mathcal F$。第一阶段优化产品回片完工时间，第二阶段在保留第一阶段完工时间上界与主要离散结构的条件下优化等待与生产节拍。
++
++\noindent\textbf{第一阶段：最小化产品回片完工时间。}
+ 令$C_w$为产品晶圆$w$完成下装载锁返回并回到LP的时刻，第一阶段优化目标为
+ \begin{equation}
+ C_w=e_{w,\mathrm{return}},\qquad
+@@ -538,28 +573,55 @@
+ \end{equation}
+ 式~\eqref{eq:primary-objective-cn}表示最大完工时间按最后一片产品晶圆完成完整端到端路线并返回LP的时刻计算。若清洁位于两个生产段之间，其资源占用和前后关系会推迟后续产品回片，因而自然影响$C_{\max}$；若最后一次清洁之后不再有产品工艺处理，则该末端清洁仍保留在设备动作序列中，其完成时刻不直接作为$C_{\max}$的下界。末端清洁仍可能经共享VTR与其他腔室的产品回片竞争资源，因此其间接影响须由完整排程判定。WPH仅以产品回片的$C_{\max}$为分母。联合可行域$\mathcal F$由配对、分腔、周期占位和完整物理时序约束共同构成；固定布局实验另施加其布局与服务次序条件。
+ 
+-令$\mathcal Q^w$为纳入评价的等待项索引集合，$\omega_\alpha$表示第$\alpha$项等待时长，即对应事件间隔扣除必要操作或移动时长后的非负余量。$L_{\rm sum}$累计这些等待，$L_{\max}$为其最大值的上界；并行发生的不同晶圆等待分别计入。
+-
+-对腔室$c$，清洁区段$e$表示相邻清洁之间的生产段，也包括首次清洁前及末次清洁后的生产段。$h_{ceq}$为该区段内生产周期$q$的开始时刻，与对应动作开始变量$s_o$一致。$\mathcal I_h$在联合模型中包含同一腔室、同一$2\times2$链内的连续三个生产周期，要求相邻两处边界均保留一个对，即$\kappa_{c,q+1}=\kappa_{cq}=1$；不跨清洁或链边界计算差分。$\Delta_{ceq}$表示后一个生产周期开始间隔减去前一个间隔，$v_{ceq}\ge0$为其绝对值上界。两者均以s计，衡量节拍变化而非工艺处理持续时间。此处$h_{ceq}$是连续时刻，区别于资源分配二元量$h_{o\ell}$；$v_{ceq}$也区别于对启用量$v_p$与周期启用量$U_{cq}$。
+-
+-设第一阶段得到当前最优可行解$\widehat\xi$和$\widehat C$，第二阶段固定集合$\mathcal D_{\rm fix}$中的离散结构，在最大完工时间容差内最小化线性排程质量：
++\noindent\textbf{第二阶段：限定优化范围并精修时序。}
++设第一阶段获得当前最好可行解$\widehat\xi$，其产品完工时间为$\widehat C$。集合$\mathcal D_{\rm fix}$包含第二阶段固定的配对、分腔、周期占位、辅助身份、手分配、随行入片选择与资源次序。给定完工时间容差$\varepsilon_C$，第二阶段在原可行域上增加
++
+ \begin{equation}
+ \begin{gathered}
+ \xi_d=\widehat\xi_d\quad(d\in\mathcal D_{\rm fix}),\qquad
+-C_{\max}\le\widehat C+\varepsilon_C,\\
++C_{\max}\le\widehat C+\varepsilon_C.
++\end{gathered}
++\label{eq:secondary-domain-cn}
++\end{equation}
++
++式~\eqref{eq:secondary-domain-cn}保留主要离散结构及产品完工时间上界，同地点原子取放同步选择与连续时刻继续参与优化。第一阶段即使尚未证明最优，也可用其当前最好可行解启动第二阶段。
++
++令$\mathcal Q^w$为纳入评价的等待项索引集合，$\omega_\alpha$表示第$\alpha$项等待时长，即对应事件间隔扣除必要操作或移动时长后的非负余量。$L_{\rm sum}$累计这些等待，$L_{\max}$为其最大值的上界；并行发生的不同晶圆等待分别计入。
++\begin{equation}
++\begin{gathered}
+ L_{\rm sum}=\sum_{\alpha\in\mathcal Q^w}\omega_\alpha,\qquad
+-L_{\max}\ge\omega_\alpha,\\
++L_{\max}\ge\omega_\alpha.
++\end{gathered}
++\label{eq:secondary-wait-cn}
++\end{equation}
++
++对腔室$c$，清洁区段$e$表示相邻清洁之间的生产段，也包括首次清洁前及末次清洁后的生产段。$h_{ceq}$为该区段内生产周期$q$的开始时刻，与对应动作开始变量$s_o$一致。$\mathcal I_h$在联合模型中包含同一腔室、同一$2\times2$链内的连续三个生产周期，要求相邻两处边界均保留一个对，即$\kappa_{c,q+1}=\kappa_{cq}=1$；不跨清洁或链边界计算差分。$\Delta_{ceq}$表示后一个生产周期开始间隔减去前一个间隔，$v_{ceq}\ge0$为其绝对值上界。两者均以s计，衡量节拍变化而非工艺处理持续时间。此处$h_{ceq}$是连续时刻，区别于资源分配二元量$h_{o\ell}$；$v_{ceq}$也区别于对启用量$v_p$与周期启用量$U_{cq}$。
++\begin{equation}
++\begin{gathered}
+ \Delta_{ceq}=(h_{ce,q+1}-h_{ceq})-(h_{ceq}-h_{ce,q-1}),\\
+-v_{ceq}\ge\Delta_{ceq},\qquad v_{ceq}\ge-\Delta_{ceq},\\
++v_{ceq}\ge\Delta_{ceq},\qquad v_{ceq}\ge-\Delta_{ceq}.
++\end{gathered}
++\label{eq:secondary-rhythm-cn}
++\end{equation}
++
++若启用等待软上限$\bar\omega_\alpha$，以非负辅助量$\eta_\alpha$表示超额等待的上界：
++\begin{equation}
+ \eta_\alpha\ge\omega_\alpha-\bar\omega_\alpha,\qquad
+-\eta_\alpha\ge0,\\
++\eta_\alpha\ge0.
++\label{eq:secondary-softwait-cn}
++\end{equation}
++
++将上述指标按非负权重$\lambda_1,\ldots,\lambda_4$组合，第二阶段目标为
++\begin{equation}
++\begin{gathered}
+ \min\Phi=\lambda_1L_{\rm sum}+\lambda_2L_{\max}
+ +\lambda_3\sum_{(c,e,q)\in\mathcal I_h}v_{ceq}
+ +\lambda_4\sum_{\alpha\in\mathcal Q^w}\eta_\alpha.
+ \end{gathered}
+ \label{eq:secondary-objective-cn}
+ \end{equation}
+-式~\eqref{eq:secondary-objective-cn}在第一阶段可行完工时间及给定容差内，固定配对、分腔、周期占位、辅助身份、手分配、随行入片选择与资源次序，优化保留的同地点原子取放同步选择及连续时刻，以压缩总等待、最大等待和同一区段内相邻生产周期开始间隔的波动，并可对超过软等待上限的部分加罚。正式实验采用$(\lambda_1,\lambda_2,\lambda_3)=(1,10,25)$、$\varepsilon_C=10^{-6}$。软等待惩罚仅在启用对应软上限时生效；关闭该上限时不产生超额变量。限时求解以第一阶段当前最优可行值$\widehat C$作为第二阶段的完工时间上界。
++
++式~\eqref{eq:secondary-objective-cn}分别惩罚总等待、最大单项等待、相邻生产周期开始间隔的变化和软等待超额。正式实验采用$(\lambda_1,\lambda_2,\lambda_3)=(1,10,25)$、$\varepsilon_C=10^{-6}$；关闭软等待上限时不生成超额变量，也不计入对应惩罚项。
+ 
+ 当对应权重严格为正且第二阶段达到最优时，上界辅助量取紧值：$L_{\max}=\max_\alpha\omega_\alpha$、$v_{ceq}=|\Delta_{ceq}|$及$\eta_\alpha=\max(0,\omega_\alpha-\bar\omega_\alpha)$。限时可行解中的辅助量可能存在松弛，因此各项指标均由实际事件时刻重新计算。节拍项衡量相邻生产周期开始间隔的变化，连续三个生产周期等间隔开始时该项为零。软等待上限允许超出并施加惩罚，驻留时间上限则作为硬约束执行。
+ 

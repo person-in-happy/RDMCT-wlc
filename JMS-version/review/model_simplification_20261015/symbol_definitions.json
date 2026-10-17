@@ -1,0 +1,346 @@
+[
+  {
+    "table": 1,
+    "old_row": 1,
+    "row": 1,
+    "symbol": "$\\mathcal W,\\mathcal I$",
+    "kind": "集合",
+    "definition": "$\\mathcal W$为产品晶圆集合，$w$为产品编号；$\\mathcal I$为晶圆路线任务集合，$i$为任务编号，包括产品路线和辅助晶圆每次借用路线。"
+  },
+  {
+    "table": 1,
+    "old_row": 2,
+    "row": 2,
+    "symbol": "$\\mathcal S,\\sigma,\\chi_{is}$",
+    "kind": "集合/0--1参数",
+    "definition": "$\\mathcal S=\\{A,V\\}$为来源区域集合，$s$为区域索引；$A,V$分别为大气区、真空区。$\\sigma=0/1$表示单源/双源；$\\chi_{is}=1$表示任务$i$来自区域$s$。"
+  },
+  {
+    "table": 1,
+    "old_row": 3,
+    "row": 3,
+    "symbol": "$\\ell_w,m_w,\\mathcal C(m)$",
+    "kind": "输入参数/集合",
+    "definition": "$\\ell_w$为产品$w$所在LP编号；$m_w\\in\\{\\zeta,\\psi\\}$为其给定工艺模式；$\\mathcal C(m)$为可执行加工类型$m$的腔室集合。"
+  },
+  {
+    "table": 1,
+    "old_row": 4,
+    "row": 4,
+    "symbol": "$N$",
+    "kind": "整数参数",
+    "definition": "产品晶圆总数，$N=|\\mathcal W|=N_{\\zeta}+N_{\\psi}$，不含辅助晶圆。"
+  },
+  {
+    "table": 1,
+    "old_row": 5,
+    "row": 5,
+    "symbol": "$\\mathcal P,\\mathcal M$",
+    "kind": "集合",
+    "definition": "$\\mathcal P$为候选PW对集合，$p$为对编号；$\\mathcal M=\\{\\zeta,\\psi,\\mathrm{cl}\\}$为加工类型集合，$m$为类型索引；三种标签依次为$4\\times1$、$2\\times2$生产和清洁。"
+  },
+  {
+    "table": 1,
+    "old_row": 6,
+    "row": 6,
+    "symbol": "$\\mathcal C$",
+    "kind": "集合",
+    "definition": "$\\mathcal C=\\{\\mathrm{CH1,CH2}\\}$为工艺腔室集合，$c$为腔室编号。"
+  },
+  {
+    "table": 1,
+    "old_row": 8,
+    "row": 7,
+    "symbol": "$\\mathcal Q_c$",
+    "kind": "索引集合",
+    "definition": "$\\mathcal Q_c=\\{1,\\ldots,Q_{\\max}\\}$为腔室$c$的候选加工周期集合，$q$为周期编号。"
+  },
+  {
+    "table": 1,
+    "old_row": 9,
+    "row": 8,
+    "symbol": "$N_{\\zeta},N_{\\psi};\\ T,J_{\\max}$",
+    "kind": "整数参数/上界",
+    "definition": "$N_{\\zeta},N_{\\psi}$分别为两种工艺的产品数量，下标为工艺标签；$T$为全设备生产周期总数上界；$J_{\\max}$为全设备清洁总次数上界。"
+  },
+  {
+    "table": 1,
+    "old_row": 10,
+    "row": 9,
+    "symbol": "$P_{\\max},Q_{\\max}$",
+    "kind": "整数容量上界",
+    "definition": "$P_{\\max}$为全批次候选PW对容量；$Q_{\\max}$为全设备加工周期总数上界，并用作每腔候选容量；下标$\\max$表示上界，加工周期含生产与清洁。"
+  },
+  {
+    "table": 1,
+    "old_row": 11,
+    "row": 10,
+    "symbol": "$H$",
+    "kind": "整数参数",
+    "definition": "单腔自初始洁净状态或上次清洁后累计生产周期数的上限；允许在$H-1$个周期后为紧随清洁的$2\\times2$生产提前清洁。"
+  },
+  {
+    "table": 1,
+    "old_row": 12,
+    "row": 11,
+    "symbol": "$\\mathcal O,\\mathcal A$",
+    "kind": "集合",
+    "definition": "$\\mathcal O$为候选物理动作集合，$o,o^{\\prime}$为两个动作的编号；$\\mathcal A$为动作先后弧集合，$(o,o^{\\prime})$表示动作$o$先于$o^{\\prime}$。"
+  },
+  {
+    "table": 1,
+    "old_row": 13,
+    "row": 12,
+    "symbol": "$\\mathcal A^{\\rm int},\\mathcal A_{is}(\\gamma)$",
+    "kind": "条件弧集合",
+    "definition": "$\\mathcal A^{\\rm int}$为共同腔内先后弧集合，上标int表示腔内；$\\mathcal A_{is}(\\gamma)$为任务$i$从区域$s$供回晶圆时、在搬运选择$\\gamma$下启用的路线弧集合。"
+  },
+  {
+    "table": 1,
+    "old_row": 14,
+    "row": 13,
+    "symbol": "$d_o,r_c$",
+    "kind": "时间参数",
+    "definition": "$d_o$为动作$o$的给定持续时间；$r_c$为腔室$c$半周旋转的给定持续时间，单位均为s。"
+  },
+  {
+    "table": 1,
+    "old_row": 15,
+    "row": 14,
+    "symbol": "$\\delta_{oo'},\\rho^r_{oo'},\\rho^{\\rm VTR}_{cc'}$",
+    "kind": "时间参数",
+    "definition": "$\\delta_{oo^{\\prime}}$为先后动作$o,o^{\\prime}$之间的最小间隔；$\\rho^r_{oo^{\\prime}}$为资源$r$从$o$转至$o^{\\prime}$所需换位或复位时间；$\\rho^{\\rm VTR}_{cc^{\\prime}}$为VTR从腔室$c$至$c^{\\prime}$的移动时间。"
+  },
+  {
+    "table": 1,
+    "old_row": 16,
+    "row": 15,
+    "symbol": "$M,\\overline R_{wr}$",
+    "kind": "时间界参数",
+    "definition": "$M$为条件时间约束使用的有效大常数；$\\overline R_{wr}$为晶圆$w$在受限设备或路线区段$r$内的最大驻留时间，单位为s。"
+  },
+  {
+    "table": 1,
+    "old_row": 17,
+    "row": 16,
+    "symbol": "$\\overline T,d_m$",
+    "kind": "时间参数",
+    "definition": "$\\overline T$为排程时刻的有效上界；$d_m$为加工类型$m$的固定持续时间，单位为s；上横线表示上界。"
+  },
+  {
+    "table": 1,
+    "old_row": 19,
+    "row": 17,
+    "symbol": "$\\mathcal E_c,\\mathcal V_c$",
+    "kind": "集合",
+    "definition": "$\\mathcal E_c$为腔室$c$的清洁区段集合，$e$为区段编号；$\\mathcal V_c$为该腔生产任务集合，$v$为任务编号，任务为一个$4\\times1$批次或$2\\times2$生产周期。"
+  },
+  {
+    "table": 1,
+    "old_row": 21,
+    "row": 18,
+    "symbol": "$\\mathcal J_c^D,\\mathcal T_c$",
+    "kind": "集合",
+    "definition": "$\\mathcal J_c^D$为分配至腔室$c$的辅助晶圆借用需求集合，$j=(p,r)$表示对$p$第$r$个成员位的需求，上标D表示辅助需求；$\\mathcal T_c$为该腔可访问的实体辅助晶圆集合，$\\tau$为实体编号。"
+  },
+  {
+    "table": 1,
+    "old_row": 22,
+    "row": 19,
+    "symbol": "$\\mathcal R$",
+    "kind": "集合",
+    "definition": "共享物理资源集合，$r$为资源编号，涵盖机械手执行机构、承片手、模块槽位、腔室及实体辅助晶圆。"
+  },
+  {
+    "table": 1,
+    "old_row": 23,
+    "row": 20,
+    "symbol": "$\\Gamma_o$",
+    "kind": "集合参数",
+    "definition": "资源占用任务$o$允许选择的物理单元集合，$\\ell$为单元编号；VTR的$D_1,D_2$表示两只脏手，$C_1,C_2$表示两只洁净手，数字为同类手编号。"
+  },
+  {
+    "table": 1,
+    "old_row": 24,
+    "row": 21,
+    "symbol": "$\\operatorname{in}(w,r),\\operatorname{out}(w,r)$",
+    "kind": "事件映射",
+    "definition": "$\\operatorname{in}(w,r)$、$\\operatorname{out}(w,r)$分别给出晶圆$w$进入、离开受限区段$r$的动作编号，用于引用相应起止时刻。"
+  },
+  {
+    "table": 1,
+    "old_row": 26,
+    "row": 22,
+    "symbol": "$\\mathcal D_{\\rm fix},\\mathcal Q^w,\\mathcal I_h$",
+    "kind": "索引集合",
+    "definition": "$\\mathcal D_{\\rm fix}$为第二阶段固定分量的索引集合（索引$d$）；$\\mathcal Q^w$为等待项集合（索引$\\alpha$，上标$w$为等待标签）；$\\mathcal I_h$为同腔、同一$2\\times2$链内连续三个生产周期的中心索引$(c,q)$集合。"
+  },
+  {
+    "table": 1,
+    "old_row": 27,
+    "row": 23,
+    "symbol": "$\\lambda_1,\\ldots,\\lambda_4$",
+    "kind": "非负权重",
+    "definition": "$\\lambda_1,\\lambda_2,\\lambda_3,\\lambda_4$依次为总等待、最大单项等待、节拍变化、软等待超额的非负权重；数字下标表示目标项类别。"
+  },
+  {
+    "table": 1,
+    "old_row": 28,
+    "row": 24,
+    "symbol": "$\\bar\\omega_\\alpha,\\varepsilon_C$",
+    "kind": "非负时间参数",
+    "definition": "$\\bar\\omega_\\alpha$为等待项$\\alpha$的软上限；$\\varepsilon_C$为第二阶段产品完工时间上界的非负容差，下标C表示完工时间，单位均为s。"
+  },
+  {
+    "table": 2,
+    "old_row": 1,
+    "row": 1,
+    "symbol": "$a_{wpr},v_p;\\ d_{pr}$",
+    "kind": "二元决策/派生量",
+    "definition": "$a_{wpr}=1$表示产品$w$占对$p$的成员位$r\\in\\{0,1\\}$；$v_p=1$表示启用该对。$d_{pr}=v_p-\\sum_w a_{wpr}$表示该位置由辅助晶圆补齐，不是额外的成员选择。"
+  },
+  {
+    "table": 2,
+    "old_row": 2,
+    "row": 2,
+    "symbol": "$\\mu_{pm},z_{pc}$",
+    "kind": "二元变量",
+    "definition": "$\\mu_{pm}=1$表示对$p$采用加工类型$m$；$z_{pc}=1$表示对$p$分配至腔室$c$，否则为0；产品自身配方$m_w$为输入。"
+  },
+  {
+    "table": 2,
+    "old_row": 3,
+    "row": 3,
+    "symbol": "$B_p,B_p^{\\psi}$",
+    "kind": "二元辅助变量",
+    "definition": "$B_p=1$表示对$p$至少含一片产品；$B_p^{\\psi}=1$表示该对含采用$2\\times2$工艺的产品，否则为0；上标$\\psi$为工艺标签。"
+  },
+  {
+    "table": 2,
+    "old_row": 4,
+    "row": 4,
+    "symbol": "$K_{cqm},X_{pcq};\\ U_{cq}$",
+    "kind": "二元决策/派生量",
+    "definition": "$K_{cqm}=1$表示腔室$c$周期$q$采用加工类型$m$；$X_{pcq}=1$表示对$p$参加该周期。$U_{cq}=\\sum_mK_{cqm}\\in\\{0,1\\}$为周期启用标记。"
+  },
+  {
+    "table": 2,
+    "old_row": 5,
+    "row": 5,
+    "symbol": "$X^P_{pcq},A^{\\psi}_{pcq},Z^{\\psi}_{pcq}$",
+    "kind": "二元辅助变量",
+    "definition": "$X^P_{pcq}=1$表示含产品对$p$参加腔室$c$的周期$q$，上标P表示产品；$A^{\\psi}_{pcq},Z^{\\psi}_{pcq}=1$分别表示该周期为$2\\times2$含产品对$p$的首次、末次工艺处理，否则为0。"
+  },
+  {
+    "table": 2,
+    "old_row": 6,
+    "row": 6,
+    "symbol": "$b_o$",
+    "kind": "0--1辅助量",
+    "definition": "$b_o=1$表示候选动作或资源占用任务$o$启用，$b_o=0$表示不启用；其取值由布局及可选搬运关系联结。"
+  },
+  {
+    "table": 2,
+    "old_row": 7,
+    "row": 7,
+    "symbol": "$s_o,e_o$",
+    "kind": "事件时刻",
+    "definition": "动作或资源占用任务$o$的开始、结束时刻（s）。固定时长动作的$e_o$由$s_o+d_ob_o$确定；占用区间端点由对应物理事件联结。"
+  },
+  {
+    "table": 2,
+    "old_row": 9,
+    "row": 8,
+    "symbol": "$\\gamma^{\\rm early}_p,\\gamma^{\\rm late}_p$",
+    "kind": "二元变量",
+    "definition": "$\\gamma^{\\rm early}_p=1$表示单源产品--辅助对$p$中辅助晶圆先行直接入锁；$\\gamma^{\\rm late}_p=1$表示产品放至AL后再取辅助晶圆；上标early、late标记两种入片方式，否则为0。"
+  },
+  {
+    "table": 2,
+    "old_row": 11,
+    "row": 9,
+    "symbol": "$A_{pcq},Z_{pcq}$",
+    "kind": "二元辅助变量",
+    "definition": "$A_{pcq}=1$表示周期$(c,q)$是对$p$在腔室$c$的首个参与周期；$Z_{pcq}=1$表示该周期是其末个参与周期，否则为0。"
+  },
+  {
+    "table": 2,
+    "old_row": 12,
+    "row": 10,
+    "symbol": "$S_{cq},E_{cq};\\ n_{cq}$",
+    "kind": "时刻别名/计数",
+    "definition": "$S_{cq},E_{cq}$为腔室$c$周期$q$的加工起止事件时刻（s）；$n_{cq}\\in\\{0,\\ldots,H\\}$为该周期结束后的累计生产周期数，清洁后归零。"
+  },
+  {
+    "table": 2,
+    "old_row": 13,
+    "row": 11,
+    "symbol": "$f_{pcq};\\ \\kappa_{cq},\\upsilon_{cq}$",
+    "kind": "二元决策/派生量",
+    "definition": "$f_{pcq}=1$表示对$p$位于腔室$c$周期$q$的访问前侧。$\\kappa_{cq}=\\sum_p(X_{pcq}-A_{pcq})$标记保留上一周期的一个对；$\\upsilon_{cq}=U_{cq}-\\sum_p(X_{pcq}-Z_{pcq})$标记本周期后全部退出，二者由占位及首末周期标记确定。"
+  },
+  {
+    "table": 2,
+    "old_row": 17,
+    "row": 12,
+    "symbol": "$a_{vce},q^{\\rm cl}_{ce}$",
+    "kind": "区段标记",
+    "definition": "$a_{vce}=1$表示生产任务$v$属于腔室$c$的清洁区段$e$；$q^{\\rm cl}_{ce}=1$表示该段后有清洁。二者由周期序列联结，用于表达清洁动作窗口；此处$q^{\\rm cl}$是标记名，不是周期索引。"
+  },
+  {
+    "table": 2,
+    "old_row": 20,
+    "row": 13,
+    "symbol": "$g_{j\\tau}$",
+    "kind": "二元变量",
+    "definition": "$g_{j\\tau}=1$表示借用需求$j=(p,r)$使用实体辅助晶圆$\\tau$，否则为0；需求编号与实体编号分别表示一次使用任务和一片可复用晶圆。"
+  },
+  {
+    "table": 2,
+    "old_row": 21,
+    "row": 14,
+    "symbol": "$h_{o\\ell},\\gamma_{pa}$",
+    "kind": "二元变量",
+    "definition": "$h_{o\\ell}=1$表示占用任务$o$选择单元$\\ell$，否则为0；$\\gamma_{pa}=1$表示对$p$在允许的同地点原子搬运段$a$上同步搬运。特殊下标$a=\\mathrm{in}$时表示单源产品--辅助对随行入片选择。"
+  },
+  {
+    "table": 2,
+    "old_row": 22,
+    "row": 15,
+    "symbol": "$y^r_{oo'}$",
+    "kind": "二元变量",
+    "definition": "当动作$o,o^{\\prime}$争用资源$r$的同一单元时，$y^r_{oo^{\\prime}}=1$表示$o$先于$o^{\\prime}$，取0表示反向次序；上标$r$标识资源，撇号区分两个动作。"
+  },
+  {
+    "table": 2,
+    "old_row": 23,
+    "row": 16,
+    "symbol": "$C_{\\max}$",
+    "kind": "非负辅助量",
+    "definition": "所有产品$w$回到原LP的时刻$e_{w,\\mathrm{return}}$的共同上界（s）；第一阶段最小化该上界，return、max为语义标签。"
+  },
+  {
+    "table": 2,
+    "old_row": 25,
+    "row": 17,
+    "symbol": "$\\omega_\\alpha,L_{\\max}$",
+    "kind": "等待表达式/辅助量",
+    "definition": "$\\omega_\\alpha$为等待项$\\alpha$中对应事件间隔扣除必要时长后的非负余量（s），由事件时刻计算；$L_{\\max}$为所有单项等待的共同上界（s）。"
+  },
+  {
+    "table": 2,
+    "old_row": 28,
+    "row": 18,
+    "symbol": "$v_{cq}$",
+    "kind": "非负线性化辅助量",
+    "definition": "腔室$c$内以周期$q$为中心的连续三个生产周期的节拍变化上界（s），即$|S_{c,q+1}-2S_{cq}+S_{c,q-1}|$的上界；仅对$(c,q)\\in\\mathcal I_h$定义。"
+  },
+  {
+    "table": 2,
+    "old_row": 29,
+    "row": 19,
+    "symbol": "$\\eta_\\alpha$",
+    "kind": "非负连续辅助量（s）",
+    "definition": "等待项$\\alpha$超出软上限$\\bar\\omega_\\alpha$的非负超额上界（s），满足$\\eta_\\alpha\\ge\\max\\{0,\\omega_\\alpha-\\bar\\omega_\\alpha\\}$。"
+  }
+]

@@ -3914,20 +3914,15 @@ def build_petri_mip_model(cfg: PetriMIPConfig):
     c_max = model.addVar(vtype="C", lb=0.0, name="c_max")
     for w in product_wafers:
         model.addCons(c_max >= wafer_completion[w], name=f"makespan_lb_{w}")
-    for m in pm_ids:
-        for clean_slot in clean_slots:
-            model.addCons(
-                c_max
-                >= clean_front_unload_end[(m, clean_slot)]
-                - big_m * (1 - clean_active[(m, clean_slot)]),
-                name=f"makespan_clean_lb_{m}_{clean_slot}",
-            )
 
     # The generated LP has a pure makespan objective: minimizing c_max is
-    # exactly maximizing WPH for a fixed wafer count. The runner may then fix
-    # c_max to either the proven optimum or the current incumbent and compact
-    # that schedule in a bounded second phase. Keeping this score explicit in
-    # the LP makes both objectives auditable in a saved solution.
+    # exactly maximizing product WPH for a fixed wafer count.  The production
+    # horizon ends when the last product wafer returns to an LP.  A terminal
+    # cleaning with no later chamber process remains physically scheduled for
+    # equipment readiness, but its completion does not extend c_max.  Internal
+    # cleanings still affect c_max through the precedence of later processing.
+    # The runner may then fix c_max to either the proven optimum or the current
+    # incumbent and compact that schedule in a bounded second phase.
     # Strict secondary objective: after phase 1 fixes Cmax, minimize the sum
     # of squared waiting intervals over every chamber and every product path.
     # This is lexicographic rather than a fragile weighted blend, so no amount
@@ -4191,7 +4186,7 @@ Embedded PEC wafers forced by odd product counts: `{embedded_pec}`.
   double-gripper variable, the two wafers enter or leave synchronously on two independent slots.
 - PEC wafers are modeled as reusable, chamber-bound tokens. Each active PEC job occupies exactly one token from its assigned chamber's PEC subset, from `vtr_load` start until `vtr_unload` end.
 - chamber cleaning is modeled as a pure `PEC+PEC` / `PEC+PEC` rotary batch. It uses the same VTR load/unload and chamber rotation semantics as `4x1`, occupies four PEC tokens, and adds a cleaning process interval.
-- per chamber, process epochs are separated by cleaning batches so that each epoch contains at most `{cfg.cleaning_interval}` full-chamber process cycles. Every completed interval-th cycle triggers cleaning, including a terminal cycle; every active cleaning completion is included in `c_max`. A long `2x2` workload is split at an exposure boundary with PEC tail/head pairs; it no longer has to fit in one cleaning epoch.
+- per chamber, process epochs are separated by cleaning batches so that each epoch contains at most `{cfg.cleaning_interval}` full-chamber process cycles. Every completed interval-th cycle triggers cleaning, including a terminal cycle. Internal cleaning delays subsequent processing; a terminal cleaning with no later chamber process remains in the action schedule but does not extend product `c_max`. A long `2x2` workload is split at an exposure boundary with PEC tail/head pairs; it no longer has to fit in one cleaning epoch.
 
 ## Resource Constraints Added Explicitly
 
@@ -4261,7 +4256,7 @@ Embedded PEC wafers forced by odd product counts: `{embedded_pec}`.
 - `llupper_slot_assign_*`, `lllower_slot_assign_*`: LL slot occupancy assignment
 - `wafer_completion_*`: auxiliary terminal timestamp linking each product wafer's LP return to the makespan; it is
   not separately summed in the objective
-- `c_max`: end-to-end makespan
+- `c_max`: end-to-end product makespan, ending when the last product wafer returns to an LP; post-production terminal cleaning is excluded
 - `schedule_wait_*`, `schedule_wait_square_*`: legacy per-event waiting variables,
   built only in `legacy_wait_square` mode;
 - `resource_idle_*`, `resource_idle_square_*`: aggregate capacity-adjusted

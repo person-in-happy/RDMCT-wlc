@@ -1,0 +1,327 @@
+[
+  {
+    "suite": "mode_n008_clean10_pure22",
+    "constraint": "all within-chain adjacent processing gaps = 4 s, combined exchange",
+    "instance": "D:\\git\\git\\RDMCT-A3C\\JMS\\results\\submission_evidence\\temp_continuous4_20260909_100003\\mode_n008_clean10_pure22\\continuous4.lp",
+    "source_solution": "D:\\git\\git\\RDMCT-A3C\\JMS\\results\\submission_evidence\\temp_continuous4_20260909_100003\\mode_n008_clean10_pure22\\best.sol",
+    "instance_sha256": "82bff4516e1f7f55adfedbdf1847fb3f5afbdc7d7d40645b25a511598c00440c",
+    "solution_sha256": "5b2f39025b586ed42c6fb84ef683bb65c8b1eed0eb90b3b02087d73d6427687b",
+    "status": "optimal",
+    "metrics": {
+      "total_wafers": 8,
+      "cmax": 584.0,
+      "model_objective_cmax": 584.000001,
+      "cmax_matches_last_product_return": true,
+      "throughput_wph": 49.31506849315068,
+      "mean_cycle_time": 350.5,
+      "p95_cycle_time": 364.0,
+      "atr_utilization": 0.5547945205479452,
+      "vtr_utilization": 0.0547945205479452,
+      "al_utilization": 0.273972602739726,
+      "llupper_capacity_utilization": 0.2363013698630137,
+      "lllower_capacity_utilization": 0.2945205479452055,
+      "pec_peak_in_tool": 4,
+      "clean_count": 0,
+      "clean_internal_count": 0,
+      "clean_terminal_count": 0,
+      "clean_time_share": 0.0,
+      "physical_route_total_wait": 404.0,
+      "physical_route_max_wait": 36.0,
+      "physical_cadence_cv": 0.0,
+      "physical_cadence_deviation_sum": 0.0,
+      "ch2_utilization": 0.4623287671232877,
+      "ch3_utilization": 0.4623287671232877
+    },
+    "full_action_horizon": 602.0,
+    "cleaning_timeline": [],
+    "bridge_audit": {
+      "active": 4,
+      "combined": 4,
+      "split": 0
+    },
+    "source_result": {
+      "suite": "mode_n008_clean10_pure22",
+      "source": {
+        "suite": "mode_n008_clean10_pure22",
+        "source_solution": "D:\\git\\git\\RDMCT-A3C\\JMS\\results\\mode_cleaning_crossover\\jms_product_cmax_n8_n16_H4_H9_20260904\\solutions\\mode_n008_clean09_pure22__mode_n008_clean09_pure22_equal_t__proposed__s1_t1__ff4a0b88c8e1ae3b.sol",
+        "instance": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\_work\\gantt8_24_20260908\\instances\\mode_n008_clean10_pure22_equal_total180_20260831.lp",
+        "provenance": "H9 saved schedule validated on byte-identical regenerated H10 model",
+        "status": "optimal",
+        "validation_note": "checked active primary model at feasibility tolerance 1.000001e-06; removed 13 inactive auxiliaries",
+        "instance_sha256": "2d21e2b969e5e59f58cd2f02953224818ee569892cc5b99d6f9cf0fbe37b0e7e",
+        "solution_sha256": "08fe8a9fd219649fc91df5752d70a2d38b22bda4b3fb172664bec1cc6d351d46",
+        "metrics": {
+          "total_wafers": 8,
+          "cmax": 577.999999,
+          "model_objective_cmax": 577.999999,
+          "cmax_matches_last_product_return": true,
+          "throughput_wph": 49.826989705583024,
+          "mean_cycle_time": 372.4999995,
+          "p95_cycle_time": 386.0,
+          "atr_utilization": 0.560553634187809,
+          "vtr_utilization": 0.06228373713197878,
+          "al_utilization": 0.2768166094754613,
+          "llupper_capacity_utilization": 0.20761245710659595,
+          "lllower_capacity_utilization": 0.17301038092216328,
+          "pec_peak_in_tool": 4,
+          "clean_count": 0,
+          "clean_internal_count": 0,
+          "clean_terminal_count": 0,
+          "clean_time_share": 0.0,
+          "physical_route_total_wait": 347.999996,
+          "physical_route_max_wait": 39.999999,
+          "physical_cadence_cv": 0.23577235772357724,
+          "physical_cadence_deviation_sum": 116.0,
+          "ch2_utilization": 0.46712802848984086,
+          "ch3_utilization": 0.46712802848984086
+        }
+      },
+      "constraint": "all within-chain adjacent processing gaps = 4 s, combined exchange",
+      "bridge_indices": [
+        [
+          2,
+          2
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          2
+        ],
+        [
+          3,
+          3
+        ]
+      ],
+      "instance": "D:\\git\\git\\RDMCT-A3C\\JMS\\results\\submission_evidence\\temp_continuous4_20260909_100003\\mode_n008_clean10_pure22\\continuous4.lp",
+      "instance_sha256": "82bff4516e1f7f55adfedbdf1847fb3f5afbdc7d7d40645b25a511598c00440c",
+      "warm_accepted": false,
+      "time_limit": 180.0,
+      "finish_time_limit": 60.0,
+      "primary": {
+        "status": "optimal",
+        "upper_bound": 584.0,
+        "lower_bound": 584.0,
+        "gap": 0.0,
+        "time": 1.0
+      },
+      "finish": {
+        "status": "optimal",
+        "objective": 584.0
+      },
+      "solution": "D:\\git\\git\\RDMCT-A3C\\JMS\\results\\submission_evidence\\temp_continuous4_20260909_100003\\mode_n008_clean10_pure22\\best.sol",
+      "validated": true,
+      "validation_note": "checked active primary model at feasibility tolerance 1.000001e-06; removed 0 inactive auxiliaries",
+      "bridge_audit": {
+        "active": 4,
+        "combined": 4,
+        "split": 0
+      },
+      "gaps": [
+        4.0,
+        4.0,
+        4.0,
+        4.0
+      ],
+      "metrics": {
+        "total_wafers": 8,
+        "cmax": 584.0,
+        "model_objective_cmax": 584.000001,
+        "cmax_matches_last_product_return": true,
+        "throughput_wph": 49.31506849315068,
+        "mean_cycle_time": 350.5,
+        "p95_cycle_time": 364.0,
+        "atr_utilization": 0.5547945205479452,
+        "vtr_utilization": 0.0547945205479452,
+        "al_utilization": 0.273972602739726,
+        "llupper_capacity_utilization": 0.2363013698630137,
+        "lllower_capacity_utilization": 0.2945205479452055,
+        "pec_peak_in_tool": 4,
+        "clean_count": 0,
+        "clean_internal_count": 0,
+        "clean_terminal_count": 0,
+        "clean_time_share": 0.0,
+        "physical_route_total_wait": 404.0,
+        "physical_route_max_wait": 36.0,
+        "physical_cadence_cv": 0.0,
+        "physical_cadence_deviation_sum": 0.0,
+        "ch2_utilization": 0.4623287671232877,
+        "ch3_utilization": 0.4623287671232877
+      },
+      "solution_sha256": "5b2f39025b586ed42c6fb84ef683bb65c8b1eed0eb90b3b02087d73d6427687b"
+    }
+  },
+  {
+    "suite": "mode_n008_clean03_pure22",
+    "constraint": "all within-chain adjacent processing gaps = 4 s, combined exchange",
+    "instance": "D:\\git\\git\\RDMCT-A3C\\JMS\\results\\submission_evidence\\temp_continuous4_20260909_100003\\mode_n008_clean03_pure22\\continuous4.lp",
+    "source_solution": "D:\\git\\git\\RDMCT-A3C\\JMS\\results\\submission_evidence\\temp_continuous4_20260909_100003\\mode_n008_clean03_pure22\\best.sol",
+    "instance_sha256": "0b128ffca706b4d395e0bd82a2ddc23fd609eb93629f036eaeb7c66f1f95429a",
+    "solution_sha256": "137b1123429f81c922c1b6d2625afeb6d3936c56e2697f0514bb276c143fdd53",
+    "status": "optimal",
+    "metrics": {
+      "total_wafers": 8,
+      "cmax": 584.000001,
+      "model_objective_cmax": 584.000001,
+      "cmax_matches_last_product_return": true,
+      "throughput_wph": 49.31506840870708,
+      "mean_cycle_time": 350.50000024999997,
+      "p95_cycle_time": 364.0,
+      "atr_utilization": 0.5547945195979546,
+      "vtr_utilization": 0.08219178068117845,
+      "al_utilization": 0.27397260227059483,
+      "llupper_capacity_utilization": 0.21917808181647588,
+      "lllower_capacity_utilization": 0.3116438367951304,
+      "pec_peak_in_tool": 8,
+      "clean_count": 2,
+      "clean_internal_count": 0,
+      "clean_terminal_count": 2,
+      "clean_time_share": 0.13527397322726373,
+      "physical_route_total_wait": 404.000002,
+      "physical_route_max_wait": 36.0,
+      "physical_cadence_cv": 0.0,
+      "physical_cadence_deviation_sum": 0.0,
+      "ch2_utilization": 0.6986301357900032,
+      "ch3_utilization": 0.49657534332778197
+    },
+    "full_action_horizon": 1076.0,
+    "cleaning_timeline": [
+      {
+        "chamber": 2,
+        "cycle": 1,
+        "preparation_start": 434.000001000008,
+        "clean_start": 446.000001000008,
+        "clean_end": 946.000001000008,
+        "unload_end": 1059.99999999998
+      },
+      {
+        "chamber": 3,
+        "cycle": 1,
+        "preparation_start": 552.0,
+        "clean_start": 564.0,
+        "clean_end": 1064.0,
+        "unload_end": 1076.0
+      }
+    ],
+    "bridge_audit": {
+      "active": 4,
+      "combined": 4,
+      "split": 0
+    },
+    "source_result": {
+      "suite": "mode_n008_clean03_pure22",
+      "source": {
+        "suite": "mode_n008_clean03_pure22",
+        "source_solution": "D:\\git\\git\\RDMCT-A3C\\JMS\\results\\mode_cleaning_crossover\\jms_product_cmax_n8_n16_H3_20260903\\solutions\\mode_n008_clean03_pure22__mode_n008_clean03_pure22_equal_t__proposed__s1_t1__47862f99e1f21ccb.sol",
+        "instance": "D:\\git\\git\\RDMCT-A3C\\generated_instances\\jms_mode_cleaning_crossover_equal_total180\\mode_n008_clean03_pure22_equal_total180_20260831.lp",
+        "provenance": "original saved schedule",
+        "status": "optimal",
+        "validation_note": "checked active primary model at feasibility tolerance 1.000001e-06; removed 13 inactive auxiliaries",
+        "instance_sha256": "fad2c5a4dd2fb1fc845a444c7049c2bff5277eb5381b6a58ea1f49c95ab03c05",
+        "solution_sha256": "2dcc55c8dfef3515e5d8b97f42f4068215c2fe87b371c557eae9270091f6e18c",
+        "metrics": {
+          "total_wafers": 8,
+          "cmax": 578.0,
+          "model_objective_cmax": 578.0,
+          "cmax_matches_last_product_return": true,
+          "throughput_wph": 49.826989619377166,
+          "mean_cycle_time": 372.5,
+          "p95_cycle_time": 386.0,
+          "atr_utilization": 0.5605536332179931,
+          "vtr_utilization": 0.08996539792387544,
+          "al_utilization": 0.2768166089965398,
+          "llupper_capacity_utilization": 0.20761245674740483,
+          "lllower_capacity_utilization": 0.17301038062283736,
+          "pec_peak_in_tool": 8,
+          "clean_count": 2,
+          "clean_internal_count": 0,
+          "clean_terminal_count": 2,
+          "clean_time_share": 0.01384083044982699,
+          "physical_route_total_wait": 348.0,
+          "physical_route_max_wait": 40.0,
+          "physical_cadence_cv": 0.23577235772357724,
+          "physical_cadence_deviation_sum": 116.0,
+          "ch2_utilization": 0.4740484429065744,
+          "ch3_utilization": 0.48788927335640137
+        }
+      },
+      "constraint": "all within-chain adjacent processing gaps = 4 s, combined exchange",
+      "bridge_indices": [
+        [
+          3,
+          3
+        ],
+        [
+          2,
+          2
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "instance": "D:\\git\\git\\RDMCT-A3C\\JMS\\results\\submission_evidence\\temp_continuous4_20260909_100003\\mode_n008_clean03_pure22\\continuous4.lp",
+      "instance_sha256": "0b128ffca706b4d395e0bd82a2ddc23fd609eb93629f036eaeb7c66f1f95429a",
+      "warm_accepted": false,
+      "time_limit": 180.0,
+      "finish_time_limit": 60.0,
+      "primary": {
+        "status": "optimal",
+        "upper_bound": 584.0,
+        "lower_bound": 584.0,
+        "gap": 0.0,
+        "time": 3.0
+      },
+      "finish": {
+        "status": "optimal",
+        "objective": 1076.0
+      },
+      "solution": "D:\\git\\git\\RDMCT-A3C\\JMS\\results\\submission_evidence\\temp_continuous4_20260909_100003\\mode_n008_clean03_pure22\\best.sol",
+      "validated": true,
+      "validation_note": "checked active primary model at feasibility tolerance 1.000001e-06; removed 0 inactive auxiliaries",
+      "bridge_audit": {
+        "active": 4,
+        "combined": 4,
+        "split": 0
+      },
+      "gaps": [
+        4.0,
+        4.0,
+        4.0,
+        4.0
+      ],
+      "metrics": {
+        "total_wafers": 8,
+        "cmax": 584.000001,
+        "model_objective_cmax": 584.000001,
+        "cmax_matches_last_product_return": true,
+        "throughput_wph": 49.31506840870708,
+        "mean_cycle_time": 350.50000024999997,
+        "p95_cycle_time": 364.0,
+        "atr_utilization": 0.5547945195979546,
+        "vtr_utilization": 0.08219178068117845,
+        "al_utilization": 0.27397260227059483,
+        "llupper_capacity_utilization": 0.21917808181647588,
+        "lllower_capacity_utilization": 0.3116438367951304,
+        "pec_peak_in_tool": 8,
+        "clean_count": 2,
+        "clean_internal_count": 0,
+        "clean_terminal_count": 2,
+        "clean_time_share": 0.13527397322726373,
+        "physical_route_total_wait": 404.000002,
+        "physical_route_max_wait": 36.0,
+        "physical_cadence_cv": 0.0,
+        "physical_cadence_deviation_sum": 0.0,
+        "ch2_utilization": 0.6986301357900032,
+        "ch3_utilization": 0.49657534332778197
+      },
+      "solution_sha256": "137b1123429f81c922c1b6d2625afeb6d3936c56e2697f0514bb276c143fdd53"
+    }
+  }
+]

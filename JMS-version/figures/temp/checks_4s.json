@@ -1,0 +1,110 @@
+[
+  {
+    "suite": "mode_n008_clean10_pure22",
+    "solution_sha256": "5b2f39025b586ed42c6fb84ef683bb65c8b1eed0eb90b3b02087d73d6427687b",
+    "upper_reset_count": 8,
+    "immediate_reset_verified": true,
+    "detail_reset": {
+      "lane": "LLupper slot 1",
+      "start": 104.0,
+      "end": 134.0,
+      "label": "LLupper vent reset: vacuum->atmosphere\nempty",
+      "short_label": "empty",
+      "color": "#BAB0AC"
+    },
+    "concurrent_vtr_actions": [
+      {
+        "lane": "VTR robot",
+        "start": 104.0,
+        "end": 108.0,
+        "label": "VTR empty move CH2->LLupper\nempty",
+        "short_label": "empty",
+        "color": "#BAB0AC"
+      }
+    ],
+    "process_duration": 90,
+    "cmax": 584.0,
+    "full_horizon": 602.0
+  },
+  {
+    "suite": "mode_n008_clean03_pure22",
+    "solution_sha256": "137b1123429f81c922c1b6d2625afeb6d3936c56e2697f0514bb276c143fdd53",
+    "upper_reset_count": 8,
+    "immediate_reset_verified": true,
+    "detail_reset": {
+      "lane": "LLupper slot 1",
+      "start": 104.0,
+      "end": 134.0,
+      "label": "LLupper vent reset: vacuum->atmosphere\nempty",
+      "short_label": "empty",
+      "color": "#BAB0AC"
+    },
+    "concurrent_vtr_actions": [
+      {
+        "lane": "VTR robot",
+        "start": 104.0,
+        "end": 108.0,
+        "label": "VTR empty move CH2->LLupper\nempty",
+        "short_label": "empty",
+        "color": "#BAB0AC"
+      }
+    ],
+    "process_duration": 90,
+    "cmax": 584.000001,
+    "full_horizon": 1076.0
+  },
+  {
+    "suite": "mode_n024_clean10_pure22",
+    "solution_sha256": "d3ea2e2f4e5200892327cfe66b8977970c2299aaa387d978019bf4c418798889",
+    "upper_reset_count": 24,
+    "immediate_reset_verified": true,
+    "detail_reset": {
+      "lane": "LLupper slot 1",
+      "start": 104.000000000001,
+      "end": 134.000000000001,
+      "label": "LLupper vent reset: vacuum->atmosphere\nempty",
+      "short_label": "empty",
+      "color": "#BAB0AC"
+    },
+    "concurrent_vtr_actions": [
+      {
+        "lane": "VTR robot",
+        "start": 104.000000000001,
+        "end": 108.000000000001,
+        "label": "VTR empty move CH2->LLupper\nempty",
+        "short_label": "empty",
+        "color": "#BAB0AC"
+      }
+    ],
+    "process_duration": 90,
+    "cmax": 1336.0,
+    "full_horizon": 1354.0
+  },
+  {
+    "suite": "mode_n024_clean03_pure22",
+    "solution_sha256": "c825fa76014f21167c812dd6e3ffe4c92bb7b2698f04da28af94a77fe1dbc2d9",
+    "upper_reset_count": 24,
+    "immediate_reset_verified": true,
+    "detail_reset": {
+      "lane": "LLupper slot 1",
+      "start": 104.0,
+      "end": 134.0,
+      "label": "LLupper vent reset: vacuum->atmosphere\nempty",
+      "short_label": "empty",
+      "color": "#BAB0AC"
+    },
+    "concurrent_vtr_actions": [
+      {
+        "lane": "VTR robot",
+        "start": 104.0,
+        "end": 108.0,
+        "label": "VTR empty move CH3->LLupper\nempty",
+        "short_label": "empty",
+        "color": "#BAB0AC"
+      }
+    ],
+    "process_duration": 90,
+    "cmax": 2219.99999999999,
+    "full_horizon": 2712.000001
+  }
+]

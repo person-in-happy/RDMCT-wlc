@@ -1,0 +1,470 @@
+{
+  "4x1": {
+    "file": "mode_4x1.gif",
+    "size": [
+      1200,
+      860
+    ],
+    "frames": 105,
+    "duration_seconds": 17.28,
+    "bytes": 1193939,
+    "checks": "passed: front-only handling, capacity, full occupancy during processing, product exposure counts, consecutive exposures, empty final chamber, GIF decoding and pixel-exact compositing",
+    "scope": "Illustrative chamber event sequence, not a validated full-tool schedule",
+    "trace": [
+      {
+        "step": 1,
+        "event": {
+          "kind": "load",
+          "title": "装入第一对 P1",
+          "note": "P1 的两片产品进入前侧工位。",
+          "pair": "P1"
+        },
+        "front": "P1",
+        "back": null,
+        "counts": {
+          "P1": 0,
+          "P2": 0
+        }
+      },
+      {
+        "step": 2,
+        "event": {
+          "kind": "rotate",
+          "title": "半周旋转 · 180°",
+          "note": "P1 转到后侧，前侧空出。",
+          "pair": null
+        },
+        "front": null,
+        "back": "P1",
+        "counts": {
+          "P1": 0,
+          "P2": 0
+        }
+      },
+      {
+        "step": 3,
+        "event": {
+          "kind": "load",
+          "title": "装入第二对 P2",
+          "note": "四工位满片，具备加工条件。",
+          "pair": "P2"
+        },
+        "front": "P2",
+        "back": "P1",
+        "counts": {
+          "P1": 0,
+          "P2": 0
+        }
+      },
+      {
+        "step": 4,
+        "event": {
+          "kind": "process",
+          "title": "四片同步加工",
+          "note": "P1、P2 同时完成唯一一次加工。",
+          "pair": null
+        },
+        "front": "P2",
+        "back": "P1",
+        "counts": {
+          "P1": 1,
+          "P2": 1
+        }
+      },
+      {
+        "step": 5,
+        "event": {
+          "kind": "unload",
+          "title": "先卸出 P2",
+          "note": "后装先卸；P2 已完成加工。",
+          "pair": "P2"
+        },
+        "front": null,
+        "back": "P1",
+        "counts": {
+          "P1": 1,
+          "P2": 1
+        }
+      },
+      {
+        "step": 6,
+        "event": {
+          "kind": "rotate",
+          "title": "半周旋转 · 180°",
+          "note": "P1 转到机械手可访问的前侧。",
+          "pair": null
+        },
+        "front": "P1",
+        "back": null,
+        "counts": {
+          "P1": 1,
+          "P2": 1
+        }
+      },
+      {
+        "step": 7,
+        "event": {
+          "kind": "unload",
+          "title": "再卸出 P1",
+          "note": "P1 完成退出，腔室恢复空闲。",
+          "pair": "P1"
+        },
+        "front": null,
+        "back": null,
+        "counts": {
+          "P1": 1,
+          "P2": 1
+        }
+      },
+      {
+        "step": 8,
+        "event": {
+          "kind": "done",
+          "title": "本批加工完成",
+          "note": "4 片产品，每片完成 1 次加工。",
+          "pair": null
+        },
+        "front": null,
+        "back": null,
+        "counts": {
+          "P1": 1,
+          "P2": 1
+        }
+      }
+    ]
+  },
+  "2x2": {
+    "file": "mode_2x2.gif",
+    "size": [
+      1200,
+      860
+    ],
+    "frames": 297,
+    "duration_seconds": 43.68,
+    "bytes": 3559641,
+    "checks": "passed: front-only handling, capacity, full occupancy during processing, product exposure counts, consecutive exposures, empty final chamber, GIF decoding and pixel-exact compositing",
+    "scope": "Illustrative chamber event sequence, not a validated full-tool schedule",
+    "trace": [
+      {
+        "step": 1,
+        "event": {
+          "kind": "load",
+          "title": "链首：装入辅助对 D",
+          "note": "D 含两片辅助晶圆，用于补位。",
+          "pair": "D"
+        },
+        "front": "D",
+        "back": null,
+        "counts": {
+          "P1": 0,
+          "P2": 0,
+          "P3": 0
+        }
+      },
+      {
+        "step": 2,
+        "event": {
+          "kind": "rotate",
+          "title": "半周旋转 · 180°",
+          "note": "D 转到后侧，前侧空出。",
+          "pair": null
+        },
+        "front": null,
+        "back": "D",
+        "counts": {
+          "P1": 0,
+          "P2": 0,
+          "P3": 0
+        }
+      },
+      {
+        "step": 3,
+        "event": {
+          "kind": "load",
+          "title": "装入产品对 P1",
+          "note": "链首四工位满片：D + P1。",
+          "pair": "P1"
+        },
+        "front": "P1",
+        "back": "D",
+        "counts": {
+          "P1": 0,
+          "P2": 0,
+          "P3": 0
+        }
+      },
+      {
+        "step": 4,
+        "event": {
+          "kind": "process",
+          "title": "周期 1：D + P1",
+          "note": "P1 第 1 次曝光；D 保持满片。",
+          "pair": null
+        },
+        "front": "P1",
+        "back": "D",
+        "counts": {
+          "P1": 1,
+          "P2": 0,
+          "P3": 0
+        }
+      },
+      {
+        "step": 5,
+        "event": {
+          "kind": "rotate",
+          "title": "半周旋转 · 180°",
+          "note": "P1 保留并转到后侧；D 转到前侧。",
+          "pair": null
+        },
+        "front": "D",
+        "back": "P1",
+        "counts": {
+          "P1": 1,
+          "P2": 0,
+          "P3": 0
+        }
+      },
+      {
+        "step": 6,
+        "event": {
+          "kind": "unload",
+          "title": "卸出 D",
+          "note": "辅助对返回存储，待链尾再次借用。",
+          "pair": "D"
+        },
+        "front": null,
+        "back": "P1",
+        "counts": {
+          "P1": 1,
+          "P2": 0,
+          "P3": 0
+        }
+      },
+      {
+        "step": 7,
+        "event": {
+          "kind": "load",
+          "title": "装入 P2",
+          "note": "P2 进入前侧，与 P1 同时加工。",
+          "pair": "P2"
+        },
+        "front": "P2",
+        "back": "P1",
+        "counts": {
+          "P1": 1,
+          "P2": 0,
+          "P3": 0
+        }
+      },
+      {
+        "step": 8,
+        "event": {
+          "kind": "process",
+          "title": "周期 2：P1 + P2",
+          "note": "P1 第 2 次曝光；P2 第 1 次曝光。",
+          "pair": null
+        },
+        "front": "P2",
+        "back": "P1",
+        "counts": {
+          "P1": 2,
+          "P2": 1,
+          "P3": 0
+        }
+      },
+      {
+        "step": 9,
+        "event": {
+          "kind": "rotate",
+          "title": "半周旋转 · 180°",
+          "note": "P2 保留并转到后侧；P1 转到前侧。",
+          "pair": null
+        },
+        "front": "P1",
+        "back": "P2",
+        "counts": {
+          "P1": 2,
+          "P2": 1,
+          "P3": 0
+        }
+      },
+      {
+        "step": 10,
+        "event": {
+          "kind": "unload",
+          "title": "卸出 P1",
+          "note": "P1 已完成两次曝光，可以退出。",
+          "pair": "P1"
+        },
+        "front": null,
+        "back": "P2",
+        "counts": {
+          "P1": 2,
+          "P2": 1,
+          "P3": 0
+        }
+      },
+      {
+        "step": 11,
+        "event": {
+          "kind": "load",
+          "title": "装入 P3",
+          "note": "P3 进入前侧，与 P2 同时加工。",
+          "pair": "P3"
+        },
+        "front": "P3",
+        "back": "P2",
+        "counts": {
+          "P1": 2,
+          "P2": 1,
+          "P3": 0
+        }
+      },
+      {
+        "step": 12,
+        "event": {
+          "kind": "process",
+          "title": "周期 3：P2 + P3",
+          "note": "P2 第 2 次曝光；P3 第 1 次曝光。",
+          "pair": null
+        },
+        "front": "P3",
+        "back": "P2",
+        "counts": {
+          "P1": 2,
+          "P2": 2,
+          "P3": 1
+        }
+      },
+      {
+        "step": 13,
+        "event": {
+          "kind": "rotate",
+          "title": "半周旋转 · 180°",
+          "note": "P3 保留并转到后侧；P2 转到前侧。",
+          "pair": null
+        },
+        "front": "P2",
+        "back": "P3",
+        "counts": {
+          "P1": 2,
+          "P2": 2,
+          "P3": 1
+        }
+      },
+      {
+        "step": 14,
+        "event": {
+          "kind": "unload",
+          "title": "卸出 P2",
+          "note": "P2 已完成两次曝光，可以退出。",
+          "pair": "P2"
+        },
+        "front": null,
+        "back": "P3",
+        "counts": {
+          "P1": 2,
+          "P2": 2,
+          "P3": 1
+        }
+      },
+      {
+        "step": 15,
+        "event": {
+          "kind": "load",
+          "title": "装入 D",
+          "note": "链尾借回辅助对 D，补齐四工位。",
+          "pair": "D"
+        },
+        "front": "D",
+        "back": "P3",
+        "counts": {
+          "P1": 2,
+          "P2": 2,
+          "P3": 1
+        }
+      },
+      {
+        "step": 16,
+        "event": {
+          "kind": "process",
+          "title": "周期 4：P3 + D",
+          "note": "P3 第 2 次曝光；D 保持满片。",
+          "pair": null
+        },
+        "front": "D",
+        "back": "P3",
+        "counts": {
+          "P1": 2,
+          "P2": 2,
+          "P3": 2
+        }
+      },
+      {
+        "step": 17,
+        "event": {
+          "kind": "unload",
+          "title": "链尾：卸出辅助对 D",
+          "note": "D 返回辅助存储，产品 P3 留在后侧。",
+          "pair": "D"
+        },
+        "front": null,
+        "back": "P3",
+        "counts": {
+          "P1": 2,
+          "P2": 2,
+          "P3": 2
+        }
+      },
+      {
+        "step": 18,
+        "event": {
+          "kind": "rotate",
+          "title": "半周旋转 · 180°",
+          "note": "P3 转到前侧，准备退出。",
+          "pair": null
+        },
+        "front": "P3",
+        "back": null,
+        "counts": {
+          "P1": 2,
+          "P2": 2,
+          "P3": 2
+        }
+      },
+      {
+        "step": 19,
+        "event": {
+          "kind": "unload",
+          "title": "卸出最后一对 P3",
+          "note": "P3 已完成两次曝光，腔室清空。",
+          "pair": "P3"
+        },
+        "front": null,
+        "back": null,
+        "counts": {
+          "P1": 2,
+          "P2": 2,
+          "P3": 2
+        }
+      },
+      {
+        "step": 20,
+        "event": {
+          "kind": "done",
+          "title": "整条加工链完成",
+          "note": "6 片产品，每片完成 2 次连续曝光。",
+          "pair": null
+        },
+        "front": null,
+        "back": null,
+        "counts": {
+          "P1": 2,
+          "P2": 2,
+          "P3": 2
+        }
+      }
+    ]
+  }
+}

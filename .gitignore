@@ -170,3 +170,43 @@ anaconda_projects/
 /cie/products/*.blg
 /cie/products/*.spl
 /cie/products/*.synctex.gz
+
+# Regenerable manuscript compilation and page-preview intermediates.
+*.aux
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.xdv
+*.idv
+*.lg
+*.spl
+*.blg
+/tmp/
+/JMS-version/tmp/
+/JMS-version/_work/
+/JMS-version/review/*/manuscript_build/
+/JMS-version/review/*/english_build/
+/JMS-version/review/*/*.png
+/JMS-version/review/*/*.jpg
+/JMS-version/review/*/*.webp
+/JMS-version/review/*/*.before.pdf
+/JMS-version/figures/temp/qa/
+/JMS-version/figures/temp/**/*.tiff
+/JMS-version/figures/temp/*.tiff
+/T-ASE-version/output/.build/
+/T-ASE-version/output/package_check/
+/T-ASE-version/output/qa/
+
+# Local historical archives and duplicate export bundles; keep on disk.
+/manuscript_archive/
+/JMS-version.zip
+/JMS-version/output/*.zip
+/JMS-version/output/pdf/*.zip
+/JMS/*.zip
+/JMS/output/packages/
+
+# Raw evidence and frozen LPs are retained locally, not discarded as caches.
+# Never stage a live campaign as though it were a completed result set.
+/JMS-version/results/optional_cleaning_*/
+/JMS-version/results/joint_model*/
+/JMS-version/results/frozen_models_20260906/
