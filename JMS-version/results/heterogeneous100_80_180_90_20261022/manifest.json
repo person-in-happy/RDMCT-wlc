@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "created_utc": "2026-10-22T14:55:59.740939+00:00",
+  "config_sha256": "33171931f7d6b25122ef9687d73f268d70c770fba30a1978c2973cecfa455269",
+  "seed_sha256": "29e43f6136caa3bb18763169c1ef02e50e4dc1b3ec676842336875b0f0f38d5e",
+  "code": {
+    "experiment.py": "9306680caf65fae132f36fd65a57bb79488690b3fcac45c4e9adcaacabefcc3e",
+    "grippers.py": "5ed898b8c17850b88da8eb8700df33dc5fd1fe3df3bf60df6b5c22281900e0fc",
+    "joint_chamber_cycle_model.py": "c744be3e696c5ef5fe7e4911fb33e9932b2ece7dbc93c275e307c2c27aaa09ab",
+    "joint_pairing_model.py": "9f5551f2f361e452664c594968c0a7d8c2ab67b7bb8245acd73eb531afa2685e",
+    "model.py": "f0cb13230ef0f8746e12060b2bf2596c22972c4eb266196999aa4f687c73e8b4",
+    "recipes.py": "44207edaacd48ddcbf0afd5c375977525e596017983ff1a33d1203d888a40ec2",
+    "runtime_compat.py": "28d479887faaa56306dd7ec53f85dad73d006176565e10978f193c99bb6d67d5",
+    "scip_imports.py": "874c497d8c283be8a5233d2c176da3c8afdfc92717d5691161c200ef5146b3d9",
+    "seed.py": "2a0a11e806c915f698f6c033d04d27d3bcd905925a5c91e97c96dcc615e3b5e0",
+    "test_heterogeneous.py": "3401e8624ee2e36b3ef4f4c5f2fa62a2c512ab713e88ea9e71a98653ffdf7190",
+    "validate.py": "5518f52fe0ed7060ab29581262f3f812cb41d543b05b9d716f635f7b4781bc5f"
+  },
+  "interpreter": "G:\\conda\\envs\\a3cenv\\python.exe",
+  "python": "3.12.12 | packaged by conda-forge | (main, Oct 22 2025, 23:13:34) [MSC v.1944 64 bit (AMD64)]",
+  "pyscipopt": "6.1.0",
+  "platform": "Windows-11-10.0.28000-SP0",
+  "objective": "last product returned to original load port; terminal cleaning still required",
+  "durations": "seconds per exposure; 2x2 products receive two exposures",
+  "group_counts": [
+    34,
+    33,
+    33
+  ],
+  "mode_counts": {
+    "4x1": 50,
+    "2x2": 50
+  },
+  "shared_cycle_rule": "All product wafers in a productive chamber cycle have the same group",
+  "cleaning_interval": 3,
+  "source": "dual",
+  "seed": 1,
+  "threads": 1,
+  "state": "prepared; exact solve pending",
+  "optimality_claim": false
+}

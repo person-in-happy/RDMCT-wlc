@@ -26,6 +26,22 @@ def finite(data):
     if isinstance(data,(list,tuple)):return [finite(v) for v in data]
     return data
 
+def incumbent_checks(model):
+    """Check the original stage model, not final search-node domains.
+
+SCIPcheckSol (the PySCIPOpt default) may reject a stored incumbent against
+transformed variable bounds left by search. Keep that diagnostic separate;
+feasibility acceptance uses SCIPcheckSolOrig and independent physical replay.
+No feasibility tolerance or constraint is relaxed.
+"""
+    if not model.getNSols():
+        return dict(original_model_check=False, transformed_model_check=False,
+                    model_check_scope='original_stage_problem')
+    best=model.getBestSol()
+    return dict(original_model_check=bool(model.checkSol(best,printreason=False,completely=True,original=True)),
+                transformed_model_check=bool(model.checkSol(best,printreason=False,completely=True)),
+                model_check_scope='original_stage_problem')
+
 def fix_structure(x,reference):
     """Fix the selected finite configuration, retain timing/robot-order choices."""
     if not validate(reference)['valid']:raise ValueError('Reference failed independent physical validation')
@@ -116,7 +132,7 @@ def solve(config_path,out,time_limit=600,stage2_limit=120,seed=1,export_only=Fal
     m.setRealParam('limits/time',time_limit);m.optimize()
     primary=x.result();primary['primal_dual_integral']=m.getPrimalDualIntegral() if hasattr(m,'getPrimalDualIntegral') else None
     primary['cleaning_policy']='optional_before_threshold' if cleaning_rule=='optional' else 'legacy_H_or_Hminus1_before_2x2'
-    primary['original_model_check']=bool(m.getNSols() and m.checkSol(m.getBestSol(),printreason=False,completely=True))
+    primary.update(incumbent_checks(m))
     if agent is not None:dump(out/'cutsel_telemetry.json',agent.get_telemetry())
     primary['validation']=validate(primary);primary['experiment_scope']='fixed_configuration' if fixed else 'joint'
     dump(out/'phase1.json',finite(primary))
@@ -149,7 +165,7 @@ def solve(config_path,out,time_limit=600,stage2_limit=120,seed=1,export_only=Fal
             else:m.freeSol(sol)
             m.optimize();secondary=x.result();secondary['phase']='secondary';secondary['fixed_discrete_variables']=fixed_count
             secondary['cleaning_policy']=primary['cleaning_policy']
-            secondary['original_model_check']=bool(m.getNSols() and m.checkSol(m.getBestSol(),printreason=False,completely=True))
+            secondary.update(incumbent_checks(m))
             secondary['validation']=validate(secondary);secondary['primary_bound']=primary['dual_bound'];secondary['primary_status']=primary['status']
             secondary['primary_gap']=primary.get('gap');secondary['secondary_objective']=m.getObjVal() if m.getNSols() else None
             dump(out/'phase2.json',finite(secondary))

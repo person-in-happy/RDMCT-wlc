@@ -1,1424 +1,0 @@
-      System-level scheduling of rotating-chamber
-   semiconductor cluster tools: A source-congurable
-   two-stage MILP and structure-aware exact search
-                          Lizhen Shaoa,∗, Lincong Weia
-a Department of Control Science and Engineering, University of Science and Technology
-       Beijing, No. 30 Xueyuan Road, Haidian District, Beijing 100083, China
-
-
-
-
-Abstract
-
-Rotating-chamber cluster tools are equipment-level manufacturing systems
-in which wafer ow, chamber rotation, cleaning, reusable dummy wafers,
-and shared robots must be coordinated without intermediate buering. This
-study develops a source-congurable scheduling framework that separates
-external material interfaces from a common internal congurationresource
-timing model. A single-source tool is the base specialization; a dual-source
-mixed-ow 4×1/2×2 conguration is used as the strongly coupled benchmark.
-The nite-horizon two-stage mixed-integer linear program rst minimizes
-end-to-end makespan and then preserves the selected discrete schedule and
-makespan within numerical tolerance while rening physical route waits and
-chamber cadence. Exact solution is enhanced by a solver-checked structure-
-preserving binary-skeleton (SPBS) warm start and RDMCT-HBS, which
-combines variable-role cut features, hierarchical learning, bounded beam
-decoding, and structural cut completion inside SCIP. Four exactly solved
-cases check internal model consistency. Across 1500 equal-600-s workow
-runs, the two-stage workow reduces total route wait, maximum route wait,
-cadence variation, and cadence deviation by 51.91%, 68.89%, 39.70%, and
-94.05%, respectively. In 2700 nominal runs sharing the same SPBS incum-
-bent, RDMCT-HBS records the lowest mean primaldual integral and solu-
-tion time among seven solver congurations. A separate 960-run paired com-
-
-  ∗
-    Corresponding author.
-    Email addresses: lshao@ustb.edu.cn (Lizhen Shao), m202420836@xs.ustb.edu.cn
-(Lincong Wei)
-     parison associates SPBS with 26.19% lower mean PDI and increases incum-
-     bent availability from 51.67% to 100%. All 729 larger shifted-instance runs
-     return solver-checked feasible schedules. The results demonstrate system-
-     level operational gains while retaining exact-solver feasibility and bound se-
-     mantics.
-     Keywords: semiconductor manufacturing, cluster tool, scheduling,
-     mixed-integer linear programming, branch-and-cut, warm start
-
-
-     1. Introduction
-
-         Semiconductor manufacturing depends on capital-intensive, highly auto-
-     mated process equipment. Equipment utilization and production cadence de-
-     pend not only on nominal processing times, but also on coordination among
- 5   wafer transport, load-lock switching, process-chamber occupancy, and control
-     logic. A cluster tool (CT) integrates multiple process modules, load locks,
-     and wafer handlers in a single controlled environment. Because intermedi-
-     ate buers are limited or absent, robot tasks and wafer processing must be
-     scheduled jointly; residency-time limits, chamber cleaning, and activity-time
-10   variation further shrink the feasible scheduling space (Pan et al., 2018). CT
-     scheduling is therefore not a generic parallel-machine sequencing problem,
-     but an equipment-level manufacturing-system coordination problem.
-         Photolithography, etching, and deposition are three central stages of semi-
-     conductor manufacturing. Within thin-lm deposition, plasma-enhanced
-15   chemical vapor deposition (PECVD) that supports advanced processes is
-     a major focus of semiconductor equipment development. As throughput and
-     oor-space utilization requirements rise, conventional CTs no longer meet
-     the full complexity of PECVD operation. Equipment manufacturers there-
-     fore place multiple processing spaces inside a module and introduce chamber
-20   rotation, allowing several wafers to be processed while preserving robotic
-     access to every station. For a four-space rotary chamber, Gu et al. (2024)
-     showed that rotation changes which spaces are accessible, so loading order,
-     rotation times, and wafer residency must be coordinated.
-         Carbon-containing lms are also dicult to clean, and the multi-space
-25   rotary chamber considered here must avoid empty stations and operate with
-     all positions occupied. Manufacturers address this requirement by protecting
-     otherwise vacant stations with reusable dummy wafers. The dummy-wafer
-     storage module is mounted directly in the vacuum domain, where dummy
-
-
-                                           2
-     wafers share the rotary chambers and robot with product wafers. Reusable
-30   dummies and the full-occupancy constraint create several processing patterns,
-     of which 4 × 1 parallel processing and 2 × 2 chained processing are the two
-     representative modes illustrated below.
-
-                               CH2
-             Vacuum domain: dummy source and shared processing
-
-
-
-
-              PEC6/PEC7
-                                                                      CH3
-             dummy storage                 VTR
-
-                 D    D
-
-
-                               LL1    LL2    LL3     LL4
-
-             Atmospheric domain: product-wafer source
-                 AL
-                  Aligner              ATR       Atmospheric robot track
-
-
-                                                                  Product-wafer route
-                             LP1     LP2    LP3      LP4          Reusable dummy-wafer route
-
-
-
-     Figure 1: Dual-source mixed-ow cluster tool. The original relative topology is retained:
-     CH2 is above, CH3 is to the right, PEC6/PEC7 dummy storage is to the left, the VTR
-     is central, the load locks are below it, and the AL and LP1LP4 form the lowest layer.
-     Product wafers enter from the atmospheric side and dummy wafers from the vacuum side;
-     both streams share the VTR and four-space rotary chambers after the load locks.
-
-         Figure 1 turns these physical relations into a computable ow topology. A
-     congurable source interface connects each external releasereturn domain to
-35   a common internal network. One interface gives the single-source base tool;
-     two interfaces give the dual-source extension evaluated here. Product wafers
-     enter from the atmospheric side and reusable dummy wafers from vacuum
-     storage. The streams merge at the rotary chambers and compete for the
-     VTR. Changing the number of sources changes only interface incidence and
-40   route arcs, not the variable families used for internal rotation, resources, and
-     timing.
-         This coupling cannot be represented by appending a few capacity con-
-     straints. The 4 × 1 parallel recipe, 2 × 2 chain, cleaning cycles, and dummy
-     reuse jointly change operation activation, robot conicts, and continuous
-45   event times. We therefore x canonical same-mode product pairing and
-     chamber-slot mapping to remove label symmetries that do not alter physical
-
-
-                                                     3
-     execution. Given this instance structure, the MILP jointly determines cycle
-     activation, physical dummy identities, permitted robot and load-lock choices,
-     shared-resource order, and event times.
-50       Existing cluster-tool research covers cyclic schedules, multiple wafer types,
-     residency limits, cleaning, and multi-space modules (Qiao et al., 2022; Li
-     et al., 2022; Wang et al., 2023a; Li and Yang, 2025; Yang et al., 2025; Gu
-     et al., 2024). Yet rotary nite-batch operation still lacks a unied exact rep-
-     resentation of dual-source ow, mixed recipes, reusable dummy wafers, and
-55   shared transport. This gap has direct operational consequences: changing
-     one dummy assignment or cleaning boundary simultaneously rewrites the
-     robot-conict graph and the continuous timing network.
-         Learning-based scheduling usually controls dispatching or process param-
-     eters directly (Liu et al., 2022; Zhang et al., 2024; Kim and Lee, 2025; Kim
-60   and Kim, 2025). In a related equipment setting, Hong et al. (2026) combine
-     DDPG and discrete-event simulation to adjust continuous processing times
-     in a PVD cluster tool. Our decision layer is dierent. Processing times are
-     given, and the algorithm must deliver a complete discrete rotary schedule
-     while retaining MIP feasibility checks, lower bounds, and optimality proofs.
-65   Learning is therefore used only to improve search order inside the exact solver,
-     not to replace the physical constraint model.
-         This design carries equipment structure through three layers: formulation,
-     initialization, and cutting planes. The two-stage MILP rst determines end-
-     to-end throughput and then improves route waits and chamber cadence while
-70   preserving the selected discrete structure and makespan. SPBS constructs
-     a binary skeleton that the full MILP can verify. RDMCT-HBS then uses
-     variable roles, hierarchical selection, and bounded beam search to improve
-     nite-time branch-and-cut. The novelty is not the isolated use of MILP, warm
-     starts, or learned cut selection, but their use of the same rotary-chamber
-75   physics.
-         The contributions are threefold.
-
-     1. We formulate a source-congurable nite-horizon MILP for rotary cluster
-        tools. It separates external material topology from internal conguration
-        resourcetiming decisions and, under canonical same-mode pairing and
-80      xed chamber slots, jointly represents rotation, robots, load locks, cleaning
-        epochs, residency, and reusable vacuum-zone dummy wafers. The dual-
-        source mixed-ow conguration activates the strongest materialresource
-        coupling in the computational study.
-
-                                            4
-      2. We introduce a throughput-rst, operational-quality-second mechanism.
- 85      Stage two preserves the discrete structure and makespan bound selected
-         by stage one, and adjusts only the event times that remain free. It there-
-         fore places nishing on time and nishing with less waiting and steadier
-         cadence in the same veriable schedule.
-      3. We develop complementary structure-aware exact-search mechanisms.
- 90      SPBS improves primal-solution acquisition; RDMCT-HBS combines
-         variable-role features, A3C-inspired parallel training, bounded beam
-         decoding, and structured cut completion to improve dual search. Both
-         work through standard SCIP interfaces and leave the MILP feasible
-         region unchanged.
-
- 95       Each claim is tied to independent evidence. Four small instances reach
-      zero gap and pass post-solve checks. Under the same 600-s total budget, the
-      two-stage workow reduces total route wait, maximum route wait, cadence
-      variation, and cadence deviation by 51.91%, 68.89%, 39.70%, and 94.05%, re-
-      spectively. SPBS raises incumbent availability from 51.67% to 100%. Among
-100   seven nominal congurations sharing the same SPBS incumbent, RDMCT-
-      HBS records the lowest observed mean PDI and mean solution time. All
-      729 shifted runs with 4064 wafers return solver-checked feasible schedules.
-      Within the tested instances and budgets, these results support two practi-
-      cal advantages: earlier delivery of complete executable schedules and better
-105   equipment-level operating quality without throughput degradation.
-
-      2. Research background and positioning
-
-      2.1. Cluster-tool scheduling models
-          Cluster-tool models have progressed from steady-state robot cycles to
-      richer representations of product heterogeneity and auxiliary constraints. In-
-110   tegrated patterns and workload balance have been investigated for dual-arm
-      tools and multiple wafer types (Kim et al., 2021; Ko et al., 2021; Zhu et al.,
-      2022). Recent MIP and analytical studies coordinate release order, robot
-      tasks, chamber assignment, and residency for concurrent or multi-type pro-
-      cessing (Li and Yang, 2025; Yang et al., 2025). Cleaning, purge, and post-
-115   processing constraints further demonstrate that temporal feasibility cannot
-      be inferred from chamber capacity alone (Qiao et al., 2022; Lee et al., 2023;
-      Yuan et al., 2023; Zhu et al., 2023; Pan et al., 2024).
-
-
-                                            5
-          Rotating and multi-space modules introduce side-dependent loading and
-      shared chamber motion. Gu et al. (2024) analyse multi-nger robotic tools
-120   with multi-space process modules, providing the closest physical foundation
-      for the chamber mechanism studied here. Their predetermined cyclic se-
-      quences do not cover nite mixed batches or a second reusable material
-      stream. The present problem extends the decision boundary beyond tim-
-      ing a prescribed robot sequence to jointly selecting cycle activation, dummy
-125   identities, cleaning epochs, resource orders, and event times. Same-mode
-      product pairs and chamberside slots remain xed by the canonical instance
-      construction.
-
-      2.2. Learning-enhanced scheduling and exact optimization
-          Deep reinforcement learning has been combined with genetic, adaptive,
-130   and problem-specic search in semiconductor scheduling (Chien and Lan,
-      2021; Liu et al., 2022; Zhang et al., 2024; Li and Chang, 2022). These
-      methods show that learned policies are most useful when coupled with do-
-      main structure. Exact optimization adds a complementary advantage: ex-
-      plicit constraints, primal and dual bounds, and veriable feasibility. Recent
-135   learning-enhanced MIP research guides branching, primal search, and cut
-      selection without surrendering those properties (Bengio et al., 2021; Khalil
-      et al., 2022; Scavuzzo et al., 2024).
-          Cut selection is especially relevant because valid inequalities dier in both
-      immediate ecacy and the decisions they constrain. Reinforcement learning,
-140   supervised ranking, look-ahead imitation, and adaptive scoring have all im-
-      proved cut management (Tang et al., 2020; Huang et al., 2022; Paulus et al.,
-      2022; Turner et al., 2023). HEM represents selection as a hierarchical count-
-      and-sequence decision (Wang et al., 2023b, 2024). However, generic cut fea-
-      tures cannot distinguish an inequality acting mainly on discrete activation
-145   from one acting on continuous event timing; greedy decoding also discards al-
-      ternative partial sequences. These limitations are particularly consequential
-      in the proposed MILP because discrete equipment choices and continuous
-      timing are strongly coupled.
-          Table 1 summarizes the research position. The novelty is not the isolated
-150   use of MILP, reinforcement learning, or beam search. It is the integration of
-      a source-congurable rotary scheduling model with a solver method whose
-      primal and dual guidance are both derived from that model's structure.
-
-
-
-                                             6
-            Table 1: Research positioning relative to representative cluster-tool studies.
-       Study            Equipment setting       Decision scope                  Solution ap-
-                                                                                proach
-      Qiao et al.       Cleaning-               Residency and cleaning          Binary IP
-      (2022)            constrained tool
-      Gu et al.         Multi-space     ro-Timing of preset se-                 LP
-      (2024)            tary modules       quences
-      Yang et al.       Two wafer types    Release, robot tasks, resi-          MIP
-      (2025)                               dency
-      Kim and Lee       Concurrent clus- Release and robot se-                  DRL       +
-      (2025)            ter tool           quence                               search
-      Hong et al.       PVD cluster tool   Continuous process-time              DES       +
-      (2026)                               control                              DDPG
-      This study        Source-            Activation, dummy allo-              Two-stage
-                        congurable        cation, resources, clean-            MILP      +
-                        rotary tool; dual- ing, and event times under           learned
-                        source benchmark canonical slots                        B&C
-
-
-      3. Industrial problem and two-stage MILP
-
-      3.1. System logic and material interaction
-155       Let S be the set of congured material-source interfaces and let χis ∈
-      {0, 1} be xed incidence    indicating whether material unit i is associated
-      with source s, with s∈S χis = 1. If Aint denotes the internal process and
-                            ∑︁
-      transfer arcs and As contains the release and⋃︁return arcs of source s, then
-      the complete route network is A = Aint ∪ ( s∈S As ). Changing from one
-160   congured source to two changes only the source incidence and interface arcs;
-      rotary decisions, internal resource conicts, and event timing retain the same
-      variable and constraint families. The formal computational study uses the
-      two-source specialization because it activates the strongest material-interface
-      and shared-resource coupling.
-165       Figure 1 already shows the equipment-level source interfaces and shared
-      resources. Product wafers traverse the atmospheric domain, load locks, VTR,
-      and rotary chamber before returning to the load ports; dummy wafers remain
-      in the vacuum domain. The streams have dierent release and return require-
-      ments but share the VTR and chambers, so a local delay on either route can
-170   propagate to the other. The recipe determines how the ows interact. In
-
-                                                  7
-      4 × 1 mode, the chamber loads a front side, rotates, loads a back side, pro-
-      cesses both sides, and unloads them in reverse order. A product-decient
-      nal side is completed by dummy wafers. In 2 × 2 mode, product pairs form
-      a chain: adjacent exposures share an intermediate pair, while leading and
-175   trailing positions require dummy pairs. Cleaning interrupts the chain only
-      at a legal exposure boundary and uses a dummy-only chamber cycle. A phys-
-      ical dummy wafer cannot be assigned to overlapping chamber occupancies.
-      Figures 2 and 3 express the two recipes as event sequences. Circles of the
-      same colour denote one product pair and D denotes a dummy wafer. The
-180   arrows retain only actions that determine resource conicts and residency.
-
-                 1                    2                  3                    4
-
-             D       D           P1 P1                P1 P1               P1 P1
-            P1 P1                 D       D           P2 P2               P2 P2
-
-            Start full           Rotate              Load P2           Process/rotate
-            D + P1                P1 to              P1 + P2             P1 + P2
-               8                carryover
-                                    7                   6                   5
-
-                                 P3 P3                P2 P2               P2 P2
-                 ∅
-                                  D       D           P3 P3               P3 P3
-
-           Unload all      Tail process   Process/rotate  Slide chain
-           chamber          P3 + D          P2 + P3        P2 + P3
-            empty chain: D + P1 → P1 + P2 → P2 + P3 → P3 + D → unload all
-          Complete
-
-      Figure 2: 2 × 2 chained processing. Dummy wafers complete the chain head, and product
-      pairs carry over between adjacent processing windows. The tail is completed by processing
-      P3 with dummy pair D; all product and dummy wafers are then removed so that the
-      chamber returns to the idle state. Green frames identify processing windows.
-
-          This interaction creates three decision layers. The conguration layer
-      chooses active cycles, cleaning epochs, and physical dummy wafers within the
-      xed canonical pairing and slot map. The resource layer orders all operations
-      competing for robots, load locks, and chambers. The timing layer assigns
-185   event times and enforces residence limits. These layers must be optimized
-      jointly because activation and dummy reuse change both resource conicts
-
-                                                 8
-                  1               2               3                  4              5           6
-
-                             P1       P1     P1       P1        P1       P1    P1       P1
-
-             P1       P1                     P2       P2        P2       P2
-
-             Load P1         Rotate         Load P2              Process      Unload P2       Rotate
-            front side        open             four            four spaces      last in,     / unload
-                           access side      slots full                         rst out      P1; cycle
-                                                                                             complete
-
-       P1 and P2 are two-wafer batches; D completes a short nal batch, so all four spaces remain occupied.
-
-      Figure 3: 4×1 parallel processing. Two two-wafer batches occupy the two chamber sides in
-      sequence. All four spaces process in parallel, after which the batches leave in the physical
-      last-inrst-out order.
-
-
-      and the feasible timing network.
-
-      3.2. Decision structure and principal constraints
-           Let W denote product wafers, P the same-mode product pairs formed
-190   by the canonical preprocessing rule, C the rotary chambers, K the ordered
-      candidate recipe slots, O the candidate operations, and R the unit-capacity
-      resources. K(p) is the set of slots compatible with pair p; K− ⊆ K contains
-      the nonterminal slots, and succ(k) is the next slot in the same ordered slot
-      family; A is the technological-arc set, and Or contains the operations that
-195   may use resource r. For chamber c, JcDW is the set of dummy-wafer demands,
-      Tc its physical dummy inventory, Vc its candidate process cycles, and Ec
-      its ordered cleaning epochs. The xed incidence x̄pk ∈ {0, 1} encodes the
-      canonical pair-to-slot map. The binary solver variable xpk is xed to this
-      incidence and retained for compatibility with downstream activation links.
-200        Binary variables uk , bo , and bv activate slots, operations, and candidate
-      process cycles, respectively; avce assigns active cycle v to epoch e; zce activates
-      an epoch; gjτ assigns dummy demand j to physical dummy τ ; and yoo        r
-                                                                                  ′ orders
-
-      two operations sharing resource r. The activation qj of dummy demand j
-      is linked to its generating cycle. Each operation o has start so , completion
-205   eo , active duration do bo , and xed duration do > 0. Constants δoo′ and
-      ρroo′ are technological and endpoint-dependent setup separations, and M is a
-      scheduling-horizon bound. For readability, the following equations state the
-
-
-
-
-                                                           9
-      principal families rather than every event-specic route and rotary equality:
-          ∑︂
-              x̄pk = 1                                    p ∈ P,                (1)
-        k∈K(p)
-
-        xpk = x̄pk                                               p ∈ P, k ∈ K(p),          (2)
-        xpk ≤ uk                                                 p ∈ P, k ∈ K(p),          (3)
-        usucc(k) ≤ uk                                            k ∈ K− ,                  (4)
-        eo = so + do bo                                          o ∈ O,                    (5)
-        so′ ≥ eo + δoo′ − M (2 − bo − bo′ )                      (o, o′ ) ∈ A,             (6)
-                                    r
-        so′ ≥ eo + ρroo′ − M (1 − yoo ′ ) − M (2 − bo − bo′ ),   r ∈ R, {o, o′ } ⊆ Or ,    (7)
-                     r        r
-        so ≥ eo′ + ρo′ o − M yoo′ − M (2 − bo − bo′ ),           r ∈ R, {o, o′ } ⊆ Or ,    (8)
-         ∑︂
-             gjτ = qj                                            c ∈ C, j ∈ JcDW .         (9)
-        τ ∈Tc
-
-      Equations (1)(2) disclose the xed canonical slot map rather than an en-
-210   dogenous grouping decision. Equations (3)(4) link that map to a contiguous
-      active structure, while Eq. (5) makes activation consistent with event timing.
-      Technological arcs in Eq. (6) create active product and dummy routes. The
-      activation-qualied disjunctions (7)(8) prevent overlap on the ATR, aligner,
-      load-lock slots, VTR, chambers, and each reusable dummy wafer; ρ includes
-215   endpoint-dependent robot repositioning.
-          Table 2 connects the remaining industrial rules to their mathematical role.
-      This mapping is important because feasibility is a property of the complete
-      equipment trajectory, not only of chamber occupancy.
-          Cleaning epochs satisfy
-                ∑︂
-                    avce = bv                          c ∈ C, v ∈ Vc ,          (10)
-                 e∈Ec
-                                ∑︂
-                 avce ≤ zce ,          avce ≤ Hzce          c ∈ C, e ∈ Ec ,               (11)
-                                v∈Vc
-
-                 zc,e+1 ≤ zce                               c ∈ C, e, e + 1 ∈ Ec ,        (12)
-220   where H is the maximum number of active process cycles between cleans.
-      Linking constraints insert a dummy-only clean between consecutive active
-      epochs and allow a 2 × 2 chain to split only at an exposure boundary. Resi-
-      dence limits take the form
-                                0 ≤ sout(w,r) − ein(w,r) ≤ Rwr .                          (13)
-
-                                               10
-                  Table 2: Industrial rules represented by the MILP.
-Industrial rule          Mathematical         mecha- Scheduling consequence
-                         nism
-Rotary side se-          Event equalities and            Enforces    loadrotate
-quence                   precedence arcs                 processunload physics
-Mixed 4 × 1/2 × 2        Fixed canonical map, ac-        Activates feasible cycles
-recipes                  tivation, and adjacency         and shared exposures
-                         links
-Cleaning interval        Cycle-to-epoch    assign-       Inserts     dummy-only
-                         ment and capacity               cleaning at legal bound-
-                                                         aries
-Reusable dummy Physical-wafer    assign-                 Prevents simultaneous
-inventory       ment      plus  interval                 reuse of one dummy
-                disjunction                              wafer
-Robot/load-lock Endpoint-dependent re-                   Prevents transfer con-
-capacity        source ordering                          icts and includes repo-
-                                                         sitioning
-Residence restric-       Upper bounds between            Protects time-sensitive
-tions                    paired route events             products and transfers
-Finite-batch             Latest     return-to-load-      Measures      end-to-end
-throughput               port variable                   rather than chamber-
-                                                         only completion
-
-
-
-
-                                         11
-          In cluster-tool control, deadlock is a reachable equipment state in which
-225   waferresource dependencies form a circular wait; Petri-net formulations ad-
-      dress this controller-level reachability property explicitly (Nishi and Mat-
-      sumoto, 2015). The present nite-horizon MILP makes a narrower, oine-
-      schedule claim. Every active route has a nite source-to-return precedence
-      chain, and every active pair sharing a unit-capacity resource receives one tem-
-230   poral order. Provided all physical hold intervals and transfers are represented
-      and active separations are positive, a directed cycle in the combined route
-      resource graph would make the summed timing inequalities imply 0 > 0 and
-      would therefore be infeasible. Terminal constraints require every product and
-      assigned dummy wafer to return. Thus a feasible solution is a complete sched-
-235   uled trajectory without circular wait under the modeled conditions; this is
-      not a controller-level deadlock-freeness guarantee under dispatch deviations,
-      unmodeled buers, or equipment failures.
-
-      3.3. Throughput rst, schedule quality second
-         Stage one minimizes the return time of the last product wafer:
-
-                       Cmax ≥ ereturn
-                               w          (w ∈ W),           min Cmax (ξ),       (14)
-                                                             ξ∈F
-
-240   where ξ collects the model variables and F contains all activation, canonical-
-      map, rotary, cleaning, dummy-allocation, resource, and timing constraints. A
-      makespan objective alone is insucient operationally. Once the last return
-      time is xed, many schedules may be equivalent in Cmax but dier substan-
-      tially in intermediate product waiting, extreme holds, and chamber cadence.
-245   Those dierences aect exposure consistency, work-in-process residence, and
-      recovery from small disturbances.
-          Let ξˆ︁ be the best stage-one schedule and C ˆ︁ its makespan, and let Dfix
-      index the discrete variables retained from that incumbent. Stage two imposes
-
-                        ξd = ξˆ︁d (d ∈ Dfix ),        Cmax (ξ) ≤ C
-                                                                 ˆ︁ + εC .       (15)
-
-      It then minimizes
-
-                     Φ(ξ) = λ1 Lsum + λ2 Lmax + λ3 Dcadence + λ4 Ecap ,          (16)
-
-250   where ωα ≥ 0 (α ∈ Q) are the model-native wait and idle variables, and
-      hmce,r is the rth active processing start in the retained order for recipe mode
-      m, chamber c, and cleaning epoch e. The absolute values, maximum, and
-
-                                                 12
-      positive parts in the operational description are implemented with the fol-
-      lowing linear epigraph relations, which are tight for the positively weighted
-255   terms at an optimum:
-                ∑︂
-        Lsum =      ωα ,    Lmax ≥ ωα                         α ∈ Q,           (17)
-                α∈Q
-
-        vmce,r ≥ (hmce,r+1 − hmce,r ) − (hmce,r − hmce,r−1 ),  (m, c, e, r) ∈ Ih , (18)
-        vmce,r ≥ −(hmce,r+1 − hmce,r ) + (hmce,r − hmce,r−1 ), (m, c, e, r) ∈ Ih , (19)
-                      ∑︂
-        Dcadence =           vmce,r ,     vmce,r ≥ 0,                              (20)
-                    (m,c,e,r)∈Ih
-                                                ∑︂
-        ηα ≥ ωα − ω̄α ,    ηα ≥ 0,     Ecap =         ηα .                         (21)
-                                                α∈Q
-
-      Here Ih contains the interior indices r = 2, . . . , nmce − 1 of retained chamber-
-      start sequences with nmce ≥ 3, and ω̄α is the congured soft wait cap. The
-      nonnegative weights λ1 , . . . , λ4 set the trade-o among aggregate waiting,
-      extreme waiting, cadence irregularity, and soft wait-cap excess. The formal
-260   linear prole uses weights (1, 10, 25, 0); the last term is disabled and not
-      interpreted when its weight is zero; it is tight when a positive soft-cap weight
-      is congured. Physical product-route waits reported as operational outcomes
-      are reconstructed uniformly from event times, rather than read from these
-      objective auxiliaries; their six-segment denition is given in the supplement.
-265       Here εC is only the numerical equality tolerance. Equation (15) gives
-      the two-stage model a clear guarantee. The second stage cannot worsen the
-      retained makespan beyond this tolerance and cannot change the chosen acti-
-      vation, cleaning, dummy-allocation, or resource-order structure. If stage one
-      proves optimality, the rened schedule remains globally makespan-optimal
-270   within the same tolerance. If stage two also proves optimality, its timing
-      is optimal for Eq. (16) within the retained discrete structure; otherwise the
-      returned renement is feasible under the makespan cap but is not claimed to
-      be stage-two optimal. If stage one ends with an incumbent, makespan reten-
-      tion is relative to that incumbent. The model therefore separates objectives
-275   without disconnecting them from the same physical schedule.
-
-      3.4. Modeling advance
-          The formulation extends existing rotating or multi-space models in four
-      directions simultaneously: nite rather than steady-state scheduling; a cong-
-
-                                             13
-      urable source interface whose single-source base admits a dual-source mixed-
-280   ow specialization; joint activation, cleaning, dummy-allocation, resource-
-      order, and timing decisions on a canonical mixed-recipe layout; and condi-
-      tional schedule-quality renement rather than makespan alone. This combi-
-      nation matters because source topology, dummy availability, cleaning, and
-      active rotary cycles alter the robot conict graph itself. They cannot be
-285   appended as independent capacity constraints after a complete product tra-
-      jectory has been timed.
-          The same structure explains computational diculty. Activation, epoch,
-      dummy identity, and pairwise order binaries interact with a dense event time
-      network. The resulting cuts may aect dierent algebraic roles even when
-290   their generic ecacy scores are similar. This observation motivates the solver
-      design in the next section.
-
-      4. Structure-aware learning-enhanced exact solution
-
-      4.1. From model structure to solver guidance
-          The MILP exhibits two practical symptoms: nding the rst competi-
-295   tive incumbent can be slow, and generic cut scores do not reveal whether a
-      cut tightens discrete equipment choices, continuous timing, or their coupling.
-      RDMCT-HBS addresses the symptoms at complementary points. Structure-
-      preserving binary-skeleton (SPBS) initialization supplies primal guidance be-
-      fore branch-and-cut, while the learned selector supplies dual guidance during
-300   separation. Both components remain advisory: SCIP keeps the original fea-
-      sible region, validates incumbents, generates valid cuts, and retains proof
-      responsibility.
-
-      4.2. Structure-preserving binary-skeleton warm start
-          SPBS retains the canonical pair-to-slot equalities and xes candidate acti-
-305   vation, cleaning-epoch, load-lock, and selected resource-order roles in a tem-
-      porary feasibility MIP. If a prole nds no incumbent, VTR, load-lock, and
-      other order xings are progressively released; continuous event times always
-      remain free. A start is accepted only after reconstruction and complete fea-
-      sibility checking in the full model. Only that feasible schedulenot the tem-
-310   porary xing constraintsis injected into the unrestricted production model.
-      Formal evaluations use this incumbent after it has been precomputed.
-          This design is stronger than an arbitrary primal hint. The retained deci-
-      sions encode the combinatorial architecture that the detailed timing model
-
-                                            14
-      must otherwise discover from scratch, while the completion solve repairs lo-
-315   cal timing interactions. Because the original model receives only a feasible
-      incumbent, SPBS cannot remove a better solution or weaken an optimality
-      proof.
-
-      4.3. Variable-role reconstruction and hierarchical decoding
-          HEM describes candidate cuts with 13 generic statistics. We add ten
-320   structural features derived from solver metadata. Variables are partitioned
-      into binary, general integer, objective-active continuous, auxiliary continuous,
-      and other roles. For cut i, the coecient mass on role g is
-                                           ∑︁
-                                              j:x ∈g |aij |
-                                     pig = ∑︁ j             .                     (22)
-                                              j |aij | + ε
-
-      Role masses, bounded-variable mass, coecient sign balance, discrete
-      continuous coupling, dominant-role mass, and role entropy extend the
-325   representation to 23 dimensions. The features are invariant to variable
-      names and distinguish broad algebraic variable domains. They do not,
-      by themselves, identify equipment semantics among variables in the same
-      domain. Candidates are screened deterministically by ecacy to at most
-      128 rows, and the selector returns at most 16 cuts.
-330       The 13 generic and 10 role features are standardized with the training
-      statistics stored with each trained parameter set. Layer normalization, sepa-
-      rate nonlinear projections of the two blocks, sigmoid-gated fusion, a one-layer
-      LSTM, and one pointer-attention glimpse produce the policy state. The
-      LSTM hidden size is 128 and the tanh exploration constant is 5. The high-
-335   level output is a continuous selection fraction capped at 0.2; its discrete
-      cardinality is obtained by ooring the candidate count times that fraction,
-      applying a minimum-two safeguard when feasible, and enforcing the 16-cut
-      cap.
-          A high-level policy selects the cut budget and a low-level pointer policy
-340   orders candidates (Vinyals et al., 2015). If k cuts are selected from state S ,
-      their joint probability is
-                                                        k
-                                                       ∏︂
-                      πθ (k, i1:k | S) = πθH (k | S)         πθL (it | S, i1:t−1 ).   (23)
-                                                       t=1
-
-      Two workers collect independent SCIP trajectories in parallel; their batches
-      then drive a synchronous central update of the shared policy with return
-
-                                               15
-      R = −PDI. The estimator
-                 B
-              1 ∑︂
-       ∇θ J =
-       ˆ︃           (Rb − R̄EMA )∇θ log πθ (τb ),    R̄EMA ← 0.9R̄EMA + 0.1R̄ (24)
-              B b=1
-
-345   uses an exponential-moving-average return baseline, not an independently
-      learned critic. It is therefore hierarchical REINFORCE (Williams, 1992)
-      with A3C-inspired parallel trajectory collection, not the asynchronous actor
-      critic algorithm of Mnih et al. (2016). Training uses ve training instances
-      and ve seeds. For each seed, two workers collect eight 30-s/1024-MB trajec-
-350   tories per epoch for 60 epochs; Adam learning rates are 10−4 and 5 × 10−4 for
-      the low- and high-level policies. For each family and seed, evaluation uses
-      the predetermined terminal-epoch (epoch 60) parameter set; the candidate
-      count is one. Eligibility is checked only from the training path, seed, PDI re-
-      ward, feature dimension, and epoch; no benchmark- or test-based parameter
-355   selection is performed.
-          At inference, width-three beam search ranks partial sequences by cumu-
-      lative joint log probability without length normalization, rather than com-
-      mitting to the rst locally best cut (Choo et al., 2022). Role-submodular
-      completion then adds candidates that balance policy score, immediate cut
-360   quality, role coverage, and representation of the remaining pool (Nemhauser
-      et al., 1978). The mechanisms are complementary: reconstruction supplies
-      meaningful diversity; beam decoding explores alternative orders; completion
-      prevents the nal set from collapsing onto one variable role.
-
-      4.4. Exactness and computational scope
-365       RDMCT-HBS ranks only cuts already generated and certied as valid by
-      SCIP (Achterberg, 2009; Bestuzheva et al., 2023). SPBS adds only a solver-
-      checked incumbent. Consequently, neither component changes the objective,
-      constraints, integrality requirements, or lower-bound logic. The method can
-      improve anytime behavior while preserving the same mathematical meaning
-370   of feasibility and optimality as default SCIP. The supplementary material
-      documents the reproducibility protocol.
-
-      5. Computational results and analysis
-
-      5.1. Evidence structure
-         The study uses seven complementary evidence sets. Four exactly solved
-375   cases check internal model consistency. A 2700-run nominal matrix compares
-
-                                            16
-      seven methods over 20 manufacturing instances and independent solver and
-      training realizations. A 960-run matched experiment compares downstream
-      SCIP solves with a precomputed SPBS incumbent against solves without that
-      incumbent. A 1500-run study compares three equal-total-budget workows:
-380   the two renement proles use 540 s for the primary solve and up to 60
-      s for renement, whereas the no-renement prole uses all 600 s for the
-      primary solve. A 300-run factorial design estimates associations of wafer
-      count, recipe composition, and process scale with diculty. An 80-run one-
-      factor study assesses solvability under parameter perturbations. Finally, 729
-385   runs on nine shifted 4064-wafer congurations assess larger-instance feasible-
-      schedule delivery. All saved incumbents supporting reported conclusions pass
-      SCIP's check and a post-solve feasibility check against the same serialized
-      MILP.
-          PDI is the primary anytime metric because it integrates SCIP's normal-
-390   ized primaldual gap over the common horizon; lower is better. Terminal
-      gap is the normalized bound gap at termination. Reported solution time is
-      the sum of SCIP-reported primary and conditional-renement solve times; it
-      excludes model loading, learned-parameter loading, solution serialization, in-
-      stance construction, and oine SPBS generation. Repetitions are aggregated
-395   within manufacturing instances before paired bootstrap intervals, Wilcoxon
-      tests, and Holm adjustment are calculated. This prevents repeated random
-      seeds from being treated as independent manufacturing evidence (Gleixner
-      et al., 2021). Hardware, budgets, hyperparameters, complete matrix deni-
-      tions, and validation tolerances are reported in the supplement.
-
-400   5.2. Exact solves and post-solve checks establish internal consistency
-          Figure 4 reports four exact pure and mixed-ow cases. Both stages reach
-      zero gap, and post-solve checking conrms every represented route, resource,
-      cleaning, residence, and dummy-allocation row in the same serialized MILP.
-      These checks are independent of the learning policy but do not constitute
-405   independent formulation or eld validation.
-          The pure cases exercise the distinct rotary logic of each recipe, while
-      mixed cases require both recipe structures, two load-lock paths, shared
-      robots, and dummy reuse to coexist in one feasible trajectory. The
-      16-product case also exercises the coupled activation and resource-order
-410   constraints targeted by RDMCT-HBS.
-
-
-
-                                            17
-a          Makespan Cmax                                   b             Route-total wait
-    1400
-                                                               1750
-                                              1170                                                             1550
-    1200
-                                                               1500
-    1000
-                                                               1250
-                                       834
-    800
-                                                               1000
-                             584
-    600                                                        750
-               458
-                                                                                                        506
-    400                                                        500            380
-
-    200                                                        250
-                                                                                              112
-
-      0                                                             0
-             Pure 4×1      Pure 2×2   Mixed   Mixed                         Pure 4×1        Pure 2×2   Mixed   Mixed
-                (4)           (4)      (8)     (16)                            (4)             (4)      (8)     (16)
-
-
-
-
-c 120 Route-maximum wait                                   d             Solve time (s, log scale)
-
-                                                                                                               24.390
-                                               99
-    100                                                             1
-                                                               10
-
-     80         76                     76
-                                                                    0
-                                                               10
-     60                                                                                                0.458
-
-
-     40                                                             −1
-                                                               10
-                             28                                                              0.039
-     20
-                                                                    −2        0.009
-                                                               10
-      0
-             Pure 4×1      Pure 2×2   Mixed   Mixed                         Pure 4×1        Pure 2×2   Mixed   Mixed
-                (4)           (4)      (8)     (16)                            (4)             (4)      (8)     (16)
-
-
-
-Figure 4: Exact-solve results used for internal formulation-consistency checks. Panels a
-d report makespan, route-total wait, route-maximum wait, and solve time, respectively;
-panel d uses a logarithmic vertical axis. Each conguration was solved once (n = 1).
-Labels are the observed values and do not represent cross-instance uncertainty.
-
-
-
-
-                                                      18
-      5.3. RDMCT-HBS attains the lowest observed nominal mean PDI and time
-          Figure 5 gives the full nominal comparison. RDMCT-HBS has the lowest
-      mean PDI and the shortest mean solution time among all seven methods.
-      Its mean PDI is 1.41% below adapted HEM and 1.97% below default SCIP.
-415   Every one of its 500 runs returns a feasible incumbent.
-          All seven conditions receive the same precomputed, solver-checked SPBS
-      incumbent, time limit, memory limit, and solver seeds. The comparison there-
-      fore isolates cut-selection and decoding choices rather than the total SPBS
-      eect, which is identied separately below. SCIP denotes its default cut se-
-420   lector under this shared start; adaptive cut selection (ACS) uses a four-score
-      SCIP rule selected on four validation instances by a simplex grid with step
-      0.25, using mean validation performance. HEM-13D and HEM-13D+Beam
-      share the original 13-feature policy and dier only in decoding. The 23D-only
-      condition uses reconstructed features without structural reranking; Struc-
-425   ture+Greedy adds role-based completion; and RDMCT-HBS combines that
-      structure with beam decoding.
-          The descriptive pattern across methods is consistent with complementary
-      module roles. Relative to HEM-13D, the 23D-only condition has the largest
-      numerical decrease in mean PDI; Structure+Greedy and then RDMCT-HBS
-430   have successively lower means, while beam decoding alone slightly worsens
-      HEM-13D. Because these component contrasts are not statistically signi-
-      cant after adjustment, they do not identify a causal contribution from any
-      individual module. They instead motivate testing beam decoding jointly
-      with algebraic role information.
-435       SCIP has a marginally better nal gap and optimal rate, whereas
-      RDMCT-HBS leads PDI and elapsed time. This is an interpretable trade-o
-      rather than a contradiction: SCIP's default selector records stronger
-      terminal proof metrics, while RDMCT-HBS records lower observed mean
-      anytime and elapsed-time metrics. The experiment does not identify which
-440   cut-level mechanism causes that pattern. For time-constrained industrial
-      use, where an incumbent and its quality during the available horizon matter,
-      RDMCT-HBS has the lowest observed nominal mean PDI and time. The
-      instance-rst mean PDI improvements over HEM and SCIP are 237.49 (95%
-      bootstrap CI [−446.71, 846.26]) and 333.31 (CI [−382.16, 999.70]), respec-
-445   tively; both Holm-adjusted tests have p = 1. Thus the nominal ranking is an
-      observed mean ordering over this matrix, whereas the statistically supported
-      matched contrasts are the SPBS and equal-budget workow comparisons
-      reported next.
-
-                                           19
-                  Observed result: RDMCT-HBS attains both the lowest mean PDI and shortest mean solve time
-
-        a         Primary | Mean PDI (lower is better)                                 b    Primary | Mean solve time (s)
-
-  SCIP default                                                       16919.01                                                                         226.05
-
-
-            ACS                                          16854.87                                                                222.34
-
-
-    HEM-13D                                          16823.18                                              219.65
-
-
-  HEM+Beam                                           16829.59                                                219.95
-
-
-     23D only             16620.91                                                                        219.42
-
-
-Struct.+Greedy       16598.11                                                                    218.44
-
-
- RDMCT-HBS           16585.70                     Lowest; 1.97% below SCIP                       218.32                               Shortest; 3.42% below SCIP
-
-
-                   16600 16650 16700 16750 16800 16850 16900 16950 17000                   218             220             222             224     226
-
-
-
-
-        c         Certificate | Mean terminal gap (%)                                  d    Certificate | Proven optimal (%)
-
-  SCIP default      119.54                                                                                                                            64.0
-
-
-            ACS                                                     127.18                       62.0
-
-
-    HEM-13D                                                          127.24                                 62.4
-
-
-  HEM+Beam                                                           127.19                                 62.4
-
-
-     23D only                                         125.33                                                        62.6
-
-
-Struct.+Greedy                                             126.03                                                                   63.2
-
-
- RDMCT-HBS                                                 126.01                                                                    63.2
-
-
-                    120          122        124         126            128                  62.0            62.5           63.0            63.5    64.0        64.5
-
-
-
-                                Proposed RDMCT-HBS              Other configurations        Best comparator certificate
-
-
-
-
-Figure 5: Nominal comparison under a common SPBS start. Panels report mean PDI,
-mean solve time, mean terminal gap, and proven-optimal rate over 2700 runs; statis-
-tics are rst aggregated within 20 manufacturing instances. Orange shading highlights
-RDMCT-HBS, grey marks the remaining congurations, and a blue outline identies a
-best certicate metric obtained by another conguration. Values are printed beside the
-points; orange callouts report improvements over default SCIP on the two primary met-
-rics.
-
-
-
-
-                                                                              20
-      5.4. Precomputed SPBS improves downstream solver-phase outcomes
-450       The matched SPBS experiment gives the clearest statistically supported
-      solver-phase contrast. As Figure 6 shows, supplying a precomputed SPBS
-      incumbent raises incumbent availability from 51.67% to 100% and reduces
-      mean PDI by 26.19%. The contrasts remain signicant after Holm adjust-
-      ment (p = 2.55 × 10−5 and p = 3.46 × 10−8 , respectively).
-                SPBS: 100% complete-schedule availability with substantially lower in-window PDI
-
-
-      a         Feasible-incumbent availability (%)                            b          Mean PDI (lower is better)
-          120
-                                               +48.33 percentage points        30000                                   26.19% lower PDI
-                         100.00                                                                                         27473.05
-          100
-                                                                               25000
-          80                                                                                      20278.78
-                                                                               20000
-
-          60                                             51.67                 15000
-
-          40
-                                                                               10000
-
-          20                                                                       5000
-
-
-           0                                                                         0
-                         SPBS                           No start                                   SPBS                  No start
-
-
-
-      Figure 6: Eect of supplying a precomputed SPBS on downstream primal search. Panel
-      a reports feasible-incumbent availability and panel b reports mean PDI. Each condition
-      contains ten matched seeds for 48 instances (n = 480). Labels are observed values; oine
-      SPBS construction time is excluded.
-
-455       Without a supplied start, nearly half of the runs end before a complete
-      schedule is available. The observed PDI and availability dierences are con-
-      sistent with SCIP receiving a feasible incumbent at the beginning of its search
-      and then improving or exploiting it. Because construction is performed of-
-      ine and is not charged, this experiment estimates the downstream value of
-460   loading SPBS; it does not establish a net end-to-end time advantage after
-      incumbent construction.
-
-      5.5. Equal-budget renement workows improve operational metrics
-          Makespan verication alone cannot establish the value of renement. We
-      therefore reconstruct route waits directly from product event times and ca-
-465   dence directly from active chamber starts. This avoids using objective slack
-      variables as performance measures and makes the metric identical across pro-
-      les. Figure 7 compares workows under the same 600-s total budget. The
-      full and quadratic proles allocate 540 s to the primary solve and up to 60 s
-
-
-                                                                          21
-      to renement, whereas the no-renement prole allocates all 600 s to the pri-
-470   mary solve. The contrast is consequently not a pure stage-two intervention
-      conditional on an identical stage-one incumbent.
-                 Same 600-s budget: the full two-stage workflow improves all four operational metrics over single-stage
-
-
-                 Route-total wait                                                             Route-maximum wait
-      a                                                                            b
-                                                                                       1200
-
-          6000                                     vs single-stage ↓ 51.91%                                                    vs single-stage ↓ 68.89%
-                                                                5398.60                1000                                                  952.57
-
-          5000
-                                                                                       800
-          4000
-                                                                                       600
-          3000        2596.01           2469.47
-                                                                                       400
-          2000                                                                                     296.33           293.27
-
-          1000                                                                         200
-
-            0                                                                            0
-                   Full two-stage      Quadratic              Single-stage                      Full two-stage     Quadratic              Single-stage
-
-
-
-
-                 Cadence CV                                                                   Cadence deviation
-      c                                                                            d
-          0.25                                     vs single-stage ↓ 39.70%                                                    vs single-stage ↓ 94.05%
-                                                                 0.216                 400                                                   370.41
-
-          0.20
-                                                                                       300
-          0.15         0.130             0.134
-
-                                                                                       200
-          0.10
-
-                                                                                       100
-          0.05                                                                                                       60.18
-                                                                                                    22.04
-          0.00                                                                           0
-                   Full two-stage      Quadratic              Single-stage                      Full two-stage     Quadratic              Single-stage
-
-
-
-      Figure 7: Saved-schedule metrics for three workows under the same 600-s total budget.
-      Panels ad report route-total wait, route-maximum wait, cadence CV, and cadence devia-
-      tion over 1500 runs, aggregated rst within manufacturing instances. The two renement
-      workows use 540 s plus up to 60 s; the single-stage workow uses 600 s. Bar labels are
-      observed means.
-
-          Relative to the no-renement workow, the full two-stage workow has
-      51.91% lower route-total wait, 68.89% lower maximum route wait, 39.70%
-      lower cadence CV, and 94.05% lower cadence deviation; all four matched
-475   contrasts remain signicant after Holm adjustment. These are large workow-
-      level dierences. They support the operational usefulness of the prespecied
-      540+60-s conguration, while dierences in the primary incumbents induced
-      by the budget split may contribute to the observed magnitudes.
-          The quadratic prole has slightly lower route-wait means, but the full
-480   linear prole has 63.38% lower cadence deviation in the matched comparison.
-
-
-                                                                              22
-      Thus the linear 540+60-s workow records the strongest observed cadence
-      regularity while retaining route waits far below the 600-s no-renement work-
-      ow. Because the two renement proles use the same split, their contrast is
-      more specic to objective prole than the comparison against no renement.
-
-485   5.6. Diculty rises with scale and mixed-ow interaction
-         Figure 8 shows a sharp observed complexity transition. All 8- and 16-
-      wafer runs prove optimality, but the rate falls to 36% at 24 wafers and 20%
-      at 32 wafers. Mean PDI increases from 28.13 and 1876.54 to 31155.94 and
-      32959.89, respectively.
-        a       Mean PDI                                   b       Proven optimal (%)                c       Mean solve time (s)
-      40000                                                120
-                                                                                                     500
-      35000                                     32959.89           100      100                                                             433.20
-                                     31155.94                                                                                      408.55
-                                                           100
-      30000                                                                                          400
-
-                                                           80
-      25000
-                                                                                                     300
-      20000                                                60
-
-      15000                                                                                36        200
-                                                           40
-      10000                                                                                     20
-                                                                                                     100
-                                                           20
-      5000              1876.54                                                                                       33.86
-                28.13                                                                                        0.34
-            0                                                  0                                         0
-                 8         16            24       32                8        16            24   32            8        16              24    32
-                                Wafers                                            Wafers                                      Wafers
-
-
-
-      Figure 8: Observed computational transition with wafer count. Panels ac show mean
-      PDI, proven-optimal rate, and mean solve time. Each wafer count has n = 75 runs (300
-      total). Lines guide the eye; labels give the observed means.
-
-490       In the prespecied tted factorial model (R2 = 0.998 for PDI), the largest
-      estimated terms are interactions between wafer count and recipe composition.
-      At the 1:1 mix, the additional PDI interaction estimates are 37729.48 and
-      40788.63 for 24 and 32 wafers. Every prespecied processing-scale main and
-      interaction interval includes zero. Within this 0.91.1 scale range, the design
-495   therefore detects no processing-scale association; it does not establish that
-      processing duration has no eect outside the tested range. The observed
-      interaction pattern is consistent with greater combinatorial coupling in mixed,
-      larger instances. The complete coecient table and condence intervals are
-      retained in the reproducibility artifacts; the main text reports the prespecied
-500   eects required for interpretation.
-
-      5.7. Sensitivity study retains feasible-schedule delivery
-         All 80 one-factor sensitivity runs return solver-checked incumbents. The
-      lowest mean PDI occurs with a longer cleaning interval (28899.41), whereas
-
-                                                                              23
-      slower motion produces the highest mean PDI (42478.32). The pattern is
-505   compatible with fewer dummy-only interruptions at longer cleaning intervals
-      and tighter shared-robot timing under slower motion, although the one-factor
-      study does not identify either mechanism causally. Feasible-schedule delivery
-      is retained across every prescribed perturbation.
-
-      5.8. OOD stress test retains feasible-schedule delivery
-510      The distribution-shift suite enlarges the batch to 4064 wafers and
-      changes the product-mixture composition. Every one of the 729 runs returns
-      a saved incumbent that passes SCIP and post-solve checks against the
-      same MILP. Because every run uses the complete search horizon, PDI and
-      terminal gap provide the discriminating measures in Figure 9.
-                       Scale-up evidence: all 729 OOD runs with 40–64 wafers return checked feasible schedules
-
-              a        OOD mean PDI                                                      b        OOD mean terminal gap (%)
-
-
-               SCIP                                          73670.99                     SCIP                                                         171.35
-
-
-
-               ACS       70915.54                                                         ACS       160.78
-
-
-
-          HEM-13D                                 73003.59                            HEM-13D                         165.88
-
-
-
-        HEM+Beam                                    73165.58                        HEM+Beam                               167.04
-
-
-
-           23D only                                                 74187.22           23D only                                               169.96
-
-
-
-      Struct.+Greedy                                     73507.76                Struct.+Greedy                                      168.54
-
-
-
-       RDMCT-HBS                                                 73919.15           RDMCT-HBS                                                  170.02
-
-
-
-                       71000 71500 72000 72500 73000 73500 74000 74500 75000                          162     164    166       168       170           172      174
-
-
-                                        Proposed RDMCT-HBS              Lowest observed mean         Other methods
-
-
-
-
-      Figure 9: Out-of-distribution stress test. Panels a and b report mean PDI and mean
-      terminal gap after aggregation within nine manufacturing instances. SCIP and ACS each
-      have n = 27; every other method has n = 135 (729 runs total), and all runs return
-      checked feasible schedules. Orange highlights RDMCT-HBS, a blue outline marks the
-      lowest observed mean, and labels give the reported values; the banner summarizes feasible-
-      schedule delivery across all runs.
-
-515      Adaptive cut selection records the lowest OOD PDI, while RDMCT-HBS
-      has an observed mean terminal gap 0.78% below default SCIP. No OOD
-      pairwise contrast remains signicant after global Holm adjustment. The
-
-
-                                                                               24
-      complete outcome separates two forms of evidence: RDMCT-HBS leads ob-
-      served mean anytime search in the nominal production range, and the shared
-520   SPBSMILPSCIP pipeline delivers a solver-checked feasible schedule in ev-
-      ery tested larger shifted run. All seven methods use the full search horizon
-      and none proves OOD optimality; global bound closure therefore remains
-      unresolved at this scale.
-
-      5.9. Industrial implications
-525       Three implications follow from the evidence. First, the prespecied two-
-      stage workows have substantially better wait and cadence metrics than the
-      equal-total-budget no-renement workow, subject to the 540+60 versus 600-
-      s primary-search confound. Second, supplying a precomputed application-
-      feasible incumbent gives the largest statistically supported computational
-530   contrast measured here, although its oine construction cost is outside that
-      comparison. Third, the numerical component pattern motivates representing
-      a cut's algebraic variable domains. The observed sign reversal of the beam
-      contrast is consistent with coupling between beam search and role informa-
-      tion, but neither the individual module contrasts nor their interaction are
-535   statistically established.
-          The explicit state, resource, and timing layers also provide a possible foun-
-      dation for online arrivals, stochastic processing, and module-failure recourse.
-      The present nite-batch evidence shows that, on the tested canonical-slot in-
-      stances, equal-budget two-stage workows improve the reported operational
-540   metrics and RDMCT-HBS attains the lowest observed nominal mean PDI
-      and time among the compared methods without a signicant pairwise advan-
-      tage.
-
-      6. Conclusions
-
-          This paper develops an integrated model-and-algorithm framework for a
-545   class of rotating-chamber semiconductor cluster tools. The source interface
-      separates external material topology from a common internal conguration
-      resourcetiming model: single-source operation is the base specialization, and
-      the dual-source mixed-ow conguration is the evaluated stress case. The
-      two-stage MILP represents product wafers, reusable vacuum-zone dummy
-550   wafers, mixed rotary recipes, cleaning, shared robots, load locks, and res-
-      idence restrictions under xed canonical same-mode pairing and chamber
-
-
-                                             25
-      side slots. Its rst stage optimizes end-to-end makespan; its second stage
-      retains the discrete production plan and renes its timing quality.
-          Four exactly solved cases and post-solve checks establish internal consis-
-555   tency for the tested instances. Relative to the 600-s no-renement workow,
-      the 540+60-s two-stage workow has 51.91%, 68.89%, 39.70%, and 94.05%
-      lower route-total wait, maximum route wait, cadence variation, and cadence
-      deviation; this equal-budget comparison does not isolate renement condi-
-      tional on an identical primary incumbent. RDMCT-HBS records the lowest
-560   observed mean PDI and solution time in the 2700-run seven-method compar-
-      ison, but its pairwise advantages are not signicant after adjustment. Sup-
-      plying precomputed SPBS is associated with 26.19% lower downstream-solve
-      PDI and 100% incumbent availability; construction time is excluded. The
-      factorial study identies the largest estimated PDI terms as scalerecipe-
-565   mixture interactions within the tested design. All 729 OOD runs produce
-      solver-checked incumbents on nine larger shifted congurations, although
-      none proves optimality.
-          The results support the operational usefulness of the prespecied two-
-      stage workow and document the lowest observed nominal mean anytime per-
-570   formance for the structure-aware learning-enhanced branch-and-cut method
-      in this comparison. The scope of inference is the tested canonical-slot in-
-      stances, budgets, and distributions.
-
-      CRediT authorship contribution statement
-
-          Lizhen Shao and Lincong Wei jointly contributed to conceptualization,
-575   methodology, software, validation, formal analysis, investigation, visualiza-
-      tion, and manuscript preparation.
-
-      Declaration of competing interest
-
-          The authors declare that they have no known competing nancial inter-
-      ests or personal relationships that could have appeared to inuence the work
-580   reported in this paper.
-
-      Data and code availability
-
-         The data, mathematical instances, trained models, and source code sup-
-      porting the ndings are available from the corresponding author on reason-
-
-
-                                           26
-      able request. A permanent public archive will be cited in the version of
-585   record.
-
-      Declaration of generative AI and AI-assisted technologies in the
-      manuscript preparation process
-
-          During the preparation of this work, the authors used OpenAI Chat-
-      GPT and Codex for language editing, LaTeX consistency checking, literature-
-590   metadata verication, software debugging, experiment-workow scripting,
-      code review, and drafting or rening analysis text. It was not used to gener-
-      ate experimental observations, alter solver output, select favorable runs, or
-      make authorship decisions. The authors checked and approved all mathemat-
-      ical statements, citations, code changes, statistical interpretations, and nal
-595   text, and take full responsibility for the content of the publication.
-
-      References
-
-      Pan, C.R., Zhou, M.C., Qiao, Y., Wu, N.Q., 2018. Scheduling cluster
-        tools in semiconductor manufacturing: Recent advances and challenges.
-        IEEE Transactions on Automation Science and Engineering 15, 2, 586
-600     601. doi:10.1109/TASE.2016.2642997.
-
-      Gu, L., Wu, N., Qiao, Y., Zhang, S., Li, T., 2024. Scheduling cluster tools
-       with multi-space process modules and a multi-nger-arm robot in wafer
-       fabrication subject to wafer residency time constraints. Applied Sciences
-       14, 9490. doi:10.3390/app14209490.
-
-605   Achterberg, T., 2009.  SCIP: Solving constraint integer programs.
-        Mathematical Programming Computation 1, 141.      doi:10.1007/
-        s12532-008-0001-1.
-      Bengio, Y., Lodi, A., Prouvost, A., 2021. Machine learning for combinato-
-        rial optimization: A methodological tour d'horizon. European Journal of
-610     Operational Research 290, 405421. doi:10.1016/j.ejor.2020.07.063.
-
-      Bestuzheva, K., Besançon, M., Chen, W.K., Chmiela, A., Donkiewicz, T.,
-        van Doornmalen, J., Eier, L., Gaul, O., Gamrath, G., Gleixner, A.,
-        Gottwald, L., Graczyk, C., Halbig, K., Hoen, A., Hojny, C., van der
-        Hulst, R., Koch, T., Lübbecke, M.E., Maher, S.J., Matter, F., Müh-
-615     mer, E., Müller, B., Pfetsch, M.E., Schlösser, F., Serrano, F., Shinano,
-
-                                            27
-        Y., Sofranac, B., Turner, M., Vigerske, S., Wegscheider, F., Wellner, P.,
-        Weninger, D., Witzig, J., 2023. Enabling research through the SCIP op-
-        timization suite 8.0. ACM Transactions on Mathematical Software 49,
-        22:122:21. doi:10.1145/3585516.
-
-620   Chien, C.F., Lan, Y.B., 2021. Agent-based approach integrating deep rein-
-        forcement learning and hybrid genetic algorithm for dynamic scheduling
-        for Industry 3.5 smart production. Computers & Industrial Engineering
-       162, 107782. doi:10.1016/j.cie.2021.107782.
-
-      Choo, J., Kwon, Y.D., Kim, J., Jae, J., Hottung, A., Tierney, K., Gwon,
-625    Y., 2022.     Simulation-guided beam search for neural combinatorial
-        optimization, in: Advances in Neural Information Processing Systems.
-        URL:        https://papers.nips.cc/paper_files/paper/2022/hash/
-        39b9b60f0d149eabd1fff2d7c7d5afc4-Abstract-Conference.html,
-        doi:10.52202/068431-0637.
-
-630   Gleixner, A., Hendel, G., Gamrath, G., Achterberg, T., Bastubbe, M.,
-        Berthold, T., Christophel, P., Jarck, K., Koch, T., Linderoth, J., Lubbecke,
-        M.E., Mittelmann, H.D., Ozyurt, D., Ralphs, T.K., Salvagnin, D., Shinano,
-        Y., 2021. MIPLIB 2017: Data-driven compilation of the 6th mixed-integer
-        programming library. Mathematical Programming Computation 13, 443
-635     490. doi:10.1007/s12532-020-00194-3.
-
-      Gu, L., Wu, N., Qiao, Y., Zhang, S., 2024. Scheduling of Multi-nger-robotic
-       Cluster Tools with Multi-space Process Modules, in: 2024 International
-       Conference on Networking, Sensing and Control (ICNSC), IEEE. doi:10.
-       1109/ICNSC62968.2024.10760109.
-640   Hong, T.Y., Hsu, C.Y., Chen, C.L., 2026. Simulation-based deep reinforce-
-        ment learning for process time optimization in semiconductor cluster tool
-        and an empirical study. Computers & Industrial Engineering 211, 111698.
-        doi:10.1016/j.cie.2025.111698.
-
-      Huang, Z., Wang, K., Liu, F., Zhen, H.L., Zhang, W., Yuan, M., Hao, J.,
-645    Yu, Y., Wang, J., 2022. Learning to select cuts for ecient mixed-integer
-       programming. Pattern Recognition 123, 108353. doi:10.1016/j.patcog.
-       2021.108353.
-
-
-
-                                           28
-      Khalil, E.B., Morris, C., Lodi, A., 2022. MIP-GNN: A data-driven framework
-       for guiding combinatorial solvers, in: Proceedings of the AAAI Confer-
-650    ence on Articial Intelligence, pp. 1021910227. doi:10.1609/aaai.v36i9.
-       21262.
-      Kim, D., Kim, H.J., 2025. Noncyclic scheduling of cluster tools using deep
-        reinforcement learning. IEEE Transactions on Automation Science and
-        Engineering 22, 2400924023. doi:10.1109/TASE.2025.3632534.
-
-655   Kim, H.J., Lee, J.H., 2025. Scheduling cluster tools for concurrent processing:
-        Deep reinforcement learning with adaptive search. IEEE Transactions on
-        Automation Science and Engineering 22, 37833796. doi:10.1109/TASE.
-        2024.3399818.
-      Kim, W., Yu, T.S., Lee, T.E., 2021. Integrated scheduling of a dual-armed
-660     cluster tool for maximizing steady schedule patterns. IEEE Transactions
-        on Systems, Man, and Cybernetics: Systems 51, 72827294. doi:10.1109/
-        TSMC.2020.2978486.
-      Ko, S.G., Yu, T.S., Lee, T.E., 2021. Wafer delay analysis and workload
-        balancing of parallel chambers for dual-armed cluster tools with multiple
-665    wafer types. IEEE Transactions on Automation Science and Engineering
-       18, 15161526. doi:10.1109/TASE.2021.3061140.
-
-      Lee, T.G., Yu, T.S., Lee, T.E., 2023. Cleaning plan optimization for dual-
-        armed cluster tools with general chamber cleaning periods. IEEE Trans-
-        actions on Automation Science and Engineering 20, 18901906. doi:10.
-670     1109/TASE.2022.3188858.
-      Li, C., Chang, Q., 2022. Hybrid feedback and reinforcement learning-based
-        control of machine cycle time for a multi-stage production system. Jour-
-        nal of Manufacturing Systems 65, 351361. doi:10.1016/j.jmsy.2022.09.
-        020.
-675   Li, C., Yang, F., Zhen, L., 2022. Ecient scheduling approaches to time-
-        constrained single-armed cluster tools with condition-based chamber clean-
-        ing operations. International Journal of Production Research 60, 3555
-        3568. doi:10.1080/00207543.2021.1926568.
-
-
-
-
-                                           29
-      Li, X., Yang, W., 2025. Cyclic scheduling of multi-type wafers concurrent
-680     processing in single-arm cluster tools with residency time constraints. Ex-
-        pert Systems with Applications 269, 126443. doi:10.1016/j.eswa.2025.
-        126443.
-      Liu, J., Qiao, F., Zou, M., Zinn, J., Ma, Y., Vogel-Heuser, B., 2022. Dynamic
-        scheduling for semiconductor manufacturing systems with uncertainties
-685     using convolutional neural networks and reinforcement learning. Complex
-        & Intelligent Systems 8, 46414662. doi:10.1007/s40747-022-00844-0.
-      Mnih, V., Badia, A.P., Mirza, M., Graves, A., Lillicrap, T.P., Harley, T., Sil-
-       ver, D., Kavukcuoglu, K., 2016. Asynchronous methods for deep reinforce-
-       ment learning, in: Proceedings of the 33rd International Conference on
-690    Machine Learning, PMLR. pp. 19281937. URL: https://proceedings.
-       mlr.press/v48/mniha16.html.
-      Nemhauser, G.L., Wolsey, L.A., Fisher, M.L., 1978. An analysis of approx-
-        imations for maximizing submodular set functionsi. Mathematical Pro-
-        gramming 14, 265294. doi:10.1007/BF01588971.
-695   Nishi, T., Matsumoto, I., 2015. Petri net decomposition approach to
-        deadlock-free and non-cyclic scheduling of dual-armed cluster tools. IEEE
-        Transactions on Automation Science and Engineering 12, 281294. doi:10.
-        1109/TASE.2013.2292572.
-      Pan, C., Lai, Y., Qiao, Y., Wu, N., Luo, X., 2024. Cycle time analysis
-700     for cluster tools with parallel process chambers, processing time variation,
-        and chamber cleaning operations. Expert Systems with Applications 255,
-        124471. doi:10.1016/j.eswa.2024.124471.
-      Paulus, M.B., Zarpellon, G., Krause, A., Charlin, L., Maddison, C., 2022.
-        Learning to cut by looking ahead: Cutting plane selection via imitation
-705     learning, in: Proceedings of the 39th International Conference on Ma-
-        chine Learning, PMLR. pp. 1758417600. URL: https://proceedings.
-        mlr.press/v162/paulus22a.html.
-      Qiao, Y., Lu, Y., Li, J., Zhang, S., Wu, N., Liu, B., 2022. An ecient bi-
-        nary integer programming model for residency time-constrained cluster
-710     tools with chamber cleaning requirements. IEEE Transactions on Au-
-        tomation Science and Engineering 19, 17571771. doi:10.1109/TASE.2021.
-        3122576.
-
-                                           30
-      Scavuzzo, L., Aardal, K., Lodi, A., Yorke-Smith, N., 2024. Machine learn-
-        ing augmented branch and bound for mixed integer linear programming.
-715     Mathematical Programming doi:10.1007/s10107-024-02130-y.
-
-      Tang, Y., Agrawal, S., Faenza, Y., 2020. Reinforcement learning for integer
-        programming: Learning to cut, in: Proceedings of the 37th International
-        Conference on Machine Learning, PMLR. pp. 93679376. URL: https:
-        //proceedings.mlr.press/v119/tang20a.html.
-720   Turner, M., Koch, T., Serrano, F., Winkler, M., 2023. Adaptive cut selec-
-        tion in mixed-integer linear programming. Open Journal of Mathematical
-        Optimization 4, 128. doi:10.5802/ojmo.25.
-
-      Vinyals, O., Fortunato, M., Jaitly, N., 2015. Pointer networks, in: Advances
-        in Neural Information Processing Systems, pp. 26922700.
-
-725   Wang, J., Liu, C., Zhou, M., Leng, T., Albeshri, A., 2023a. Optimal cyclic
-       scheduling of wafer-residency-time-constrained dual-arm cluster tools by
-       conguring processing modules and robot waiting time. IEEE Transac-
-       tions on Semiconductor Manufacturing 36, 251259. doi:10.1109/TSM.
-       2023.3239198.
-730   Wang, J., Wang, Z., Li, X., Kuang, Y., Shi, Z., Zhu, F., Yuan, M.,
-       Zeng, J., Zhang, Y., Wu, F., 2024. Learning to cut via hierarchi-
-       cal sequence/set model for ecient mixed-integer programming. IEEE
-       Transactions on Pattern Analysis and Machine Intelligence 46, 96979713.
-       doi:10.1109/TPAMI.2024.3432716.
-
-735   Wang, Z., Li, X., Wang, J., Kuang, Y., Yuan, M., Zeng, J., Zhang, Y.,
-       Wu, F., 2023b. Learning cut selection for mixed-integer linear program-
-       ming via hierarchical sequence model, in: Proceedings of the Eleventh
-       International Conference on Learning Representations. URL: https:
-       //openreview.net/forum?id=Zob4P9bRNcK.
-740   Williams, R.J., 1992. Simple statistical gradient-following algorithms for
-       connectionist reinforcement learning. Machine Learning 8, 229256. doi:10.
-       1007/BF00992696.
-      Yang, F., Li, C., Zhen, L., Zhang, C., Wu, N., 2025. Scheduling resi-
-        dency time-constrained single-armed cluster tools with two-wafer types
-
-
-                                          31
-745     via mixed integer programming model. Expert Systems with Applications
-        288, 128209. doi:10.1016/j.eswa.2025.128209.
-
-      Yuan, F., Zhao, Q., Huang, B., Pan, C., 2023. Scheduling of time-constrained
-        single-arm cluster tools with purge operations in wafer fabrications. Jour-
-        nal of Systems Architecture 134, 102788. doi:10.1016/j.sysarc.2022.
-750     102788.
-      Zhang, L., Lin, Y., Xu, C., Liu, M., 2024. A new EDA algorithm combined
-        with Q-learning for semiconductor nal testing scheduling problem. Com-
-        puters & Industrial Engineering 193, 110259. doi:10.1016/j.cie.2024.
-        110259.
-755   Zhu, Q., Li, B., Hou, Y., Li, H., Wu, N., 2023. Scheduling dual-arm multi-
-        cluster tools with regulation of post-processing time. IEEE/CAA Journal
-        of Automatica Sinica 10, 17301742. doi:10.1109/JAS.2023.123189.
-
-      Zhu, Q., Wang, G., Hou, Y., Wu, N., Qiao, Y., 2022. Optimally scheduling
-        dual-arm multi-cluster tools to process two wafer types. IEEE Robotics
-760     and Automation Letters 7, 59205927. doi:10.1109/LRA.2022.3157031.
-
-
-
-
-                                          32
-

@@ -1,0 +1,167 @@
+{
+  "campaign": "JMS-version\\results\\paper_gantt_n16_optimal_attempt_20261020",
+  "campaign_sha256": "7b23287af3f0b65d440387d737c3c0ae2ea63a8e081e91066160a853c841503d",
+  "finished": {
+    "expected": 4,
+    "states": {
+      "feasible_limit": 4
+    },
+    "complete_observations": 4,
+    "paired_evidence": "Compare identical case and seed; aggregate seeds within case before any instance-level inference.",
+    "claims": "No automatic claim of significance, algorithm superiority or mode optimality. Inspect bounds and cut-call counts.",
+    "ended_utc": "2026-10-21T04:44:34.666807+00:00",
+    "all_cells_successful": true
+  },
+  "rows": [
+    {
+      "cell": "n16_H10_2x2_dual__s1__joint",
+      "status": "memlimit",
+      "cmax": 2639.0,
+      "lower": 39.0,
+      "gap": 66.66666666666667,
+      "seconds": 591.0,
+      "nodes": 1,
+      "solutions": 1,
+      "variables": 662934,
+      "constraints": 3373197,
+      "initial_cmax": 2639.0,
+      "same_events_as_reference": true,
+      "same_cycles_as_reference": true,
+      "previous_300s_cmax": 2928.0,
+      "same_physical_configuration": true,
+      "metrics": {
+        "route_wait_sum": 1437.0,
+        "route_wait_max": 66.0,
+        "rhythm_deviation": 676.0,
+        "rhythm_centers": 6,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0
+      },
+      "physical_recheck": {
+        "valid": true,
+        "checks": 9226,
+        "errors": [],
+        "product_return_cmax": 2639.0,
+        "cleaning_count": 0,
+        "processing_cycles": 10
+      },
+      "result_sha256": "526930ec40aac04ab3c6a1dff44e57ac07fa0c153c05dc44e02103faa498d06c",
+      "evidence_sha256": "471ee585e2dfb659ccbfefe0b67b15f3ceddc220577b3b5ebf2ece8487923165",
+      "solver_log_sha256": "cf51897ab7485723fda095e805e179b2ae0990f56e118a2deadacd9cfe4558ad"
+    },
+    {
+      "cell": "n16_H10_4x1_dual__s1__joint",
+      "status": "timelimit",
+      "cmax": 2633.0,
+      "lower": 39.0,
+      "gap": 66.51282051282051,
+      "seconds": 7200.0,
+      "nodes": 1,
+      "solutions": 1,
+      "variables": 228606,
+      "constraints": 1151045,
+      "initial_cmax": 2633.0,
+      "same_events_as_reference": true,
+      "same_cycles_as_reference": true,
+      "previous_300s_cmax": 2633.0,
+      "same_physical_configuration": true,
+      "metrics": {
+        "route_wait_sum": 1677.0000000000093,
+        "route_wait_max": 124.00000000000003,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0
+      },
+      "physical_recheck": {
+        "valid": true,
+        "checks": 7325,
+        "errors": [],
+        "product_return_cmax": 2633.0,
+        "cleaning_count": 0,
+        "processing_cycles": 4
+      },
+      "result_sha256": "d4d764961fb160f5300a49496f14c47004875b10201543ee247711215406242b",
+      "evidence_sha256": "fb1b7f17f37e3e15739988a16bb717c2bbf60e95748c418b2db663b93749e280",
+      "solver_log_sha256": "569664cc6cc3b114696c7c052beea16ec99c897429de10d00c47574a3b6a63c4"
+    },
+    {
+      "cell": "n16_H3_2x2_dual__s1__joint",
+      "status": "memlimit",
+      "cmax": 3660.0,
+      "lower": 39.0,
+      "gap": 92.84615384615384,
+      "seconds": 576.0,
+      "nodes": 1,
+      "solutions": 1,
+      "variables": 662934,
+      "constraints": 3373197,
+      "initial_cmax": 3660.0,
+      "same_events_as_reference": true,
+      "same_cycles_as_reference": true,
+      "previous_300s_cmax": 4716.0,
+      "same_physical_configuration": true,
+      "metrics": {
+        "route_wait_sum": 4935.000000000005,
+        "route_wait_max": 417.0,
+        "rhythm_deviation": 149.99999999999955,
+        "rhythm_centers": 4,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0
+      },
+      "physical_recheck": {
+        "valid": true,
+        "checks": 18176,
+        "errors": [],
+        "product_return_cmax": 3660.0,
+        "cleaning_count": 4,
+        "processing_cycles": 12
+      },
+      "result_sha256": "abd8d745097c4b0ddd8fc3eab0bc11c288670f3939550f3dac5409d5cb87cd4f",
+      "evidence_sha256": "632bd233503bc4c14366e54894e93b1cbf8bce7628bc026aa64f87fcc11755cf",
+      "solver_log_sha256": "9c151e5683ea77f00256df58d55248bacb8ddc092567fda6d3f9e8c2f14b2cba"
+    },
+    {
+      "cell": "n16_H3_4x1_dual__s1__joint",
+      "status": "timelimit",
+      "cmax": 2633.0,
+      "lower": 39.0,
+      "gap": 66.51282051282051,
+      "seconds": 7201.0,
+      "nodes": 1,
+      "solutions": 1,
+      "variables": 228606,
+      "constraints": 1151045,
+      "initial_cmax": 2633.0,
+      "same_events_as_reference": true,
+      "same_cycles_as_reference": true,
+      "previous_300s_cmax": 2633.0,
+      "same_physical_configuration": true,
+      "metrics": {
+        "route_wait_sum": 1677.0000000000093,
+        "route_wait_max": 124.00000000000003,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0
+      },
+      "physical_recheck": {
+        "valid": true,
+        "checks": 7325,
+        "errors": [],
+        "product_return_cmax": 2633.0,
+        "cleaning_count": 0,
+        "processing_cycles": 4
+      },
+      "result_sha256": "f72ec0c7f2926608e3069ff57c8ee812a5e8135f05716264bdd38618fc5d5d33",
+      "evidence_sha256": "55377728d647e7765b073205f5534ed6b3931bcd085134678be0c71ad4e7612b",
+      "solver_log_sha256": "c008a12a90f29c568ea5b6ee3a57f4dc40cdfa01249464b8ef3bbe60cd98cee1"
+    }
+  ],
+  "new_solver_runs": 0,
+  "scope": "Full-model primary proof failed; initialization improvements are not main-solver improvements or matched-budget algorithm evidence."
+}

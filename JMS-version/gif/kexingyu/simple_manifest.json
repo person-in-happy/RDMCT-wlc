@@ -1,0 +1,117 @@
+{
+  "created_utc": "2026-10-26T12:57:23.165465+00:00",
+  "complete_enumeration": false,
+  "all_feasible_orders": null,
+  "counting": "Handling actions only, sorted by start; exact simultaneous-start groups preserved; global dedup across four configurations.",
+  "validation": "Every abstract template/configuration physically replayed; every output uses a bijection preserving constraints under recorded substitution proof; representative substitutions additionally replayed.",
+  "generator_sha256": "fce05d9e8d5cbc6107a682d9f5745d16da5b9c5d0c2ad01c49a2a02dfa81ff9a",
+  "files": [
+    {
+      "n": 8,
+      "path": "8wafer-已列40320种_每配置至少40320种_简化取放.txt",
+      "count": 40320,
+      "all_feasible_orders": null,
+      "sha256": "74a48eb810a43fcfc399a030ddc2cbe7d29b0a29021a05f81370e366960b884e",
+      "bytes": 218831139,
+      "templates": "simple_evidence\\8wafer-templates.json.gz",
+      "templates_sha256": "7c8a9835512b4473ac52c7618f41d5d6543a0d4c74e34a1f2e2018933986c395",
+      "template_count": 12,
+      "index": "simple_evidence\\8wafer-index.jsonl.gz",
+      "index_sha256": "b10f24805c45ee5b8170e88e70649fb9a6e639ebe300cbe086e762b745e8ffad",
+      "source": {
+        "path": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\gif\\kexingyu\\evidence\\8wafer-witnesses.jsonl.gz",
+        "sha256": "823f6a0e2b262577deb45ca078426836c9071fa0facbccf9c501643003e8e647",
+        "audited_template_configuration_pairs": 16
+      },
+      "per_configuration": {
+        "4x1_H3": 13440,
+        "4x1_H10": 13440,
+        "2x2_H3": 13440,
+        "2x2_H10": 13440
+      },
+      "action_count_range": [
+        144,
+        288
+      ],
+      "additional_full_witness_replays": 48,
+      "product_order_lower_bound": "40320",
+      "permutation_rank_selection": "All ranks for N=8; evenly spaced ranks for larger N.",
+      "elapsed_seconds": 10.28100000001723,
+      "lower_bound_per_configuration": "40320",
+      "lower_bound_type": "constructive N!; not an estimate",
+      "exact_total_known": false
+    },
+    {
+      "n": 16,
+      "path": "16wafer-已列50000种_每配置至少20922789888000种_简化取放.txt",
+      "count": 50000,
+      "all_feasible_orders": null,
+      "sha256": "6bc6ff37fd1157acccc284886eaf96ba947e6d10b33dccb0bf47dc4954d79c21",
+      "bytes": 550562979,
+      "templates": "simple_evidence\\16wafer-templates.json.gz",
+      "templates_sha256": "3eec558dd0a7dd58a0b5c7a63a441d6939d58b370e17d7cc98aac67cf2301d77",
+      "template_count": 12,
+      "index": "simple_evidence\\16wafer-index.jsonl.gz",
+      "index_sha256": "72ea8509930f7b370ba6a47d42ac50eb1ede91735166d85bb08c9f721fae1fbe",
+      "source": {
+        "path": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\gif\\kexingyu\\evidence\\16wafer-witnesses.jsonl.gz",
+        "sha256": "a078afc47999cc24f7f662e020be90e10dda58e7b533e98deb6473a349c19a28",
+        "audited_template_configuration_pairs": 16
+      },
+      "per_configuration": {
+        "4x1_H3": 16668,
+        "4x1_H10": 16668,
+        "2x2_H3": 16666,
+        "2x2_H10": 16665
+      },
+      "action_count_range": [
+        300,
+        576
+      ],
+      "additional_full_witness_replays": 48,
+      "product_order_lower_bound": "20922789888000",
+      "permutation_rank_selection": "All ranks for N=8; evenly spaced ranks for larger N.",
+      "elapsed_seconds": 28.98399999999674,
+      "lower_bound_per_configuration": "20922789888000",
+      "lower_bound_type": "constructive N!; not an estimate",
+      "exact_total_known": false
+    },
+    {
+      "n": 32,
+      "path": "32wafer-已列60000种_每配置至少263130836933693530167218012160000000种_简化取放.txt",
+      "count": 60000,
+      "all_feasible_orders": null,
+      "sha256": "af515fa67b66b4f901790374f48c15e1f0f000d83e1acb17cbcb07503a29e2f2",
+      "bytes": 1324701102,
+      "templates": "simple_evidence\\32wafer-templates.json.gz",
+      "templates_sha256": "b5936fc5cb6b4f3299667ebef3dcaa03febf88d95d3ab3ca0cdfaf0295d301d8",
+      "template_count": 12,
+      "index": "simple_evidence\\32wafer-index.jsonl.gz",
+      "index_sha256": "c23a0ed4373b053b48cb0760ad4a3f7148d58a07bf7e60f42cffbefa93b318e7",
+      "source": {
+        "path": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\gif\\kexingyu\\evidence\\32wafer-witnesses.jsonl.gz",
+        "sha256": "d577e6b6d752be9a225eae3d49b610cbc5d0d1128789517b85e3e41a1542ff87",
+        "audited_template_configuration_pairs": 16
+      },
+      "per_configuration": {
+        "4x1_H3": 20000,
+        "4x1_H10": 20000,
+        "2x2_H3": 20000,
+        "2x2_H10": 20000
+      },
+      "action_count_range": [
+        612,
+        1152
+      ],
+      "additional_full_witness_replays": 48,
+      "product_order_lower_bound": "263130836933693530167218012160000000",
+      "permutation_rank_selection": "All ranks for N=8; evenly spaced ranks for larger N.",
+      "elapsed_seconds": 71.48499999998603,
+      "lower_bound_per_configuration": "263130836933693530167218012160000000",
+      "lower_bound_type": "constructive N!; not an estimate",
+      "exact_total_known": false
+    }
+  ],
+  "title_revision_utc": "2026-10-27T00:13:50.428079+00:00",
+  "bound_scope": "Each fixed pure-recipe/H configuration; original 100000-second horizon; no optimum or additional Cmax restriction."
+}

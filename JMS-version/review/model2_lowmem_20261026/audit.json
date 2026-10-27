@@ -1,0 +1,64 @@
+{
+  "protocol": {
+    "scip_memory_mb": 18944,
+    "process_rss_limit_mib": 14336,
+    "reserve_mib": 2048,
+    "required_available_mib": 16384,
+    "wait_seconds": 300
+  },
+  "tests": {
+    "policy_tests": 10,
+    "pipeline_tests": 7,
+    "passed": 17
+  },
+  "model_equivalence_hashes": {
+    "model.py": "c22703636dcf5a9d7f9e8c88ee6f23b869ee84319318c8652e92c2b1eb8bcb99",
+    "validate.py": "ed086b9ae01dcca25e3244340cac7b503dd229b995a57843545305ad58f42a3d",
+    "grippers.py": "5ed898b8c17850b88da8eb8700df33dc5fd1fe3df3bf60df6b5c22281900e0fc",
+    "seed.py": "f79c22704ce9c56f9c7171b94c50afb9c8bd72719eeb24aff98afc726e171094",
+    "joint_algorithms.py": "25ef8cd2fbd06365de48e5b569aa249598f97b7a63ff6c1fba591871cbd9f8e7",
+    "joint_pairing_model.py": "adad254d3794b2645ff554dbb51ea8707796f972d44476395403bd0f324f4f1d",
+    "joint_chamber_cycle_model.py": "91d9d8a9ab6960e079f1a49fdb5a86f9c36496d4db4cb6b2bbf4061b3b9ff796",
+    "reference_completion.py": "ccedf951fd1b1737043704028a5504ef6d7bd6cf28c1eaa81ad0748f43710231",
+    "supplement_protocol.py": "b033a74b201540de58cc51cbaf8147d5ef3c36c942316ff0bcc585cac0d23800"
+  },
+  "source_hashes": {
+    "available_evidence_supplement.py": "0f6b50bbdf0ae77e3fb8e5b5d60129d84da3ee0c78326832f350a223359c7b6a",
+    "evidence_supplement.py": "e93369408e1ee693d9123b13d03401d84263291ec4a00c4d654ef63a65bf0b04",
+    "experiment_console.py": "298a7939ceb57e6cd4f2b4c0731d448aa3de32094111b6802229ae1678c73d2c",
+    "grippers.py": "5ed898b8c17850b88da8eb8700df33dc5fd1fe3df3bf60df6b5c22281900e0fc",
+    "joint_algorithms.py": "25ef8cd2fbd06365de48e5b569aa249598f97b7a63ff6c1fba591871cbd9f8e7",
+    "joint_chamber_cycle_model.py": "91d9d8a9ab6960e079f1a49fdb5a86f9c36496d4db4cb6b2bbf4061b3b9ff796",
+    "joint_pairing_model.py": "adad254d3794b2645ff554dbb51ea8707796f972d44476395403bd0f324f4f1d",
+    "low_memory_evidence.py": "1013ef6df86c19ca7d577e70046c61283e856069cb911be26ff2589cfd5013bb",
+    "memory_policy.py": "37f605089784130b89b260fdcc4380c8956b2b0a1165e94a34547eb7b7a3cfa3",
+    "model.py": "c22703636dcf5a9d7f9e8c88ee6f23b869ee84319318c8652e92c2b1eb8bcb99",
+    "probe.py": "6b7c7b2ea2b3844f8182432c44d38932649d42cdcfbba3f85d3e0276956a77eb",
+    "reference_completion.py": "ccedf951fd1b1737043704028a5504ef6d7bd6cf28c1eaa81ad0748f43710231",
+    "revalidate.py": "a12b99ac2146dcb7349af80f525462be3e5947d5cba403b148ec05d11fcba561",
+    "run_experiments.py": "302235190ddd477b20b9cc3c583fe5c09f529a5bdced60adde6616b8b682e018",
+    "run_matched_supplement.py": "4be03ccbdae101bd0354bab57077f58292effdea296e43b72945ad95e84da149",
+    "seed.py": "f79c22704ce9c56f9c7171b94c50afb9c8bd72719eeb24aff98afc726e171094",
+    "supplement_memory_guard.py": "df0564301d420c3239d3744aa1d5782fdca8cce0c8e9925cb9a8694e0b7cc099",
+    "supplement_protocol.py": "b033a74b201540de58cc51cbaf8147d5ef3c36c942316ff0bcc585cac0d23800",
+    "test_compact_equivalence.py": "4bdca28f4014df9c1468829f7fa82f35fa039030c003c529fb86c01e2a0a1ee0",
+    "test_compact_pipeline.py": "3250d25a236adbd2479f62ff98ad7eed310bef56e028f5247c1287d693d1a080",
+    "test_grippers.py": "3e9ed25b69f0e32fbf5b40f708ccefba2f0616baf594f45eacc5ab504b56ddee",
+    "test_integrated.py": "a395f5dfc186809ba69ca963077fe00181673a98ed184d247412535b24103070",
+    "test_low_memory.py": "b10f8ee2126046bbd3ecec76b6de95afe7192ca6cb6f6946371b1ff8a5ac3b7b",
+    "test_seed_travel.py": "befe2b2f5703026a557b5e0c168eca333b82ff44f8e1eadc4722082b312cb455",
+    "test_supplement_protocol.py": "da38b695cafa0ad01f121834f1292aac4de42895dac1de9e696e4771a240ba05",
+    "validate.py": "ed086b9ae01dcca25e3244340cac7b503dd229b995a57843545305ad58f42a3d"
+  },
+  "new_formal_campaign_started": false,
+  "old_campaign_intervened": false,
+  "pending_groups_preview": {
+    "retained": 27,
+    "new_cells": 45,
+    "partial_group_reruns": 1
+  },
+  "limits": [
+    "No large-RSS pilot was run alongside active experiments",
+    "Current 300s model2 diagnostics do not establish optimality or algorithm superiority"
+  ]
+}

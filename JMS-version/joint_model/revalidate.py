@@ -89,8 +89,15 @@ def plan(suite):
     return cases,cells
 
 def prepare(args):
+    cases,pairs=plan(args.suite)
+    selected=getattr(args,'cases',None)
+    if selected is not None:
+        unknown=set(selected)-set(cases)
+        if unknown:raise ValueError('Unknown cases: '+', '.join(sorted(unknown)))
+        cases={key:cfg for key,cfg in cases.items() if key in selected}
+        pairs=[(key,variant) for key,variant in pairs if key in cases]
     out=Path(args.output).resolve();out.mkdir(parents=True,exist_ok=False)
-    cases,pairs=plan(args.suite);(out/'configs').mkdir();cells=[]
+    (out/'configs').mkdir();cells=[]
     for key,cfg in cases.items():dump(out/'configs'/f'{key}.json',cfg)
     # Traverse paired methods within each seed, so partial progress remains useful.
     for seed in args.seeds:
@@ -104,6 +111,7 @@ def prepare(args):
         case_hashes={k:digest(out/'configs'/f'{k}.json') for k in cases},cells=cells,
         accounting='300s main solve, or 270s primary + 30s refinement; shared preparation and model build reported separately',
         scope='Frozen-policy transfer; no claim of retraining, industrial deployment, or global optimality from timeouts')
+    if selected is not None:protocol['selected_cases']=list(cases)
     dump(out/'campaign.json',protocol)
     print(json.dumps(dict(campaign=str(out),cases=len(cases),runs=len(cells),main_budget_hours=len(cells)*args.time_limit/3600)))
 
@@ -322,6 +330,7 @@ def run(args):
 def main():
     p=argparse.ArgumentParser(__doc__);sub=p.add_subparsers(dest='command',required=True)
     prep=sub.add_parser('prepare');prep.add_argument('--suite',choices=['smoke','core','crossover','ablation','sensitivity','scale','doe','ood'],required=True);prep.add_argument('--output',required=True)
+    prep.add_argument('--cases',nargs='+',help='Prepare only these explicit case IDs; store the subset in the frozen manifest')
     prep.add_argument('--time-limit',type=float,default=300);prep.add_argument('--seeds',type=int,nargs='+',default=[1,2,3]);prep.add_argument('--training-seed',type=int,default=1)
     prep.add_argument('--spbs-budget',type=float,default=20);prep.add_argument('--cut-profile',choices=['root_only','standard'],default='root_only');prep.add_argument('--memory-mb',type=float,default=14000);prep.add_argument('--wall-limit',type=float,default=1800)
     for cmd in ('run','summarize','worker'):

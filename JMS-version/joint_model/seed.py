@@ -10,18 +10,22 @@ from validate import validate
 
 def construct(cfg, template=None):
     products=products_from_load_ports(cfg.load_ports);byid={w.identifier:w for w in products}
-    available=set(f'D{i+1}' for i in range(cfg.dummy_count));now=0.;robotloc={};robotend={};upper_free=lower_free=0.;events=[];jobs=[];pairs=[];cycles=[]
+    available=set(f'D{i+1}' for i in range(cfg.dummy_count));now=0.;robotend=defaultdict(dict);upper_free=lower_free=0.;events=[];jobs=[];pairs=[];cycles=[]
     chamber=cfg.chambers[0];loc=f'CH{chamber}';active_jobs={};pair_members={};loaded=set()
     def event(name,kind,robot,location,duration=None,**meta):
         nonlocal now
         if robot:
-            prev=robotloc.get(robot,location)
-            move=0 if prev==location or {prev,location}<={'U','L'} else cfg.atr_travel if robot=='ATR' else cfg.vtr_travel
-            if robot=='ATR' and prev in ('U','L') and (location.startswith('LP') or location=='AS') and kind=='origin_pick':move=cfg.atr_empty_ll_to_lp
-            now=max(now,robotend.get(robot,0)+move)
+            # The model and replay checker impose travel on every ordered
+            # event pair, including nonadjacent events. Keep the latest end
+            # at each location: an intervening origin_put does not remove
+            # an earlier LL-to-origin_pick minimum interval.
+            for prev,end in robotend[robot].items():
+                move=0 if prev==location or {prev,location}<={'U','L'} else cfg.atr_travel if robot=='ATR' else cfg.vtr_travel
+                if robot=='ATR' and prev in ('U','L') and (location.startswith('LP') or location=='AS') and kind=='origin_pick':move=cfg.atr_empty_ll_to_lp
+                now=max(now,end+move)
         d=duration if duration is not None else cfg.atr_handling if robot=='ATR' else cfg.handling
         e=dict(name=name,kind=kind,robot=robot,start=now,end=now+d,location=location,**meta);events.append(e);now+=d
-        if robot:robotloc[robot]=location;robotend[robot]=now
+        if robot:robotend[robot][location]=now
         return e
     def newpair(mode,members):
         p=len(pairs);pairs.append(dict(id=p,members=list(members),mode=mode,chamber=chamber));pair_members[p]=members;return p

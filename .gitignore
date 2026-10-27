@@ -210,3 +210,13 @@ anaconda_projects/
 /JMS-version/results/optional_cleaning_*/
 /JMS-version/results/joint_model*/
 /JMS-version/results/frozen_models_20260906/
+/JMS-version/.solver_env/
+
+# Raw/frozen model 2 campaigns remain local, including active runs.
+/JMS-version/results/*
+!/JMS-version/results/heterogeneous100_80_180_90_20261022/
+/JMS-version/review/
+# Large user-facing text exports are versioned as lossless gzip files.
+/JMS-version/gif/kexingyu/*.txt
+/JMS-version/gif/kexingyu/title_revision_20261027/
+/JMS-version/gif/kexingyu/simple_evidence/audit_*/

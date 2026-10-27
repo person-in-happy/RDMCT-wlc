@@ -1,0 +1,93 @@
+{
+  "created_utc": "2026-10-26T10:07:40.373967+00:00",
+  "complete_enumeration": false,
+  "global_sequence_count": null,
+  "permutation_ranks_per_family": 16,
+  "counting": "Unique ordered groups of physical action START/END labels; numeric timestamps excluded; H merged when order identical.",
+  "sampling": "Evenly spaced lexicographic permutation ranks; 4 serial construction families per configuration.",
+  "dependencies": {
+    "JMS-version\\tools\\export_feasible_action_orders.py": "770f1515d03137140ff0f4767a478ea6258103dfa5200e1b693765a2fa3483b3",
+    "JMS-version\\joint_model\\seed.py": "c89b747bafa3f2042cc8e58f5d0ac9673c9c2b54493f7b3476d43256e7f06e82",
+    "JMS-version\\joint_model\\model.py": "8eaafc4ce215884169b2f20294762445249ce24399821f15fe5e89e9709e9575",
+    "JMS-version\\joint_model\\validate.py": "ed086b9ae01dcca25e3244340cac7b503dd229b995a57843545305ad58f42a3d",
+    "JMS-version\\joint_model\\grippers.py": "5ed898b8c17850b88da8eb8700df33dc5fd1fe3df3bf60df6b5c22281900e0fc",
+    "joint_chamber_cycle_model.py": "d01902149c2d26109e4f7c292b34ffbf30e54b0d1e0a9e58cd95378b61d4c48e",
+    "joint_pairing_model.py": "9f5551f2f361e452664c594968c0a7d8c2ab67b7bb8245acd73eb531afa2685e"
+  },
+  "files": [
+    {
+      "n": 8,
+      "path": "8wafer-已列192种_每配置至少40320种_详细动作.txt",
+      "sha256": "d8672af4acb14a801549984a1fbf9f4bc9161e4e7df82e6489ebbe86cc6ded25",
+      "unique_orders": 192,
+      "per_configuration": {
+        "4x1_H3": 64,
+        "4x1_H10": 64,
+        "2x2_H3": 64,
+        "2x2_H10": 64
+      },
+      "constructed_lower_bound_per_configuration": "40320",
+      "all_feasible_orders": null,
+      "witnesses": "evidence\\8wafer-witnesses.jsonl.gz",
+      "witness_sha256": "823f6a0e2b262577deb45ca078426836c9071fa0facbccf9c501643003e8e647",
+      "physical_checks": 5797824,
+      "full_milp_solver_certified": false,
+      "max_complete_horizon": 6800.0,
+      "seconds": 5.375,
+      "bytes": 4080582,
+      "lower_bound_per_configuration": "40320",
+      "lower_bound_type": "constructive N!; not an estimate",
+      "exact_total_known": false
+    },
+    {
+      "n": 16,
+      "path": "16wafer-已列192种_每配置至少20922789888000种_详细动作.txt",
+      "sha256": "22f288b5934266e380c537151c06ed7149c38049abb455127d938b0b9e7b18b8",
+      "unique_orders": 192,
+      "per_configuration": {
+        "4x1_H3": 64,
+        "4x1_H10": 64,
+        "2x2_H3": 64,
+        "2x2_H10": 64
+      },
+      "constructed_lower_bound_per_configuration": "20922789888000",
+      "all_feasible_orders": null,
+      "witnesses": "evidence\\16wafer-witnesses.jsonl.gz",
+      "witness_sha256": "a078afc47999cc24f7f662e020be90e10dda58e7b533e98deb6473a349c19a28",
+      "physical_checks": 21920832,
+      "full_milp_solver_certified": false,
+      "max_complete_horizon": 13600.0,
+      "seconds": 17.43700000003446,
+      "bytes": 8264707,
+      "lower_bound_per_configuration": "20922789888000",
+      "lower_bound_type": "constructive N!; not an estimate",
+      "exact_total_known": false
+    },
+    {
+      "n": 32,
+      "path": "32wafer-已列192种_每配置至少263130836933693530167218012160000000种_详细动作.txt",
+      "sha256": "671277156ac50cbee4a57429e0f0d78c72c734867afc3f8ab3422b6ff19ecf9b",
+      "unique_orders": 192,
+      "per_configuration": {
+        "4x1_H3": 64,
+        "4x1_H10": 64,
+        "2x2_H3": 64,
+        "2x2_H10": 64
+      },
+      "constructed_lower_bound_per_configuration": "263130836933693530167218012160000000",
+      "all_feasible_orders": null,
+      "witnesses": "evidence\\32wafer-witnesses.jsonl.gz",
+      "witness_sha256": "d577e6b6d752be9a225eae3d49b610cbc5d0d1128789517b85e3e41a1542ff87",
+      "physical_checks": 84645312,
+      "full_milp_solver_certified": false,
+      "max_complete_horizon": 27200.0,
+      "seconds": 71.26600000000326,
+      "bytes": 16557318,
+      "lower_bound_per_configuration": "263130836933693530167218012160000000",
+      "lower_bound_type": "constructive N!; not an estimate",
+      "exact_total_known": false
+    }
+  ],
+  "title_revision_utc": "2026-10-27T00:13:44.822908+00:00",
+  "bound_scope": "Each fixed pure-recipe/H configuration; original 100000-second horizon; no optimum or additional Cmax restriction."
+}

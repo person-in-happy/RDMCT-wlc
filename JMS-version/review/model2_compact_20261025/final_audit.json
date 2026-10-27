@@ -1,0 +1,140 @@
+{
+  "created_utc": "2026-10-26T00:06:34.116434+00:00",
+  "scope": "Equivalent compact model2 implementation; resource diagnostics, not formal performance evidence",
+  "original_implementation": {
+    "files": 19,
+    "unchanged": true
+  },
+  "tests": {
+    "passed": 101,
+    "seconds": 12.15,
+    "files": [
+      "test_integrated.py",
+      "test_grippers.py",
+      "test_supplement_protocol.py",
+      "test_seed_travel.py",
+      "test_compact_equivalence.py",
+      "test_compact_pipeline.py"
+    ]
+  },
+  "baseline_dimensions": {
+    "variables": 1500662,
+    "constraints": 7629489,
+    "types": {
+      "BINARY": 1494044,
+      "INTEGER": 192,
+      "CONTINUOUS": 6426
+    }
+  },
+  "final_diagnostic": {
+    "summary": {
+      "output": "JMS-version\\review\\model2_compact_20261025\\n24_translated_available_300s_probe",
+      "status": "timelimit",
+      "cmax": 6036.0,
+      "valid": true,
+      "full_candidate_space": true,
+      "dimensions": {
+        "variables": 1111970,
+        "constraints": 3627189,
+        "types": {
+          "BINARY": 1107608,
+          "INTEGER": 1296,
+          "CONTINUOUS": 3066
+        }
+      }
+    },
+    "memory": {
+      "policy": "maximum_available_ram_v1",
+      "available_mib": 23934.9921875,
+      "jobs": 1,
+      "memory_mb": 18944,
+      "cap_mb": null,
+      "reserve_mib": 2048,
+      "worker_rss_factor": 1.15,
+      "rounding_mib": 256,
+      "required_mib": 23833.6
+    },
+    "elapsed_seconds": 410.5231293999823,
+    "peak_rss_mib": 11801.58984375
+  },
+  "checks": {
+    "original_model": true,
+    "physical": true,
+    "full_candidates": true
+  },
+  "search_nodes": 0,
+  "presolving_seconds": 296.0,
+  "failed_14000_mib": {
+    "summary": {
+      "output": "JMS-version\\review\\model2_compact_20261025\\n24_translated_300s_probe",
+      "status": "memlimit",
+      "cmax": 6036.0,
+      "valid": true,
+      "full_candidate_space": true,
+      "dimensions": {
+        "variables": 1111970,
+        "constraints": 3627189,
+        "types": {
+          "BINARY": 1107608,
+          "INTEGER": 1296,
+          "CONTINUOUS": 3066
+        }
+      }
+    },
+    "memory_mb": 14000,
+    "elapsed_seconds": 138.7582135000266,
+    "peak_rss_mib": 11401.94140625
+  },
+  "source_hashes": {
+    "available_evidence_supplement.py": "0f6b50bbdf0ae77e3fb8e5b5d60129d84da3ee0c78326832f350a223359c7b6a",
+    "evidence_supplement.py": "a02a615a30aebbc350d8b38ba73e3000255770876ede660b1d16832a02c4a6ca",
+    "experiment_console.py": "9aeeefddd6fe8f0e5adec25a868dc602231e00b2559c52fa3c870c2dae398be5",
+    "grippers.py": "5ed898b8c17850b88da8eb8700df33dc5fd1fe3df3bf60df6b5c22281900e0fc",
+    "joint_algorithms.py": "25ef8cd2fbd06365de48e5b569aa249598f97b7a63ff6c1fba591871cbd9f8e7",
+    "joint_chamber_cycle_model.py": "91d9d8a9ab6960e079f1a49fdb5a86f9c36496d4db4cb6b2bbf4061b3b9ff796",
+    "joint_pairing_model.py": "adad254d3794b2645ff554dbb51ea8707796f972d44476395403bd0f324f4f1d",
+    "model.py": "c22703636dcf5a9d7f9e8c88ee6f23b869ee84319318c8652e92c2b1eb8bcb99",
+    "probe.py": "6b7c7b2ea2b3844f8182432c44d38932649d42cdcfbba3f85d3e0276956a77eb",
+    "reference_completion.py": "ccedf951fd1b1737043704028a5504ef6d7bd6cf28c1eaa81ad0748f43710231",
+    "revalidate.py": "2538c516ee368b6edeee81d5c75f418586b4e10abef72e55f6c0c62d0b86d9b0",
+    "run_experiments.py": "410ca8058f9a999034224b6cf54809fa3038c76605d08aa4351f9d464051aa70",
+    "run_matched_supplement.py": "4be03ccbdae101bd0354bab57077f58292effdea296e43b72945ad95e84da149",
+    "seed.py": "f79c22704ce9c56f9c7171b94c50afb9c8bd72719eeb24aff98afc726e171094",
+    "supplement_memory_guard.py": "df0564301d420c3239d3744aa1d5782fdca8cce0c8e9925cb9a8694e0b7cc099",
+    "supplement_protocol.py": "b033a74b201540de58cc51cbaf8147d5ef3c36c942316ff0bcc585cac0d23800",
+    "test_compact_equivalence.py": "4bdca28f4014df9c1468829f7fa82f35fa039030c003c529fb86c01e2a0a1ee0",
+    "test_compact_pipeline.py": "823257bf8c3f63f29bc7f1f44592a95fc71b6200a6ba999906962e32528e2595",
+    "test_grippers.py": "3e9ed25b69f0e32fbf5b40f708ccefba2f0616baf594f45eacc5ab504b56ddee",
+    "test_integrated.py": "a395f5dfc186809ba69ca963077fe00181673a98ed184d247412535b24103070",
+    "test_seed_travel.py": "befe2b2f5703026a557b5e0c168eca333b82ff44f8e1eadc4722082b312cb455",
+    "test_supplement_protocol.py": "da38b695cafa0ad01f121834f1292aac4de42895dac1de9e696e4771a240ba05",
+    "validate.py": "ed086b9ae01dcca25e3244340cac7b503dd229b995a57843545305ad58f42a3d"
+  },
+  "manuscript": {
+    "JMS_Review_CN.tex": "a52a75a1052ecb11727f5d9bf1ffa2a83b2b34de7bf7097f5e2ec6ea0301863b",
+    "JMS_Review_CN.pdf": "90c1ca37365a3946eea9f277563333026612f6eadab00cfd923660bbca47fbc3",
+    "output/pdf/JMS_Review_CN.pdf": "90c1ca37365a3946eea9f277563333026612f6eadab00cfd923660bbca47fbc3"
+  },
+  "pdf_checks": {
+    "pages": 24,
+    "overfull": false,
+    "undefined_references": false,
+    "missing_characters": false,
+    "visually_inspected_pages": [
+      4,
+      6,
+      9,
+      10
+    ]
+  },
+  "deferred": [
+    "No unrestricted optimum established",
+    "300s consumed by presolving; no branch-and-bound or algorithm superiority evidence",
+    "Larger scale32/DOE/OOD memory fit unverified",
+    "No search-tree resume; audited cell-level restart only"
+  ],
+  "reductions_percent": {
+    "variables": 25.901368862541997,
+    "constraints": 52.45829701045509
+  }
+}
