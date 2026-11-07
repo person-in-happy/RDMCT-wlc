@@ -1,0 +1,17 @@
+{
+  "date": "2026-09-15",
+  "tests": {
+    "command": "G:/conda/envs/a3cenv/python.exe T-ASE-version/tools/test_resumable_experiments.py",
+    "passed": 14
+  },
+  "dry_runs": [
+    "new spbs-cost, one instance and seed",
+    "new sensitivity, one instance and seed",
+    "legacy sensitivity resume"
+  ],
+  "active_guard": "Detected legacy Python PID 17672 and refused concurrent execution",
+  "baseline_signature": "unlabeled__trainseed_-1__f6f27dd9328b2b7d.jsonl matches existing checkpoint (read-only)",
+  "legacy_spbs": "First saved candidate has_solution=true, valid=false; no recovery can make it valid",
+  "scope": "Temporary mock experiments and read-only checks only. No formal benchmark launched, no active code/results edited.",
+  "model_scale_integration": "Temporary tiny LP parsed once, repeated command reused checkpoint; incomplete tail backup and repair verified."
+}

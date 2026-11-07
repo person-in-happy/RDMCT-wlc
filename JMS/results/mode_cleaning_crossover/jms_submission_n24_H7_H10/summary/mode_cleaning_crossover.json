@@ -1,0 +1,44 @@
+{
+  "metrics": "D:\\git\\git\\RDMCT-A3C\\JMS\\results\\mode_cleaning_crossover\\jms_submission_n24_H7_H10\\validation\\cie_manufacturing_metrics.json",
+  "wafer_counts": [
+    24
+  ],
+  "cleaning_intervals": [
+    7,
+    8,
+    9,
+    10
+  ],
+  "solver_seeds": [
+    1
+  ],
+  "training_seeds": [
+    1
+  ],
+  "bridge_time": 4.0,
+  "exact": false,
+  "errors": [
+    "(24, 7, 'pure22'): non-certificate row status=timelimit, gap=0.8679775280898973, physical=True, product-return-Cmax=True",
+    "(24, 7, 'mixed11'): non-certificate row status=timelimit, gap=0.06202208920985547, physical=True, product-return-Cmax=True",
+    "(24, 8, 'pure22'): non-certificate row status=timelimit, gap=0.4691211401425178, physical=True, product-return-Cmax=True",
+    "(24, 8, 'mixed11'): non-certificate row status=timelimit, gap=0.06202208920985547, physical=True, product-return-Cmax=True",
+    "(24, 9, 'pure22'): non-certificate row status=timelimit, gap=0.4691211401425178, physical=True, product-return-Cmax=True",
+    "(24, 9, 'mixed11'): non-certificate row status=timelimit, gap=0.06202208920985547, physical=True, product-return-Cmax=True",
+    "(24, 10, 'pure22'): non-certificate row status=timelimit, gap=0.46912113895486923, physical=True, product-return-Cmax=True",
+    "(24, 10, 'mixed11'): non-certificate row status=timelimit, gap=0.06202208920985547, physical=True, product-return-Cmax=True",
+    "n=24, clean=7: missing one or more exact three-mode cells",
+    "n=24, clean=8: missing one or more exact three-mode cells",
+    "n=24, clean=9: missing one or more exact three-mode cells",
+    "n=24, clean=10: missing one or more exact three-mode cells"
+  ],
+  "comparisons": [],
+  "transitions": [
+    {
+      "wafer_count": 24,
+      "first_2x2_win_interval": null,
+      "last_4x1_win_interval": null,
+      "winner_switches": "",
+      "monotone_single_switch": true
+    }
+  ]
+}

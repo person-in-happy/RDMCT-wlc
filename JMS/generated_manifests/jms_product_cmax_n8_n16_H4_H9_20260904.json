@@ -1,0 +1,257 @@
+{
+    "description":  "JMS supplement: pure 4x1, pure 2x2, and 1:1 mixed modes with 4x1=180 s and 2x2=90+90 s across cleaning intervals.",
+    "suites":  [
+                   {
+                       "name":  "mode_n008_clean04_pure41",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_clean04_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n008_clean04_pure41_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n008_clean04_pure22",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_clean04_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n008_clean04_pure22_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n008_clean04_mixed11",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_clean04_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n008_clean04_mixed11_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n008_clean05_pure41",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_clean05_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n008_clean05_pure41_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n008_clean05_pure22",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_clean05_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n008_clean05_pure22_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n008_clean05_mixed11",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_clean05_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n008_clean05_mixed11_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n008_clean06_pure41",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_clean06_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n008_clean06_pure41_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n008_clean06_pure22",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_clean06_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n008_clean06_pure22_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n008_clean06_mixed11",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_clean06_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n008_clean06_mixed11_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n008_clean07_pure41",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_clean07_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n008_clean07_pure41_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n008_clean07_pure22",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_clean07_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n008_clean07_pure22_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n008_clean07_mixed11",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_clean07_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n008_clean07_mixed11_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n008_clean08_pure41",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_clean08_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n008_clean08_pure41_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n008_clean08_pure22",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_clean08_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n008_clean08_pure22_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n008_clean08_mixed11",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_clean08_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n008_clean08_mixed11_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n008_clean09_pure41",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_clean09_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n008_clean09_pure41_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n008_clean09_pure22",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_clean09_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n008_clean09_pure22_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n008_clean09_mixed11",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_clean09_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n008_clean09_mixed11_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n016_clean04_pure41",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_clean04_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n016_clean04_pure41_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n016_clean04_pure22",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_clean04_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n016_clean04_pure22_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n016_clean04_mixed11",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_clean04_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n016_clean04_mixed11_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n016_clean05_pure41",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_clean05_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n016_clean05_pure41_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n016_clean05_pure22",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_clean05_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n016_clean05_pure22_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n016_clean05_mixed11",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_clean05_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n016_clean05_mixed11_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n016_clean06_pure41",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_clean06_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n016_clean06_pure41_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n016_clean06_pure22",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_clean06_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n016_clean06_pure22_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n016_clean06_mixed11",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_clean06_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n016_clean06_mixed11_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n016_clean07_pure41",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_clean07_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n016_clean07_pure41_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n016_clean07_pure22",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_clean07_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n016_clean07_pure22_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n016_clean07_mixed11",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_clean07_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n016_clean07_mixed11_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n016_clean08_pure41",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_clean08_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n016_clean08_pure41_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n016_clean08_pure22",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_clean08_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n016_clean08_pure22_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n016_clean08_mixed11",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_clean08_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n016_clean08_mixed11_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n016_clean09_pure41",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_clean09_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n016_clean09_pure41_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n016_clean09_pure22",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_clean09_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n016_clean09_pure22_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n016_clean09_mixed11",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_clean09_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n016_clean09_mixed11_equal_total180_20260831.lp"
+                   }
+               ]
+}

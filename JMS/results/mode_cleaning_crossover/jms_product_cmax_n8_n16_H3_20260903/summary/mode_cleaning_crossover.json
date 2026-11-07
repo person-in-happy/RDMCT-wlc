@@ -1,0 +1,66 @@
+{
+  "metrics": "D:\\git\\git\\RDMCT-A3C\\JMS\\results\\mode_cleaning_crossover\\jms_product_cmax_n8_n16_H3_20260903\\validation\\cie_manufacturing_metrics.json",
+  "wafer_counts": [
+    8,
+    16
+  ],
+  "cleaning_intervals": [
+    3
+  ],
+  "solver_seeds": [
+    1
+  ],
+  "training_seeds": [
+    1
+  ],
+  "bridge_time": 4.0,
+  "exact": false,
+  "errors": [
+    "(16, 3, 'pure22'): non-certificate row status=timelimit, gap=0.9857707516996058, physical=True, product-return-Cmax=True",
+    "n=16, clean=3: missing one or more exact three-mode cells"
+  ],
+  "comparisons": [
+    {
+      "wafer_count": 8,
+      "cleaning_interval": 3,
+      "cmax_4x1": 610.0,
+      "cmax_2x2": 578.0,
+      "cmax_mixed11": 653.999999999993,
+      "delta_cmax_2x2_minus_4x1": -32.0,
+      "pure_mode_winner": "2x2",
+      "best_of_three": "2x2",
+      "wph_4x1": 47.21311475409836,
+      "wph_2x2": 49.826989619377166,
+      "wph_mixed11": 44.0366972477069,
+      "clean_internal_4x1": 0,
+      "clean_terminal_4x1": 0,
+      "clean_internal_2x2": 0,
+      "clean_terminal_2x2": 2,
+      "clean_internal_mixed11": 0,
+      "clean_terminal_mixed11": 1,
+      "replicates_4x1": 1,
+      "replicates_2x2": 1,
+      "replicates_mixed11": 1,
+      "combined_bridges_2x2": 3,
+      "split_bridges_2x2": 1,
+      "combined_bridges_mixed11": 1,
+      "split_bridges_mixed11": 1
+    }
+  ],
+  "transitions": [
+    {
+      "wafer_count": 8,
+      "first_2x2_win_interval": 3,
+      "last_4x1_win_interval": null,
+      "winner_switches": "",
+      "monotone_single_switch": true
+    },
+    {
+      "wafer_count": 16,
+      "first_2x2_win_interval": null,
+      "last_4x1_win_interval": null,
+      "winner_switches": "",
+      "monotone_single_switch": true
+    }
+  ]
+}

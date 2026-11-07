@@ -1,0 +1,47 @@
+{
+    "description":  "JMS supplement: pure 4x1, pure 2x2, and 1:1 mixed modes with 4x1=180 s and 2x2=90+90 s across cleaning intervals.",
+    "suites":  [
+                   {
+                       "name":  "mode_n008_clean03_pure41",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_clean03_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n008_clean03_pure41_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n008_clean03_pure22",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_clean03_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n008_clean03_pure22_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n008_clean03_mixed11",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n008_clean03_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n008_clean03_mixed11_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n016_clean03_pure41",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_clean03_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n016_clean03_pure41_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n016_clean03_pure22",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_clean03_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n016_clean03_pure22_equal_total180_20260831.lp"
+                   },
+                   {
+                       "name":  "mode_n016_clean03_mixed11",
+                       "family":  "dual_source_cluster_tool",
+                       "scale":  "n016_clean03_equal_total180",
+                       "split":  "mode_cleaning_crossover",
+                       "root":  "../../generated_instances/jms_mode_cleaning_crossover_equal_total180/mode_n016_clean03_mixed11_equal_total180_20260831.lp"
+                   }
+               ]
+}

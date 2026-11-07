@@ -1,0 +1,17 @@
+{
+  "load_ports": {
+    "LP1": {"4x1": 3, "2x2": 0},
+    "LP2": {"4x1": 1, "2x2": 0},
+    "LP3": {"4x1": 0, "2x2": 0},
+    "LP4": {"4x1": 0, "2x2": 0}
+  },
+  "chambers": [2, 3],
+  "pjobs": [
+    {"id": "Pjob1", "mode": "4x1", "chambers": [2], "wafers": ["LP1_W1"]},
+    {"id": "Pjob2", "mode": "4x1", "chambers": [3], "wafers": ["LP1_W2"]},
+    {"id": "Pjob3", "mode": "4x1", "chambers": [2, 3], "wafers": ["LP1_W3", "LP2_W1"]}
+  ],
+  "source": "dual",
+  "dummy_count": 8,
+  "cleaning_interval": 3
+}

@@ -1,0 +1,77 @@
+{
+  "state": "checked",
+  "solve_seconds": 0,
+  "solver_started": false,
+  "complete": true,
+  "valid": true,
+  "source_metrics": {
+    "route_wait_sum": 727.0,
+    "route_wait_max": 120.0,
+    "rhythm_deviation": 0,
+    "rhythm_centers": 0,
+    "early_cleanings": 0,
+    "legacy_rule_feasible": true,
+    "production_overlap": 0,
+    "cleanings": 0,
+    "modeled_completion": 1196.0,
+    "product_cmax": 1178.0
+  },
+  "metrics": {
+    "route_wait_sum": 727.0,
+    "route_wait_max": 120.0,
+    "rhythm_deviation": 0,
+    "rhythm_centers": 0,
+    "early_cleanings": 0,
+    "legacy_rule_feasible": true,
+    "production_overlap": 0,
+    "cleanings": 0,
+    "modeled_completion": 1196.0,
+    "product_cmax": 1178.0
+  },
+  "original_model_check": true,
+  "full_model_audit": {
+    "valid": true,
+    "original_model_check": true,
+    "physical_validation": {
+      "valid": true,
+      "checks": 2352,
+      "errors": [],
+      "product_return_cmax": 1178.0,
+      "cleaning_count": 0,
+      "processing_cycles": 2,
+      "pjob_check": true,
+      "pjob_release_order_check": true
+    },
+    "seconds": 1.7810000000026776,
+    "solver_started": false,
+    "dimensions": {
+      "variables": 45525,
+      "constraints": 170136,
+      "linear_nonzeros": 1006450,
+      "types": {
+        "BINARY": 44624,
+        "INTEGER": 264,
+        "CONTINUOUS": 637
+      }
+    }
+  },
+  "dimensions": {
+    "variables": 45597,
+    "constraints": 170407,
+    "linear_nonzeros": 1056160,
+    "types": {
+      "BINARY": 44688,
+      "INTEGER": 264,
+      "CONTINUOUS": 645
+    }
+  },
+  "build_seconds": 2.312999999998283,
+  "selector_variables": 128,
+  "N": 8,
+  "G": 4,
+  "candidate_pairs": 32,
+  "candidate_cycles": 16,
+  "full_candidate_space": true,
+  "substituted_variables": 0,
+  "removed_tautologies": 0
+}

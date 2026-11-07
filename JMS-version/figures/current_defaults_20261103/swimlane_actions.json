@@ -1,0 +1,966 @@
+{
+  "lanes": [
+    "LP1",
+    "ATR机械手",
+    "对准器 AL",
+    "上装载锁槽1",
+    "上装载锁槽2",
+    "VTR机械手",
+    "旋转腔 CH2",
+    "旋转腔 CH3",
+    "下装载锁槽1",
+    "下装载锁槽2",
+    "VS"
+  ],
+  "bars": [
+    {
+      "lane": "上装载锁槽1",
+      "start": 42.0,
+      "end": 46.0,
+      "action": "ATR放片",
+      "origin": "explicit",
+      "job": "prod_0_1"
+    },
+    {
+      "lane": "上装载锁槽1",
+      "start": 46.0,
+      "end": 76.0,
+      "action": "LL抽气",
+      "origin": "earliest_completion",
+      "job": "prod_0_1"
+    },
+    {
+      "lane": "上装载锁槽1",
+      "start": 76.0,
+      "end": 100.0,
+      "action": "LL真空等待",
+      "origin": "explicit",
+      "job": "prod_0_1"
+    },
+    {
+      "lane": "上装载锁槽1",
+      "start": 100.0,
+      "end": 101.0,
+      "action": "VTR取放",
+      "origin": "explicit",
+      "job": "prod_0_1"
+    },
+    {
+      "lane": "上装载锁槽1",
+      "start": 101.0,
+      "end": 131.0,
+      "action": "空载移动/复位",
+      "origin": "model_reset",
+      "job": "prod_0_1"
+    },
+    {
+      "lane": "上装载锁槽2",
+      "start": 66.0,
+      "end": 70.0,
+      "action": "ATR放片",
+      "origin": "explicit",
+      "job": "prod_0_0"
+    },
+    {
+      "lane": "上装载锁槽2",
+      "start": 70.0,
+      "end": 100.0,
+      "action": "LL抽气",
+      "origin": "earliest_completion",
+      "job": "prod_0_0"
+    },
+    {
+      "lane": "上装载锁槽2",
+      "start": 100.0,
+      "end": 101.0,
+      "action": "VTR取放",
+      "origin": "explicit",
+      "job": "prod_0_0"
+    },
+    {
+      "lane": "上装载锁槽2",
+      "start": 101.0,
+      "end": 131.0,
+      "action": "空载移动/复位",
+      "origin": "model_reset",
+      "job": "prod_0_0"
+    },
+    {
+      "lane": "下装载锁槽1",
+      "start": 287.0,
+      "end": 288.0,
+      "action": "VTR取放",
+      "origin": "explicit",
+      "job": "prod_0_0"
+    },
+    {
+      "lane": "下装载锁槽1",
+      "start": 288.0,
+      "end": 313.0,
+      "action": "LL放气",
+      "origin": "earliest_completion",
+      "job": "prod_0_0"
+    },
+    {
+      "lane": "下装载锁槽1",
+      "start": 313.0,
+      "end": 317.0,
+      "action": "ATR取片",
+      "origin": "explicit",
+      "job": "prod_0_0"
+    },
+    {
+      "lane": "下装载锁槽1",
+      "start": 317.0,
+      "end": 342.0,
+      "action": "空载移动/复位",
+      "origin": "model_reset",
+      "job": "prod_0_0"
+    },
+    {
+      "lane": "下装载锁槽2",
+      "start": 287.0,
+      "end": 288.0,
+      "action": "VTR取放",
+      "origin": "explicit",
+      "job": "prod_0_1"
+    },
+    {
+      "lane": "下装载锁槽2",
+      "start": 288.0,
+      "end": 313.0,
+      "action": "LL放气",
+      "origin": "earliest_completion",
+      "job": "prod_0_1"
+    },
+    {
+      "lane": "下装载锁槽2",
+      "start": 313.0,
+      "end": 317.0,
+      "action": "ATR取片",
+      "origin": "explicit",
+      "job": "prod_0_1"
+    },
+    {
+      "lane": "下装载锁槽2",
+      "start": 317.0,
+      "end": 342.0,
+      "action": "空载移动/复位",
+      "origin": "model_reset",
+      "job": "prod_0_1"
+    },
+    {
+      "lane": "对准器 AL",
+      "start": 35.0,
+      "end": 39.0,
+      "action": "ATR放片",
+      "origin": "explicit",
+      "job": "prod_0_0"
+    },
+    {
+      "lane": "对准器 AL",
+      "start": 39.0,
+      "end": 59.0,
+      "action": "AL对准",
+      "origin": "earliest_completion",
+      "job": "prod_0_0"
+    },
+    {
+      "lane": "对准器 AL",
+      "start": 59.0,
+      "end": 63.0,
+      "action": "ATR取片",
+      "origin": "explicit",
+      "job": "prod_0_0"
+    },
+    {
+      "lane": "对准器 AL",
+      "start": 7.0,
+      "end": 11.0,
+      "action": "ATR放片",
+      "origin": "explicit",
+      "job": "prod_0_1"
+    },
+    {
+      "lane": "对准器 AL",
+      "start": 11.0,
+      "end": 31.0,
+      "action": "AL对准",
+      "origin": "earliest_completion",
+      "job": "prod_0_1"
+    },
+    {
+      "lane": "对准器 AL",
+      "start": 31.0,
+      "end": 35.0,
+      "action": "ATR取片",
+      "origin": "explicit",
+      "job": "prod_0_1"
+    },
+    {
+      "lane": "ATR机械手",
+      "start": 0.0,
+      "end": 4.0,
+      "action": "ATR取片",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "ATR机械手",
+      "start": 4.0,
+      "end": 7.0,
+      "action": "带片移动",
+      "origin": "latest_travel",
+      "job": null
+    },
+    {
+      "lane": "ATR机械手",
+      "start": 7.0,
+      "end": 11.0,
+      "action": "ATR放片",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "ATR机械手",
+      "start": 11.0,
+      "end": 31.0,
+      "action": "承片等待",
+      "origin": "completed_robot_state",
+      "job": null
+    },
+    {
+      "lane": "ATR机械手",
+      "start": 31.0,
+      "end": 35.0,
+      "action": "ATR取片",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "ATR机械手",
+      "start": 35.0,
+      "end": 39.0,
+      "action": "ATR放片",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "ATR机械手",
+      "start": 39.0,
+      "end": 42.0,
+      "action": "带片移动",
+      "origin": "latest_travel",
+      "job": null
+    },
+    {
+      "lane": "ATR机械手",
+      "start": 42.0,
+      "end": 46.0,
+      "action": "ATR放片",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "ATR机械手",
+      "start": 56.0,
+      "end": 59.0,
+      "action": "空载移动/复位",
+      "origin": "latest_travel",
+      "job": null
+    },
+    {
+      "lane": "ATR机械手",
+      "start": 59.0,
+      "end": 63.0,
+      "action": "ATR取片",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "ATR机械手",
+      "start": 63.0,
+      "end": 66.0,
+      "action": "带片移动",
+      "origin": "latest_travel",
+      "job": null
+    },
+    {
+      "lane": "ATR机械手",
+      "start": 66.0,
+      "end": 70.0,
+      "action": "ATR放片",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "ATR机械手",
+      "start": 313.0,
+      "end": 317.0,
+      "action": "ATR取片",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "ATR机械手",
+      "start": 317.0,
+      "end": 320.0,
+      "action": "带片移动",
+      "origin": "latest_travel",
+      "job": null
+    },
+    {
+      "lane": "ATR机械手",
+      "start": 320.0,
+      "end": 324.0,
+      "action": "ATR放片",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "VTR机械手",
+      "start": 0.0,
+      "end": 1.0,
+      "action": "VTR取放",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "VTR机械手",
+      "start": 1.0,
+      "end": 95.0,
+      "action": "承片等待",
+      "origin": "completed_robot_state",
+      "job": null
+    },
+    {
+      "lane": "VTR机械手",
+      "start": 95.0,
+      "end": 97.0,
+      "action": "带片移动",
+      "origin": "latest_travel",
+      "job": null
+    },
+    {
+      "lane": "VTR机械手",
+      "start": 97.0,
+      "end": 98.0,
+      "action": "VTR取放",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "VTR机械手",
+      "start": 98.0,
+      "end": 100.0,
+      "action": "空载移动/复位",
+      "origin": "latest_travel",
+      "job": null
+    },
+    {
+      "lane": "VTR机械手",
+      "start": 100.0,
+      "end": 101.0,
+      "action": "VTR取放",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "VTR机械手",
+      "start": 101.0,
+      "end": 103.0,
+      "action": "带片移动",
+      "origin": "latest_travel",
+      "job": null
+    },
+    {
+      "lane": "VTR机械手",
+      "start": 103.0,
+      "end": 104.0,
+      "action": "VTR取放",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "VTR机械手",
+      "start": 284.0,
+      "end": 285.0,
+      "action": "VTR取放",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "VTR机械手",
+      "start": 285.0,
+      "end": 287.0,
+      "action": "带片移动",
+      "origin": "latest_travel",
+      "job": null
+    },
+    {
+      "lane": "VTR机械手",
+      "start": 287.0,
+      "end": 288.0,
+      "action": "VTR取放",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "VTR机械手",
+      "start": 288.0,
+      "end": 290.0,
+      "action": "空载移动/复位",
+      "origin": "latest_travel",
+      "job": null
+    },
+    {
+      "lane": "VTR机械手",
+      "start": 290.0,
+      "end": 291.0,
+      "action": "VTR取放",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "VTR机械手",
+      "start": 291.0,
+      "end": 293.0,
+      "action": "带片移动",
+      "origin": "latest_travel",
+      "job": null
+    },
+    {
+      "lane": "VTR机械手",
+      "start": 293.0,
+      "end": 294.0,
+      "action": "VTR取放",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "旋转腔 CH2",
+      "start": 97.0,
+      "end": 98.0,
+      "action": "VTR取放",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "旋转腔 CH2",
+      "start": 98.0,
+      "end": 101.0,
+      "action": "腔内等待",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "旋转腔 CH2",
+      "start": 101.0,
+      "end": 103.0,
+      "action": "腔室旋转",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "旋转腔 CH2",
+      "start": 103.0,
+      "end": 104.0,
+      "action": "VTR取放",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "旋转腔 CH2",
+      "start": 104.0,
+      "end": 284.0,
+      "action": "腔室加工",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "旋转腔 CH2",
+      "start": 284.0,
+      "end": 285.0,
+      "action": "VTR取放",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "旋转腔 CH2",
+      "start": 285.0,
+      "end": 287.0,
+      "action": "腔室旋转",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "旋转腔 CH2",
+      "start": 287.0,
+      "end": 290.0,
+      "action": "腔内等待",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "旋转腔 CH2",
+      "start": 290.0,
+      "end": 291.0,
+      "action": "VTR取放",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "LP1",
+      "start": 0.0,
+      "end": 4.0,
+      "action": "ATR取片",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "LP1",
+      "start": 320.0,
+      "end": 324.0,
+      "action": "ATR放片",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "VS",
+      "start": 0.0,
+      "end": 1.0,
+      "action": "VTR取放",
+      "origin": "explicit",
+      "job": null
+    },
+    {
+      "lane": "VS",
+      "start": 293.0,
+      "end": 294.0,
+      "action": "VTR取放",
+      "origin": "explicit",
+      "job": null
+    }
+  ],
+  "paths": [
+    {
+      "job": "prod_0_0",
+      "label": "W1",
+      "description": "W1=Pjob1[1]",
+      "color": "#093B79",
+      "points": [
+        [
+          0.0,
+          "LP1"
+        ],
+        [
+          4.0,
+          "ATR机械手"
+        ],
+        [
+          35.0,
+          "ATR机械手"
+        ],
+        [
+          39.0,
+          "对准器 AL"
+        ],
+        [
+          59.0,
+          "对准器 AL"
+        ],
+        [
+          63.0,
+          "ATR机械手"
+        ],
+        [
+          66.0,
+          "ATR机械手"
+        ],
+        [
+          70.0,
+          "上装载锁槽2"
+        ],
+        [
+          100.0,
+          "上装载锁槽2"
+        ],
+        [
+          101.0,
+          "VTR机械手"
+        ],
+        [
+          103.0,
+          "VTR机械手"
+        ],
+        [
+          104.0,
+          "旋转腔 CH2"
+        ],
+        [
+          284.0,
+          "旋转腔 CH2"
+        ],
+        [
+          285.0,
+          "VTR机械手"
+        ],
+        [
+          287.0,
+          "VTR机械手"
+        ],
+        [
+          288.0,
+          "下装载锁槽1"
+        ],
+        [
+          313.0,
+          "下装载锁槽1"
+        ],
+        [
+          317.0,
+          "ATR机械手"
+        ],
+        [
+          320.0,
+          "ATR机械手"
+        ],
+        [
+          324.0,
+          "LP1"
+        ]
+      ]
+    },
+    {
+      "job": "prod_0_1",
+      "label": "W2",
+      "description": "W2=Pjob1[2]",
+      "color": "#872196",
+      "points": [
+        [
+          0.0,
+          "LP1"
+        ],
+        [
+          4.0,
+          "ATR机械手"
+        ],
+        [
+          7.0,
+          "ATR机械手"
+        ],
+        [
+          11.0,
+          "对准器 AL"
+        ],
+        [
+          31.0,
+          "对准器 AL"
+        ],
+        [
+          35.0,
+          "ATR机械手"
+        ],
+        [
+          42.0,
+          "ATR机械手"
+        ],
+        [
+          46.0,
+          "上装载锁槽1"
+        ],
+        [
+          100.0,
+          "上装载锁槽1"
+        ],
+        [
+          101.0,
+          "VTR机械手"
+        ],
+        [
+          103.0,
+          "VTR机械手"
+        ],
+        [
+          104.0,
+          "旋转腔 CH2"
+        ],
+        [
+          284.0,
+          "旋转腔 CH2"
+        ],
+        [
+          285.0,
+          "VTR机械手"
+        ],
+        [
+          287.0,
+          "VTR机械手"
+        ],
+        [
+          288.0,
+          "下装载锁槽2"
+        ],
+        [
+          313.0,
+          "下装载锁槽2"
+        ],
+        [
+          317.0,
+          "ATR机械手"
+        ],
+        [
+          320.0,
+          "ATR机械手"
+        ],
+        [
+          324.0,
+          "LP1"
+        ]
+      ]
+    },
+    {
+      "job": "aux_2_0",
+      "label": "A1",
+      "description": "A1=辅助片D1",
+      "color": "#007D65",
+      "points": [
+        [
+          0.0,
+          "VS"
+        ],
+        [
+          1.0,
+          "VTR机械手"
+        ],
+        [
+          97.0,
+          "VTR机械手"
+        ],
+        [
+          98.0,
+          "旋转腔 CH2"
+        ],
+        [
+          290.0,
+          "旋转腔 CH2"
+        ],
+        [
+          291.0,
+          "VTR机械手"
+        ],
+        [
+          293.0,
+          "VTR机械手"
+        ],
+        [
+          294.0,
+          "VS"
+        ]
+      ]
+    },
+    {
+      "job": "aux_2_1",
+      "label": "A2",
+      "description": "A2=辅助片D2",
+      "color": "#976000",
+      "points": [
+        [
+          0.0,
+          "VS"
+        ],
+        [
+          1.0,
+          "VTR机械手"
+        ],
+        [
+          97.0,
+          "VTR机械手"
+        ],
+        [
+          98.0,
+          "旋转腔 CH2"
+        ],
+        [
+          290.0,
+          "旋转腔 CH2"
+        ],
+        [
+          291.0,
+          "VTR机械手"
+        ],
+        [
+          293.0,
+          "VTR机械手"
+        ],
+        [
+          294.0,
+          "VS"
+        ]
+      ]
+    }
+  ],
+  "implicit_action_completions": [
+    {
+      "lane": "上装载锁槽1",
+      "start": 46.0,
+      "end": 76.0,
+      "rule": "pressure immediately after deposit"
+    },
+    {
+      "lane": "上装载锁槽2",
+      "start": 70.0,
+      "end": 100.0,
+      "rule": "pressure immediately after deposit"
+    },
+    {
+      "lane": "下装载锁槽1",
+      "start": 288.0,
+      "end": 313.0,
+      "rule": "pressure immediately after deposit"
+    },
+    {
+      "lane": "下装载锁槽2",
+      "start": 288.0,
+      "end": 313.0,
+      "rule": "pressure immediately after deposit"
+    },
+    {
+      "lane": "对准器 AL",
+      "start": 39.0,
+      "end": 59.0,
+      "rule": "alignment immediately after deposit"
+    },
+    {
+      "lane": "对准器 AL",
+      "start": 11.0,
+      "end": 31.0,
+      "rule": "alignment immediately after deposit"
+    },
+    {
+      "lane": "ATR机械手",
+      "start": 4.0,
+      "end": 7.0,
+      "origin": "LP1",
+      "destination": "AL",
+      "held": [
+        "prod_0_0",
+        "prod_0_1"
+      ],
+      "rule": "travel immediately before next handling"
+    },
+    {
+      "lane": "ATR机械手",
+      "start": 39.0,
+      "end": 42.0,
+      "origin": "AL",
+      "destination": "U",
+      "held": [
+        "prod_0_1"
+      ],
+      "rule": "travel immediately before next handling"
+    },
+    {
+      "lane": "ATR机械手",
+      "start": 56.0,
+      "end": 59.0,
+      "origin": "U",
+      "destination": "AL",
+      "held": [],
+      "rule": "travel immediately before next handling"
+    },
+    {
+      "lane": "ATR机械手",
+      "start": 63.0,
+      "end": 66.0,
+      "origin": "AL",
+      "destination": "U",
+      "held": [
+        "prod_0_0"
+      ],
+      "rule": "travel immediately before next handling"
+    },
+    {
+      "lane": "ATR机械手",
+      "start": 317.0,
+      "end": 320.0,
+      "origin": "L",
+      "destination": "LP1",
+      "held": [
+        "prod_0_0",
+        "prod_0_1"
+      ],
+      "rule": "travel immediately before next handling"
+    },
+    {
+      "lane": "VTR机械手",
+      "start": 95.0,
+      "end": 97.0,
+      "origin": "VS",
+      "destination": "CH2",
+      "held": [
+        "aux_2_0",
+        "aux_2_1"
+      ],
+      "rule": "travel immediately before next handling"
+    },
+    {
+      "lane": "VTR机械手",
+      "start": 98.0,
+      "end": 100.0,
+      "origin": "CH2",
+      "destination": "U",
+      "held": [],
+      "rule": "travel immediately before next handling"
+    },
+    {
+      "lane": "VTR机械手",
+      "start": 101.0,
+      "end": 103.0,
+      "origin": "U",
+      "destination": "CH2",
+      "held": [
+        "prod_0_0",
+        "prod_0_1"
+      ],
+      "rule": "travel immediately before next handling"
+    },
+    {
+      "lane": "VTR机械手",
+      "start": 285.0,
+      "end": 287.0,
+      "origin": "CH2",
+      "destination": "L",
+      "held": [
+        "prod_0_0",
+        "prod_0_1"
+      ],
+      "rule": "travel immediately before next handling"
+    },
+    {
+      "lane": "VTR机械手",
+      "start": 288.0,
+      "end": 290.0,
+      "origin": "L",
+      "destination": "CH2",
+      "held": [],
+      "rule": "travel immediately before next handling"
+    },
+    {
+      "lane": "VTR机械手",
+      "start": 291.0,
+      "end": 293.0,
+      "origin": "CH2",
+      "destination": "VS",
+      "held": [
+        "aux_2_0",
+        "aux_2_1"
+      ],
+      "rule": "travel immediately before next handling"
+    }
+  ],
+  "explicit_events_covered": 26,
+  "complete_wafer_paths": 4,
+  "overlapping_display_states": 0,
+  "optimization_calls": 0
+}

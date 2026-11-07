@@ -1,0 +1,35 @@
+{
+  "dimensions": {
+    "variables": 178305,
+    "constraints": 671975,
+    "linear_nonzeros": 4615224,
+    "types": {
+      "BINARY": 176484,
+      "INTEGER": 528,
+      "CONTINUOUS": 1293
+    }
+  },
+  "build_seconds": 10.468000000000757,
+  "source_metrics": {
+    "route_wait_sum": 1320.0,
+    "route_wait_max": 118.0,
+    "rhythm_deviation": 0,
+    "rhythm_centers": 0,
+    "early_cleanings": 0,
+    "legacy_rule_feasible": true,
+    "production_overlap": 0,
+    "cleanings": 0,
+    "modeled_completion": 2418.0,
+    "product_cmax": 2400.0
+  },
+  "selector_variables": 512,
+  "N": 16,
+  "G": 4,
+  "candidate_pairs": 64,
+  "candidate_cycles": 32,
+  "full_candidate_space": true,
+  "candidate_bound_restricted": false,
+  "build_rss_mb": 867.25,
+  "substituted_variables": 0,
+  "removed_tautologies": 0
+}

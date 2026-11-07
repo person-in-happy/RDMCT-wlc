@@ -1,0 +1,94 @@
+{
+  "suite": "mode_n024_clean03_pure22",
+  "source": {
+    "suite": "mode_n024_clean03_pure22",
+    "source_solution": "D:\\git\\git\\RDMCT-A3C\\JMS\\results\\submission_evidence\\certificate_mode_n024_clean03_pure22_20260907_101136_723565\\best.sol",
+    "instance": "D:\\git\\git\\RDMCT-A3C\\JMS\\results\\submission_evidence\\certificate_mode_n024_clean03_pure22_20260907_101136_723565\\mode_n024_clean03_pure22_equal_total180_20260831.lp",
+    "provenance": "28800 s certificate run, feasible incumbent",
+    "status": "timelimit",
+    "validation_note": "checked active primary model at feasibility tolerance 1.000001e-06; removed 13 inactive auxiliaries",
+    "instance_sha256": "819e728949e57b18de3be126e5364091e4447c5291fc9f2aaf6fad39ffac7a91",
+    "solution_sha256": "740b631e0857e376ebec1fdc0f90310498498a97bab475b48bc112de4dd9c981",
+    "metrics": {
+      "total_wafers": 24,
+      "cmax": 2220.0,
+      "model_objective_cmax": 2220.0,
+      "cmax_matches_last_product_return": true,
+      "throughput_wph": 38.91891891891892,
+      "mean_cycle_time": 496.8333333333331,
+      "p95_cycle_time": 824.2400000003599,
+      "atr_utilization": 0.43783783783783786,
+      "vtr_utilization": 0.07927927927927927,
+      "al_utilization": 0.21621621621621623,
+      "llupper_capacity_utilization": 0.6208468468463592,
+      "lllower_capacity_utilization": 0.5890630630635495,
+      "pec_peak_in_tool": 8,
+      "clean_count": 6,
+      "clean_internal_count": 4,
+      "clean_terminal_count": 2,
+      "clean_time_share": 0.4594594594594595,
+      "physical_route_total_wait": 4723.999999999994,
+      "physical_route_max_wait": 477.0,
+      "physical_cadence_cv": 0.0,
+      "physical_cadence_deviation_sum": 0.0,
+      "ch2_utilization": 0.8207207207207208,
+      "ch3_utilization": 0.8279279279279279
+    }
+  },
+  "constraint": "all within-chain adjacent processing gaps = 4 s, combined exchange",
+  "bridge_indices": [
+    [
+      2,
+      2
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      2,
+      5
+    ],
+    [
+      2,
+      6
+    ],
+    [
+      2,
+      8
+    ],
+    [
+      2,
+      9
+    ],
+    [
+      3,
+      2
+    ],
+    [
+      3,
+      3
+    ],
+    [
+      3,
+      5
+    ],
+    [
+      3,
+      6
+    ],
+    [
+      3,
+      8
+    ],
+    [
+      3,
+      9
+    ]
+  ],
+  "instance": "D:\\git\\git\\RDMCT-A3C\\JMS\\results\\submission_evidence\\temp_continuous4_20260909_133332\\mode_n024_clean03_pure22\\continuous4.lp",
+  "instance_sha256": "427ff441fbdaf51d60bde00245c797840eba2660d4d7ad14e643524b42a1cdce",
+  "warm_accepted": true,
+  "time_limit": 180.0,
+  "finish_time_limit": 60.0
+}

@@ -1,0 +1,92 @@
+{
+  "state": "checked",
+  "solve_seconds": 0,
+  "solver_started": false,
+  "complete": true,
+  "valid": true,
+  "source_metrics": {
+    "route_wait_sum": 3109.0,
+    "route_wait_max": 437.0,
+    "rhythm_deviation": 696.0,
+    "rhythm_centers": 8,
+    "early_cleanings": 0,
+    "legacy_rule_feasible": true,
+    "production_overlap": 0,
+    "cleanings": 2,
+    "modeled_completion": 4803.0,
+    "product_cmax": 4785.0
+  },
+  "metrics": {
+    "route_wait_sum": 3109.0,
+    "route_wait_max": 437.0,
+    "rhythm_deviation": 696.0,
+    "rhythm_centers": 8,
+    "early_cleanings": 0,
+    "legacy_rule_feasible": true,
+    "production_overlap": 0,
+    "cleanings": 2,
+    "modeled_completion": 4803.0,
+    "product_cmax": 4785.0
+  },
+  "original_model_check": true,
+  "full_model_audit": {
+    "valid": true,
+    "original_model_check": true,
+    "physical_validation": {
+      "valid": true,
+      "checks": 24790,
+      "errors": [],
+      "product_return_cmax": 4785.0,
+      "cleaning_count": 2,
+      "processing_cycles": 16,
+      "pjob_check": true,
+      "pjob_release_order_check": true
+    },
+    "seconds": 47.53099999999904,
+    "solver_started": false,
+    "dimensions": {
+      "variables": 1080365,
+      "constraints": 3768984,
+      "linear_nonzeros": 22174778,
+      "types": {
+        "BINARY": 1075832,
+        "INTEGER": 1320,
+        "CONTINUOUS": 3213
+      }
+    }
+  },
+  "dimensions": {
+    "variables": 3645,
+    "constraints": 34538,
+    "linear_nonzeros": 66401,
+    "types": {
+      "BINARY": 432,
+      "INTEGER": 0,
+      "CONTINUOUS": 3213
+    }
+  },
+  "build_seconds": 9.71900000000096,
+  "selector_variables": 0,
+  "N": 24,
+  "G": 4,
+  "candidate_pairs": 168,
+  "candidate_cycles": 96,
+  "full_candidate_space": false,
+  "candidate_bound_restricted": false,
+  "build_rss_mb": 1382.21875,
+  "substituted_variables": 1044276,
+  "removed_tautologies": 3637115,
+  "cell": {
+    "id": "n24_H5_2x2_dual__s2__w25",
+    "case": "n24_H5_2x2_dual",
+    "seed": 2,
+    "arm": "substituted",
+    "weight": 25,
+    "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s2__joint\\result.json",
+    "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s2__joint\\variables_phase1.json"
+  },
+  "sources": {
+    "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s2__joint\\result.json": "8e91c6ce4c357122c0b6842389b63db78dde053a67b2d8bb9f76880e7a5bed44",
+    "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s2__joint\\variables_phase1.json": "78cfa62af063406f48cad4820c8cae148002c0757a20e8b8648362601a81695b"
+  }
+}

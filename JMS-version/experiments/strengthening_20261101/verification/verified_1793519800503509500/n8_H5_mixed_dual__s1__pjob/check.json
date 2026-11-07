@@ -1,0 +1,91 @@
+{
+  "state": "checked",
+  "solve_seconds": 0,
+  "solver_started": false,
+  "complete": true,
+  "valid": true,
+  "source_metrics": {
+    "route_wait_sum": 760.999999999998,
+    "route_wait_max": 65.0,
+    "rhythm_deviation": 0,
+    "rhythm_centers": 0,
+    "early_cleanings": 0,
+    "legacy_rule_feasible": true,
+    "production_overlap": 0,
+    "cleanings": 0,
+    "modeled_completion": 1738.0,
+    "product_cmax": 1720.0
+  },
+  "metrics": {
+    "route_wait_sum": 760.999999999998,
+    "route_wait_max": 65.0,
+    "rhythm_deviation": 0,
+    "rhythm_centers": 0,
+    "early_cleanings": 0,
+    "legacy_rule_feasible": true,
+    "production_overlap": 0,
+    "cleanings": 0,
+    "modeled_completion": 1738.0,
+    "product_cmax": 1720.0
+  },
+  "original_model_check": true,
+  "full_model_audit": {
+    "valid": true,
+    "original_model_check": true,
+    "physical_validation": {
+      "valid": true,
+      "checks": 4500,
+      "errors": [],
+      "product_return_cmax": 1720.0,
+      "cleaning_count": 0,
+      "processing_cycles": 6,
+      "pjob_check": true,
+      "pjob_release_order_check": true
+    },
+    "seconds": 3.186999999998079,
+    "solver_started": false,
+    "dimensions": {
+      "variables": 79188,
+      "constraints": 280452,
+      "linear_nonzeros": 1700980,
+      "types": {
+        "BINARY": 77980,
+        "INTEGER": 352,
+        "CONTINUOUS": 856
+      }
+    }
+  },
+  "dimensions": {
+    "variables": 79188,
+    "constraints": 280452,
+    "linear_nonzeros": 1700980,
+    "types": {
+      "BINARY": 77980,
+      "INTEGER": 352,
+      "CONTINUOUS": 856
+    }
+  },
+  "build_seconds": 4.360000000000582,
+  "selector_variables": 128,
+  "N": 8,
+  "G": 8,
+  "candidate_pairs": 44,
+  "candidate_cycles": 24,
+  "full_candidate_space": true,
+  "candidate_bound_restricted": false,
+  "build_rss_mb": 535.06640625,
+  "substituted_variables": 0,
+  "removed_tautologies": 0,
+  "cell": {
+    "id": "n8_H5_mixed_dual__s1__pjob",
+    "case": "n8_H5_mixed_dual",
+    "seed": 1,
+    "arm": "pjob",
+    "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\reference.json",
+    "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\common.json"
+  },
+  "sources": {
+    "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\reference.json": "0ad08885e625fd7660d25cc341d3fb12ee15098345a13d4171b7ac9ec44cb64f",
+    "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\common.json": "2b56354a367e43069ddc58fef5da79ecd74315648008849854d2573cd0ab0467"
+  }
+}

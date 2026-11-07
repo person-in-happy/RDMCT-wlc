@@ -1,0 +1,77 @@
+{
+  "solver_started": false,
+  "checks": [
+    {
+      "case": "n4_H10_mixed_dual",
+      "check": "common_assignment_in_full_model",
+      "valid": true
+    },
+    {
+      "case": "n4_H10_mixed_dual",
+      "check": "strong_fixed_assignment_in_full_model",
+      "valid": true,
+      "cmax": 542.0
+    },
+    {
+      "case": "n4_H10_mixed_dual",
+      "check": "common_assignment_in_fixed_model",
+      "valid": true
+    },
+    {
+      "case": "n8_H3_mixed_dual",
+      "check": "common_assignment_in_full_model",
+      "valid": true
+    },
+    {
+      "case": "n8_H3_mixed_dual",
+      "check": "common_assignment_in_fixed_model",
+      "valid": true
+    }
+  ],
+  "frozen_backend_changes": [],
+  "model_sha256": "f3abcd2dbcc4a1d1afa93379261870f8e2f078ba145b1caa590282898d76722e",
+  "source_sha256": "c71d127fa9bf3c729619b8d39815e93d7ce10bad5a0cee78a0f7c27d693df73d",
+  "entry_sha256": "c5e9355c9b0a3537efb1d4254fc584f198c102579061a0fcc8a71a277cb94638",
+  "refinement_assignment_checks": [
+    {
+      "path": "JMS-version\\results\\review_cleanup_entrycheck_20261101_01\\checks\\n4_H3_mixed_single__s1__refined_1793500114985532900\\check.json",
+      "sha256": "947878f0b64584dc141f478d2ba8017c1576ecec9da8b5a811d7a5f5eb2b3304",
+      "valid": true,
+      "solver_started": false,
+      "dimensions": {
+        "variables": 43532,
+        "constraints": 154416,
+        "linear_nonzeros": 901024,
+        "types": {
+          "BINARY": 42692,
+          "INTEGER": 256,
+          "CONTINUOUS": 584
+        }
+      }
+    },
+    {
+      "path": "JMS-version\\results\\review_rhythm_entrycheck_20261101_01\\checks\\n24_H5_2x2_dual__s1__w25_1793500150024233600\\check.json",
+      "sha256": "3d4f853490963635bf357bff3fbd02b17b42d4b030db9f0e632467315d6ff14c",
+      "valid": true,
+      "solver_started": false,
+      "dimensions": {
+        "variables": 1080365,
+        "constraints": 3768984,
+        "linear_nonzeros": 22174778,
+        "types": {
+          "BINARY": 1075832,
+          "INTEGER": 1320,
+          "CONTINUOUS": 3213
+        }
+      }
+    }
+  ],
+  "planned_counts": {
+    "baseline": 36,
+    "rhythm": 36,
+    "cleanup": 42
+  },
+  "formal_campaigns_started": 0,
+  "launcher_sha256": "80bc3b02197e3e6e0ebc2353ee76f2a3d7810361b3badf3d7a5d7a4e19036ddd",
+  "post_check_change": "PowerShell status header display only; model/check/solver paths unchanged."
+}

@@ -1,0 +1,41 @@
+{
+  "updated_utc": "2026-10-29T08:09:30.199811+00:00",
+  "model": "pjob_global_fifo",
+  "export_manifest": "pjob_fifo_20261029/manifest.json",
+  "manifest_sha256": "37b9082dbfff12f03fee191e305a2c1215f0e94b24006de1fd8f62ef902eb8f4",
+  "lower_bound_formula": "N! / ((N/4)!^2 * (N/2)!) * 2^(N/2)",
+  "release_rule": "Strict global Pjob index order, no simultaneous same-Pjob initial pickup",
+  "qualification": "LP1->CH2; LP2->CH3; LP3,LP4->CH2 or CH3",
+  "union_definition": "4x1/2x2 x H3/H10; identical H orders merged; union lower bound = 2*L(N)",
+  "complete_enumeration": false,
+  "exact_total": null,
+  "files": [
+    {
+      "n": 8,
+      "listed": 6720,
+      "listed_per_configuration": 3360,
+      "lower_bound_per_configuration": "6720",
+      "lower_bound_union_four_configurations": "13440",
+      "path": "pjob_fifo_20261029/8wafer_pjob_strict_orders.txt",
+      "sha256": "6f25d743686aaf37f8987801b3ea9fc31299b570bce121032077bc8e61e43de5"
+    },
+    {
+      "n": 16,
+      "listed": 676,
+      "listed_per_configuration": 338,
+      "lower_bound_per_configuration": "230630400",
+      "lower_bound_union_four_configurations": "461260800",
+      "path": "pjob_fifo_20261029/16wafer_pjob_strict_orders.txt",
+      "sha256": "3a414b462a22b634bdd1a690fd846a03b29d426f2910e7046c69d7cb45e59c24"
+    },
+    {
+      "n": 32,
+      "listed": 6,
+      "listed_per_configuration": 3,
+      "lower_bound_per_configuration": "506980245130444800",
+      "lower_bound_union_four_configurations": "1013960490260889600",
+      "path": "pjob_fifo_20261029/32wafer_pjob_strict_orders.txt",
+      "sha256": "ccd00917d078f8efda262b333fa02d45360a7bcb62a54c2e53445801e109bf82"
+    }
+  ]
+}

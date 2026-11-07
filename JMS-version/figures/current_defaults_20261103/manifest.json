@@ -1,0 +1,26 @@
+{
+  "result": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\revisions\\20261103_results_default_residency\\validated\\n2_H3_4x1_dual_same_lp__pjob_a87d0cfeda\\result.json",
+  "result_sha256": "ee029a795ca9228f05cfa1c9e1d5389e82ddcbb7a10d54bd53e9b6fdc32b2330",
+  "variables_sha256": "54153630203e6f1e85b86805706c6f53aa0ac785f8c404c19a3fa25510eb736b",
+  "proof": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\revisions\\20261103_results_default_residency\\optimality_certificate.json",
+  "certified_product_cmax": true,
+  "cmax": 324.0,
+  "resource_horizon": 342.0,
+  "renderer_sha256": "94bbf0bdcd7fd7689190f8c02b9380ebb0c31cd0d278cd8276786b9ad9babf3b",
+  "swimlane_renderer_sha256": "edc52ea8c647e27a679659fd904b3dca35d583e226dd5c82d252b122f662bd3d",
+  "flow_intervals": 28,
+  "resource_intervals": 66,
+  "explicit_events_covered": 26,
+  "complete_wafer_paths": 4,
+  "physical": {
+    "valid": true,
+    "checks": 537,
+    "errors": [],
+    "product_return_cmax": 324.0,
+    "cleaning_count": 0,
+    "processing_cycles": 1,
+    "pjob_check": true,
+    "pjob_release_order_check": true
+  },
+  "notes": "Unified resource time lanes and wafer identity labels; no path lines or arrows. Implicit travel is completed immediately before the next handling; alignment/pump/vent immediately after deposit. LL slots are equivalent display assignments. No new optimization."
+}

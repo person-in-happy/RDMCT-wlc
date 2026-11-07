@@ -27,7 +27,7 @@
 \renewcommand{\dblfloatpagefraction}{0.95}
 
 \journal{Journal of Manufacturing Systems}
-\biboptions{sort&compress}
+\biboptions{numbers,sort&compress}
 
 \newcommand{\method}{RDMCT-HBS}
 \newcommand{\cmax}{C_{\max}}
@@ -63,6 +63,8 @@ semiconductor manufacturing systems \sep full-occupancy processing \sep dummy-wa
 
 Plasma-enhanced chemical vapor deposition (PECVD) is used in semiconductor thin-film fabrication. Cluster tools (CTs) connect process modules, robots, and load locks into a continuous wafer-handling route. Processing and transport times, load-lock switching, cleaning, and residency constraints jointly determine feasible operation and equipment output \citep{pan2018survey}. Three-dimensional device structures and multilayer integration increase demands on deposition uniformity and processing capability \citep{appliedprecisioncvd}. Multi-space process modules and multi-finger robots provide a structural basis for parallel processing within a tool \citep{gu2024applied,gu2024multifinger}.
 
+Process-quality prediction provides a related but distinct context for equipment scheduling. Maitra et al. review virtual metrology methods that predict product quality from equipment state, process variables, and sampled physical measurements \citep{maitra2024virtual}. For amorphous carbon deposition, Choi and Hong use equipment-state data and in situ optical emission spectroscopy in neural-network film-thickness prediction \citep{choi2021carbon}. Here, recipes and mode eligibility that satisfy product-quality requirements are inputs to resource scheduling; schedule quality does not replace film-thickness prediction or recipe qualification.
+
 This study considers a PECVD CT with four-position rotating chambers. The operating decision starts from the full-occupancy requirement of the studied recipes: all four positions must contain wafers during production, with dummy wafers filling positions not occupied by products. We use auxiliary wafer to denote a reusable dummy wafer used for production filling or cleaning occupancy. Dummies do not contribute to product output, but their handling, rotation, transport, and repeated loans consume resources. Products enter from atmospheric load ports through alignment and load locks; in dual-source operation, auxiliaries come from vacuum storage. These source and route differences form part of the equipment conditions for mode comparison.
 
 \begin{figure}[t]
@@ -84,11 +86,13 @@ Full occupancy couples product supply with auxiliary reuse. Auxiliary wafers fil
 
 Two prescribed modes are considered: $4\times1$ parallel processing gives four wafers one synchronous exposure, whereas $2\times2$ chained processing uses paired transfers and rotation to give each product two consecutive exposures. Recipes and chamber operations define these modes. Dummy wafers required for full occupancy give them different resource costs for partial batches, chain initialization and termination, and cleaning transitions. Equal cumulative nominal processing time per product therefore need not yield equal batch makespan. Mode preference must be assessed against lot size, cleaning threshold, dummy supply, and handling conditions. Product modes are fixed inputs within each solve. Mode selection is supported by separately constructing pure and mixed configurations and comparing validated schedules and bounds, rather than freely changing product recipes within one solve.
 
-CT studies established analytical relationships between processing, handling, and throughput \citep{perkinson1994throughput} and used linear programming, heuristics, and timed Petri nets to obtain schedules under residency constraints \citep{rostami2002optimal,wu2010closedform,qiao2012sojourn}. Later models address revisiting processes, multiple wafer types, and selectable modules \citep{qiao2014revisiting,wang2020multiple,wang2025virtualcell}. Clean/dirty-hand separation and steady-state analysis of four-finger robots and four-space modules, together with joint optimization of two-type wafer releases and handling, supports more complex configurations \citep{gu2024multifinger,yang2025miptwowafers}. Finite batches additionally involve chain initialization, termination, and partial-batch filling, making auxiliary return times direct constraints on subsequent processing.
+CT studies established analytical relationships between processing, handling, and throughput \citep{perkinson1994throughput} and used linear programming, heuristics, and timed Petri nets to obtain schedules under residency constraints \citep{rostami2002optimal,wu2010closedform,qiao2012sojourn}. Later models address revisiting processes, multiple wafer types, and selectable modules \citep{qiao2014revisiting,wang2020multiple,wang2025virtualcell}. Clean/dirty-hand separation and steady-state analysis of four-finger robots and four-space modules, together with joint optimization of two-type wafer releases and handling, supports more complex configurations \citep{gu2024multifinger,yang2025miptwowafers}. Finite batches additionally involve chain initialization, termination, and partial-batch filling, requiring coordinated product and auxiliary handling.
 
 Periodic-cleaning scheduling uses task-sequence enumeration, partial loading and timing control, virtual-wafer occupancy, and chamber-state-dependent triggers to coordinate maintenance and production \citep{kim2013cleaning,yu2020delay,qiao2022binary,li2022conditioncleaning}. Shared-buffer synchronization and dynamic action screening address deadlock during failure shutdown and noncyclic operation \citep{zhu2025failuredeadlock,kim2025noncyclicdeadlock}; waiting constraints also affect equipment output and upstream control \citep{lee2018waiting}. Here, cleaning simultaneously changes chain segmentation, auxiliary occupancy, and vacuum-robot order. Scheduling product processing or cleaning independently would omit these dependencies.
 
 Timing quality requires distinguishing batch efficiency from coordination between operations. JMS research links waiting limits to effective output \citep{lee2018waiting}, while JIT scheduling seeks completion times aligned with downstream acceptance \citep{weng2022jit}. For the present tool, reducing avoidable waiting and variation in repeated production-cycle intervals can support predictable supply and pickup plans. However, timely demand-driven coordination, uniform wafer residency, and regular cycle-start intervals are distinct criteria. This study directly optimizes waiting and cycle cadence and imposes hard residency limits; these measures do not establish equal residency or strict JIT control.
+
+Equipment-state studies provide an engineering basis for parameter updates. Sun et al. report differences in processing time across chambers and use equipment-data analysis to locate steps responsible for throughput loss \citep{sun2024manufacturing}. Chen et al. detect sensory-data anomalies in an HDP-CVD tool using recipe-cycle extraction, time and spectral features, and unsupervised autoencoders \citep{chen2020anomaly}. Biebl et al. connect time-to-failure interval prediction and Bayesian root-cause analysis to maintenance recommendations and planning \citep{biebl2020maintenance}. These studies support state assessment and maintenance decisions; the present work coordinates production, handling, and cleaning for given equipment parameters. Translating state estimates into scheduling parameters and triggering rescheduling require a separate interface and validation.
 
 Two hardware-deviation mechanisms motivate schedule updates: actual action durations can deviate from nominal values, and chambers or robots can differ in performance. Either can change resource availability and require mode evaluation and scheduling to be recomputed for updated parameters. JMS research on uncertain durations explicitly distinguishes proactive scheduling from reactive adjustment \citep{rahmani2014robust}. Here, the computational task is time-limited scheduling for a given parameter snapshot: obtain a complete constraint-checked schedule within the budget, then improve makespan and timing quality. Current experiments do not inject online stochastic deviations or implement measurement feedback and closed-loop rescheduling; they validate scheduling only for the tested deterministic configurations.
 
@@ -114,7 +118,7 @@ Two decision levels are distinguished. Mode comparison constructs pure $4\times1
 
 Inputs comprise action durations, resource capacities, residency limits, cleaning threshold, and auxiliary inventory. Reducing batch completion time means reducing the last product-return time $C_{\max}$, rather than changing recipe-prescribed processing durations or minimizing the sum of action durations. Stage one prioritizes $C_{\max}$; stage two improves waiting and production cadence while preserving its bound. Stable coordination is therefore an engineering aim of timing refinement, while equal residency or fixed cadence is not a prerequisite enforced before stage one in the current model. A feasible schedule specifies wafers, resources, and event times for checking precedence, conflicts, and operating metrics.
 
-The cleaning threshold satisfies $H\ge2$, and the shared inventory contains at least four auxiliary wafers. Action durations are deterministic within each solve. No buffers are assumed beyond LPs, aligners, load locks, rotating chambers, and vacuum storage.
+The cleaning threshold satisfies $H\ge2$. The baseline auxiliary inventory is sized at four wafers per four-position rotating chamber, giving eight wafers for the two-chamber tool. All chambers share this inventory; individual wafers are not dedicated to a chamber. This total covers simultaneous auxiliary occupancy of every chamber position, while availability at a particular time depends on ongoing loans and returns. Separately reported inventory sensitivity cases vary this baseline. Action durations are deterministic within each solve. No buffers are assumed beyond LPs, aligners, load locks, rotating chambers, and vacuum storage.
 
 Table~\ref{tab:symbol-en-a} summarizes sets, inputs, and capacity bounds; Table~\ref{tab:symbol-en-b} lists core decisions, derived indicators, and linearization auxiliaries. All events use start and end times $s_o,e_o$. For a fixed-duration physical action, $e_o=s_o+d_ob_o$ can be substituted directly. For a resource-holding interval spanning several actions, the endpoints are linked to the corresponding pickup and placement events, and its duration is not prescribed. Loading, unloading, rotation, cycle, and cleaning-stage times are indexed aliases of these physical events, not independent clocks.
 
@@ -369,12 +373,7 @@ A regular all-product $4\times1$ batch contains two product PW pairs. Four produ
 \label{fig:chain-en}
 \end{figure}
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=\linewidth]{fig_parallel_en_nature}
-\caption{$4\times1$ parallel production. Two PW pairs are loaded successively around a rotation, filling all four positions for one synchronous exposure. Pairs leave in last-in--first-out order; auxiliary wafers fill product shortages.}
-\label{fig:parallel-en}
-\end{figure}
+
 
 Binary $A_{pcq},Z_{pcq}$ identify the first and last cycles occupied by pair $p$ in chamber $c$. With $X_{pc0}=X_{pc,Q_{\max}+1}=0$,
 \begin{equation}
@@ -389,6 +388,13 @@ Z_{pcq}&\le1-X_{pc,q+1},\\
 \label{eq:cycle-exposures-en}
 \end{equation}
 Here $A^{\psi}_{pcq}=A_{pcq}\land B_p^{\psi}$ and $Z^{\psi}_{pcq}=Z_{pcq}\land B_p^{\psi}$ use the three-inequality linearization in Eq.~\eqref{eq:cycle-products-en}. Each active pair enters and exits once, ensuring uninterrupted occupancy. Total occupancy $v_p+B_p^{\psi}$ gives one production cycle to a $4\times1$ product pair and two adjacent production cycles in one chamber to a $2\times2$ product pair. Each $2\times2$ cycle contains at most one product pair receiving its first exposure and one receiving its last, forming an alternating exchange chain. An auxiliary-only support pair occupies one production cycle, and a cleaning pair occupies one cleaning cycle.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig_parallel_en_nature}
+\caption{$4\times1$ parallel production. Two PW pairs are loaded successively around a rotation, filling all four positions for one synchronous exposure. Pairs leave in last-in--first-out order; auxiliary wafers fill product shortages.}
+\label{fig:parallel-en}
+\end{figure}
 
 \noindent\textbf{Cycle durations and timing links.}
 Let $S_{cq},E_{cq}$ be cycle start and end times, $d_m$ the duration of operation type $m$, and $\overline T$ a valid time horizon:
@@ -488,7 +494,7 @@ All chambers access one physical auxiliary inventory. The set $\mathcal T_c$ con
 \qquad j=(p,r)\in\mathcal J_c^D.
 \label{eq:dummy-assign-en}
 \end{equation}
-The assignment $g_{j\tau}$ also marks occupancy of the borrowed physical identity. Shared-resource constraints order successive loans, permitting reuse only after unloading and completed return to storage. Identity choices determine which cross-chamber loans compete: even with identical product pairing, chamber assignment, and cycle structure, different identities can change concurrent production intervals. Section~\ref{sec:joint-evidence-en} quantifies this effect with product structure controlled.
+The assignment $g_{j\tau}$ also marks occupancy of the borrowed physical identity. Shared-resource constraints order successive loans, permitting reuse only after unloading and completed return to storage. This condition governs reuse of the same physical wafer; it does not imply that every return delays subsequent processing. Another available wafer can be selected instead. A subsequent loan assigned the same wafer must wait for its return, but whether this wait delays product processing or batch completion also depends on other precedence relations and handling-resource timing. Identity choices determine which cross-chamber loans require ordering: even with identical inventory, product pairing, chamber assignment, and cycle structure, different identities may change concurrent production intervals. Section~\ref{sec:joint-evidence-en} quantifies this effect with product structure controlled.
 
 \noindent\textbf{Robot hands and module capacities.}
 ATR has two hands, VTR has four, and each rotating chamber has four wafer positions. At any instant, each ATR or VTR executes at most one coordinated transfer, and each chamber executes at most one unified loading, unloading, rotation, or chamber-operation stage. Their actuators are therefore exclusive action resources. Individual hand assignments express robot carrying capacity, and pair occupancy expresses chamber capacity; actuator exclusivity does not represent wafer count. AL is also exclusive. The upper and lower load locks contain slots U1/U2 and L1/L2, respectively, and every physical auxiliary wafer is a reusable identity. Each occupancy interval selects one allowed unit, whether a physical hand, an auxiliary identity, or an exclusive actuator. For occupancy task $o$,
@@ -1387,386 +1393,203 @@ publication.
 
 \footnotesize
 \setlength{\bibsep}{0pt}
-\begin{thebibliography}{34}
-\expandafter\ifx\csname natexlab\endcsname\relax\def\natexlab#1{#1}\fi
-\providecommand{\url}[1]{\texttt{#1}}
-\providecommand{\href}[2]{#2}
-\providecommand{\path}[1]{#1}
-\providecommand{\DOIprefix}{doi:}
-\providecommand{\ArXivprefix}{arXiv:}
-\providecommand{\URLprefix}{URL: }
-\providecommand{\Pubmedprefix}{pmid:}
-\providecommand{\doi}[1]{\href{http://dx.doi.org/#1}{\path{#1}}}
-\providecommand{\Pubmed}[1]{\href{pmid:#1}{\path{#1}}}
-\providecommand{\bibinfo}[2]{#2}
-\ifx\xfnm\relax \def\xfnm[#1]{\unskip,\space#1}\fi
-%Type = Article
-\bibitem[{Pan et~al.(2018)Pan, Zhou, Qiao and Wu}]{pan2018survey}
-\bibinfo{author}{Pan, C.R.}, \bibinfo{author}{Zhou, M.C.},
-  \bibinfo{author}{Qiao, Y.}, \bibinfo{author}{Wu, N.Q.},
-  \bibinfo{year}{2018}.
-\newblock \bibinfo{title}{Scheduling cluster tools in semiconductor manufacturing:
-  Recent advances and challenges}.
-\newblock \bibinfo{journal}{IEEE Transactions on Automation Science and Engineering}
-  \bibinfo{volume}{15}, \bibinfo{number}{2}, \bibinfo{pages}{586--601}.
-\newblock \DOIprefix\doi{10.1109/TASE.2016.2642997}.
-%Type = Article
+\begin{thebibliography}{39}
+% JMS: Elsevier NLM/Vancouver, first-citation order. Generated by tools/format_jms_references.py.
+\interlinepenalty=10000
 
-\bibitem[{{Applied Materials}(n.d.)}]{appliedprecisioncvd}
-Applied Materials, n.d.
-\newblock Producer XP Precision CVD.
-\newblock \url{https://www.appliedmaterials.com/us/en/product-library/producer-xp-precision-cvd.html} (accessed 7 September 2026).
+\bibitem{pan2018survey}
+Pan CR, Zhou MC, Qiao Y, Wu NQ. Scheduling cluster tools in semiconductor manufacturing: Recent advances and challenges.
+IEEE Trans Autom Sci Eng 2018;15:586--601.
+\url{https://doi.org/10.1109/TASE.2016.2642997}.
 
-\bibitem[{Gu et~al.(2024)Gu, Wu, Qiao, Zhang and Li}]{gu2024applied}
-\bibinfo{author}{Gu, L.}, \bibinfo{author}{Wu, N.},
-  \bibinfo{author}{Qiao, Y.}, \bibinfo{author}{Zhang, S.},
-  \bibinfo{author}{Li, T.}, \bibinfo{year}{2024}.
-\newblock \bibinfo{title}{Scheduling cluster tools with multi-space process
-  modules and a multi-finger-arm robot in wafer fabrication subject to wafer
-  residency time constraints}.
-\newblock \bibinfo{journal}{Applied Sciences} \bibinfo{volume}{14},
-  \bibinfo{pages}{9490}.
-\newblock \DOIprefix\doi{10.3390/app14209490}.
-%Type = Article
+\bibitem{appliedprecisioncvd}
+Applied Materials. Producer XP Precision CVD.
+n.d.
+\url{https://www.appliedmaterials.com/us/en/product-library/producer-xp-precision-cvd.html} (accessed September 7, 2026).
 
-\bibitem[{Gu et~al.(2024)Gu, Wu, Qiao and Zhang}]{gu2024multifinger}
-\bibinfo{author}{Gu, L.}, \bibinfo{author}{Wu, N.}, \bibinfo{author}{Qiao, Y.},
-  \bibinfo{author}{Zhang, S.}, \bibinfo{year}{2024}.
-\newblock \bibinfo{title}{Scheduling of {Multi-finger-robotic Cluster Tools}
-  with {Multi-space Process Modules}}, in: \bibinfo{booktitle}{2024
-  International Conference on Networking, Sensing and Control ({ICNSC})},
-  \bibinfo{publisher}{IEEE}.
-\newblock \DOIprefix\doi{10.1109/ICNSC62968.2024.10760109}.
-%Type = Article
+\bibitem{gu2024applied}
+Gu L, Wu N, Qiao Y, Zhang S, Li T. Scheduling cluster tools with multi-space process modules and a multi-finger-arm robot in wafer fabrication subject to wafer residency time constraints.
+Appl Sci 2024;14:9490.
+\url{https://doi.org/10.3390/app14209490}.
 
-\bibitem[{Perkinson et~al.(1994)Perkinson, McLarty, Gyurcsik and
-  Cavin}]{perkinson1994throughput}
-\bibinfo{author}{Perkinson, T.L.}, \bibinfo{author}{McLarty, P.K.},
-  \bibinfo{author}{Gyurcsik, R.S.}, \bibinfo{author}{Cavin, R.K.},
-  \bibinfo{year}{1994}.
-\newblock \bibinfo{title}{Single-wafer cluster tool performance: An analysis
-  of throughput}.
-\newblock \bibinfo{journal}{IEEE Transactions on Semiconductor Manufacturing}
-  \bibinfo{volume}{7}, \bibinfo{pages}{369--373}.
-\newblock \DOIprefix\doi{10.1109/66.311340}.
-%Type = Article
+\bibitem{gu2024multifinger}
+Gu L, Wu N, Qiao Y, Zhang S. Scheduling of {Multi-finger-robotic Cluster Tools} with {Multi-space Process Modules}.
+In: 2024 International Conference on Networking, Sensing and Control ({ICNSC}). IEEE; 2024.
+\url{https://doi.org/10.1109/ICNSC62968.2024.10760109}.
 
-\bibitem[{Rostami and Hamidzadeh(2002)}]{rostami2002optimal}
-\bibinfo{author}{Rostami, S.}, \bibinfo{author}{Hamidzadeh, B.},
-  \bibinfo{year}{2002}.
-\newblock \bibinfo{title}{Optimal scheduling techniques for cluster tools
-  with process-module and transport-module residency constraints}.
-\newblock \bibinfo{journal}{IEEE Transactions on Semiconductor Manufacturing}
-  \bibinfo{volume}{15}, \bibinfo{pages}{341--349}.
-\newblock \DOIprefix\doi{10.1109/TSM.2002.801379}.
-%Type = Article
+\bibitem{maitra2024virtual}
+Maitra V, Su Y, Shi J. Virtual metrology in semiconductor manufacturing: Current status and future prospects.
+Expert Syst Appl 2024;249:123559.
+\url{https://doi.org/10.1016/j.eswa.2024.123559}.
 
-\bibitem[{Wu and Zhou(2010)}]{wu2010closedform}
-\bibinfo{author}{Wu, N.Q.}, \bibinfo{author}{Zhou, M.C.},
-  \bibinfo{year}{2010}.
-\newblock \bibinfo{title}{A closed-form solution for schedulability and
-  optimal scheduling of dual-arm cluster tools with wafer residency time
-  constraint based on steady schedule analysis}.
-\newblock \bibinfo{journal}{IEEE Transactions on Automation Science and
-  Engineering} \bibinfo{volume}{7}, \bibinfo{pages}{303--315}.
-\newblock \DOIprefix\doi{10.1109/TASE.2008.2008633}.
-%Type = Article
+\bibitem{choi2021carbon}
+Choi JE, Hong SJ. Machine learning-based virtual metrology on film thickness in amorphous carbon layer deposition process.
+Meas Sens 2021;16:100046.
+\url{https://doi.org/10.1016/j.measen.2021.100046}.
 
-\bibitem[{Qiao et~al.(2012)Qiao, Wu and Zhou}]{qiao2012sojourn}
-\bibinfo{author}{Qiao, Y.}, \bibinfo{author}{Wu, N.Q.},
-  \bibinfo{author}{Zhou, M.C.}, \bibinfo{year}{2012}.
-\newblock \bibinfo{title}{Petri net modeling and wafer sojourn time analysis
-  of single-arm cluster tools with residency time constraints and activity
-  time variation}.
-\newblock \bibinfo{journal}{IEEE Transactions on Semiconductor Manufacturing}
-  \bibinfo{volume}{25}, \bibinfo{pages}{432--446}.
-\newblock \DOIprefix\doi{10.1109/TSM.2012.2199338}.
-%Type = Article
+\bibitem{perkinson1994throughput}
+Perkinson TL, McLarty PK, Gyurcsik RS, Cavin RK. Single-wafer cluster tool performance: An analysis of throughput.
+IEEE Trans Semicond Manuf 1994;7:369--73.
+\url{https://doi.org/10.1109/66.311340}.
 
-\bibitem[{Qiao et~al.(2014)Qiao, Wu and Zhou}]{qiao2014revisiting}
-\bibinfo{author}{Qiao, Y.}, \bibinfo{author}{Wu, N.},
-  \bibinfo{author}{Zhou, M.C.}, \bibinfo{year}{2014}.
-\newblock \bibinfo{title}{Scheduling of dual-arm cluster tools with wafer
-  revisiting and residency time constraints}.
-\newblock \bibinfo{journal}{IEEE Transactions on Industrial Informatics}
-  \bibinfo{volume}{10}, \bibinfo{pages}{286--300}.
-\newblock \DOIprefix\doi{10.1109/TII.2013.2272702}.
-%Type = Article
+\bibitem{rostami2002optimal}
+Rostami S, Hamidzadeh B. Optimal scheduling techniques for cluster tools with process-module and transport-module residency constraints.
+IEEE Trans Semicond Manuf 2002;15:341--9.
+\url{https://doi.org/10.1109/TSM.2002.801379}.
 
-\bibitem[{Wang et~al.(2020)Wang, Hu, Pan, Zhou and Li}]{wang2020multiple}
-\bibinfo{author}{Wang, J.}, \bibinfo{author}{Hu, H.},
-  \bibinfo{author}{Pan, C.}, \bibinfo{author}{Zhou, Y.},
-  \bibinfo{author}{Li, L.}, \bibinfo{year}{2020}.
-\newblock \bibinfo{title}{Scheduling dual-arm cluster tools with multiple
-  wafer types and residency time constraints}.
-\newblock \bibinfo{journal}{IEEE/CAA Journal of Automatica Sinica}
-  \bibinfo{volume}{7}, \bibinfo{pages}{776--789}.
-\newblock \DOIprefix\doi{10.1109/JAS.2020.1003150}.
-%Type = Article
+\bibitem{wu2010closedform}
+Wu NQ, Zhou MC. A closed-form solution for schedulability and optimal scheduling of dual-arm cluster tools with wafer residency time constraint based on steady schedule analysis.
+IEEE Trans Autom Sci Eng 2010;7:303--15.
+\url{https://doi.org/10.1109/TASE.2008.2008633}.
 
-\bibitem[{Wang et~al.(2025)Wang, Liu, Zhou and
-  Abusorrah}]{wang2025virtualcell}
-\bibinfo{author}{Wang, J.}, \bibinfo{author}{Liu, C.},
-  \bibinfo{author}{Zhou, M.C.}, \bibinfo{author}{Abusorrah, A.},
-  \bibinfo{year}{2025}.
-\newblock \bibinfo{title}{Virtual cell-based scheduling approach to
-  single-robotic-arm cluster tools subject to wafer residency time
-  constraints}.
-\newblock \bibinfo{journal}{IEEE Transactions on Automation Science and
-  Engineering} \bibinfo{volume}{22}, \bibinfo{pages}{240--251}.
-\newblock \DOIprefix\doi{10.1109/TASE.2024.3349380}.
-%Type = Article
+\bibitem{qiao2012sojourn}
+Qiao Y, Wu NQ, Zhou MC. Petri net modeling and wafer sojourn time analysis of single-arm cluster tools with residency time constraints and activity time variation.
+IEEE Trans Semicond Manuf 2012;25:432--46.
+\url{https://doi.org/10.1109/TSM.2012.2199338}.
 
-\bibitem[{Yang et~al.(2025)Yang, Li, Zhen, Zhang and Wu}]{yang2025miptwowafers}
-\bibinfo{author}{Yang, F.}, \bibinfo{author}{Li, C.}, \bibinfo{author}{Zhen,
-  L.}, \bibinfo{author}{Zhang, C.}, \bibinfo{author}{Wu, N.},
-  \bibinfo{year}{2025}.
-\newblock \bibinfo{title}{Scheduling residency time-constrained single-armed
-  cluster tools with two-wafer types via mixed integer programming model}.
-\newblock \bibinfo{journal}{Expert Systems with Applications}
-  \bibinfo{volume}{288}, \bibinfo{pages}{128209}.
-\newblock \DOIprefix\doi{10.1016/j.eswa.2025.128209}.
-%Type = Article
+\bibitem{qiao2014revisiting}
+Qiao Y, Wu N, Zhou MC. Scheduling of dual-arm cluster tools with wafer revisiting and residency time constraints.
+IEEE Trans Ind Inform 2014;10:286--300.
+\url{https://doi.org/10.1109/TII.2013.2272702}.
 
-\bibitem[{Kim et~al.(2013)Kim, Kim, Lee and Lee}]{kim2013cleaning}
-\bibinfo{author}{Kim, H.}, \bibinfo{author}{Kim, H.J.},
-  \bibinfo{author}{Lee, J.H.}, \bibinfo{author}{Lee, T.E.},
-  \bibinfo{year}{2013}.
-\newblock \bibinfo{title}{Scheduling dual-armed cluster tools with cleaning
-  processes}.
-\newblock \bibinfo{journal}{International Journal of Production Research}
-  \bibinfo{volume}{51}, \bibinfo{pages}{3671--3687}.
-\newblock \DOIprefix\doi{10.1080/00207543.2012.758392}.
-%Type = Article
+\bibitem{wang2020multiple}
+Wang J, Hu H, Pan C, Zhou Y, Li L. Scheduling dual-arm cluster tools with multiple wafer types and residency time constraints.
+IEEE/CAA J Autom Sin 2020;7:776--89.
+\url{https://doi.org/10.1109/JAS.2020.1003150}.
 
-\bibitem[{Yu and Lee(2020)}]{yu2020delay}
-\bibinfo{author}{Yu, T.S.}, \bibinfo{author}{Lee, T.E.},
-  \bibinfo{year}{2020}.
-\newblock \bibinfo{title}{Wafer delay analysis and control of dual-armed
-  cluster tools with chamber cleaning operations}.
-\newblock \bibinfo{journal}{International Journal of Production Research}
-  \bibinfo{volume}{58}, \bibinfo{pages}{434--447}.
-\newblock \DOIprefix\doi{10.1080/00207543.2019.1593547}.
-%Type = Article
+\bibitem{wang2025virtualcell}
+Wang J, Liu C, Zhou MC, Abusorrah A. Virtual cell-based scheduling approach to single-robotic-arm cluster tools subject to wafer residency time constraints.
+IEEE Trans Autom Sci Eng 2025;22:240--51.
+\url{https://doi.org/10.1109/TASE.2024.3349380}.
 
-\bibitem[{Qiao et~al.(2022)Qiao, Lu, Li, Zhang, Wu and Liu}]{qiao2022binary}
-\bibinfo{author}{Qiao, Y.}, \bibinfo{author}{Lu, Y.}, \bibinfo{author}{Li, J.},
-  \bibinfo{author}{Zhang, S.}, \bibinfo{author}{Wu, N.}, \bibinfo{author}{Liu,
-  B.}, \bibinfo{year}{2022}.
-\newblock \bibinfo{title}{An efficient binary integer programming model for
-  residency time-constrained cluster tools with chamber cleaning requirements}.
-\newblock \bibinfo{journal}{IEEE Transactions on Automation Science and
-  Engineering} \bibinfo{volume}{19}, \bibinfo{pages}{1757--1771}.
-\newblock \DOIprefix\doi{10.1109/TASE.2021.3122576}.
-%Type = Article
+\bibitem{yang2025miptwowafers}
+Yang F, Li C, Zhen L, Zhang C, Wu N. Scheduling residency time-constrained single-armed cluster tools with two-wafer types via mixed integer programming model.
+Expert Syst Appl 2025;288:128209.
+\url{https://doi.org/10.1016/j.eswa.2025.128209}.
 
-\bibitem[{Li et~al.(2022)Li, Yang and Zhen}]{li2022conditioncleaning}
-\bibinfo{author}{Li, C.}, \bibinfo{author}{Yang, F.}, \bibinfo{author}{Zhen,
-  L.}, \bibinfo{year}{2022}.
-\newblock \bibinfo{title}{Efficient scheduling approaches to time-constrained
-  single-armed cluster tools with condition-based chamber cleaning operations}.
-\newblock \bibinfo{journal}{International Journal of Production Research}
-  \bibinfo{volume}{60}, \bibinfo{pages}{3555--3568}.
-\newblock \DOIprefix\doi{10.1080/00207543.2021.1926568}.
-%Type = Inproceedings
+\bibitem{kim2013cleaning}
+Kim H, Kim HJ, Lee JH, Lee TE. Scheduling dual-armed cluster tools with cleaning processes.
+Int J Prod Res 2013;51:3671--87.
+\url{https://doi.org/10.1080/00207543.2012.758392}.
 
-\bibitem[{Zhu et~al.(2025)Zhu, Yuan, Wang and Hou}]{zhu2025failuredeadlock}
-\bibinfo{author}{Zhu, Q.}, \bibinfo{author}{Yuan, J.},
-  \bibinfo{author}{Wang, G.}, \bibinfo{author}{Hou, Y.}, \bibinfo{year}{2025}.
-\newblock \bibinfo{title}{Scheduling a single-arm two-cluster tool with a
-  process module failure subject to wafer residency time constraints}.
-\newblock \bibinfo{journal}{IEEE Transactions on Automation Science and
-  Engineering} \bibinfo{volume}{22}, \bibinfo{pages}{667--679}.
-\newblock \DOIprefix\doi{10.1109/TASE.2023.3275703}.
-%Type = Article
+\bibitem{yu2020delay}
+Yu TS, Lee TE. Wafer delay analysis and control of dual-armed cluster tools with chamber cleaning operations.
+Int J Prod Res 2020;58:434--47.
+\url{https://doi.org/10.1080/00207543.2019.1593547}.
 
-\bibitem[{Kim and Kim(2025)}]{kim2025noncyclicdeadlock}
-\bibinfo{author}{Kim, D.}, \bibinfo{author}{Kim, H.J.}, \bibinfo{year}{2025}.
-\newblock \bibinfo{title}{Noncyclic scheduling of cluster tools using deep
-  reinforcement learning}.
-\newblock \bibinfo{journal}{IEEE Transactions on Automation Science and
-  Engineering} \bibinfo{volume}{22}, \bibinfo{pages}{24009--24023}.
-\newblock \DOIprefix\doi{10.1109/TASE.2025.3632534}.
-%Type = Article
+\bibitem{qiao2022binary}
+Qiao Y, Lu Y, Li J, Zhang S, Wu N, Liu B. An efficient binary integer programming model for residency time-constrained cluster tools with chamber cleaning requirements.
+IEEE Trans Autom Sci Eng 2022;19:1757--71.
+\url{https://doi.org/10.1109/TASE.2021.3122576}.
 
-\bibitem[{Lee et~al.(2018)Lee, Zhao, Li and Papadopoulos}]{lee2018waiting}
-\bibinfo{author}{Lee, J.H.}, \bibinfo{author}{Zhao, C.},
-  \bibinfo{author}{Li, J.}, \bibinfo{author}{Papadopoulos, C.T.},
-  \bibinfo{year}{2018}.
-\newblock \bibinfo{title}{Analysis, design, and control of {Bernoulli}
-  production lines with waiting time constraints}.
-\newblock \bibinfo{journal}{Journal of Manufacturing Systems}
-  \bibinfo{volume}{46}, \bibinfo{pages}{208--220}.
-\newblock \DOIprefix\doi{10.1016/j.jmsy.2018.01.001}.
-%Type = Article
+\bibitem{li2022conditioncleaning}
+Li C, Yang F, Zhen L. Efficient scheduling approaches to time-constrained single-armed cluster tools with condition-based chamber cleaning operations.
+Int J Prod Res 2022;60:3555--68.
+\url{https://doi.org/10.1080/00207543.2021.1926568}.
 
-\bibitem[{Weng et~al.(2022)Weng, Chen, Zheng and Fujimura}]{weng2022jit}
-Weng, W., Chen, J., Zheng, M., Fujimura, S., 2022.
-\newblock Realtime scheduling heuristics for just-in-time production in large-scale flexible job shops.
-\newblock Journal of Manufacturing Systems 63, 64--77.
-\newblock \DOIprefix\doi{10.1016/j.jmsy.2022.01.006}.
+\bibitem{zhu2025failuredeadlock}
+Zhu Q, Yuan J, Wang G, Hou Y. Scheduling a single-arm two-cluster tool with a process module failure subject to wafer residency time constraints.
+IEEE Trans Autom Sci Eng 2025;22:667--79.
+\url{https://doi.org/10.1109/TASE.2023.3275703}.
 
-\bibitem[{Rahmani and Heydari(2014)}]{rahmani2014robust}
-Rahmani, D., Heydari, M., 2014.
-\newblock Robust and stable flow shop scheduling with unexpected arrivals of new jobs and uncertain processing times.
-\newblock Journal of Manufacturing Systems 33, 84--92.
-\newblock \DOIprefix\doi{10.1016/j.jmsy.2013.03.004}.
+\bibitem{kim2025noncyclicdeadlock}
+Kim D, Kim HJ. Noncyclic scheduling of cluster tools using deep reinforcement learning.
+IEEE Trans Autom Sci Eng 2025;22:24009--23.
+\url{https://doi.org/10.1109/TASE.2025.3632534}.
 
-\bibitem[{Kim and Lee(2025)}]{kim2025adaptivecluster}
-\bibinfo{author}{Kim, H.J.}, \bibinfo{author}{Lee, J.H.}, \bibinfo{year}{2025}.
-\newblock \bibinfo{title}{Scheduling cluster tools for concurrent processing:
-  Deep reinforcement learning with adaptive search}.
-\newblock \bibinfo{journal}{IEEE Transactions on Automation Science and
-  Engineering} \bibinfo{volume}{22}, \bibinfo{pages}{3783--3796}.
-\newblock \DOIprefix\doi{10.1109/TASE.2024.3399818}.
-%Type = Article
+\bibitem{lee2018waiting}
+Lee JH, Zhao C, Li J, Papadopoulos CT. Analysis, design, and control of {Bernoulli} production lines with waiting time constraints.
+J Manuf Syst 2018;46:208--20.
+\url{https://doi.org/10.1016/j.jmsy.2018.01.001}.
 
-\bibitem[{Tang et~al.(2020)Tang, Agrawal and Faenza}]{tang2020cut}
-\bibinfo{author}{Tang, Y.}, \bibinfo{author}{Agrawal, S.},
-  \bibinfo{author}{Faenza, Y.}, \bibinfo{year}{2020}.
-\newblock \bibinfo{title}{Reinforcement learning for integer programming:
-  Learning to cut}, in: \bibinfo{booktitle}{Proceedings of the 37th
-  International Conference on Machine Learning}, \bibinfo{publisher}{PMLR}. pp.
-  \bibinfo{pages}{9367--9376}.
-\newblock \URLprefix \url{https://proceedings.mlr.press/v119/tang20a.html}.
-%Type = Article
+\bibitem{weng2022jit}
+Weng W, Chen J, Zheng M, Fujimura S. Realtime scheduling heuristics for just-in-time production in large-scale flexible job shops.
+J Manuf Syst 2022;63:64--77.
+\url{https://doi.org/10.1016/j.jmsy.2022.01.006}.
 
-\bibitem[{Huang et~al.(2022)Huang, Wang, Liu, Zhen, Zhang, Yuan, Hao, Yu and
-  Wang}]{huang2022cutranking}
-\bibinfo{author}{Huang, Z.}, \bibinfo{author}{Wang, K.}, \bibinfo{author}{Liu,
-  F.}, \bibinfo{author}{Zhen, H.L.}, \bibinfo{author}{Zhang, W.},
-  \bibinfo{author}{Yuan, M.}, \bibinfo{author}{Hao, J.}, \bibinfo{author}{Yu,
-  Y.}, \bibinfo{author}{Wang, J.}, \bibinfo{year}{2022}.
-\newblock \bibinfo{title}{Learning to select cuts for efficient mixed-integer
-  programming}.
-\newblock \bibinfo{journal}{Pattern Recognition} \bibinfo{volume}{123},
-  \bibinfo{pages}{108353}.
-\newblock \DOIprefix\doi{10.1016/j.patcog.2021.108353}.
-%Type = Inproceedings
+\bibitem{sun2024manufacturing}
+Sun L, Lyu P, Zhang X, Wu J, Wang Q, Ervin J, et~al. Machine learning technologies for semiconductor manufacturing.
+In: 2024 Conference of Science and Technology for Integrated Circuits (CSTIC). IEEE; 2024, p. 1--7.
+\url{https://doi.org/10.1109/CSTIC61820.2024.10532076}.
 
-\bibitem[{Paulus et~al.(2022)Paulus, Zarpellon, Krause, Charlin and
-  Maddison}]{paulus2022looking}
-\bibinfo{author}{Paulus, M.B.}, \bibinfo{author}{Zarpellon, G.},
-  \bibinfo{author}{Krause, A.}, \bibinfo{author}{Charlin, L.},
-  \bibinfo{author}{Maddison, C.}, \bibinfo{year}{2022}.
-\newblock \bibinfo{title}{Learning to cut by looking ahead: Cutting plane
-  selection via imitation learning}, in: \bibinfo{booktitle}{Proceedings of the
-  39th International Conference on Machine Learning},
-  \bibinfo{publisher}{PMLR}. pp. \bibinfo{pages}{17584--17600}.
-\newblock \URLprefix \url{https://proceedings.mlr.press/v162/paulus22a.html}.
-%Type = Inproceedings
+\bibitem{chen2020anomaly}
+Chen CY, Chang SC, Liao DY. Equipment anomaly detection for semiconductor manufacturing by exploiting unsupervised learning from sensory data.
+Sensors 2020;20:5650.
+\url{https://doi.org/10.3390/s20195650}.
 
-\bibitem[{Wang et~al.(2023)Wang, Li, Wang, Kuang, Yuan, Zeng, Zhang and
-  Wu}]{wang2023hem}
-\bibinfo{author}{Wang, Z.}, \bibinfo{author}{Li, X.}, \bibinfo{author}{Wang,
-  J.}, \bibinfo{author}{Kuang, Y.}, \bibinfo{author}{Yuan, M.},
-  \bibinfo{author}{Zeng, J.}, \bibinfo{author}{Zhang, Y.}, \bibinfo{author}{Wu,
-  F.}, \bibinfo{year}{2023}.
-\newblock \bibinfo{title}{Learning cut selection for mixed-integer linear
-  programming via hierarchical sequence model}, in:
-  \bibinfo{booktitle}{Proceedings of the Eleventh International Conference on
-  Learning Representations}.
-\newblock \URLprefix \url{https://openreview.net/forum?id=Zob4P9bRNcK}.
-%Type = Article
+\bibitem{biebl2020maintenance}
+Biebl F, Glawar R, Jalali A, Ansari F, Haslhofer B, de~Boer P, et~al. A conceptual model to enable prescriptive maintenance for etching equipment in semiconductor manufacturing.
+Procedia CIRP 2020;88:64--9.
+\url{https://doi.org/10.1016/j.procir.2020.05.012}.
 
-\bibitem[{Achterberg(2009)}]{achterberg2009scip}
-\bibinfo{author}{Achterberg, T.}, \bibinfo{year}{2009}.
-\newblock \bibinfo{title}{{SCIP}: Solving constraint integer programs}.
-\newblock \bibinfo{journal}{Mathematical Programming Computation}
-  \bibinfo{volume}{1}, \bibinfo{pages}{1--41}.
-\newblock \DOIprefix\doi{10.1007/s12532-008-0001-1}.
-%Type = Article
+\bibitem{rahmani2014robust}
+Rahmani D, Heydari M. Robust and stable flow shop scheduling with unexpected arrivals of new jobs and uncertain processing times.
+J Manuf Syst 2014;33:84--92.
+\url{https://doi.org/10.1016/j.jmsy.2013.03.004}.
 
-\bibitem[{Bestuzheva et~al.(2023)Bestuzheva, Besan{\c{c}}on, Chen, Chmiela,
-  Donkiewicz, van Doornmalen, Eifler, Gaul, Gamrath, Gleixner, Gottwald,
-  Graczyk, Halbig, Hoen, Hojny, van~der Hulst, Koch, L{\"u}bbecke, Maher,
-  Matter, M{\"u}hmer, M{\"u}ller, Pfetsch, Schl{\"o}sser, Serrano, Shinano,
-  Sofranac, Turner, Vigerske, Wegscheider, Wellner, Weninger and
-  Witzig}]{bestuzheva2023scip}
-\bibinfo{author}{Bestuzheva, K.}, \bibinfo{author}{Besan{\c{c}}on, M.},
-  \bibinfo{author}{Chen, W.K.}, \bibinfo{author}{Chmiela, A.},
-  \bibinfo{author}{Donkiewicz, T.}, \bibinfo{author}{van Doornmalen, J.},
-  \bibinfo{author}{Eifler, L.}, \bibinfo{author}{Gaul, O.},
-  \bibinfo{author}{Gamrath, G.}, \bibinfo{author}{Gleixner, A.},
-  \bibinfo{author}{Gottwald, L.}, \bibinfo{author}{Graczyk, C.},
-  \bibinfo{author}{Halbig, K.}, \bibinfo{author}{Hoen, A.},
-  \bibinfo{author}{Hojny, C.}, \bibinfo{author}{van~der Hulst, R.},
-  \bibinfo{author}{Koch, T.}, \bibinfo{author}{L{\"u}bbecke, M.E.},
-  \bibinfo{author}{Maher, S.J.}, \bibinfo{author}{Matter, F.},
-  \bibinfo{author}{M{\"u}hmer, E.}, \bibinfo{author}{M{\"u}ller, B.},
-  \bibinfo{author}{Pfetsch, M.E.}, \bibinfo{author}{Schl{\"o}sser, F.},
-  \bibinfo{author}{Serrano, F.}, \bibinfo{author}{Shinano, Y.},
-  \bibinfo{author}{Sofranac, B.}, \bibinfo{author}{Turner, M.},
-  \bibinfo{author}{Vigerske, S.}, \bibinfo{author}{Wegscheider, F.},
-  \bibinfo{author}{Wellner, P.}, \bibinfo{author}{Weninger, D.},
-  \bibinfo{author}{Witzig, J.}, \bibinfo{year}{2023}.
-\newblock \bibinfo{title}{Enabling research through the {SCIP} optimization
-  suite 8.0}.
-\newblock \bibinfo{journal}{ACM Transactions on Mathematical Software}
-  \bibinfo{volume}{49}, \bibinfo{pages}{22:1--22:21}.
-\newblock \DOIprefix\doi{10.1145/3585516}.
-%Type = Inproceedings
+\bibitem{kim2025adaptivecluster}
+Kim HJ, Lee JH. Scheduling cluster tools for concurrent processing: Deep reinforcement learning with adaptive search.
+IEEE Trans Autom Sci Eng 2025;22:3783--96.
+\url{https://doi.org/10.1109/TASE.2024.3399818}.
 
-\bibitem[{Wang et~al.(2024)Wang, Wang, Li, Kuang, Shi, Zhu, Yuan, Zeng, Zhang and Wu}]{wang2024hemset}
-Wang, J., Wang, Z., Li, X., Kuang, Y., Shi, Z., Zhu, F., Yuan, M., Zeng, J., Zhang, Y., Wu, F., 2024.
-\newblock Learning to Cut via Hierarchical Sequence/Set Model for Efficient Mixed-Integer Programming.
-\newblock arXiv:2404.12638.
-\newblock \URLprefix \url{https://arxiv.org/abs/2404.12638}.
+\bibitem{tang2020cut}
+Tang Y, Agrawal S, Faenza Y. Reinforcement learning for integer programming: Learning to cut.
+In: Proceedings of the 37th International Conference on Machine Learning. PMLR; 2020, p. 9367--76.
+\url{https://proceedings.mlr.press/v119/tang20a.html}.
 
-\bibitem[{Vinyals et~al.(2015)Vinyals, Fortunato and
-  Jaitly}]{vinyals2015pointer}
-\bibinfo{author}{Vinyals, O.}, \bibinfo{author}{Fortunato, M.},
-  \bibinfo{author}{Jaitly, N.}, \bibinfo{year}{2015}.
-\newblock \bibinfo{title}{Pointer networks}, in: \bibinfo{booktitle}{Advances
-  in Neural Information Processing Systems}, pp. \bibinfo{pages}{2692--2700}.
-%Type = Inproceedings
+\bibitem{huang2022cutranking}
+Huang Z, Wang K, Liu F, Zhen HL, Zhang W, Yuan M, et~al. Learning to select cuts for efficient mixed-integer programming.
+Pattern Recognit 2022;123:108353.
+\url{https://doi.org/10.1016/j.patcog.2021.108353}.
 
-\bibitem[{Choo et~al.(2022)Choo, Kwon, Kim, Jae, Hottung, Tierney and
-  Gwon}]{choo2022beam}
-\bibinfo{author}{Choo, J.}, \bibinfo{author}{Kwon, Y.D.}, \bibinfo{author}{Kim,
-  J.}, \bibinfo{author}{Jae, J.}, \bibinfo{author}{Hottung, A.},
-  \bibinfo{author}{Tierney, K.}, \bibinfo{author}{Gwon, Y.},
-  \bibinfo{year}{2022}.
-\newblock \bibinfo{title}{Simulation-guided beam search for neural
-  combinatorial optimization}, in: \bibinfo{booktitle}{Advances in Neural
-  Information Processing Systems}.
-\newblock \URLprefix
-  \url{https://papers.nips.cc/paper_files/paper/2022/hash/39b9b60f0d149eabd1fff2d7c7d5afc4-Abstract-Conference.html},
-  \DOIprefix\doi{10.52202/068431-0637}.
-%Type = Article
+\bibitem{paulus2022looking}
+Paulus MB, Zarpellon G, Krause A, Charlin L, Maddison C. Learning to cut by looking ahead: Cutting plane selection via imitation learning.
+In: Proceedings of the 39th International Conference on Machine Learning. PMLR; 2022, p. 17584--600.
+\url{https://proceedings.mlr.press/v162/paulus22a.html}.
 
-\bibitem[{Nemhauser et~al.(1978)Nemhauser, Wolsey and
-  Fisher}]{nemhauser1978analysis}
-\bibinfo{author}{Nemhauser, G.L.}, \bibinfo{author}{Wolsey, L.A.},
-  \bibinfo{author}{Fisher, M.L.}, \bibinfo{year}{1978}.
-\newblock \bibinfo{title}{An analysis of approximations for maximizing
-  submodular set functions---i}.
-\newblock \bibinfo{journal}{Mathematical Programming} \bibinfo{volume}{14},
-  \bibinfo{pages}{265--294}.
-\newblock \DOIprefix\doi{10.1007/BF01588971}.
-%Type = Article
+\bibitem{wang2023hem}
+Wang Z, Li X, Wang J, Kuang Y, Yuan M, Zeng J, et~al. Learning cut selection for mixed-integer linear programming via hierarchical sequence model.
+In: Proceedings of the Eleventh International Conference on Learning Representations. 2023.
+\url{https://openreview.net/forum?id=Zob4P9bRNcK}.
 
-\bibitem[{Williams(1992)}]{williams1992reinforce}
-\bibinfo{author}{Williams, R.J.}, \bibinfo{year}{1992}.
-\newblock \bibinfo{title}{Simple statistical gradient-following algorithms for
-  connectionist reinforcement learning}.
-\newblock \bibinfo{journal}{Machine Learning} \bibinfo{volume}{8},
-  \bibinfo{pages}{229--256}.
-\newblock \DOIprefix\doi{10.1007/BF00992696}.
-%Type = Inproceedings
+\bibitem{achterberg2009scip}
+Achterberg T. {SCIP}: Solving constraint integer programs.
+Math Program Comput 2009;1:1--41.
+\url{https://doi.org/10.1007/s12532-008-0001-1}.
 
-\bibitem[{Mnih et~al.(2016)Mnih, Badia, Mirza, Graves, Lillicrap, Harley,
-  Silver and Kavukcuoglu}]{mnih2016a3c}
-\bibinfo{author}{Mnih, V.}, \bibinfo{author}{Badia, A.P.},
-  \bibinfo{author}{Mirza, M.}, \bibinfo{author}{Graves, A.},
-  \bibinfo{author}{Lillicrap, T.P.}, \bibinfo{author}{Harley, T.},
-  \bibinfo{author}{Silver, D.}, \bibinfo{author}{Kavukcuoglu, K.},
-  \bibinfo{year}{2016}.
-\newblock \bibinfo{title}{Asynchronous methods for deep reinforcement
-  learning}, in: \bibinfo{booktitle}{Proceedings of the 33rd International
-  Conference on Machine Learning}, \bibinfo{publisher}{PMLR}. pp.
-  \bibinfo{pages}{1928--1937}.
-\newblock \URLprefix \url{https://proceedings.mlr.press/v48/mniha16.html}.
+\bibitem{bestuzheva2023scip}
+Bestuzheva K, Besan{\c{c}}on M, Chen WK, Chmiela A, Donkiewicz T, van Doornmalen J, et~al. Enabling research through the {SCIP} optimization suite 8.0.
+ACM Trans Math Softw 2023;49:22:1--22:21.
+\url{https://doi.org/10.1145/3585516}.
+
+\bibitem{wang2024hemset}
+Wang J, Wang Z, Li X, Kuang Y, Shi Z, Zhu F, et~al. Learning to Cut via Hierarchical Sequence/Set Model for Efficient Mixed-Integer Programming.
+[Preprint]. arXiv:2404.12638; 2024.
+\url{https://arxiv.org/abs/2404.12638}.
+
+\bibitem{vinyals2015pointer}
+Vinyals O, Fortunato M, Jaitly N. Pointer networks.
+In: Advances in Neural Information Processing Systems. 2015, p. 2692--700.
+
+\bibitem{choo2022beam}
+Choo J, Kwon YD, Kim J, Jae J, Hottung A, Tierney K, et~al. Simulation-guided beam search for neural combinatorial optimization.
+In: Advances in Neural Information Processing Systems. 2022.
+\url{https://doi.org/10.52202/068431-0637}.
+
+\bibitem{nemhauser1978analysis}
+Nemhauser GL, Wolsey LA, Fisher ML. An analysis of approximations for maximizing submodular set functions---i.
+Math Program 1978;14:265--94.
+\url{https://doi.org/10.1007/BF01588971}.
+
+\bibitem{williams1992reinforce}
+Williams RJ. Simple statistical gradient-following algorithms for connectionist reinforcement learning.
+Mach Learn 1992;8:229--56.
+\url{https://doi.org/10.1007/BF00992696}.
+
+\bibitem{mnih2016a3c}
+Mnih V, Badia AP, Mirza M, Graves A, Lillicrap TP, Harley T, et~al. Asynchronous methods for deep reinforcement learning.
+In: Proceedings of the 33rd International Conference on Machine Learning. PMLR; 2016, p. 1928--37.
+\url{https://proceedings.mlr.press/v48/mniha16.html}.
 
 \end{thebibliography}
 

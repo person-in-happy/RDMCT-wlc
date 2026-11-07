@@ -1,0 +1,79 @@
+{
+  "instance_file": "cie_core_n008_f000_m008_proc090.lp",
+  "instance_sha256": "9dda2ea090f0debb9aed664969440612dbe53077b12d22dcd5675f86f20b6605",
+  "warm_start_strategy": "SPBS",
+  "solution_scope": "full_quadratic_model",
+  "accepted_profile": "spbs_full",
+  "random_seed": 1,
+  "profile_attempts": [
+    {
+      "profile": "spbs_full",
+      "status": "optimal",
+      "solving_time": 0.0,
+      "nodes": 1,
+      "solutions": 1,
+      "structure_summary": {
+        "strategy": "SPBS",
+        "profile": "spbs_full",
+        "role_names": [
+          "assignment",
+          "activation",
+          "cleaning_epoch",
+          "loadlock_slot",
+          "low_risk_resource_order",
+          "high_risk_resource_order",
+          "timing_or_other"
+        ],
+        "role_confidence": {
+          "assignment": 1.0,
+          "activation": 0.95,
+          "cleaning_epoch": 0.95,
+          "loadlock_slot": 0.8,
+          "low_risk_resource_order": 0.7,
+          "high_risk_resource_order": 0.35,
+          "timing_or_other": 0.0
+        },
+        "role_fix_policy": {
+          "assignment": "fix",
+          "activation": "fix",
+          "cleaning_epoch": "fix",
+          "loadlock_slot": "fix",
+          "low_risk_resource_order": "fix",
+          "high_risk_resource_order": "profile-dependent",
+          "timing_or_other": "free"
+        },
+        "binary_variables": 828,
+        "fixed_binary_variables": 326,
+        "free_binary_variables": 502,
+        "role_counts": {
+          "assignment": 0,
+          "activation": 38,
+          "cleaning_epoch": 0,
+          "loadlock_slot": 32,
+          "low_risk_resource_order": 168,
+          "high_risk_resource_order": 276,
+          "timing_or_other": 314
+        },
+        "fixed_role_counts": {
+          "assignment": 0,
+          "activation": 34,
+          "cleaning_epoch": 0,
+          "loadlock_slot": 32,
+          "low_risk_resource_order": 140,
+          "high_risk_resource_order": 120,
+          "timing_or_other": 0
+        },
+        "stripped_stability_constraints": 13
+      },
+      "secondary_completion": {
+        "status": "optimal",
+        "solving_time": 0.0,
+        "nodes": 1,
+        "solutions": 1,
+        "fixed_primary_variables": 1353,
+        "free_secondary_variables": 13,
+        "fully_feasible": true
+      }
+    }
+  ]
+}

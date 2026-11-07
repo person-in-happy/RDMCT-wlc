@@ -1,0 +1,114 @@
+{
+  "load_ports": {
+    "LP1": {
+      "4x1": 3,
+      "2x2": 3
+    },
+    "LP2": {
+      "4x1": 1,
+      "2x2": 1
+    },
+    "LP3": {
+      "4x1": 0,
+      "2x2": 0
+    },
+    "LP4": {
+      "4x1": 0,
+      "2x2": 0
+    }
+  },
+  "pjobs": [
+    {
+      "id": "Pjob1",
+      "mode": "2x2",
+      "chambers": [
+        2
+      ],
+      "wafers": [
+        "LP1_W4",
+        "LP2_W2"
+      ]
+    },
+    {
+      "id": "Pjob2",
+      "mode": "2x2",
+      "chambers": [
+        2,
+        3
+      ],
+      "wafers": [
+        "LP1_W6"
+      ]
+    },
+    {
+      "id": "Pjob3",
+      "mode": "2x2",
+      "chambers": [
+        3
+      ],
+      "wafers": [
+        "LP1_W5"
+      ]
+    },
+    {
+      "id": "Pjob4",
+      "mode": "4x1",
+      "chambers": [
+        2
+      ],
+      "wafers": [
+        "LP1_W1",
+        "LP2_W1"
+      ]
+    },
+    {
+      "id": "Pjob5",
+      "mode": "4x1",
+      "chambers": [
+        2,
+        3
+      ],
+      "wafers": [
+        "LP1_W3"
+      ]
+    },
+    {
+      "id": "Pjob6",
+      "mode": "4x1",
+      "chambers": [
+        3
+      ],
+      "wafers": [
+        "LP1_W2"
+      ]
+    }
+  ],
+  "source": "dual",
+  "dummy_alignment": "bypass_or_accompany",
+  "vtr_hand_policy": "clean_dirty",
+  "dummy_count": 8,
+  "cleaning_interval": 3,
+  "full_time": 180,
+  "mix_time": 90,
+  "cleaning_time": 500,
+  "handling": 1,
+  "atr_handling": 4,
+  "atr_empty_ll_to_lp": 6,
+  "rotation": 2,
+  "atr_travel": 3,
+  "vtr_travel": 2,
+  "alignment": 20,
+  "pump": 30,
+  "vent": 25,
+  "upper_reset": 30,
+  "lower_reset": 25,
+  "module_residency": 10000,
+  "robot_residency": 10000,
+  "horizon": 100000,
+  "max_pairs": 0,
+  "max_cycles": 0,
+  "chambers": [
+    2,
+    3
+  ]
+}

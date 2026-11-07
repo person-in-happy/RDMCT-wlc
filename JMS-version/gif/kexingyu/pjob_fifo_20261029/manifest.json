@@ -1,0 +1,543 @@
+{
+  "release_rule": "global_pjob_index_strict_lp_pickup",
+  "solver_runs": 0,
+  "source": "Filtered existing sequences, unchanged physical action times",
+  "sizes": {
+    "8": {
+      "count": 6720,
+      "per_recipe": {
+        "4x1": 3360,
+        "2x2": 3360
+      },
+      "lower_bound_per_configuration": 6720,
+      "file": "8wafer_pjob_strict_orders.txt",
+      "sha256": "6f25d743686aaf37f8987801b3ea9fc31299b570bce121032077bc8e61e43de5"
+    },
+    "16": {
+      "count": 676,
+      "per_recipe": {
+        "4x1": 338,
+        "2x2": 338
+      },
+      "lower_bound_per_configuration": 230630400,
+      "file": "16wafer_pjob_strict_orders.txt",
+      "sha256": "3a414b462a22b634bdd1a690fd846a03b29d426f2910e7046c69d7cb45e59c24"
+    },
+    "32": {
+      "count": 6,
+      "per_recipe": {
+        "4x1": 3,
+        "2x2": 3
+      },
+      "lower_bound_per_configuration": 506980245130444800,
+      "file": "32wafer_pjob_strict_orders.txt",
+      "sha256": "ccd00917d078f8efda262b333fa02d45360a7bcb62a54c2e53445801e109bf82"
+    }
+  },
+  "examples": [
+    {
+      "file": "examples/n8_4x1_H3_example1.json",
+      "cmax": 6606.0,
+      "validation": {
+        "valid": true,
+        "checks": 23486,
+        "errors": [],
+        "product_return_cmax": 6606.0,
+        "cleaning_count": 8,
+        "processing_cycles": 8,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n8_4x1_H10_example1.json",
+      "cmax": 6606.0,
+      "validation": {
+        "valid": true,
+        "checks": 23486,
+        "errors": [],
+        "product_return_cmax": 6606.0,
+        "cleaning_count": 8,
+        "processing_cycles": 8,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n8_4x1_H3_example2.json",
+      "cmax": 6606.0,
+      "validation": {
+        "valid": true,
+        "checks": 23486,
+        "errors": [],
+        "product_return_cmax": 6606.0,
+        "cleaning_count": 8,
+        "processing_cycles": 8,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n8_4x1_H10_example2.json",
+      "cmax": 6606.0,
+      "validation": {
+        "valid": true,
+        "checks": 23486,
+        "errors": [],
+        "product_return_cmax": 6606.0,
+        "cleaning_count": 8,
+        "processing_cycles": 8,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n8_4x1_H3_example3.json",
+      "cmax": 6606.0,
+      "validation": {
+        "valid": true,
+        "checks": 23486,
+        "errors": [],
+        "product_return_cmax": 6606.0,
+        "cleaning_count": 8,
+        "processing_cycles": 8,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n8_4x1_H10_example3.json",
+      "cmax": 6606.0,
+      "validation": {
+        "valid": true,
+        "checks": 23486,
+        "errors": [],
+        "product_return_cmax": 6606.0,
+        "cleaning_count": 8,
+        "processing_cycles": 8,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n8_2x2_H3_example1.json",
+      "cmax": 6625.0,
+      "validation": {
+        "valid": true,
+        "checks": 34758,
+        "errors": [],
+        "product_return_cmax": 6625.0,
+        "cleaning_count": 8,
+        "processing_cycles": 16,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n8_2x2_H10_example1.json",
+      "cmax": 6625.0,
+      "validation": {
+        "valid": true,
+        "checks": 34758,
+        "errors": [],
+        "product_return_cmax": 6625.0,
+        "cleaning_count": 8,
+        "processing_cycles": 16,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n8_2x2_H3_example2.json",
+      "cmax": 6625.0,
+      "validation": {
+        "valid": true,
+        "checks": 34758,
+        "errors": [],
+        "product_return_cmax": 6625.0,
+        "cleaning_count": 8,
+        "processing_cycles": 16,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n8_2x2_H10_example2.json",
+      "cmax": 6625.0,
+      "validation": {
+        "valid": true,
+        "checks": 34758,
+        "errors": [],
+        "product_return_cmax": 6625.0,
+        "cleaning_count": 8,
+        "processing_cycles": 16,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n8_2x2_H3_example3.json",
+      "cmax": 6625.0,
+      "validation": {
+        "valid": true,
+        "checks": 34758,
+        "errors": [],
+        "product_return_cmax": 6625.0,
+        "cleaning_count": 8,
+        "processing_cycles": 16,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n8_2x2_H10_example3.json",
+      "cmax": 6625.0,
+      "validation": {
+        "valid": true,
+        "checks": 34758,
+        "errors": [],
+        "product_return_cmax": 6625.0,
+        "cleaning_count": 8,
+        "processing_cycles": 16,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n16_4x1_H3_example1.json",
+      "cmax": 13806.0,
+      "validation": {
+        "valid": true,
+        "checks": 86126,
+        "errors": [],
+        "product_return_cmax": 13806.0,
+        "cleaning_count": 16,
+        "processing_cycles": 16,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n16_4x1_H10_example1.json",
+      "cmax": 13806.0,
+      "validation": {
+        "valid": true,
+        "checks": 86126,
+        "errors": [],
+        "product_return_cmax": 13806.0,
+        "cleaning_count": 16,
+        "processing_cycles": 16,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n16_4x1_H3_example2.json",
+      "cmax": 13806.0,
+      "validation": {
+        "valid": true,
+        "checks": 86126,
+        "errors": [],
+        "product_return_cmax": 13806.0,
+        "cleaning_count": 16,
+        "processing_cycles": 16,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n16_4x1_H10_example2.json",
+      "cmax": 13806.0,
+      "validation": {
+        "valid": true,
+        "checks": 86126,
+        "errors": [],
+        "product_return_cmax": 13806.0,
+        "cleaning_count": 16,
+        "processing_cycles": 16,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n16_4x1_H3_example3.json",
+      "cmax": 13806.0,
+      "validation": {
+        "valid": true,
+        "checks": 86126,
+        "errors": [],
+        "product_return_cmax": 13806.0,
+        "cleaning_count": 16,
+        "processing_cycles": 16,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n16_4x1_H10_example3.json",
+      "cmax": 13806.0,
+      "validation": {
+        "valid": true,
+        "checks": 86126,
+        "errors": [],
+        "product_return_cmax": 13806.0,
+        "cleaning_count": 16,
+        "processing_cycles": 16,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n16_2x2_H3_example1.json",
+      "cmax": 13825.0,
+      "validation": {
+        "valid": true,
+        "checks": 129406,
+        "errors": [],
+        "product_return_cmax": 13825.0,
+        "cleaning_count": 16,
+        "processing_cycles": 32,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n16_2x2_H10_example1.json",
+      "cmax": 13825.0,
+      "validation": {
+        "valid": true,
+        "checks": 129406,
+        "errors": [],
+        "product_return_cmax": 13825.0,
+        "cleaning_count": 16,
+        "processing_cycles": 32,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n16_2x2_H3_example2.json",
+      "cmax": 13825.0,
+      "validation": {
+        "valid": true,
+        "checks": 129406,
+        "errors": [],
+        "product_return_cmax": 13825.0,
+        "cleaning_count": 16,
+        "processing_cycles": 32,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n16_2x2_H10_example2.json",
+      "cmax": 13825.0,
+      "validation": {
+        "valid": true,
+        "checks": 129406,
+        "errors": [],
+        "product_return_cmax": 13825.0,
+        "cleaning_count": 16,
+        "processing_cycles": 32,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n16_2x2_H3_example3.json",
+      "cmax": 13825.0,
+      "validation": {
+        "valid": true,
+        "checks": 129406,
+        "errors": [],
+        "product_return_cmax": 13825.0,
+        "cleaning_count": 16,
+        "processing_cycles": 32,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n16_2x2_H10_example3.json",
+      "cmax": 13825.0,
+      "validation": {
+        "valid": true,
+        "checks": 129406,
+        "errors": [],
+        "product_return_cmax": 13825.0,
+        "cleaning_count": 16,
+        "processing_cycles": 32,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n32_4x1_H3_example1.json",
+      "cmax": 28206.0,
+      "validation": {
+        "valid": true,
+        "checks": 328910,
+        "errors": [],
+        "product_return_cmax": 28206.0,
+        "cleaning_count": 32,
+        "processing_cycles": 32,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n32_4x1_H10_example1.json",
+      "cmax": 28206.0,
+      "validation": {
+        "valid": true,
+        "checks": 328910,
+        "errors": [],
+        "product_return_cmax": 28206.0,
+        "cleaning_count": 32,
+        "processing_cycles": 32,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n32_4x1_H3_example2.json",
+      "cmax": 28206.0,
+      "validation": {
+        "valid": true,
+        "checks": 328910,
+        "errors": [],
+        "product_return_cmax": 28206.0,
+        "cleaning_count": 32,
+        "processing_cycles": 32,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n32_4x1_H10_example2.json",
+      "cmax": 28206.0,
+      "validation": {
+        "valid": true,
+        "checks": 328910,
+        "errors": [],
+        "product_return_cmax": 28206.0,
+        "cleaning_count": 32,
+        "processing_cycles": 32,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n32_4x1_H3_example3.json",
+      "cmax": 28206.0,
+      "validation": {
+        "valid": true,
+        "checks": 328910,
+        "errors": [],
+        "product_return_cmax": 28206.0,
+        "cleaning_count": 32,
+        "processing_cycles": 32,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n32_4x1_H10_example3.json",
+      "cmax": 28206.0,
+      "validation": {
+        "valid": true,
+        "checks": 328910,
+        "errors": [],
+        "product_return_cmax": 28206.0,
+        "cleaning_count": 32,
+        "processing_cycles": 32,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n32_2x2_H3_example1.json",
+      "cmax": 28225.0,
+      "validation": {
+        "valid": true,
+        "checks": 498414,
+        "errors": [],
+        "product_return_cmax": 28225.0,
+        "cleaning_count": 32,
+        "processing_cycles": 64,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n32_2x2_H10_example1.json",
+      "cmax": 28225.0,
+      "validation": {
+        "valid": true,
+        "checks": 498414,
+        "errors": [],
+        "product_return_cmax": 28225.0,
+        "cleaning_count": 32,
+        "processing_cycles": 64,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n32_2x2_H3_example2.json",
+      "cmax": 28225.0,
+      "validation": {
+        "valid": true,
+        "checks": 498414,
+        "errors": [],
+        "product_return_cmax": 28225.0,
+        "cleaning_count": 32,
+        "processing_cycles": 64,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n32_2x2_H10_example2.json",
+      "cmax": 28225.0,
+      "validation": {
+        "valid": true,
+        "checks": 498414,
+        "errors": [],
+        "product_return_cmax": 28225.0,
+        "cleaning_count": 32,
+        "processing_cycles": 64,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n32_2x2_H3_example3.json",
+      "cmax": 28225.0,
+      "validation": {
+        "valid": true,
+        "checks": 498414,
+        "errors": [],
+        "product_return_cmax": 28225.0,
+        "cleaning_count": 32,
+        "processing_cycles": 64,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    },
+    {
+      "file": "examples/n32_2x2_H10_example3.json",
+      "cmax": 28225.0,
+      "validation": {
+        "valid": true,
+        "checks": 498414,
+        "errors": [],
+        "product_return_cmax": 28225.0,
+        "cleaning_count": 32,
+        "processing_cycles": 64,
+        "pjob_check": true,
+        "pjob_release_order_check": true
+      }
+    }
+  ]
+}

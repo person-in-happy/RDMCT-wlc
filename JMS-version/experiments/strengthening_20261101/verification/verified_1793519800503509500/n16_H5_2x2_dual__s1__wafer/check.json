@@ -1,0 +1,91 @@
+{
+  "state": "checked",
+  "solve_seconds": 0,
+  "solver_started": false,
+  "complete": true,
+  "valid": true,
+  "source_metrics": {
+    "route_wait_sum": 2275.9999999999995,
+    "route_wait_max": 409.0,
+    "rhythm_deviation": 731.0,
+    "rhythm_centers": 6,
+    "early_cleanings": 0,
+    "legacy_rule_feasible": true,
+    "production_overlap": 0,
+    "cleanings": 2,
+    "modeled_completion": 3431.0,
+    "product_cmax": 2943.0
+  },
+  "metrics": {
+    "route_wait_sum": 2275.9999999999995,
+    "route_wait_max": 409.0,
+    "rhythm_deviation": 731.0,
+    "rhythm_centers": 6,
+    "early_cleanings": 0,
+    "legacy_rule_feasible": true,
+    "production_overlap": 0,
+    "cleanings": 2,
+    "modeled_completion": 3431.0,
+    "product_cmax": 2943.0
+  },
+  "original_model_check": true,
+  "full_model_audit": {
+    "valid": true,
+    "original_model_check": true,
+    "physical_validation": {
+      "valid": true,
+      "checks": 11927,
+      "errors": [],
+      "product_return_cmax": 2943.0,
+      "cleaning_count": 2,
+      "processing_cycles": 10,
+      "pjob_check": true,
+      "pjob_release_order_check": true
+    },
+    "seconds": 20.04699999999866,
+    "solver_started": false,
+    "dimensions": {
+      "variables": 482609,
+      "constraints": 1680520,
+      "linear_nonzeros": 9858474,
+      "types": {
+        "BINARY": 479588,
+        "INTEGER": 880,
+        "CONTINUOUS": 2141
+      }
+    }
+  },
+  "dimensions": {
+    "variables": 483009,
+    "constraints": 1681575,
+    "linear_nonzeros": 10449800,
+    "types": {
+      "BINARY": 479972,
+      "INTEGER": 880,
+      "CONTINUOUS": 2157
+    }
+  },
+  "build_seconds": 26.125,
+  "selector_variables": 512,
+  "N": 16,
+  "G": 4,
+  "candidate_pairs": 112,
+  "candidate_cycles": 64,
+  "full_candidate_space": true,
+  "candidate_bound_restricted": false,
+  "build_rss_mb": 2145.5859375,
+  "substituted_variables": 0,
+  "removed_tautologies": 0,
+  "cell": {
+    "id": "n16_H5_2x2_dual__s1__wafer",
+    "case": "n16_H5_2x2_dual",
+    "seed": 1,
+    "arm": "wafer",
+    "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_2x2_dual\\reference.json",
+    "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_2x2_dual\\common.json"
+  },
+  "sources": {
+    "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_2x2_dual\\reference.json": "8dab23e06e03fd442f8ec7c5a75b6602700aecee1689455969473028a4db1b95",
+    "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_2x2_dual\\common.json": "8c0f0383534ebb1ce20989f964e9305b23014485b684d9431c5345680a0b9a36"
+  }
+}

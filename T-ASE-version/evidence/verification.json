@@ -1,0 +1,74 @@
+{
+  "checked_at": "2026-09-15",
+  "source_unchanged": {
+    "JMS_Submission_EN.tex": true,
+    "JMS_Review_CN.tex": true
+  },
+  "pdfs": [
+    {
+      "name": "TASE_Submission_EN",
+      "pages": 12,
+      "compile_problems": [],
+      "anonymous": true,
+      "abstract_words": 169,
+      "ntp_words": 173,
+      "figure_min_text_pt": {
+        "fig_system_tase": 8.18,
+        "fig_chain_en_nature": 8.24,
+        "fig_parallel_en_nature": 8.24,
+        "fig_resource_gantt_cleanH10_w16_22_en_nature": 8.11,
+        "fig_resource_gantt_cleanH3_w16_22_en_nature": 8.11
+      }
+    },
+    {
+      "name": "TASE_Review_CN",
+      "pages": 15,
+      "compile_problems": [],
+      "anonymous": true
+    },
+    {
+      "name": "TASE_Supplement_EN",
+      "pages": 9,
+      "compile_problems": [],
+      "anonymous": true
+    }
+  ],
+  "historical_audits": {
+    "main": {
+      "expected_rows": 2700,
+      "csv_rows": 2700,
+      "incumbent_rows": 2700,
+      "ok": true
+    },
+    "stability": {
+      "expected_rows": 1500,
+      "csv_rows": 1500,
+      "incumbent_rows": 1500,
+      "ok": true
+    },
+    "doe": {
+      "expected_rows": 300,
+      "csv_rows": 300,
+      "incumbent_rows": 300,
+      "ok": true
+    },
+    "spbs": {
+      "expected_rows": 960,
+      "csv_rows": 960,
+      "incumbent_rows": 728,
+      "ok": true
+    },
+    "sensitivity": {
+      "expected_rows": 80,
+      "csv_rows": 80,
+      "incumbent_rows": 80,
+      "ok": true
+    },
+    "ood": {
+      "expected_rows": 729,
+      "csv_rows": 729,
+      "incumbent_rows": 729,
+      "ok": true
+    }
+  }
+}

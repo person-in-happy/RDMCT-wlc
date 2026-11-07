@@ -1,0 +1,62 @@
+{
+  "suite": "mode_n008_clean03_pure22",
+  "source": {
+    "suite": "mode_n008_clean03_pure22",
+    "source_solution": "D:\\git\\git\\RDMCT-A3C\\JMS\\results\\mode_cleaning_crossover\\jms_product_cmax_n8_n16_H3_20260903\\solutions\\mode_n008_clean03_pure22__mode_n008_clean03_pure22_equal_t__proposed__s1_t1__47862f99e1f21ccb.sol",
+    "instance": "D:\\git\\git\\RDMCT-A3C\\generated_instances\\jms_mode_cleaning_crossover_equal_total180\\mode_n008_clean03_pure22_equal_total180_20260831.lp",
+    "provenance": "original saved schedule",
+    "status": "optimal",
+    "validation_note": "checked active primary model at feasibility tolerance 1.000001e-06; removed 13 inactive auxiliaries",
+    "instance_sha256": "fad2c5a4dd2fb1fc845a444c7049c2bff5277eb5381b6a58ea1f49c95ab03c05",
+    "solution_sha256": "2dcc55c8dfef3515e5d8b97f42f4068215c2fe87b371c557eae9270091f6e18c",
+    "metrics": {
+      "total_wafers": 8,
+      "cmax": 578.0,
+      "model_objective_cmax": 578.0,
+      "cmax_matches_last_product_return": true,
+      "throughput_wph": 49.826989619377166,
+      "mean_cycle_time": 372.5,
+      "p95_cycle_time": 386.0,
+      "atr_utilization": 0.5605536332179931,
+      "vtr_utilization": 0.08996539792387544,
+      "al_utilization": 0.2768166089965398,
+      "llupper_capacity_utilization": 0.20761245674740483,
+      "lllower_capacity_utilization": 0.17301038062283736,
+      "pec_peak_in_tool": 8,
+      "clean_count": 2,
+      "clean_internal_count": 0,
+      "clean_terminal_count": 2,
+      "clean_time_share": 0.01384083044982699,
+      "physical_route_total_wait": 348.0,
+      "physical_route_max_wait": 40.0,
+      "physical_cadence_cv": 0.23577235772357724,
+      "physical_cadence_deviation_sum": 116.0,
+      "ch2_utilization": 0.4740484429065744,
+      "ch3_utilization": 0.48788927335640137
+    }
+  },
+  "constraint": "all within-chain adjacent processing gaps = 4 s, combined exchange",
+  "bridge_indices": [
+    [
+      3,
+      3
+    ],
+    [
+      2,
+      2
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      3,
+      2
+    ]
+  ],
+  "instance": "D:\\git\\git\\RDMCT-A3C\\JMS\\results\\submission_evidence\\temp_continuous4_20260909_100003\\mode_n008_clean03_pure22\\continuous4.lp",
+  "instance_sha256": "0b128ffca706b4d395e0bd82a2ddc23fd609eb93629f036eaeb7c66f1f95429a",
+  "warm_accepted": false,
+  "time_limit": 180.0,
+  "finish_time_limit": 60.0
+}

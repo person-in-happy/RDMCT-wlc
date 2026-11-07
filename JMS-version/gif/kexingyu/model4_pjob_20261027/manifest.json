@@ -1,0 +1,781 @@
+{
+  "created_utc": "2026-10-27T07:36:47.157458+00:00",
+  "model": "model4_pjob",
+  "complete_enumeration": false,
+  "all_feasible_orders": null,
+  "construction_family": "Serial one-product blocks; completed cleaning after every product; canonical per-Pjob/LP identities.",
+  "lower_bound_formula": "n! / ((n/4)!)^4 * 2^(n/2)",
+  "block_period_seconds": 900,
+  "counting": "Handling-only start-order groups; numeric times excluded; anonymous Pjob/LP occurrence identity canonicalized; H=3 and H=10 merged.",
+  "resources": {
+    "concurrency": 1,
+    "solver_processes": 0,
+    "gpu_jobs": 0,
+    "execution": "visible foreground"
+  },
+  "validation_scope": "Every output: inventory, eligibility, canonical decoding, distinct sequence hash. Every block: full physical replay. First/middle/last rank of every size/recipe/H: full replay. No per-output MILP solve.",
+  "composition_proof": "Every block returns all material and ends after cleaning at count zero. The 900-second spacing exceeds block end plus LL reset and maximum robot movement. All cross-block robot pairs, gripper/module/identity loans and chamber resets are therefore feasible. Remapping the sole product LP and the sole chamber preserves within-block durations; all permitted mappings are replayed.",
+  "dependencies": {
+    "JMS-version\\tools\\model4_feasible_orders.py": "0e53222967d1d32ae2fd856665b9ca481af1caa4c36a6bd53495cf71eb0ea05f",
+    "JMS-version\\tools\\export_feasible_action_orders.py": "b098533861419157ae36dd90ac862bba5fcbc6189c42abdf44dbdc7c130c745a",
+    "JMS-version\\tools\\feasible_order_titles.py": "4daa549f6fc4f742a4493d0180f5bb62921a3544e231029540b748342a2b9e12",
+    "JMS-version\\joint_model\\seed.py": "c89b747bafa3f2042cc8e58f5d0ac9673c9c2b54493f7b3476d43256e7f06e82",
+    "JMS-version\\joint_model\\model.py": "8eaafc4ce215884169b2f20294762445249ce24399821f15fe5e89e9709e9575",
+    "JMS-version\\joint_model\\validate.py": "ed086b9ae01dcca25e3244340cac7b503dd229b995a57843545305ad58f42a3d",
+    "JMS-version\\joint_model\\grippers.py": "5ed898b8c17850b88da8eb8700df33dc5fd1fe3df3bf60df6b5c22281900e0fc",
+    "joint_pairing_model.py": "9f5551f2f361e452664c594968c0a7d8c2ab67b7bb8245acd73eb531afa2685e",
+    "joint_chamber_cycle_model.py": "d01902149c2d26109e4f7c292b34ffbf30e54b0d1e0a9e58cd95378b61d4c48e"
+  },
+  "blocks_sha256": "2dafb72f3e64a9f034907fc05f1be3c3c7ed8da55c294a9ef0d1fe1b9949e634",
+  "block_audits": [
+    {
+      "recipe": "4x1",
+      "lp": 1,
+      "chamber": 2,
+      "h": 3,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 764,
+            "errors": [],
+            "product_return_cmax": 306.0,
+            "cleaning_count": 1,
+            "processing_cycles": 1
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "4x1",
+      "lp": 1,
+      "chamber": 2,
+      "h": 10,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 764,
+            "errors": [],
+            "product_return_cmax": 306.0,
+            "cleaning_count": 1,
+            "processing_cycles": 1
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "4x1",
+      "lp": 2,
+      "chamber": 3,
+      "h": 3,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 764,
+            "errors": [],
+            "product_return_cmax": 306.0,
+            "cleaning_count": 1,
+            "processing_cycles": 1
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "4x1",
+      "lp": 2,
+      "chamber": 3,
+      "h": 10,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 764,
+            "errors": [],
+            "product_return_cmax": 306.0,
+            "cleaning_count": 1,
+            "processing_cycles": 1
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "4x1",
+      "lp": 3,
+      "chamber": 2,
+      "h": 3,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 764,
+            "errors": [],
+            "product_return_cmax": 306.0,
+            "cleaning_count": 1,
+            "processing_cycles": 1
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "4x1",
+      "lp": 3,
+      "chamber": 2,
+      "h": 10,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 764,
+            "errors": [],
+            "product_return_cmax": 306.0,
+            "cleaning_count": 1,
+            "processing_cycles": 1
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "4x1",
+      "lp": 3,
+      "chamber": 3,
+      "h": 3,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 764,
+            "errors": [],
+            "product_return_cmax": 306.0,
+            "cleaning_count": 1,
+            "processing_cycles": 1
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "4x1",
+      "lp": 3,
+      "chamber": 3,
+      "h": 10,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 764,
+            "errors": [],
+            "product_return_cmax": 306.0,
+            "cleaning_count": 1,
+            "processing_cycles": 1
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "4x1",
+      "lp": 4,
+      "chamber": 2,
+      "h": 3,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 764,
+            "errors": [],
+            "product_return_cmax": 306.0,
+            "cleaning_count": 1,
+            "processing_cycles": 1
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "4x1",
+      "lp": 4,
+      "chamber": 2,
+      "h": 10,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 764,
+            "errors": [],
+            "product_return_cmax": 306.0,
+            "cleaning_count": 1,
+            "processing_cycles": 1
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "4x1",
+      "lp": 4,
+      "chamber": 3,
+      "h": 3,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 764,
+            "errors": [],
+            "product_return_cmax": 306.0,
+            "cleaning_count": 1,
+            "processing_cycles": 1
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "4x1",
+      "lp": 4,
+      "chamber": 3,
+      "h": 10,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 764,
+            "errors": [],
+            "product_return_cmax": 306.0,
+            "cleaning_count": 1,
+            "processing_cycles": 1
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "2x2",
+      "lp": 1,
+      "chamber": 2,
+      "h": 3,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 1031,
+            "errors": [],
+            "product_return_cmax": 325.0,
+            "cleaning_count": 1,
+            "processing_cycles": 2
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "2x2",
+      "lp": 1,
+      "chamber": 2,
+      "h": 10,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 1031,
+            "errors": [],
+            "product_return_cmax": 325.0,
+            "cleaning_count": 1,
+            "processing_cycles": 2
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "2x2",
+      "lp": 2,
+      "chamber": 3,
+      "h": 3,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 1031,
+            "errors": [],
+            "product_return_cmax": 325.0,
+            "cleaning_count": 1,
+            "processing_cycles": 2
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "2x2",
+      "lp": 2,
+      "chamber": 3,
+      "h": 10,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 1031,
+            "errors": [],
+            "product_return_cmax": 325.0,
+            "cleaning_count": 1,
+            "processing_cycles": 2
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "2x2",
+      "lp": 3,
+      "chamber": 2,
+      "h": 3,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 1031,
+            "errors": [],
+            "product_return_cmax": 325.0,
+            "cleaning_count": 1,
+            "processing_cycles": 2
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "2x2",
+      "lp": 3,
+      "chamber": 2,
+      "h": 10,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 1031,
+            "errors": [],
+            "product_return_cmax": 325.0,
+            "cleaning_count": 1,
+            "processing_cycles": 2
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "2x2",
+      "lp": 3,
+      "chamber": 3,
+      "h": 3,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 1031,
+            "errors": [],
+            "product_return_cmax": 325.0,
+            "cleaning_count": 1,
+            "processing_cycles": 2
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "2x2",
+      "lp": 3,
+      "chamber": 3,
+      "h": 10,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 1031,
+            "errors": [],
+            "product_return_cmax": 325.0,
+            "cleaning_count": 1,
+            "processing_cycles": 2
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "2x2",
+      "lp": 4,
+      "chamber": 2,
+      "h": 3,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 1031,
+            "errors": [],
+            "product_return_cmax": 325.0,
+            "cleaning_count": 1,
+            "processing_cycles": 2
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "2x2",
+      "lp": 4,
+      "chamber": 2,
+      "h": 10,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 1031,
+            "errors": [],
+            "product_return_cmax": 325.0,
+            "cleaning_count": 1,
+            "processing_cycles": 2
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "2x2",
+      "lp": 4,
+      "chamber": 3,
+      "h": 3,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 1031,
+            "errors": [],
+            "product_return_cmax": 325.0,
+            "cleaning_count": 1,
+            "processing_cycles": 2
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    },
+    {
+      "recipe": "2x2",
+      "lp": 4,
+      "chamber": 3,
+      "h": 10,
+      "audit": {
+        "physical": {
+          "physical": {
+            "valid": true,
+            "checks": 1031,
+            "errors": [],
+            "product_return_cmax": 325.0,
+            "cleaning_count": 1,
+            "processing_cycles": 2
+          },
+          "candidate_capacity": true,
+          "time_horizon": true,
+          "label_symmetry": true,
+          "full_milp_solver_certification": false
+        },
+        "pjob": {
+          "valid": true,
+          "pjob_count": 1,
+          "canonical_identities": true
+        },
+        "full_milp_solver_certification": false
+      }
+    }
+  ],
+  "files": [
+    {
+      "n": 8,
+      "path": "模型4_8wafer_已列40320种_每配置至少40320种_简化取放.txt",
+      "compressed_path": "模型4_8wafer_已列40320种_每配置至少40320种_简化取放.txt.gz",
+      "count": 40320,
+      "per_configuration": {
+        "4x1_H3": 20160,
+        "4x1_H10": 20160,
+        "2x2_H3": 20160,
+        "2x2_H10": 20160
+      },
+      "family_count_per_configuration": "40320",
+      "full_space_count": null,
+      "complete_enumeration": false,
+      "sha256": "5c82aded118902d1a0fc357d5b7fd98996d241342b06de71b71932e296bcd986",
+      "compressed_sha256": "246ce6c20940bbcbe0fb636baee0247e0c56ccddb05b1e09684a43737805a0b6",
+      "bytes": 263924387,
+      "index": "evidence\\8wafer-index.jsonl.gz",
+      "index_sha256": "fd80d25e0b8091b8bfa93d18061af59555100ef93dfba1315d2e07c4ce1f45c4",
+      "representative_witnesses": "evidence\\8wafer-representatives.jsonl.gz",
+      "representative_sha256": "2d1a24249f93382f136ca7fa697694f8e6d8d118f723ee8f28ca20d34165a578",
+      "full_replays": 12,
+      "maximum_complete_time": 7150.0
+    },
+    {
+      "n": 16,
+      "path": "模型4_16wafer_已列50000种_每配置至少16144128000种_简化取放.txt",
+      "compressed_path": "模型4_16wafer_已列50000种_每配置至少16144128000种_简化取放.txt.gz",
+      "count": 50000,
+      "per_configuration": {
+        "4x1_H3": 25000,
+        "4x1_H10": 25000,
+        "2x2_H3": 25000,
+        "2x2_H10": 25000
+      },
+      "family_count_per_configuration": "16144128000",
+      "full_space_count": null,
+      "complete_enumeration": false,
+      "sha256": "e0c10ba9e4e3d7e897390514e80073812c857c4b2c0c599626346842c3d2cc8c",
+      "compressed_sha256": "d2ff893292da564fb8fbfcbc104653658a015489688c793b766915d1cca62a41",
+      "bytes": 652366360,
+      "index": "evidence\\16wafer-index.jsonl.gz",
+      "index_sha256": "0b1052294452b250f5df72207584a44c55394f53fac7a2de84280d4e05d335d3",
+      "representative_witnesses": "evidence\\16wafer-representatives.jsonl.gz",
+      "representative_sha256": "e24748226f5582f9d91f057ed42ea5f5988efc581f3061da736e5184420214dc",
+      "full_replays": 12,
+      "maximum_complete_time": 14350.0
+    },
+    {
+      "n": 32,
+      "path": "模型4_32wafer_已列60000种_每配置至少6524835754828824576000种_简化取放.txt",
+      "compressed_path": "模型4_32wafer_已列60000种_每配置至少6524835754828824576000种_简化取放.txt.gz",
+      "count": 60000,
+      "per_configuration": {
+        "4x1_H3": 30000,
+        "4x1_H10": 30000,
+        "2x2_H3": 30000,
+        "2x2_H10": 30000
+      },
+      "family_count_per_configuration": "6524835754828824576000",
+      "full_space_count": null,
+      "complete_enumeration": false,
+      "sha256": "26cd4959c9a205fc6cf7362191246c75df3e4ccf497b7502c1bb3afa13ee45ec",
+      "compressed_sha256": "9d379ba6fb5c71530abbc8d6e20faf23361971aaa2e693c70cf0f7d05e46503a",
+      "bytes": 1563050543,
+      "index": "evidence\\32wafer-index.jsonl.gz",
+      "index_sha256": "ae794dd79fc870dada30b3394ec698739dc0c6d7d1c18e55715209f59ac6fa25",
+      "representative_witnesses": "evidence\\32wafer-representatives.jsonl.gz",
+      "representative_sha256": "50c43f4396fdf0ce6aa52a05758215eccd30a728b07858a9829a92e137f84166",
+      "full_replays": 12,
+      "maximum_complete_time": 28750.0
+    }
+  ],
+  "elapsed_seconds": 26.18800000000192,
+  "status": "completed",
+  "failed": 0
+}

@@ -1,0 +1,1056 @@
+{
+  "solver_started": false,
+  "assets": {
+    "cie\\code\\run_cie_benchmarks.py": "33ab2a81dc120eaa98862aea2386ad19675de96203ef9bdb60c1da9ea7c484c2",
+    "cutsel_agent_parallel.py": "f2b6eb80254b68e21e37f18f3ff50e3064e5b31988e8fa16f04f2fd15a287f50",
+    "environments.py": "1783d0e23bd15ec0c0ad9bd2c04f544865e54384f366069e434882ced18c5194",
+    "global_const.py": "31a70bab931eaaf58445a762f8a9986a2576fbce2de20071dd60ca141dd1e3be",
+    "JMS-version\\model4_pjob_fifo_20261029\\evidence_supplement.py": "8b71a242df899868f131ae98e84bde0fc939799280306f8eb18745aede67e46d",
+    "JMS-version\\model4_pjob_fifo_20261029\\experiment_console.py": "8f85f01c5dcc906e8347bb5b5f2e587eee26cfebb11c5429a480fddc3018a729",
+    "JMS-version\\model4_pjob_fifo_20261029\\grippers.py": "5ed898b8c17850b88da8eb8700df33dc5fd1fe3df3bf60df6b5c22281900e0fc",
+    "JMS-version\\model4_pjob_fifo_20261029\\joint_algorithms.py": "a41510be8956369ea84dbfb25289b3f115afab741786ea9ac0284cf365dea1f1",
+    "JMS-version\\model4_pjob_fifo_20261029\\joint_chamber_cycle_model.py": "aa0615a5c69fd1fe29ebe58f88c085d15a3c9f5fcd993ead55a0e3ca52a295a5",
+    "JMS-version\\model4_pjob_fifo_20261029\\joint_pairing_model.py": "c9e678b6a510ea29869a7d9aec3d9f8b6686d91620cf38e49262007ca7f14dd9",
+    "JMS-version\\model4_pjob_fifo_20261029\\memory_policy.py": "37f605089784130b89b260fdcc4380c8956b2b0a1165e94a34547eb7b7a3cfa3",
+    "JMS-version\\model4_pjob_fifo_20261029\\model.py": "f3abcd2dbcc4a1d1afa93379261870f8e2f078ba145b1caa590282898d76722e",
+    "JMS-version\\model4_pjob_fifo_20261029\\physical_seed.py": "da232cdf3ddf9e5d35a27b36d4084fa12f97720aceb8d6b4e5eea4587f8011b1",
+    "JMS-version\\model4_pjob_fifo_20261029\\physical_validate.py": "ed086b9ae01dcca25e3244340cac7b503dd229b995a57843545305ad58f42a3d",
+    "JMS-version\\model4_pjob_fifo_20261029\\pjob_order.py": "a0c942244ba6115363b68b1123bf39feb993beac7da633215395cfbbf53a82fd",
+    "JMS-version\\model4_pjob_fifo_20261029\\pjobs.py": "e41f0ae77876f8cc7600bdbe99ef227f8d5c677c86bcc865a55b81e2bbf098fc",
+    "JMS-version\\model4_pjob_fifo_20261029\\reference_completion.py": "ccedf951fd1b1737043704028a5504ef6d7bd6cf28c1eaa81ad0748f43710231",
+    "JMS-version\\model4_pjob_fifo_20261029\\run_experiments.py": "bc0335edaffd70844c55c3bcb5e76eda36cd9f48443de90f4af94628d5edc686",
+    "JMS-version\\model4_pjob_fifo_20261029\\seed.py": "9d5421a566dcdee0a9250363fb68684dcd7660bf648009ee8bbd7e00141e7b72",
+    "JMS-version\\model4_pjob_fifo_20261029\\validate.py": "7c5853bb37a0819cde1bf9d970effce230e6c8eb07d65ca12f6233b318259f16",
+    "runtime_compat.py": "28d479887faaa56306dd7ec53f85dad73d006176565e10978f193c99bb6d67d5",
+    "scip_imports.py": "874c497d8c283be8a5233d2c176da3c8afdfc92717d5691161c200ef5146b3d9",
+    "utils.py": "22dd9f831ba8e4f431d2cc17b4b8ab29ab0452e9f5cafa3bcf73f6f2fff1f630",
+    "JMS-version\\experiments\\strengthening_20261101\\strengthen.py": "727ee2c4566a00978186f64a84e45b26ca0886d44af31db584d2047f36150d5e",
+    "JMS-version\\experiments\\strengthening_20261101\\run_strengthen.ps1": "c74b4836976fcd68ae0edd9b1b3819950e211b585308a1c72729a7b526303173",
+    "JMS-version\\experiments\\strengthening_20261101\\strengthen_models.py": "623867f2d79acc39c340ae8763c1b36e7a025dd0ec90cac912976f476a8867b3",
+    "JMS-version\\experiments\\reviewer_supplement_20261101\\review_experiments.py": "c5e9355c9b0a3537efb1d4254fc584f198c102579061a0fcc8a71a277cb94638",
+    "JMS-version\\model4_pjob_fifo_20261029\\revalidate.py": "bbdf4db71d35832c834f53740b5fed28a543c138f0b530179871b49c03f6a4f9",
+    "JMS-version\\model4_pjob_fifo_20261029\\run_matched_supplement.py": "4be03ccbdae101bd0354bab57077f58292effdea296e43b72945ad95e84da149",
+    "JMS-version\\model4_pjob_fifo_20261029\\supplement_protocol.py": "1a8cbd2a055f4fbb03655187c49b694ecba0e084951744cc8532839604daf82e"
+  },
+  "environment": {
+    "python": "G:\\conda\\envs\\a3cenv\\python.exe",
+    "version": "3.12.12 | packaged by conda-forge | (main, Oct 22 2025, 23:13:34) [MSC v.1944 64 bit (AMD64)]",
+    "packages": {
+      "pyscipopt": "6.1.0",
+      "psutil": "7.2.2",
+      "numpy": "2.4.4"
+    }
+  },
+  "cells": [
+    {
+      "state": "checked",
+      "solve_seconds": 0,
+      "solver_started": false,
+      "complete": true,
+      "valid": true,
+      "source_metrics": {
+        "route_wait_sum": 727.0,
+        "route_wait_max": 120.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1196.0,
+        "product_cmax": 1178.0
+      },
+      "metrics": {
+        "route_wait_sum": 727.0,
+        "route_wait_max": 120.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1196.0,
+        "product_cmax": 1178.0
+      },
+      "original_model_check": true,
+      "full_model_audit": {
+        "valid": true,
+        "original_model_check": true,
+        "physical_validation": {
+          "valid": true,
+          "checks": 2352,
+          "errors": [],
+          "product_return_cmax": 1178.0,
+          "cleaning_count": 0,
+          "processing_cycles": 2,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "seconds": 1.8440000000009604,
+        "solver_started": false,
+        "dimensions": {
+          "variables": 45525,
+          "constraints": 170136,
+          "linear_nonzeros": 1006450,
+          "types": {
+            "BINARY": 44624,
+            "INTEGER": 264,
+            "CONTINUOUS": 637
+          }
+        }
+      },
+      "dimensions": {
+        "variables": 45597,
+        "constraints": 170407,
+        "linear_nonzeros": 1056160,
+        "types": {
+          "BINARY": 44688,
+          "INTEGER": 264,
+          "CONTINUOUS": 645
+        }
+      },
+      "build_seconds": 2.4219999999986612,
+      "selector_variables": 128,
+      "N": 8,
+      "G": 4,
+      "candidate_pairs": 32,
+      "candidate_cycles": 16,
+      "full_candidate_space": true,
+      "candidate_bound_restricted": false,
+      "build_rss_mb": 260.51171875,
+      "substituted_variables": 0,
+      "removed_tautologies": 0,
+      "cell": {
+        "id": "n8_H5_4x1_dual__s1__wafer",
+        "case": "n8_H5_4x1_dual",
+        "seed": 1,
+        "arm": "wafer",
+        "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_4x1_dual\\reference.json",
+        "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_4x1_dual\\common.json"
+      },
+      "sources": {
+        "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_4x1_dual\\reference.json": "092a9facf37f1940f75f13b3a8d3f38614ae89af5aa0f9678a88a6d2aa93999c",
+        "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_4x1_dual\\common.json": "0e6879b962d7d45f29875126c010b7878c81aa22efb721f4a6cf7b98cb0c4abb"
+      }
+    },
+    {
+      "state": "checked",
+      "solve_seconds": 0,
+      "solver_started": false,
+      "complete": true,
+      "valid": true,
+      "source_metrics": {
+        "route_wait_sum": 1286.0,
+        "route_wait_max": 93.0,
+        "rhythm_deviation": 136.00000000000023,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1231.0,
+        "product_cmax": 1213.0
+      },
+      "metrics": {
+        "route_wait_sum": 1286.0,
+        "route_wait_max": 93.0,
+        "rhythm_deviation": 136.00000000000023,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1231.0,
+        "product_cmax": 1213.0
+      },
+      "original_model_check": true,
+      "full_model_audit": {
+        "valid": true,
+        "original_model_check": true,
+        "physical_validation": {
+          "valid": true,
+          "checks": 3666,
+          "errors": [],
+          "product_return_cmax": 1213.0,
+          "cleaning_count": 0,
+          "processing_cycles": 6,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "seconds": 4.875,
+        "solver_started": false,
+        "dimensions": {
+          "variables": 122485,
+          "constraints": 424184,
+          "linear_nonzeros": 2466842,
+          "types": {
+            "BINARY": 120976,
+            "INTEGER": 440,
+            "CONTINUOUS": 1069
+          }
+        }
+      },
+      "dimensions": {
+        "variables": 122557,
+        "constraints": 424455,
+        "linear_nonzeros": 2516552,
+        "types": {
+          "BINARY": 121040,
+          "INTEGER": 440,
+          "CONTINUOUS": 1077
+        }
+      },
+      "build_seconds": 6.28099999999904,
+      "selector_variables": 128,
+      "N": 8,
+      "G": 4,
+      "candidate_pairs": 56,
+      "candidate_cycles": 32,
+      "full_candidate_space": true,
+      "candidate_bound_restricted": false,
+      "build_rss_mb": 583.84375,
+      "substituted_variables": 0,
+      "removed_tautologies": 0,
+      "cell": {
+        "id": "n8_H5_2x2_dual__s1__wafer",
+        "case": "n8_H5_2x2_dual",
+        "seed": 1,
+        "arm": "wafer",
+        "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_2x2_dual\\reference.json",
+        "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_2x2_dual\\common.json"
+      },
+      "sources": {
+        "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_2x2_dual\\reference.json": "55e392d0df839a09cd973ad0b05b04071c5baef61df5f397a91769d361686af2",
+        "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_2x2_dual\\common.json": "1ec97e6611da5e157b9799cd2f6e15e87e676fff168a27c9580293500d1ec4df"
+      }
+    },
+    {
+      "state": "checked",
+      "solve_seconds": 0,
+      "solver_started": false,
+      "complete": true,
+      "valid": true,
+      "source_metrics": {
+        "route_wait_sum": 760.999999999998,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1738.0,
+        "product_cmax": 1720.0
+      },
+      "metrics": {
+        "route_wait_sum": 760.999999999998,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1738.0,
+        "product_cmax": 1720.0
+      },
+      "original_model_check": true,
+      "full_model_audit": {
+        "valid": true,
+        "original_model_check": true,
+        "physical_validation": {
+          "valid": true,
+          "checks": 4500,
+          "errors": [],
+          "product_return_cmax": 1720.0,
+          "cleaning_count": 0,
+          "processing_cycles": 6,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "seconds": 3.139999999999418,
+        "solver_started": false,
+        "dimensions": {
+          "variables": 79188,
+          "constraints": 280452,
+          "linear_nonzeros": 1700980,
+          "types": {
+            "BINARY": 77980,
+            "INTEGER": 352,
+            "CONTINUOUS": 856
+          }
+        }
+      },
+      "dimensions": {
+        "variables": 79196,
+        "constraints": 280722,
+        "linear_nonzeros": 1701888,
+        "types": {
+          "BINARY": 77980,
+          "INTEGER": 352,
+          "CONTINUOUS": 864
+        }
+      },
+      "build_seconds": 4.515999999999622,
+      "selector_variables": 128,
+      "N": 8,
+      "G": 8,
+      "candidate_pairs": 44,
+      "candidate_cycles": 24,
+      "full_candidate_space": true,
+      "candidate_bound_restricted": false,
+      "build_rss_mb": 438.40625,
+      "substituted_variables": 0,
+      "removed_tautologies": 0,
+      "cell": {
+        "id": "n8_H5_mixed_dual__s1__wafer",
+        "case": "n8_H5_mixed_dual",
+        "seed": 1,
+        "arm": "wafer",
+        "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\reference.json",
+        "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\common.json"
+      },
+      "sources": {
+        "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\reference.json": "0ad08885e625fd7660d25cc341d3fb12ee15098345a13d4171b7ac9ec44cb64f",
+        "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\common.json": "2b56354a367e43069ddc58fef5da79ecd74315648008849854d2573cd0ab0467"
+      }
+    },
+    {
+      "state": "checked",
+      "solve_seconds": 0,
+      "solver_started": false,
+      "complete": true,
+      "valid": true,
+      "source_metrics": {
+        "route_wait_sum": 1320.0,
+        "route_wait_max": 118.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2418.0,
+        "product_cmax": 2400.0
+      },
+      "metrics": {
+        "route_wait_sum": 1320.0,
+        "route_wait_max": 118.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2418.0,
+        "product_cmax": 2400.0
+      },
+      "original_model_check": true,
+      "full_model_audit": {
+        "valid": true,
+        "original_model_check": true,
+        "physical_validation": {
+          "valid": true,
+          "checks": 7569,
+          "errors": [],
+          "product_return_cmax": 2400.0,
+          "cleaning_count": 0,
+          "processing_cycles": 4,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "seconds": 7.859000000000378,
+        "solver_started": false,
+        "dimensions": {
+          "variables": 177905,
+          "constraints": 670920,
+          "linear_nonzeros": 4023898,
+          "types": {
+            "BINARY": 176100,
+            "INTEGER": 528,
+            "CONTINUOUS": 1277
+          }
+        }
+      },
+      "dimensions": {
+        "variables": 178305,
+        "constraints": 671975,
+        "linear_nonzeros": 4615224,
+        "types": {
+          "BINARY": 176484,
+          "INTEGER": 528,
+          "CONTINUOUS": 1293
+        }
+      },
+      "build_seconds": 10.468000000000757,
+      "selector_variables": 512,
+      "N": 16,
+      "G": 4,
+      "candidate_pairs": 64,
+      "candidate_cycles": 32,
+      "full_candidate_space": true,
+      "candidate_bound_restricted": false,
+      "build_rss_mb": 867.25,
+      "substituted_variables": 0,
+      "removed_tautologies": 0,
+      "cell": {
+        "id": "n16_H5_4x1_dual__s1__wafer",
+        "case": "n16_H5_4x1_dual",
+        "seed": 1,
+        "arm": "wafer",
+        "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_4x1_dual\\reference.json",
+        "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_4x1_dual\\common.json"
+      },
+      "sources": {
+        "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_4x1_dual\\reference.json": "35fbf0e8339216c1a8ee7587126db168cfa76dc76f25f833e21831e602f646da",
+        "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_4x1_dual\\common.json": "2f29ab9fc9a2b9a6bef8f4a5bb33d2afa9e2d7d6419065a1c4744db357d86168"
+      }
+    },
+    {
+      "state": "checked",
+      "solve_seconds": 0,
+      "solver_started": false,
+      "complete": true,
+      "valid": true,
+      "source_metrics": {
+        "route_wait_sum": 2275.9999999999995,
+        "route_wait_max": 409.0,
+        "rhythm_deviation": 731.0,
+        "rhythm_centers": 6,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 3431.0,
+        "product_cmax": 2943.0
+      },
+      "metrics": {
+        "route_wait_sum": 2275.9999999999995,
+        "route_wait_max": 409.0,
+        "rhythm_deviation": 731.0,
+        "rhythm_centers": 6,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 3431.0,
+        "product_cmax": 2943.0
+      },
+      "original_model_check": true,
+      "full_model_audit": {
+        "valid": true,
+        "original_model_check": true,
+        "physical_validation": {
+          "valid": true,
+          "checks": 11927,
+          "errors": [],
+          "product_return_cmax": 2943.0,
+          "cleaning_count": 2,
+          "processing_cycles": 10,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "seconds": 20.04699999999866,
+        "solver_started": false,
+        "dimensions": {
+          "variables": 482609,
+          "constraints": 1680520,
+          "linear_nonzeros": 9858474,
+          "types": {
+            "BINARY": 479588,
+            "INTEGER": 880,
+            "CONTINUOUS": 2141
+          }
+        }
+      },
+      "dimensions": {
+        "variables": 483009,
+        "constraints": 1681575,
+        "linear_nonzeros": 10449800,
+        "types": {
+          "BINARY": 479972,
+          "INTEGER": 880,
+          "CONTINUOUS": 2157
+        }
+      },
+      "build_seconds": 26.125,
+      "selector_variables": 512,
+      "N": 16,
+      "G": 4,
+      "candidate_pairs": 112,
+      "candidate_cycles": 64,
+      "full_candidate_space": true,
+      "candidate_bound_restricted": false,
+      "build_rss_mb": 2145.5859375,
+      "substituted_variables": 0,
+      "removed_tautologies": 0,
+      "cell": {
+        "id": "n16_H5_2x2_dual__s1__wafer",
+        "case": "n16_H5_2x2_dual",
+        "seed": 1,
+        "arm": "wafer",
+        "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_2x2_dual\\reference.json",
+        "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_2x2_dual\\common.json"
+      },
+      "sources": {
+        "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_2x2_dual\\reference.json": "8dab23e06e03fd442f8ec7c5a75b6602700aecee1689455969473028a4db1b95",
+        "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_2x2_dual\\common.json": "8c0f0383534ebb1ce20989f964e9305b23014485b684d9431c5345680a0b9a36"
+      }
+    },
+    {
+      "state": "checked",
+      "solve_seconds": 0,
+      "solver_started": false,
+      "complete": true,
+      "valid": true,
+      "source_metrics": {
+        "route_wait_sum": 3021.0,
+        "route_wait_max": 237.00000000000023,
+        "rhythm_deviation": 136.00000000000068,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2543.0,
+        "product_cmax": 2525.0
+      },
+      "metrics": {
+        "route_wait_sum": 3021.0,
+        "route_wait_max": 237.00000000000023,
+        "rhythm_deviation": 136.00000000000068,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2543.0,
+        "product_cmax": 2525.0
+      },
+      "original_model_check": true,
+      "full_model_audit": {
+        "valid": true,
+        "original_model_check": true,
+        "physical_validation": {
+          "valid": true,
+          "checks": 9462,
+          "errors": [],
+          "product_return_cmax": 2525.0,
+          "cleaning_count": 0,
+          "processing_cycles": 8,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "seconds": 13.234000000000378,
+        "solver_started": false,
+        "dimensions": {
+          "variables": 310636,
+          "constraints": 1108316,
+          "linear_nonzeros": 6796204,
+          "types": {
+            "BINARY": 308220,
+            "INTEGER": 704,
+            "CONTINUOUS": 1712
+          }
+        }
+      },
+      "dimensions": {
+        "variables": 310908,
+        "constraints": 1109370,
+        "linear_nonzeros": 7191624,
+        "types": {
+          "BINARY": 308476,
+          "INTEGER": 704,
+          "CONTINUOUS": 1728
+        }
+      },
+      "build_seconds": 18.5,
+      "selector_variables": 512,
+      "N": 16,
+      "G": 8,
+      "candidate_pairs": 88,
+      "candidate_cycles": 48,
+      "full_candidate_space": true,
+      "candidate_bound_restricted": false,
+      "build_rss_mb": 1422.98046875,
+      "substituted_variables": 0,
+      "removed_tautologies": 0,
+      "cell": {
+        "id": "n16_H5_mixed_dual__s1__wafer",
+        "case": "n16_H5_mixed_dual",
+        "seed": 1,
+        "arm": "wafer",
+        "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_mixed_dual\\reference.json",
+        "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_mixed_dual\\common.json"
+      },
+      "sources": {
+        "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_mixed_dual\\reference.json": "23ff821f169bc7959d767189287328d46b17dbabc89ce5be8a2f0cd6fec3e63f",
+        "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_mixed_dual\\common.json": "d11e3ac2b7c04f51bf8ccf7b86b44847ed039641c48ab38a2e2e5a93e37134b1"
+      }
+    },
+    {
+      "state": "checked",
+      "solve_seconds": 0,
+      "solver_started": false,
+      "complete": true,
+      "valid": true,
+      "source_metrics": {
+        "route_wait_sum": 760.999999999998,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1738.0,
+        "product_cmax": 1720.0
+      },
+      "metrics": {
+        "route_wait_sum": 760.999999999998,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1738.0,
+        "product_cmax": 1720.0
+      },
+      "original_model_check": true,
+      "full_model_audit": {
+        "valid": true,
+        "original_model_check": true,
+        "physical_validation": {
+          "valid": true,
+          "checks": 4500,
+          "errors": [],
+          "product_return_cmax": 1720.0,
+          "cleaning_count": 0,
+          "processing_cycles": 6,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "seconds": 3.186999999998079,
+        "solver_started": false,
+        "dimensions": {
+          "variables": 79188,
+          "constraints": 280452,
+          "linear_nonzeros": 1700980,
+          "types": {
+            "BINARY": 77980,
+            "INTEGER": 352,
+            "CONTINUOUS": 856
+          }
+        }
+      },
+      "dimensions": {
+        "variables": 79188,
+        "constraints": 280452,
+        "linear_nonzeros": 1700980,
+        "types": {
+          "BINARY": 77980,
+          "INTEGER": 352,
+          "CONTINUOUS": 856
+        }
+      },
+      "build_seconds": 4.360000000000582,
+      "selector_variables": 128,
+      "N": 8,
+      "G": 8,
+      "candidate_pairs": 44,
+      "candidate_cycles": 24,
+      "full_candidate_space": true,
+      "candidate_bound_restricted": false,
+      "build_rss_mb": 535.06640625,
+      "substituted_variables": 0,
+      "removed_tautologies": 0,
+      "cell": {
+        "id": "n8_H5_mixed_dual__s1__pjob",
+        "case": "n8_H5_mixed_dual",
+        "seed": 1,
+        "arm": "pjob",
+        "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\reference.json",
+        "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\common.json"
+      },
+      "sources": {
+        "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\reference.json": "0ad08885e625fd7660d25cc341d3fb12ee15098345a13d4171b7ac9ec44cb64f",
+        "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\common.json": "2b56354a367e43069ddc58fef5da79ecd74315648008849854d2573cd0ab0467"
+      }
+    },
+    {
+      "state": "checked",
+      "solve_seconds": 0,
+      "solver_started": false,
+      "complete": true,
+      "valid": true,
+      "source_metrics": {
+        "route_wait_sum": 3109.0,
+        "route_wait_max": 437.0,
+        "rhythm_deviation": 696.0,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.0,
+        "product_cmax": 4785.0
+      },
+      "metrics": {
+        "route_wait_sum": 3109.0,
+        "route_wait_max": 437.0,
+        "rhythm_deviation": 696.0,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.0,
+        "product_cmax": 4785.0
+      },
+      "original_model_check": true,
+      "full_model_audit": {
+        "valid": true,
+        "original_model_check": true,
+        "physical_validation": {
+          "valid": true,
+          "checks": 24790,
+          "errors": [],
+          "product_return_cmax": 4785.0,
+          "cleaning_count": 2,
+          "processing_cycles": 16,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "seconds": 46.53199999999924,
+        "solver_started": false,
+        "dimensions": {
+          "variables": 1080365,
+          "constraints": 3768984,
+          "linear_nonzeros": 22174778,
+          "types": {
+            "BINARY": 1075832,
+            "INTEGER": 1320,
+            "CONTINUOUS": 3213
+          }
+        }
+      },
+      "dimensions": {
+        "variables": 3645,
+        "constraints": 34538,
+        "linear_nonzeros": 66401,
+        "types": {
+          "BINARY": 432,
+          "INTEGER": 0,
+          "CONTINUOUS": 3213
+        }
+      },
+      "build_seconds": 9.46900000000096,
+      "selector_variables": 0,
+      "N": 24,
+      "G": 4,
+      "candidate_pairs": 168,
+      "candidate_cycles": 96,
+      "full_candidate_space": false,
+      "candidate_bound_restricted": false,
+      "build_rss_mb": 399.9140625,
+      "substituted_variables": 1044276,
+      "removed_tautologies": 3637115,
+      "cell": {
+        "id": "n24_H5_2x2_dual__s1__w25",
+        "case": "n24_H5_2x2_dual",
+        "seed": 1,
+        "arm": "substituted",
+        "weight": 25,
+        "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s1__joint\\result.json",
+        "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s1__joint\\variables_phase1.json"
+      },
+      "sources": {
+        "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s1__joint\\result.json": "8e91c6ce4c357122c0b6842389b63db78dde053a67b2d8bb9f76880e7a5bed44",
+        "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s1__joint\\variables_phase1.json": "1c118e4eddd1f9ff5f6e4249325d37aaf7936b5fc3256108f191f4ac05c8bd94"
+      }
+    },
+    {
+      "state": "checked",
+      "solve_seconds": 0,
+      "solver_started": false,
+      "complete": true,
+      "valid": true,
+      "source_metrics": {
+        "route_wait_sum": 3109.0,
+        "route_wait_max": 437.0,
+        "rhythm_deviation": 696.0,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.0,
+        "product_cmax": 4785.0
+      },
+      "metrics": {
+        "route_wait_sum": 3109.0,
+        "route_wait_max": 437.0,
+        "rhythm_deviation": 696.0,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.0,
+        "product_cmax": 4785.0
+      },
+      "original_model_check": true,
+      "full_model_audit": {
+        "valid": true,
+        "original_model_check": true,
+        "physical_validation": {
+          "valid": true,
+          "checks": 24790,
+          "errors": [],
+          "product_return_cmax": 4785.0,
+          "cleaning_count": 2,
+          "processing_cycles": 16,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "seconds": 47.53099999999904,
+        "solver_started": false,
+        "dimensions": {
+          "variables": 1080365,
+          "constraints": 3768984,
+          "linear_nonzeros": 22174778,
+          "types": {
+            "BINARY": 1075832,
+            "INTEGER": 1320,
+            "CONTINUOUS": 3213
+          }
+        }
+      },
+      "dimensions": {
+        "variables": 3645,
+        "constraints": 34538,
+        "linear_nonzeros": 66401,
+        "types": {
+          "BINARY": 432,
+          "INTEGER": 0,
+          "CONTINUOUS": 3213
+        }
+      },
+      "build_seconds": 9.71900000000096,
+      "selector_variables": 0,
+      "N": 24,
+      "G": 4,
+      "candidate_pairs": 168,
+      "candidate_cycles": 96,
+      "full_candidate_space": false,
+      "candidate_bound_restricted": false,
+      "build_rss_mb": 1382.21875,
+      "substituted_variables": 1044276,
+      "removed_tautologies": 3637115,
+      "cell": {
+        "id": "n24_H5_2x2_dual__s2__w25",
+        "case": "n24_H5_2x2_dual",
+        "seed": 2,
+        "arm": "substituted",
+        "weight": 25,
+        "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s2__joint\\result.json",
+        "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s2__joint\\variables_phase1.json"
+      },
+      "sources": {
+        "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s2__joint\\result.json": "8e91c6ce4c357122c0b6842389b63db78dde053a67b2d8bb9f76880e7a5bed44",
+        "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s2__joint\\variables_phase1.json": "78cfa62af063406f48cad4820c8cae148002c0757a20e8b8648362601a81695b"
+      }
+    },
+    {
+      "state": "checked",
+      "solve_seconds": 0,
+      "solver_started": false,
+      "complete": true,
+      "valid": true,
+      "source_metrics": {
+        "route_wait_sum": 3109.0,
+        "route_wait_max": 437.0,
+        "rhythm_deviation": 696.0,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.0,
+        "product_cmax": 4785.0
+      },
+      "metrics": {
+        "route_wait_sum": 3109.0,
+        "route_wait_max": 437.0,
+        "rhythm_deviation": 696.0,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.0,
+        "product_cmax": 4785.0
+      },
+      "original_model_check": true,
+      "full_model_audit": {
+        "valid": true,
+        "original_model_check": true,
+        "physical_validation": {
+          "valid": true,
+          "checks": 24790,
+          "errors": [],
+          "product_return_cmax": 4785.0,
+          "cleaning_count": 2,
+          "processing_cycles": 16,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "seconds": 47.60900000000038,
+        "solver_started": false,
+        "dimensions": {
+          "variables": 1080365,
+          "constraints": 3768984,
+          "linear_nonzeros": 22174778,
+          "types": {
+            "BINARY": 1075832,
+            "INTEGER": 1320,
+            "CONTINUOUS": 3213
+          }
+        }
+      },
+      "dimensions": {
+        "variables": 3645,
+        "constraints": 34538,
+        "linear_nonzeros": 66401,
+        "types": {
+          "BINARY": 432,
+          "INTEGER": 0,
+          "CONTINUOUS": 3213
+        }
+      },
+      "build_seconds": 9.31199999999808,
+      "selector_variables": 0,
+      "N": 24,
+      "G": 4,
+      "candidate_pairs": 168,
+      "candidate_cycles": 96,
+      "full_candidate_space": false,
+      "candidate_bound_restricted": false,
+      "build_rss_mb": 1399.15234375,
+      "substituted_variables": 1044276,
+      "removed_tautologies": 3637115,
+      "cell": {
+        "id": "n24_H5_2x2_dual__s3__w25",
+        "case": "n24_H5_2x2_dual",
+        "seed": 3,
+        "arm": "substituted",
+        "weight": 25,
+        "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s3__joint\\result.json",
+        "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s3__joint\\variables_phase1.json"
+      },
+      "sources": {
+        "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s3__joint\\result.json": "8e91c6ce4c357122c0b6842389b63db78dde053a67b2d8bb9f76880e7a5bed44",
+        "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s3__joint\\variables_phase1.json": "ea07cdebf0fb74613b7d04432d0d53fac638f875bb25214e2c6f28f1d3316097"
+      }
+    },
+    {
+      "state": "checked",
+      "solve_seconds": 0,
+      "solver_started": false,
+      "complete": true,
+      "valid": true,
+      "source_metrics": {
+        "route_wait_sum": 21448.0,
+        "route_wait_max": 9996.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 22228.0,
+        "product_cmax": 2264.0
+      },
+      "metrics": {
+        "route_wait_sum": 21448.0,
+        "route_wait_max": 9996.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 22228.0,
+        "product_cmax": 2264.0
+      },
+      "original_model_check": true,
+      "full_model_audit": {
+        "valid": true,
+        "original_model_check": true,
+        "physical_validation": {
+          "valid": true,
+          "checks": 8632,
+          "errors": [],
+          "product_return_cmax": 2264.0,
+          "cleaning_count": 2,
+          "processing_cycles": 8,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "seconds": 2.937000000001717,
+        "solver_started": false,
+        "dimensions": {
+          "variables": 79184,
+          "constraints": 260196,
+          "linear_nonzeros": 1568692,
+          "types": {
+            "BINARY": 77980,
+            "INTEGER": 352,
+            "CONTINUOUS": 852
+          }
+        }
+      },
+      "dimensions": {
+        "variables": 79192,
+        "constraints": 260462,
+        "linear_nonzeros": 1569592,
+        "types": {
+          "BINARY": 77980,
+          "INTEGER": 352,
+          "CONTINUOUS": 860
+        }
+      },
+      "build_seconds": 3.6090000000003783,
+      "selector_variables": 128,
+      "N": 8,
+      "G": 8,
+      "candidate_pairs": 44,
+      "candidate_cycles": 24,
+      "full_candidate_space": true,
+      "candidate_bound_restricted": false,
+      "build_rss_mb": 1493.890625,
+      "substituted_variables": 0,
+      "removed_tautologies": 0,
+      "cell": {
+        "id": "qualification_n8__wafer",
+        "case": "qualification_n8",
+        "arm": "wafer",
+        "seed": 1,
+        "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_qualification_all_20261030_120650\\references\\qualification_n8_mixed_dual\\reference.json",
+        "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_qualification_all_20261030_120650\\references\\qualification_n8_mixed_dual\\common.json"
+      },
+      "sources": {
+        "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_qualification_all_20261030_120650\\references\\qualification_n8_mixed_dual\\reference.json": "019bc54d0efc7e65397cceefa07eb02b10eb89bf8ee5d482c971ed540538765d",
+        "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_qualification_all_20261030_120650\\references\\qualification_n8_mixed_dual\\common.json": "8b72348c8556257d8e4381508411881db4b3c9a7f1259dda3a8a88e1f1e28cd0"
+      }
+    }
+  ],
+  "negative_checks": {
+    "strict_fifo_identity_exchange_rejected": true,
+    "interval_pruning_binding_row_retained": true,
+    "contradictory_fixed_row_rejected": true
+  },
+  "complete": true
+}
