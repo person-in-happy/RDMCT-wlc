@@ -1,0 +1,71 @@
+{
+  "coverage": {
+    "original_completed": 453,
+    "original_feasible": 441,
+    "prior_supplement": 114,
+    "new_supplement": 48,
+    "total_completed_records": 615,
+    "total_feasible_records": 603,
+    "retained_execution_interruptions": 3,
+    "records_are_not_independent_instances": true
+  },
+  "pure_chain_cleaning": {
+    "n": 24,
+    "threshold": 5,
+    "source": "dual",
+    "weights": [
+      0,
+      5,
+      25,
+      100
+    ],
+    "seeds": [
+      1,
+      2,
+      3
+    ],
+    "cmax": 4785,
+    "waiting_before": 3109,
+    "waiting_after": 1440,
+    "waiting_reduction_percent": 53.682856223866196,
+    "maximum_wait_before": 437,
+    "maximum_wait_after": 65,
+    "rhythm_before": 696,
+    "rhythm_after": 696,
+    "cleanings": 2,
+    "optimality_scope": "fixed_structure_refinement",
+    "original_variables": 1080365,
+    "substituted_variables": 3645,
+    "substituted_constraints": 34538
+  },
+  "representation": {
+    "cases": 6,
+    "paired_seed_comparisons": 18,
+    "runs": 36,
+    "scope": "membership representation with identical pair-slot routes and strict FIFO",
+    "preparation_reduction_percent": [
+      9.256357,
+      14.980832
+    ],
+    "preparation_includes_start_checks": true,
+    "total_variable_reduction_percent": [
+      0.010102,
+      0.224335
+    ],
+    "matrix_nonzero_reduction_percent": [
+      0.053353,
+      12.812509
+    ],
+    "matched_product_cmax": true,
+    "all_returned_common_incumbent": true,
+    "solver_budget": 300,
+    "actual_solver_seconds": [
+      300,
+      392
+    ],
+    "algorithm_speedup_claim": false,
+    "universal_memory_reduction_claim": false
+  },
+  "corrected_equation": "eq:operation-time-cn: enabled start/end bounded by the configured horizon",
+  "evidence": "verified_strengthening.json"
+}

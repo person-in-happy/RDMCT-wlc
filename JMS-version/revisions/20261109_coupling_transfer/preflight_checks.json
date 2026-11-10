@@ -1,0 +1,249 @@
+{
+  "driver_sha256": "a44929db7066e304d19932053e3061547e2bd014388e981f84e459424b5091a9",
+  "solver_started": false,
+  "campaigns": [
+    {
+      "suite": "mechanism",
+      "campaign": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\journal_support_preflight_20261109_mechanism_r2",
+      "cells": 144,
+      "contract": "d7ea29c6704eea03002ec67ce110aa86aa9bb4c09350b513afa7a016dd2afd7b",
+      "solver_started": false
+    },
+    {
+      "suite": "chain",
+      "campaign": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\journal_support_preflight_20261109_chain_r2",
+      "cells": 24,
+      "contract": "cc4eb712d302374098845597af31db5f79ec37cbb61adf19811c0d0f137e8282",
+      "solver_started": false
+    },
+    {
+      "suite": "backfill_standard",
+      "campaign": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\journal_support_preflight_20261109_backfill_standard_r2",
+      "cells": 96,
+      "contract": "dc37414a0319e40aafe5d9aca69b5971e937ccad7328d8cfe171d7992dced1e0",
+      "solver_started": false
+    },
+    {
+      "suite": "qualification",
+      "campaign": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\journal_support_preflight_20261109_qualification_r2",
+      "cells": 27,
+      "contract": "d99a347e34ac5166401e4337e4d672f97aecee807de7a44e781bac25366adda2",
+      "solver_started": false
+    }
+  ],
+  "policies": [
+    {
+      "method": "hem",
+      "training_seed": 1,
+      "policy": {
+        "method": "hem",
+        "training_seed": 1,
+        "checkpoint": "D:\\git\\git\\RDMCT-A3C\\cie\\models\\hem\\cie_hem13_all_cie_hem\\cie_hem13_all_cie_hem_2026_08_02_14_15_39_0000--s-1\\itr_60.pkl",
+        "sha256": "020333c64dfc6a602566c0916bdaf5eed41628495b2b389ce851534da4ae9d73",
+        "config": "D:\\git\\git\\RDMCT-A3C\\cie\\configs\\cie_hem_train.json",
+        "config_sha256": "7a4fac03b08397a48a8c1cb38a94f9615e754425f02e98697462bcb5c9897b0d",
+        "transfer": "frozen_policy_evaluation_on_new_model"
+      },
+      "loaded": true
+    },
+    {
+      "method": "hem",
+      "training_seed": 2,
+      "policy": {
+        "method": "hem",
+        "training_seed": 2,
+        "checkpoint": "D:\\git\\git\\RDMCT-A3C\\cie\\models\\hem\\cie_hem13_all_cie_hem\\cie_hem13_all_cie_hem_2026_08_02_14_23_31_0000--s-2\\itr_60.pkl",
+        "sha256": "52064c7c7526efd19a589c5d303e6cbc6246527dc13a79704933076a574adcfc",
+        "config": "D:\\git\\git\\RDMCT-A3C\\cie\\configs\\cie_hem_train.json",
+        "config_sha256": "7a4fac03b08397a48a8c1cb38a94f9615e754425f02e98697462bcb5c9897b0d",
+        "transfer": "frozen_policy_evaluation_on_new_model"
+      },
+      "loaded": true
+    },
+    {
+      "method": "hem",
+      "training_seed": 3,
+      "policy": {
+        "method": "hem",
+        "training_seed": 3,
+        "checkpoint": "D:\\git\\git\\RDMCT-A3C\\cie\\models\\hem\\cie_hem13_all_cie_hem\\cie_hem13_all_cie_hem_2026_08_02_14_30_45_0000--s-3\\itr_60.pkl",
+        "sha256": "a4b2e392482e8f68430a05519ce14a1a833abd1cbd72931980ae04135dc2a8bf",
+        "config": "D:\\git\\git\\RDMCT-A3C\\cie\\configs\\cie_hem_train.json",
+        "config_sha256": "7a4fac03b08397a48a8c1cb38a94f9615e754425f02e98697462bcb5c9897b0d",
+        "transfer": "frozen_policy_evaluation_on_new_model"
+      },
+      "loaded": true
+    },
+    {
+      "method": "proposed",
+      "training_seed": 1,
+      "policy": {
+        "method": "proposed",
+        "training_seed": 1,
+        "checkpoint": "D:\\git\\git\\RDMCT-A3C\\cie\\models\\proposed\\cie_proposed_all_cie_proposed\\cie_proposed_all_cie_proposed_2026_08_02_14_55_21_0000--s-1\\itr_60.pkl",
+        "sha256": "23961d2d9f09473982a79271642fca1d6e76cd0bf3837240d5e38a2361d824ce",
+        "config": "D:\\git\\git\\RDMCT-A3C\\cie\\configs\\cie_proposed_inference.json",
+        "config_sha256": "9c1ef2f4c90c92158c13ea8538413daf8f6609c1f4a701d2e98534d593236293",
+        "transfer": "frozen_policy_evaluation_on_new_model"
+      },
+      "loaded": true
+    },
+    {
+      "method": "proposed",
+      "training_seed": 2,
+      "policy": {
+        "method": "proposed",
+        "training_seed": 2,
+        "checkpoint": "D:\\git\\git\\RDMCT-A3C\\cie\\models\\proposed\\cie_proposed_all_cie_proposed\\cie_proposed_all_cie_proposed_2026_08_02_15_03_12_0000--s-2\\itr_60.pkl",
+        "sha256": "4ed0602fc46bcff1dc5890cc4ad755e2588b25b2b010e7e799a8324932344988",
+        "config": "D:\\git\\git\\RDMCT-A3C\\cie\\configs\\cie_proposed_inference.json",
+        "config_sha256": "9c1ef2f4c90c92158c13ea8538413daf8f6609c1f4a701d2e98534d593236293",
+        "transfer": "frozen_policy_evaluation_on_new_model"
+      },
+      "loaded": true
+    },
+    {
+      "method": "proposed",
+      "training_seed": 3,
+      "policy": {
+        "method": "proposed",
+        "training_seed": 3,
+        "checkpoint": "D:\\git\\git\\RDMCT-A3C\\cie\\models\\proposed\\cie_proposed_all_cie_proposed\\cie_proposed_all_cie_proposed_2026_08_02_15_10_55_0000--s-3\\itr_60.pkl",
+        "sha256": "1ae8ac705dc2c7856cebd69cb65aea1c15f40b22ffe62e1d64ff3df7ec2993ca",
+        "config": "D:\\git\\git\\RDMCT-A3C\\cie\\configs\\cie_proposed_inference.json",
+        "config_sha256": "9c1ef2f4c90c92158c13ea8538413daf8f6609c1f4a701d2e98534d593236293",
+        "transfer": "frozen_policy_evaluation_on_new_model"
+      },
+      "loaded": true
+    },
+    {
+      "method": "feature_only",
+      "training_seed": 1,
+      "policy": {
+        "method": "feature_only",
+        "training_seed": 1,
+        "checkpoint": "D:\\git\\git\\RDMCT-A3C\\cie\\models\\feature_only\\cie_feature_only_all_cie_feature_only\\cie_feature_only_all_cie_feature_only_2026_08_02_15_48_39_0000--s-1\\itr_60.pkl",
+        "sha256": "baae33c3f330c558646fa04479b0877e63cd9a96a9d5da157e4208ca27ab6499",
+        "config": "D:\\git\\git\\RDMCT-A3C\\cie\\configs\\cie_proposed_inference.json",
+        "config_sha256": "9c1ef2f4c90c92158c13ea8538413daf8f6609c1f4a701d2e98534d593236293",
+        "transfer": "frozen_policy_evaluation_on_new_model"
+      },
+      "loaded": true
+    },
+    {
+      "method": "feature_only",
+      "training_seed": 2,
+      "policy": {
+        "method": "feature_only",
+        "training_seed": 2,
+        "checkpoint": "D:\\git\\git\\RDMCT-A3C\\cie\\models\\feature_only\\cie_feature_only_all_cie_feature_only\\cie_feature_only_all_cie_feature_only_2026_08_02_16_39_22_0000--s-2\\itr_60.pkl",
+        "sha256": "bb7f774de1df9037869d2ea70cc807a6b9359ff67f0677b01e5f0c4581e8dbc7",
+        "config": "D:\\git\\git\\RDMCT-A3C\\cie\\configs\\cie_proposed_inference.json",
+        "config_sha256": "9c1ef2f4c90c92158c13ea8538413daf8f6609c1f4a701d2e98534d593236293",
+        "transfer": "frozen_policy_evaluation_on_new_model"
+      },
+      "loaded": true
+    },
+    {
+      "method": "feature_only",
+      "training_seed": 3,
+      "policy": {
+        "method": "feature_only",
+        "training_seed": 3,
+        "checkpoint": "D:\\git\\git\\RDMCT-A3C\\cie\\models\\feature_only\\cie_feature_only_all_cie_feature_only\\cie_feature_only_all_cie_feature_only_2026_08_02_16_48_20_0000--s-3\\itr_60.pkl",
+        "sha256": "50cd7abe450ba134240e7cca33e71333d5c586017be35bd80a7677b006741058",
+        "config": "D:\\git\\git\\RDMCT-A3C\\cie\\configs\\cie_proposed_inference.json",
+        "config_sha256": "9c1ef2f4c90c92158c13ea8538413daf8f6609c1f4a701d2e98534d593236293",
+        "transfer": "frozen_policy_evaluation_on_new_model"
+      },
+      "loaded": true
+    },
+    {
+      "method": "proposed_no_structure",
+      "training_seed": 1,
+      "policy": {
+        "method": "proposed_no_structure",
+        "training_seed": 1,
+        "checkpoint": "D:\\git\\git\\RDMCT-A3C\\cie\\models\\proposed\\cie_proposed_all_cie_proposed\\cie_proposed_all_cie_proposed_2026_08_02_14_55_21_0000--s-1\\itr_60.pkl",
+        "sha256": "23961d2d9f09473982a79271642fca1d6e76cd0bf3837240d5e38a2361d824ce",
+        "config": "D:\\git\\git\\RDMCT-A3C\\cie\\configs\\cie_proposed_inference.json",
+        "config_sha256": "9c1ef2f4c90c92158c13ea8538413daf8f6609c1f4a701d2e98534d593236293",
+        "transfer": "frozen_policy_evaluation_on_new_model"
+      },
+      "loaded": true
+    },
+    {
+      "method": "proposed_no_structure",
+      "training_seed": 2,
+      "policy": {
+        "method": "proposed_no_structure",
+        "training_seed": 2,
+        "checkpoint": "D:\\git\\git\\RDMCT-A3C\\cie\\models\\proposed\\cie_proposed_all_cie_proposed\\cie_proposed_all_cie_proposed_2026_08_02_15_03_12_0000--s-2\\itr_60.pkl",
+        "sha256": "4ed0602fc46bcff1dc5890cc4ad755e2588b25b2b010e7e799a8324932344988",
+        "config": "D:\\git\\git\\RDMCT-A3C\\cie\\configs\\cie_proposed_inference.json",
+        "config_sha256": "9c1ef2f4c90c92158c13ea8538413daf8f6609c1f4a701d2e98534d593236293",
+        "transfer": "frozen_policy_evaluation_on_new_model"
+      },
+      "loaded": true
+    },
+    {
+      "method": "proposed_no_structure",
+      "training_seed": 3,
+      "policy": {
+        "method": "proposed_no_structure",
+        "training_seed": 3,
+        "checkpoint": "D:\\git\\git\\RDMCT-A3C\\cie\\models\\proposed\\cie_proposed_all_cie_proposed\\cie_proposed_all_cie_proposed_2026_08_02_15_10_55_0000--s-3\\itr_60.pkl",
+        "sha256": "1ae8ac705dc2c7856cebd69cb65aea1c15f40b22ffe62e1d64ff3df7ec2993ca",
+        "config": "D:\\git\\git\\RDMCT-A3C\\cie\\configs\\cie_proposed_inference.json",
+        "config_sha256": "9c1ef2f4c90c92158c13ea8538413daf8f6609c1f4a701d2e98534d593236293",
+        "transfer": "frozen_policy_evaluation_on_new_model"
+      },
+      "loaded": true
+    },
+    {
+      "method": "proposed_greedy",
+      "training_seed": 1,
+      "policy": {
+        "method": "proposed_greedy",
+        "training_seed": 1,
+        "checkpoint": "D:\\git\\git\\RDMCT-A3C\\cie\\models\\proposed\\cie_proposed_all_cie_proposed\\cie_proposed_all_cie_proposed_2026_08_02_14_55_21_0000--s-1\\itr_60.pkl",
+        "sha256": "23961d2d9f09473982a79271642fca1d6e76cd0bf3837240d5e38a2361d824ce",
+        "config": "D:\\git\\git\\RDMCT-A3C\\cie\\configs\\cie_proposed_inference.json",
+        "config_sha256": "9c1ef2f4c90c92158c13ea8538413daf8f6609c1f4a701d2e98534d593236293",
+        "transfer": "frozen_policy_evaluation_on_new_model"
+      },
+      "loaded": true
+    },
+    {
+      "method": "proposed_greedy",
+      "training_seed": 2,
+      "policy": {
+        "method": "proposed_greedy",
+        "training_seed": 2,
+        "checkpoint": "D:\\git\\git\\RDMCT-A3C\\cie\\models\\proposed\\cie_proposed_all_cie_proposed\\cie_proposed_all_cie_proposed_2026_08_02_15_03_12_0000--s-2\\itr_60.pkl",
+        "sha256": "4ed0602fc46bcff1dc5890cc4ad755e2588b25b2b010e7e799a8324932344988",
+        "config": "D:\\git\\git\\RDMCT-A3C\\cie\\configs\\cie_proposed_inference.json",
+        "config_sha256": "9c1ef2f4c90c92158c13ea8538413daf8f6609c1f4a701d2e98534d593236293",
+        "transfer": "frozen_policy_evaluation_on_new_model"
+      },
+      "loaded": true
+    },
+    {
+      "method": "proposed_greedy",
+      "training_seed": 3,
+      "policy": {
+        "method": "proposed_greedy",
+        "training_seed": 3,
+        "checkpoint": "D:\\git\\git\\RDMCT-A3C\\cie\\models\\proposed\\cie_proposed_all_cie_proposed\\cie_proposed_all_cie_proposed_2026_08_02_15_10_55_0000--s-3\\itr_60.pkl",
+        "sha256": "1ae8ac705dc2c7856cebd69cb65aea1c15f40b22ffe62e1d64ff3df7ec2993ca",
+        "config": "D:\\git\\git\\RDMCT-A3C\\cie\\configs\\cie_proposed_inference.json",
+        "config_sha256": "9c1ef2f4c90c92158c13ea8538413daf8f6609c1f4a701d2e98534d593236293",
+        "transfer": "frozen_policy_evaluation_on_new_model"
+      },
+      "loaded": true
+    }
+  ],
+  "shared_input_fixture_valid": true,
+  "pending_parent_rejected": true,
+  "actual_optimization_tested": false
+}

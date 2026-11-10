@@ -14,13 +14,14 @@ min c_max
 
 ## 从这里开始
 
-文档按用途分成三个入口：
+当前中文研究主稿为 `JMS-version/JMS_Review_CN.tex`。按用途选择入口：
 
-- [完整运行指南](Producedocs/docs/how_to_run_and_get_final_mip_solution.md)：术语、安装、参数、单实例训练/测试、消融和故障排查。
-- [C&IE 投稿级实验入口](cie/README.md)：冻结协议、全部 campaign、统计口径、精确行数和投稿验收。
-- [C&IE 当前证据状态](cie/products/README.md)：仓库中已有结果能否用于论文。
+- [当前 JMS 模型与文稿](JMS-version/README.md)：主稿、模型说明、期刊与学位论文实验入口。
+- [期刊补充实验](JMS-version/JOURNAL_EXPERIMENT_COMMANDS.md)：已完成结果与后续缺口。
+- [C&IE 当前材料](cie/products/README.md)：中文迁移稿、补强实验及投稿缺口。
+- [完整运行指南](Producedocs/docs/how_to_run_and_get_final_mip_solution.md)：根目录 Petri/MIP 与学习选割流程的安装、参数和排错。
 
-`cie/docs/` 中的单路、两路和并行清单是历史运行记录或高级运维材料；正式实验以 [`cie/README.md`](cie/README.md) 为唯一协议。
+下方 smoke 属于历史 Petri/MIP 流程；当前联合模型 D 使用上方 JMS/C&IE 新入口。C&IE 历史固定结构模型的冻结复现协议保存在 [cie/README.md](cie/README.md)，不同模型、起点和预算的结果分别报告。
 
 ## 10 分钟 CPU smoke
 
@@ -162,7 +163,7 @@ python -c "import torch; print('torch', torch.__version__); print('cuda', torch.
 - [逐晶圆端到端 MIP](Producedocs/docs/per_wafer_path_mip.md)
 - [结构感知训练与消融协议](Producedocs/docs/a3c_structure_ablation.md)
 - [完整运行指南](Producedocs/docs/how_to_run_and_get_final_mip_solution.md)
-- [C&IE 投稿级实验入口](cie/README.md)
+- [C&IE 历史固定结构模型复现协议](cie/README.md)
 
 ## 复现底线
 
@@ -171,6 +172,10 @@ python -c "import torch; print('torch', torch.__version__); print('cuda', torch.
 - 修改工艺时间、驻留上限、PEC 或 cleaning 后，重新生成 LP 和与其 SHA-256 匹配的 warm start；
 - 保存 Git commit、环境清单、配置、manifest、LP/checkpoint/ACS hash、raw CSV/JSON、`.sol`、日志和分析报告；
 - 仓库已有结果不代表正式 campaign 已完成，以 [C&IE 当前证据状态](cie/products/README.md) 为准。
+
+## 版本控制与本地证据
+
+源码、测试、当前稿件和必要审查记录纳入版本控制。部分大型实验、冻结 LP、检查点和历史归档仅保存在本地并由 `.gitignore` 排除；GitHub 克隆不是这些原始证据的完整备份。保留原始解、验证记录和模型哈希，活动批次只读检查。`JMS/` 与 `JMS-version/` 是不同稿件，不自动同步。
 
 ## License
 

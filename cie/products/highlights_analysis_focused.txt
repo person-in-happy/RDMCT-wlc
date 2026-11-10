@@ -1,5 +1,5 @@
-A two-stage MILP models dual-source mixed rotating-chamber scheduling.
-Under 600 s, the two-stage workflow yields lower waits and cadence.
-Precomputed SPBS supplied to SCIP lowers mean PDI by 26.19%.
-Role features plus beam decoding attain the lowest nominal mean PDI.
-All 729 larger shifted-instance runs return solver-checked incumbents.
+Wafer pairs connect handling and chamber cycles in a joint scheduling MILP.
+Batch inventory variables support deterministic decoding of wafer identities.
+Structured initialization improves selected feasible schedules under time limits.
+Cut-selection rankings depend on the instance and separation protocol.
+Product-return makespan and final equipment occupancy are evaluated separately.

@@ -1,711 +1,1262 @@
-\documentclass[preprint,12pt,authoryear]{elsarticle}
+% !TeX program = xelatex
+% !TeX encoding = UTF-8
+\documentclass[preprint,12pt,nonatbib]{elsarticle}
 
-\usepackage[UTF8,scheme=plain]{ctex}
+\usepackage{iftex}
+\ifXeTeX\else
+  \PackageError{CIE_Review_CN}{This manuscript requires XeLaTeX}
+    {Select XeLaTeX as the compiler and compile again.}
+\fi
+\IfFileExists{ctex-fontset-fandol.def}
+  {\usepackage[UTF8,scheme=plain,fontset=fandol]{ctex}}
+  {\usepackage[UTF8,scheme=plain,fontset=windows]{ctex}}
 \usepackage{amsmath,amssymb,mathtools}
-\usepackage{booktabs,multirow,array}
+\usepackage{booktabs,array,multirow}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}m{#1}}
 \usepackage{graphicx}
 \usepackage{enumitem}
+\usepackage{placeins}
 \usepackage{lineno}
+\usepackage{float}
+\usepackage{flafter}
 \usepackage{microtype}
-\usepackage{url}
-\usepackage{tikz}
-\usetikzlibrary{arrows.meta,positioning,fit}
+  \usepackage{xurl}
+  \usepackage{xcolor}
+\definecolor{JMSCiteBlue}{HTML}{0072B2}
+\usepackage[colorlinks=true,citecolor=JMSCiteBlue,linkcolor=JMSCiteBlue,urlcolor=JMSCiteBlue]{hyperref}
+\graphicspath{{./}}
 \setlength{\emergencystretch}{3em}
+\setcounter{topnumber}{2}
+\setcounter{dbltopnumber}{3}
 
-\journal{Computers \& Industrial Engineering（中文审查版）}
-\modulolinenumbers[5]
+\renewcommand{\topfraction}{0.90}
+\renewcommand{\dbltopfraction}{0.72}
+\renewcommand{\textfraction}{0.10}
+\renewcommand{\floatpagefraction}{0.90}
+\renewcommand{\dblfloatpagefraction}{0.95}
+
+\journal{Computers \& Industrial Engineering}
+\usepackage[backend=biber,style=apa,natbib=true,doi=true,url=true]{biblatex}
+\addbibresource{rdmct_cie_current_references.bib}
 
 \newcommand{\method}{RDMCT-HBS}
 \newcommand{\cmax}{C_{\max}}
 \newcommand{\pdi}{\mathrm{PDI}}
+\newcounter{algorithm}
+\newcommand{\algorithmtitle}[1]{\refstepcounter{algorithm}\noindent\textbf{算法~\thealgorithm：#1}\par\smallskip}
+
+
+\usepackage[margin=22mm]{geometry}
+\newsavebox{\CIEtablebox}
+
+\hypersetup{pdfauthor={},pdftitle={PW-pair scheduling: Chinese review manuscript},pdfsubject={Anonymous working manuscript}}
 
 \begin{document}
+\raggedbottom
 \begin{frontmatter}
-
-\title{双源混流旋转腔室组合设备调度的两阶段MILP与结构感知学习增强分支割}
-\author{匿名作者}
-
+\title{基于PW对的双源混流旋转腔组合设备两阶段调度与结构化求解}
 \begin{abstract}
-双源混流旋转腔室组合设备需要在共享腔室、装载锁和机械手之间协调产品晶圆与
-可复用真空区假片。同模式产品晶圆采用消除标签对称性的规范配对及固定腔室槽位；
-在此边界内，腔室旋转、清洗、物料可用性、共享资源次序和驻留限制相互耦合，
-使最大完工时间相同的排程仍可能具有完全不同的等待与加工节拍。本文构建面向
-混合$4\times1$/$2\times2$运行的有限时域两阶段MILP：第一阶段最小化端到端
-最大完工时间，第二阶段在数值容差内保持离散排程和最大完工时间，并精修物理路线等待与腔室节拍。
-为求解该模型，本文提出旋转双源混流组合设备层次束搜索方法（\method{}），在SCIP中集成结构保持二元骨架初始解、变量
-角色重构、层次REINFORCE、A3C启发的并行轨迹采集、有限宽束解码和结构化割集补全。四个小规模实例
-经精确求解以及针对同一序列化MILP的SCIP与后处理核查，用于建立模型实现的内部一致性证据。2700次标称实验中，\method{}在七种方法中取得最低平均原始--对偶
-积分和求解时间，平均PDI较适配HEM和SCIP分别降低1.41\%和1.97\%。独立960次
-实验表明，把预计算SPBS解作为SCIP输入后，求解窗口内平均PDI降低26.19\%，可行解
-获得率由51.67\%提高到100\%；该比较不计SPBS构造时间。1500次同预算工作流比较中，
-采用540~s主求解和至多60~s精修的完整两阶段流程，相对采用600~s主求解的单阶段流程，
-其保存排程的路线总等待、路线最大等待、节拍变异和节拍偏差分别低51.91\%、68.89\%、
-39.70\%和94.05\%。在9个更大构型的729次
-分布外实验中，每种方法均获得通过SCIP与后处理一致性核查的可行解。这些结果支持两阶段工作流的
-运行价值，以及结构感知精确搜索在标称范围的观察平均计算优势。
+
+针对采用辅助晶圆补位的满片加工场景，本文研究双源混流旋转腔组合设备的调度问题。以两片晶圆组成的PW对为搬运与周期联结单位，结合Pjob库存表示，建立联合决定配对、分腔、清洁、辅助片复用及资源次序的两阶段混合整数线性规划模型。第一阶段最小化产品回片完工时间，第二阶段在保留其上界与主要离散结构的条件下精修等待和节拍。求解流程结合结构化初始排程、五层结构保持二元骨架改善以及HEM学习选割的特征与推理扩展，并将最终赋值解码为具体晶圆动作。
+在工艺腔非加工驻留和机械手承片上限均为100~s的默认配置下，已有八个小规模实例中四个证明主问题最优，一个获得限时可行解。新增180次算法消融与分离设置对照表明：在共同可行输入条件下，根分离协议中的结构化初始化将2片混合实例的完工时间由518降至505~s，将4片混合实例由542降至541~s；学习选割的相对表现随实例与分离设置变化，尚未呈现一致优势。另36次结构对照支持先利用已有结构再开放联合搜索，12次收尾对照未产生额外改善。扩展驻留窗口配置中的30组阶段内配对均保持产品完工时间并降低路线等待。结果支持PW对表示的可验证解码、结构化初始化的条件性作用与时序精修机制，但不支持大规模可扩展性、普遍选割优势或端到端加速的结论。
+
 \end{abstract}
-
-\begin{highlights}
-\item 两阶段MILP统一表示双源混流旋转腔室组合设备调度。
-\item 同为600~s总预算，两阶段流程得到更低的等待与节拍指标。
-\item 预计算SPBS输入SCIP后，平均PDI降低26.19\%，可行解率达到100\%。
-\item 23维变量角色表示支持结构感知的束式割解码与补全。
-\item RDMCT-HBS在2700次标称运行中取得最低观察平均PDI与时间。
-\end{highlights}
-
 \begin{keyword}
-旋转腔室组合设备 \sep 半导体制造 \sep 混合整数线性规划 \sep
-学习增强分支割 \sep 初始解 \sep 束搜索 \sep 排程稳定性
+Semiconductor manufacturing \sep Cluster tool scheduling \sep Wafer pairing \sep Mixed-integer linear programming \sep Structured initialization \sep Cut selection
 \end{keyword}
-
 \end{frontmatter}
+\modulolinenumbers[5]
 \linenumbers
-
 \section{引言}
 
-半导体装备投资巨大，其有效产能往往不只由名义加工时间决定，更取决于设备内部
-资源能否被合理协调。组合设备把工艺腔室、装载锁和机械手集成在同一个强耦合系统
-中，一个局部看似合理的动作可能同时推迟多个下游工序。因此，在不增加硬件的情况
-下，改进调度是提高装备利用率和制造效率的直接途径
-\citep{chien2021drlhga,hong2026ddpgct}。
+等离子体增强化学气相沉积（plasma-enhanced chemical vapor deposition，PECVD）是一种重要的半导体薄膜沉积工艺，
+三维器件结构与多层薄膜集成对沉积均匀性和工艺处理能力提出了更高要求\citep{appliedprecisioncvd}。对此，半导体设备
+厂商生产多空间工艺模块与多指机械手，为提高单个设备内的并行处理能力提供了结构基础\citep{gu2024applied,gu2024multifinger}，
+并通过组合设备（cluster tool，CT）将工艺模块、机械手和装载锁连接为连续的晶圆加工路径。其中，CT的可行运行时序由工
+艺处理与搬运时间、装载锁切换、腔室清洁和驻留约束共同决定\citep{pan2018survey}。
 
-本文研究应用于PECVD工艺场景的双源混流旋转腔室组合设备。产品晶圆从大气侧
-装载端口进入，可复用真空区假片从独立存储区进入；两条物流在旋转腔室汇合，并
-竞争真空机械手。设备同时执行$4\times1$和$2\times2$配方。前者按前后两侧
-组成旋转批次，后者通过相邻曝光共享中间产品对。清洗还会插入仅含假片的加工周期，
-并把连续生产划分为多个epoch。本文按晶圆编号在各工艺模式内形成规范产品对，并把
-这些可互换产品对固定到规范的腔室--批次--侧面槽位或腔室--链位置；这是消除标签
-对称性的建模约定，而不是待优化的产品重组或腔室侧面分配。MILP在该给定结构上联合
-处理操作激活、物理假片身份、配置允许的机械手与装载锁选择、共享资源次序和连续事件时刻。
 
-现有组合设备研究已经覆盖周期调度、多晶圆类型、驻留限制、清洗和多空间模块
-\citep{qiao2022binary,li2022conditioncleaning,wang2023optimalcyclic,
-li2025cyclicmultitype,yang2025miptwowafers,gu2024multifinger}，但尚未在一个
-有限时域模型中统一表示双源物流、混合旋转配方、可复用假片库存和共享搬运。
-区别并非简单增加一组容量约束：假片复用、清洗激活和完整双源路线会改变机械手冲突
-关系，必须与资源次序和时序在同一模型中保持一致。
+本文考虑采用可复用辅助晶圆保护工位底座的难清理薄膜加工场景，并将生产与清洁均需满片占位作为工艺前提。辅助晶圆在
+多工位工艺腔室加工且产品晶圆不足时或腔室清洁时补位，使得薄膜沉积到辅助晶圆上保护底座，此时所有工位均由晶圆占用，形
+成满片加工。辅助晶圆不计入产品产出，归还后可复用，但其取放、旋转、搬运及重复借用会占用设备资源。产品晶圆从大气侧装
+载端口进入，经对准和装载锁送至腔室；辅助晶圆则分为单源配置和双源配置，单源配置中的辅助晶圆也从大气侧进入，双源配置
+中的辅助晶圆则由真空存储区供给，与产品晶圆形成混流。本文算例使用给定的标称工艺参数，不将其解释为特定产线的实测性能。
 
-学习式调度通常直接控制派工或工艺参数
-\citep{liu2022cnna3c,zhang2024qeda,kim2025adaptivecluster,
-kim2025noncyclic}。与本文工程背景最接近的\citet{hong2026ddpgct}采用DDPG与
-离散事件仿真调节PVD组合设备的连续加工时间。本文的决策层不同：加工时间给定，
-算法必须构造离散旋转腔排程，并保留MIP的下界与最优性证明。因此，本文把学习
-机制置于精确求解器内部，而不是用黑箱策略替代数学规划。
+辅助晶圆和旋转腔的引入使得腔室加工不再局限于传统的加工模式，以四工位旋转腔为例，腔室同时支持以$4\times1$为代表的并行加工和
+以$2\times2$为代表的链式加工。前者使四片晶圆同步完成一次工艺处理；后者通过成对装卸与旋转使每片产品连续参加两次工艺处理，链
+首和链尾采用辅助晶圆进行一次加工。本文算例中两种加工模式的单片总工艺处理时长相同，链式加工通过两次处理及中间旋转形成不同的装卸与资源衔接关系。
 
-本文解决两个相互关联的研究缺口。模型方面，以两阶段MILP区分吞吐量与排程质量，
-同时保持二者属于同一套物理决策；算法方面，把设备结构同时用于原始可行解和割平面
-选择。研究逻辑由此形成“设备物理结构—精确调度模型—模型诱导的搜索瓶颈—结构感知
-分支割”的完整链条。
-
-主要贡献如下：
-\begin{enumerate}[leftmargin=*]
-\item 构建双源混流旋转腔室组合设备的有限时域MILP，在规范同模式配对和固定腔室
-槽位条件下，统一表示旋转事件、机械手、装载锁、清洗epoch、驻留和可复用真空区假片。
-\item 引入保持最大完工时间的第二阶段，使模型在不改变第一阶段生产方案的条件下，
-进一步优化产品物理等待和腔室加工节拍。
-\item 提出结构感知改进HEM方法\method{}，将SPBS初始解、变量角色特征、
-A3C启发并行训练、有限宽束解码和结构化割集补全嵌入SCIP。
-\end{enumerate}
-
-本文采用互补证据检验两项贡献：小规模精确实例核查模型实现，完整标称矩阵比较算法，
-配对实验评价预计算初始解输入，同预算工作流比较评价两阶段方案，析因和分布偏移实验
-刻画计算难度及规模扩展能力。
-
-\section{研究基础与定位}
-
-\subsection{组合设备调度模型}
-
-组合设备模型已由稳态机械手循环扩展到多产品与附加约束。双臂工具的集成模式、
-并行腔负载和多晶圆类型得到持续研究
-\citep{kim2021integrated,ko2021wafer,zhu2022twotypes}；近期模型进一步联合决定
-投放顺序、机械手任务、腔室分配和驻留
-\citep{li2025cyclicmultitype,yang2025miptwowafers}。清洗、吹扫和后处理研究表明，
-仅满足腔室容量并不能保证时序可行
-\citep{qiao2022binary,lee2023cleaningplan,yuan2023purge,
-zhu2023postprocess,pan2024cycletime}。
-
-旋转和多空间模块还引入侧面相关的装卸与共享腔室运动。\citet{gu2024multifinger}
-研究多指机械手和多空间加工模块，为本文的腔室结构提供直接参照，但其核心是计算
-给定周期序列的时刻。本文在规范同模式配对和固定腔室槽位的明确边界内，把双源产品--
-假片路线、混合配方激活、清洗epoch、资源次序与事件时刻统一到有限批次模型。因而，
-本文的扩展不包括内生产品重组或腔室侧面分配，而在于固定物理布局下的完整双源可行性与时序优化。
-
-\subsection{学习增强调度与精确优化}
-
-深度强化学习已经与遗传搜索、自适应搜索和领域编码结合用于半导体调度
-\citep{chien2021drlhga,liu2022cnna3c,zhang2024qeda,
-li2022hybridfeedback}。这些工作共同说明，学习策略只有与问题结构结合时才能
-稳定发挥作用。精确优化则提供显式约束、原始与对偶界和可验证可行性；近年来的
-学习增强MIP方法在保持这些性质的同时指导分支、原始搜索和割选择
-\citep{bengio2021machine,khalil2022mipgnn,scavuzzo2024mlbb}。
-
-割选择尤其适合本文模型，因为不同割即使具有相近通用效率，也可能分别约束腔室
-分配、连续时刻或二者耦合。已有研究采用强化学习、监督排序、前瞻模仿和自适应
-打分管理割平面\citep{tang2020cut,huang2022cutranking,
-paulus2022looking,turner2023adaptive}。HEM进一步把选择建模为数量与有序子集的
-层次决策\citep{wang2023hem,wang2024hemtpami}，但其通用特征不能区分变量的
-设备角色，贪心解码也会过早丢弃替代序列。本文的创新正是把双源旋转腔MILP的
-物理结构引入该层次决策。
-
-\section{工业问题与两阶段MILP}
-
-\subsection{双物流及其交互}
-
-图~\ref{fig:system-zh-new}给出理解模型所需的设备结构。产品晶圆经过大气域、上
-装载锁、真空机械手、旋转腔室和下装载锁后返回装载端口；真空区假片始终位于真空域。
-两条物流共享真空机械手（VTR）和腔室，但具有不同的释放与返回要求；大气机械手
-（ATR）负责产品晶圆的外部路线。
-
-\begin{figure}[htbp]
+\begin{figure}[t]
 \centering
-\resizebox{\linewidth}{!}{%
-\begin{tikzpicture}[
-node distance=7mm and 7mm,
-box/.style={draw,rounded corners,align=center,minimum height=8mm,minimum width=16mm,fill=blue!5},
-vbox/.style={box,fill=orange!10},
-flow/.style={-{Latex[length=2mm]},thick},
-dflow/.style={-{Latex[length=2mm]},thick,dashed,red!70!black},
-domainbox/.style={draw,dashed,rounded corners,inner sep=4mm}]
-\node[box] (lp) {装载\\端口};
-\node[box,right=of lp] (atr) {ATR};
-\node[box,right=of atr] (al) {对准器};
-\node[vbox,right=of al] (llu) {上装载锁};
-\node[vbox,right=of llu] (vtr) {VTR};
-\node[vbox,right=of vtr,minimum width=27mm] (ch) {旋转腔室\\CH2--CH3};
-\node[vbox,below=of vtr] (lll) {下装载锁};
-\node[vbox,above=of vtr] (store) {真空区假片\\存储区};
-\draw[flow] (lp)--(atr)--(al)--(llu)--(vtr)--(ch);
-\draw[flow] (ch) |- (lll);
-\draw[flow] (lll) -| (atr);
-\draw[flow] (atr) -- ++(0,-15mm) -| (lp);
-\draw[dflow] (store)--(vtr);
-\draw[dflow] (vtr)--(ch);
-\draw[dflow] (ch) to[bend right=28] (store);
-\node[domainbox,fit=(lp)(atr)(al)] (atm) {};
-\node[domainbox,fit=(llu)(vtr)(ch)(lll)(store)] (vac) {};
-\node[above=1mm of atm.north] {大气域};
-\node[above=1mm of vac.north] {真空域};
-\end{tikzpicture}}
-\caption{双源物流与共享资源。实线表示产品晶圆路线，虚线表示可复用真空区假片。}
+\includegraphics[width=\linewidth]{fig_system_pjob_cn}
+\caption{双源混流旋转腔组合设备拓扑与晶圆加工路径}
 \label{fig:system-zh-new}
 \end{figure}
 
-$4\times1$模式依次执行前侧装载、旋转、后侧装载、加工和逆序卸载，最后不足的
-产品侧由假片补齐。$2\times2$模式把产品对连接成曝光链，相邻曝光共享中间产品对，
-首尾位置使用假片对。清洗只能在合法曝光边界中断链，并占用一个仅含假片的加工周期。
-同一物理假片的两个占用区间不得重叠。
 
-由此形成三个相互作用的表示层：布局--激活层记录规范产品对、固定腔室槽位、清洗
-epoch和物理假片使用；资源层表示配置允许的机械手、装载锁选择及冲突动作次序；
-时刻层决定事件时刻并满足驻留限制。活动路线与假片身份会改变资源冲突和时序网络，
-因而后两层不能在忽略给定布局--激活一致性的情况下独立求解。
+已有CT研究建立了工艺处理、搬运与吞吐率之间的解析关系\citep{perkinson1994throughput}，并通过线性规划、启发式和时间
+Petri网求解带驻留约束的排程\citep{rostami2002optimal,wu2010closedform,qiao2012sojourn}。研究范围进一步扩展到重
+入工艺、多类晶圆和可选工艺模块\citep{qiao2014revisiting,wang2020multiple,wang2025virtualcell}。四指机械手与四空
+间模块的洁净/脏手分工及稳态周期分析，以及两类晶圆投放与搬运的联合优化，为复杂设备结构提供了建模基础\citep{gu2024multifinger,yang2025miptwowafers}。
 
-\subsection{决策结构和主要约束族}
+周期清洁调度采用任务序列枚举、部分装载与时刻控制、虚拟晶圆占位和腔室状态触发等方式协调清洁与
+生产\citep{kim2013cleaning,yu2020delay,qiao2022binary,li2022conditioncleaning}。共享缓冲同步和动态动作筛选用于
+避免故障停机与非周期运行中的死锁\citep{zhu2025failuredeadlock,kim2025noncyclicdeadlock}，等待约束还关系到设备产
+出和上游控制\citep{lee2018waiting}。对满片加工的设备而言，清洁同时改变生产链分段、辅助晶圆占用和真空机械手次序，单独安排
+产品工艺处理或清洁时刻难以完整表示这些依赖关系。
 
-设$\mathcal W$为产品晶圆，$\mathcal P$为按工艺模式和晶圆编号形成的规范产品对，
-$\mathcal C$为旋转腔室，
-$\mathcal K$为候选配方位置，$\mathcal O$为操作集合，$\mathcal R$为单位容量资源。
-$\mathcal K(p)$表示产品组$p$可用的位置，$\mathcal A$为工艺前驱弧，$\mathcal O_r$
-为可能使用资源$r$的操作。对腔室$c$，$\mathcal V_c=(v_{c1},\ldots,v_{cn_c})$和
-$\mathcal E_c=\{1,\ldots,E_c\}$分别为有序候选加工周期和潜在清洗epoch，
-$\mathcal J_c^{\rm DW}$是假片需求集合，$\mathcal T_c$为物理假片库存。
-$\bar x_{pk}\in\{0,1\}$给出产品对到规范腔室槽位的
-固定映射，$x$保留为模型内可审计的分配指示量；$u$和$b$启用位置与操作，
-$a$分配清洗epoch，$g$把假片需求分配给物理假片，$y$决定共享资源操作次序；
-$s_o$和$e_o$为操作开始与完成时刻，$\delta_{oo'}$和$\rho^r_{oo'}$
-分别表示工艺间隔和端点相关回位间隔，$M$是由排程时域确定的有效上界。为便于阅读，
-以下关系概括主要约束族，而未逐行展开生成LP中的全部事件专用路线与旋转等式：
-\begin{align}
-&x_{pk}=\bar x_{pk},\qquad \sum_{k\in\mathcal K(p)}x_{pk}=1
-&&p\in\mathcal P,\\
-&x_{pk}\le u_k &&p\in\mathcal P,\ k\in\mathcal K(p),\\
-&u_{k+1}\le u_k &&k,k+1\in\mathcal K,\\
-&b_o=\chi_o(x,u,a) &&o\in\mathcal O,\\
-&b_{o'}\le b_o &&(o,o')\in\mathcal A,\\
-&0\le s_o\le Mb_o,\qquad e_o=s_o+d_ob_o &&o\in\mathcal O,\\
-&s_{o'}\ge e_o+\delta_{oo'}-M(2-b_o-b_{o'}), &&(o,o')\in\mathcal A,\\
-&s_{o'}\ge e_o+\rho^r_{oo'}-M(1-y^r_{oo'})-M(2-b_o-b_{o'}),
-&&\{o,o'\}\subseteq\mathcal O_r,\\
-&s_o\ge e_{o'}+\rho^r_{o'o}-My^r_{oo'}-M(2-b_o-b_{o'}),
-&&\{o,o'\}\subseteq\mathcal O_r,\\
-&\sum_{\tau\in\mathcal T_c}g_{j\tau}=b_j &&j\in\mathcal J_c^{\rm DW}.
-\end{align}
-第一式把每个规范产品对固定到唯一槽位，故$x$不是内生分组或侧面选择。二元仿射关联
-$\chi_o$使且仅使所选$4\times1$侧面、$2\times2$链位置或清洗周期对应的事件激活；
-前驱激活不等式保证活动后继不存在未激活的必要前驱，时间上界和持续时间等式又使
-未激活操作取零、已激活操作具有持续时间$d_o$。带相同
-激活条件的工艺弧和成对析取约束统一处理ATR、对准器、装载锁槽位、VTR、腔室及每片
-可复用假片的互斥占用；$\rho$包含端点相关的机械手空载回位时间。
+制造系统的时序质量还要求区分批次效率与工序衔接。Lee等关于等待约束的研究将允许等待与有效产出联系起来\citep{lee2018waiting}；
+Weng等关于Just in time（JIT）调度的研究则以作业完成时刻匹配下游可接收时刻为目标\citep{weng2022jit}。对于PECVD设备，减少无
+效等待、协调重复生产周期的开始间隔，有助于形成可预测的供片与取片安排。
 
-表~\ref{tab:rule-zh-new}把其余工业规则与数学机制对应起来。该映射说明，模型可行性
-来自整条设备轨迹，而不仅是腔室不重叠。
+设备状态研究为参数更新的工程动机提供了依据。Sun等介绍了智能设备数据分析工具在半导体制造质量、效率与生产率改进中的
+应用\citep{sun2024manufacturing}。Chen等通过配方周期提取、时频特征和无监督自编码器检测HDP-CVD设备的传感数据异常\citep{chen2020anomaly}；
+Biebl等则将故障时间区间预测与贝叶斯根因分析连接到维护建议和维护计划\citep{biebl2020maintenance}。工程上需要考虑两类
+硬件偏差：同一动作的实际时长偏离标称值，以及不同腔室或机械手之间的性能差异。它们可能改变资源可用时刻，使原有模式评价和
+排程需要随参数更新而重新计算\citep{rahmani2014robust}。本文将动作时长作为实例输入，在给定设备参数下分析配方、清洁与物料来源的调度关系。
 
-\begin{table}[htbp]
-\centering
-\caption{MILP表示的工业规则}
-\label{tab:rule-zh-new}
-\begin{tabular}{p{0.23\linewidth}p{0.34\linewidth}p{0.33\linewidth}}
+上述晶圆与资源约束形成混合整数调度问题。对于此问题，强化学习可用于CT动作选择，也可辅助MILP
+搜索\citep{kim2025adaptivecluster,tang2020cut,huang2022cutranking,paulus2022looking}。Wang等设计了HEM以层次策略协调割数量和
+有序子集，通过强化学习训练选割策略，为在MILP求解器内协调割数量、子集与顺序提供了基础\citep{wang2023hem}。本文的学习选割实验采用已冻结策略的迁移评估，不在当前调度实例上重新训练。
+
+上述研究已覆盖多指机械手、多空间模块与清洁调度。双源供片、满片加工、可复用辅助晶圆及混合配方在旋转腔中的联合安排进一步联结了库存、工艺链与搬运资源。本文研究具有四工位旋
+转腔的 PECVD 组合设备的满片加工，围绕满片条件下的批次生产组织与具体晶圆排程，主要贡献如下：
+\begin{enumerate}[leftmargin=*]
+\item 建立以PW对为搬运与周期联结单位、以Pjob库存恢复具体晶圆身份的两阶段MILP模型，联合表示双源供片、满片加工、连续处理、清洁和有限辅助片复用，保持产品完工时间优先，并在保留主要结构后精修等待与节拍；
+\item 构建结构化初始化与HEM扩展选割相衔接的限时求解流程，以五层SPBS改善原始可行起点，并考察通用MILP变量角色特征、结构重排及推理解码的作用。通过同输入的组件消融与分离设置对照，识别结构化初始化的条件性收益和冻结策略迁移的适用限制。
+\end{enumerate}
+
+第2节定义旋转腔组合设备调度模型；第3节介绍算法求解与解码流程；第4节设计实验验证；第5节讨论工业工程意义与适用边界，第6节给出结论；附录保留历史参数配置与完整负结果。
+
+\section{旋转腔组合设备调度模型}
+\setcounter{equation}{0}
+
+一次生产处理或清洁处理对应一个加工周期，其中生产周期指按产品配方执行工艺处理的周期。清洁处理仅由辅助晶圆占位，其阈值至少为2。
+
+模型输入包括动作时长、资源容量、驻留上限、清洁阈值和辅助晶圆数量，输出为具体晶圆的资源指派及动作起止时刻。
+表~\ref{tab:symbol-cn-a}定义输入常量与集合，表~\ref{tab:symbol-cn-b}定义主要决策变量及辅助变量，其余符号在正文首次使用处定义。
+所有时刻和时长的单位均为秒，数量的单位为片、对或周期。
+
+
+
+
+
+
+\begin{table}[!t]
+\centering\small
+\caption{批次任务调度的输入参数与集合配置}
+\label{tab:symbol-cn-a}
+\renewcommand{\arraystretch}{1.03}
+\setlength{\tabcolsep}{4pt}
+\begin{lrbox}{\CIEtablebox}\begin{tabular}{@{}p{0.24\textwidth}p{\dimexpr0.76\textwidth-8pt\relax}@{}}
 \toprule
-工业规则 & 数学机制 & 排程作用 \\
-\midrule
-旋转侧面次序 & 事件等式与前驱弧 & 保证装载--旋转--加工--卸载物理过程 \\
-混合配方 & 规范同模式配对、固定槽位及激活链接 & 消除标签对称性并强制合法共享曝光 \\
-清洗间隔 & 周期--epoch分配与容量 & 在合法边界插入假片清洗 \\
-可复用假片库存 & 物理假片分配与区间析取 & 禁止同一假片被同时使用 \\
-机械手与装载锁容量 & 端点相关资源排序 & 消除搬运冲突并计入回位 \\
-驻留限制 & 成对路线事件的时间上界 & 保护时间敏感产品和搬运 \\
-有限批次吞吐量 & 最晚返回装载端口时刻 & 度量端到端而非腔室内完工 \\
+符号或配置项 & 定义与取值\\\midrule
+$\mathcal J,\mathrm{Pjob}_j$ & $\mathcal J=\{1,\ldots,J\}$是批次任务集合；$\mathrm{Pjob}_j$是任务$j$的产品晶圆集合。\\
+$\mathcal L_j,\ell_{jk}$ & $\mathcal L_j$是任务$j$实际晶圆编号的升序表，$\ell_{jk}$是其第$k$片晶圆的来源LP编号。\\
+$N_{j\ell},N_j,N_\zeta,N_\psi,N$ & 分别表示任务$j$在LP $\ell$的产品数、任务$j$的产品总数、两种生产配方的产品数及全批产品总数。\\
+$m_j,\mathcal M,\mathcal C_j$ & $\mathcal M=\{\zeta,\psi,\mathrm{cl}\}$是加工类型集合，三种标签依次表示$4\times1$、$2\times2$与清洁；$m_j$是任务$j$的加工模式类型。$\mathcal C=\{\mathrm{CH2},\mathrm{CH3}\}$是腔室集合，$\mathcal C_j\subseteq\mathcal C$是任务$j$允许访问的非空腔室集合。\\
+$\mathcal P,\mathcal Q_c,\mathcal I$ & $\mathcal P=\{1,\ldots,P_{\max}\}$是PW对集合；$\mathcal Q_c=\{1,\ldots,Q_{\max}\}$是腔室$c$的周期集合；$\mathcal I=\mathcal P\times\{0,1\}$是晶圆路线任务集合。\\
+$T,J_{\max},P_{\max},Q_{\max}$ & 依次表示全设备生产周期数上界、清洁次数上界、PW对容量和每腔候选周期容量。\\
+$\mathcal S,\sigma$ & $\mathcal S=\{A,V\}$是来源区域集合，元素分别是大气区、真空区；$\sigma$表示来源配置，单源取0、双源取1。\\
+$\mathcal O,\mathcal O^{\rm occ}$ & $\mathcal O$是候选物理动作集合，$\mathcal O^{\rm occ}$是候选资源占用区间集合，由路线与周期模板生成。\\
+$\mathcal R,K_\rho,\mathcal D$ & $\mathcal R$是资源集合，$K_\rho$是资源$\rho$的容量:ATR承2片、VTR承4片，AL容量1，上/下LL各2槽，腔室4工位,$\mathcal D=\{1,\ldots,D\}$是辅助晶圆集合，两个腔时存储容量为10片，实际存储8片。\\
+$d_m\ (d_\zeta,d_\psi,d_{\mathrm{cl}})$ & 表示类型$m$的加工持续时间；分别默认180、90、500 s；$2\times2$产品需相邻两次加工处理。\\
+$d_o^{\rm ATR},d_o^{\rm VTR},r_c$ & 分别表示ATR取放时长、VTR取放时长和腔室$c$半周旋转时长；分别默认4、1、2 s。\\
+$t_{\rm ATR},t_{\rm VTR},t_{\rm empty}$ & 分别表示ATR交换时长、VTR交换时长和ATR从LL移动LP的时长，默认3、2、6 s。\\
+$t_{\rm AL},t_{\rm pump},t_{\rm vent}$ & 分别表示产品对准、上LL抽气及下LL放气时长，默认20、30、25 s；辅助片不执行AL对准。\\
+$t_{\rm U}^{\rm reset},t_{\rm L}^{\rm reset}$ & 分别表示上/下LL槽位复位时长，默认30、25 s，从另一侧取片结束后开始计。\\
+$d_o,\delta_{oo'},\delta^\rho_{oo'}$ & 分别表示动作$o$的持续时间、$o$结束至后续动作$o'$开始的最小时间间隔、资源$\rho$上从$o$至$o'$的换位或复位间隔。\\
+$H$ & 表示清洁阈值，$H\ge2$，默认3；累计1至$H-1$次可提前清洁，达到$H$必须清洁。\\
+$\overline R_{i\rho}$ & 表示路线任务$i$在资源$\rho$的驻留上限，默认100 s；模块按放片结束至取片开始计，机械手按取片开始至放片结束计。\\
+$B,M$ & 分别表示整个加工排程的时间上界和加上必要间隔的约束松弛量，前者默认10000 s；后者取$M=B+\max\{\delta_{oo'},\delta^\rho_{oo'},r_c\}$。\\
+$\lambda_1,\lambda_2,\lambda_3,\lambda_4$ & 依次是总等待、最大单项等待、节拍变化的权重和软等待超额的罚权重，基准取$(1,10,25,0)$。\\
+$\bar\omega_\alpha,\varepsilon_C,\varepsilon_2$ & $\bar\omega_\alpha$是等待项$\alpha$的软上限；$\varepsilon_C=\varepsilon_2=10^{-6}$，分别是产品完工上界容差和二阶段加权目标容差。\\
 \bottomrule
-\end{tabular}
+\end{tabular}\end{lrbox}\ifdim\wd\CIEtablebox>\linewidth\resizebox{\linewidth}{!}{\usebox{\CIEtablebox}}\else\usebox{\CIEtablebox}\fi
 \end{table}
 
-令$H$为两次清洗间允许的最大活动加工周期数。清洗激活与epoch一致性写为
-\begin{align}
-&\sum_{e\in\mathcal E_c}a_{vce}=b_v,\qquad a_{vce}\le z_{ce},\qquad
-z_{ce}\le\sum_{v\in\mathcal V_c}a_{vce},\\
-&\sum_{v\in\mathcal V_c}a_{vce}\le Hz_{ce},\qquad z_{c,e+1}\le z_{ce},\\
-&b_{v_{c,q+1}}\le b_{v_{cq}},\\
-&\sum_{e\in\mathcal E_c}e\,a_{v_{cq},c,e}
-\le\sum_{e\in\mathcal E_c}e\,a_{v_{c,q+1},c,e}
-+E_c(1-b_{v_{c,q+1}}).
-\end{align}
-这些关系使epoch只在包含活动周期时启用，强制周期和epoch采用前缀结构，并用最后一项
-避免未激活后缀错误约束活动前驱。相邻epoch转换激活其间的假片清洗路线，$2\times2$
-链只能在已激活的曝光边界分段。驻留限制统一写为
-\begin{equation}
-0\le s_{\mathrm{out}(w,r)}-e_{\mathrm{in}(w,r)}\le\overline R_{wr}.
-\end{equation}
-
-在组合设备控制中，死锁通常指某一可达设备状态中的晶圆--资源依赖形成循环等待；
-Petri网方法显式研究这种控制器层面的可达性\citep{nishi2015deadlock}。本文的有限时域
-MILP只作更窄的离线排程声明。每条活动物料路线具有有限的来源--返回前驱链，每对
-竞争同一单位容量资源的活动操作获得一个时间次序。在所有物理保持区间与搬运动作均
-被模型表示且活动间隔为正的前提下，若联合路线--资源图出现有向环，环上时序不等式
-相加将产生矛盾，故该次序组合不可能属于MILP可行解；终止约束还要求每片产品和已
-分配假片完成建模路线。因此，可行解是在所建模条件下不含循环等待的完整离线轨迹。
-该结论不是设备控制器对调度偏离、模型外缓冲、设备故障或任意可达在线状态的普适
-无死锁保证。
-
-\subsection{先优化吞吐量，再优化排程质量}
-
-第一阶段最小化最后一片产品返回装载端口的时刻：
-\begin{equation}
-\cmax\ge e_w^{\rm return}\quad(w\in\mathcal W),\qquad
-\min_{z\in\mathcal F}\cmax(z),
-\end{equation}
-其中$\mathcal F$包含全部物料、旋转、清洗、资源和时序约束。仅最小化$\cmax$
-不能保证运行质量：在最后完成时刻相同时，中间等待、极端驻留和腔室节拍仍可能
-存在巨大差异，并影响工艺一致性和对小扰动的恢复能力。
-
-设第一阶段保留的incumbent为$\widehat z$，最大完工时间为$\widehat C$。第二阶段
-固定该incumbent中保留的路由与资源次序整数$\mathcal D_{\rm fix}$，而双夹持机械手
-选择保持自由：
-\begin{equation}
-z_d=\widehat z_d\ (d\in\mathcal D_{\rm fix}),\qquad
-\cmax(z)\le\widehat C+\varepsilon_C,
-\end{equation}
-并最小化
-\begin{equation}
-\Phi(z)=\lambda_1L_{\rm sum}+\lambda_2L_{\max}
-+\lambda_3D_{\rm cadence}+\lambda_4E_{\rm cap}.
-\end{equation}
-令$\mathcal L(z)$为在线性目标下保持紧性的模型内等待与空闲项集合，
-$h_{mce\ell}$为配方模式$m$、腔室$c$、清洗epoch $e$中的第$\ell$个活动加工
-开始时刻，则
-\begin{align}
-L_{\rm sum}&=\sum_{\ell\in\mathcal L(z)}\ell, &
-L_{\max}&=\max_{\ell\in\mathcal L(z)}\ell,\\
-D_{\rm cadence}&=\sum_{m,c,e,\ell\ge2}
-|(h_{mce,\ell+1}-h_{mce,\ell})-(h_{mce,\ell}-h_{mce,\ell-1})|,\\
-E_{\rm cap}&=\sum_{\ell\in\mathcal L(z)}[\ell-\bar\ell]_+.
-\end{align}
-非负权重$\lambda_1,\ldots,\lambda_4$分别控制总等待、极端等待、节拍不规则性和软
-等待上限超额；正式线性配置采用$(1,10,25,0)$，只有设置正软上限时才启用最后一项。
-论文报告的产品物理路线等待均由事件时刻按统一六段定义重构，而不直接读取这些目标
-辅助变量，具体定义见补充材料。$\varepsilon_C$仅为数值等式容差。该阶段
-不能在此容差之外恶化最大完工时间，也不能改变$\mathcal D_{\rm fix}$中的路由和资源
-次序；双夹持选择仍可调整，规范产品配对与腔室槽位在两个阶段本来就是固定输入。若
-第一阶段证明最优，精修结果在相同数值容差内保持全局最优最大完工时间；第二目标
-在保留的离散结构内最优。若第一阶段仅有incumbent，则只相对该incumbent保持
-最大完工时间。因此，两阶段法实现目标分层，但始终优化同一套物理排程。
-
-\subsection{模型改进及其计算含义}
-
-相比既有旋转或多空间模型，本文实现三项相互关联的扩展：由稳态周期改为有限批次，
-由单一物料源改为产品--假片双源物流，并由单一最大完工时间改为条件式排程质量精修；
-混合$4\times1$/$2\times2$路线在同一事件--资源网络中统一激活。本文不把规范
-产品配对或腔室侧面作为内生决策。计算耦合来自活动双源路线、假片复用、清洗状态、
-配置允许的装载锁选择及资源次序共同改变机械手冲突图。
-
-模型结构也解释了求解困难。激活、epoch、假片身份、配置允许的槽位选择和成对次序
-变量与稠密事件时刻网络耦合。通用效率相近的割可能主要作用于不同的数学变量角色，
-这正是下一节算法采用变量角色信息的原因。
-
-\section{结构感知学习增强精确求解}
-
-\subsection{从模型结构到求解器引导}
-
-模型具有两个主要症状：高质量可行解出现较晚，通用割分数不能说明一个割主要收紧
-离散设备选择、连续时刻还是二者耦合。\method{}在两个位置提供互补引导：结构保持
-二元骨架（SPBS）在
-分支割前提供原始可行解，学习选择器在分离过程中提供对偶引导。SCIP始终保留原始
-可行域、有效割生成和最优性证明责任。
-
-\subsection{结构保持二元骨架初始解}
-
-SPBS在临时可行性MIP中固定确定性的产品分配、批次启用、清洗epoch、装载锁和
-部分资源次序。若一个配置未得到incumbent，则依次释放VTR、装载锁和其他次序；
-连续事件时刻始终保持自由。初始解只有在完整模型中完成重构并通过完全可行性检查后
-才被接收；无限制的生产模型只接收该可行解，不接收临时固定约束。
-
-该初始解不同于任意变量提示。二元骨架给出详细时序模型原本需要从零搜索的设备组合
-结构，而补全求解负责修复局部时序冲突。由于原始MIP仅增加可行incumbent，SPBS
-不会排除更优解，也不会削弱最优性证明。
-
-正式基准把SPBS排程离线预计算，并以精确LP哈希绑定、经求解器检查后再输入SCIP。PDI与求解时间
-从生产求解开始计量，不包含SPBS构造及其逐级释放配置所用时间。因此，相关实验评价
-的是“给定一个预计算且经求解器检查的SPBS输入”对SCIP求解窗口的影响，不是包含初始解
-构造成本的端到端加速比。
-
-\subsection{变量角色重构与层次解码}
-
-HEM使用13维通用割特征。本文依据求解器元数据，把变量分为二元、一般整数、目标
-活跃连续、连续辅助和其他五类，并为割$i$定义角色$g$上的系数质量
-\begin{equation}
-p_{ig}=\frac{\sum_{j:x_j\in g}|a_{ij}|}{\sum_j|a_{ij}|+\varepsilon}.
-\end{equation}
-新增十项特征依次为五类系数绝对质量占比、有限上下界变量的系数质量占比、正系数
-绝对质量占比、离散--连续质量耦合、主导类别质量占比和归一化类别熵；它们把13维
-通用表示扩展到23维。这些特征仅依赖SCIP变量类型、目标系数、上下界和割系数，不
-读取变量名称或设备标签。因而它们刻画的是可迁移的数学变量角色，而不能单独识别
-某个具体机械手、腔室或工序。
-
-高层策略决定割预算，低层指针策略产生有序候选集\citep{vinyals2015pointer}。
-选取$k$个割时，联合概率为
-\begin{equation}
-\pi_\theta(k,i_{1:k}\mid S)=\pi_\theta^H(k\mid S)
-\prod_{t=1}^k\pi_\theta^L(i_t\mid S,i_{1:t-1}).
-\end{equation}
-两个worker并行采集独立SCIP轨迹，随后由中央使用批数据同步更新共享策略网络。
-以$R=-\pdi$为回报，并采用
-\begin{equation}
-\widehat{\nabla_\theta J}=\frac1B\sum_{b=1}^B
-(R_b-\bar R_{\rm EMA})\nabla_\theta\log\pi_\theta(\tau_b),\qquad
-\bar R_{\rm EMA}\leftarrow0.9\bar R_{\rm EMA}+0.1\bar R
-\end{equation}
-所示的指数移动平均回报基线。该骨干是层次REINFORCE\citep{williams1992reinforce}，
-其并行轨迹采集受A3C\citep{mnih2016a3c}启发；实现既不含独立学习的critic，也不进行
-异步参数更新，因而不称为异步演员--评论家算法。训练集含五个实例和五个随机种子。
-每个种子使用两个worker，每个epoch收集八条30~s/1024~MB轨迹，共训练60个epoch；
-低层和高层策略的Adam学习率分别为$10^{-4}$和$5\times10^{-4}$。每个模型族与种子的
-评估均使用预先规定的终止epoch 60参数，每个方法--种子组合只有一个合格参数集；资格仅依据训练路径、
-种子、PDI回报、特征维数和epoch检查，不使用基准集或测试集选择参数。
-推理时，有限宽束搜索保留多个部分序列\citep{choo2022beam}，
-角色次模补全再平衡策略分数、即时割质量、角色覆盖和候选池代表性
-\citep{nemhauser1978analysis}。三者在设计上互补：特征重构提供角色差异，束搜索
-保留替代顺序，补全抑制最终集合集中于单一变量角色。次模近似性质仅适用于锚点和
-候选池给定后的剩余单调次模补全问题，不是全局割选择性能保证。
-
-\subsection{精确性}
-
-\method{}只排序SCIP已经生成并确认有效的候选割
-\citep{achterberg2009scip,bestuzheva2023scip}，SPBS只添加经求解器检查的可行解。
-两者均不改变目标、约束、整数性或下界逻辑。因此，算法以改善限时轨迹为目标，同时保持
-与默认SCIP相同的可行性和最优性含义。补充材料给出完整复现协议。
-
-\section{计算结果与分析}
-
-\subsection{证据结构}
-
-七组证据分别回答不同问题：四个小规模精确实例核查模型实现的内部一致性；2700次标称矩阵
-比较七种方法；960次配对实验评价预计算SPBS输入；1500次实验比较三种同总预算
-工作流，而不把差异解释为纯粹的第二阶段因果效应；300次析因实验描述制造因素与
-难度的关联；80次单因素实验检验参数扰动下的可运行性；729次实验在9个
-40--64片分布偏移构型上检验更大规模的可行排程交付。支撑本文结论的全部
-保存incumbent均通过SCIP检查以及针对同一序列化MILP的后处理可行性检查。
-
-主要指标PDI是SCIP归一化原始--对偶gap在共同求解时域上的积分，数值越低越好；
-终止gap是停止时的归一化界差。600~s两阶段工作流把540~s分配给主求解，并为条件式
-精修保留至多60~s；单阶段对照把全部600~s用于主求解。报告的求解时间是SCIP记录的
-主求解与条件式精修求解时间之和；模型装载、学习参数装载、解序列化、实例构造和离线
-SPBS构造均不计入。制造实例是推断单位：先在每个
-实例--方法或实例--工作流内平均求解器与训练随机重复，再对同一实例的差值计算非参数
-95\% bootstrap区间和双侧Wilcoxon符号秩检验，并在预设分析族内作Holm校正；限时运行
-保留在汇总中。该流程避免把随机种子误作独立制造证据\citep{gleixner2021miplib}。
-完整预算、环境、超参数、矩阵定义和可行性检查容差见补充材料。
-
-\subsection{精确求解与后处理核查建立内部一致性}
-
-表~\ref{tab:val-zh-new}给出四个小规模纯配方和混流实例，每个实例进行一次精确求解。
-两阶段均达到零gap；SCIP检查与后处理可行性检查针对同一序列化MILP核查其路线、资源、
-清洗、驻留和假片分配约束。连续残差阈值为$10^{-6}$求解器容差加$10^{-12}$文本
-序列化余量，二元和整数条件不放宽。这些检查独立于学习策略，但不构成独立的模型
-结构验证或现场设备验证。
-
-\begin{table}[htbp]
-\centering
-\caption{用于内部模型一致性核查的精确求解实例}
-\label{tab:val-zh-new}
-\resizebox{\linewidth}{!}{%
-\begin{tabular}{lrrrrr}
+\begin{table}[t]
+\centering\small
+\caption{批次任务调度的关键决策变量}
+\label{tab:symbol-cn-b}
+\renewcommand{\arraystretch}{1.05}
+\setlength{\tabcolsep}{4pt}
+\begin{lrbox}{\CIEtablebox}\begin{tabular}{@{}p{0.24\textwidth}p{0.16\textwidth}p{0.56\textwidth}@{}}
 \toprule
-配置 & 产品数 & $\cmax$ & 路线总等待 & 路线最大等待 & 时间(s) \\
-\midrule
-纯$4\times1$ & 4 & 458 & 380 & 76 & 0.009 \\
-纯$2\times2$ & 4 & 584 & 112 & 28 & 0.039 \\
-混流 & 8 & 834 & 506 & 76 & 0.458 \\
-混流 & 16 & 1170 & 1550 & 99 & 24.390 \\
+符号 & 类型 & 定义与取值含义\\\midrule
+$x_{j\ell pr}$ & 二元决策变量 & PW对$p$的位置$r$是否使用任务$j$在LP $\ell$的一片产品，$N_{j\ell}>0$时建立。\\
+$v_p,\mu_{pm},z_{pc}$ & 二元决策变量 & 分别表示PW对$p$是否启用，是否采用加工类型$m$，是否分配至腔室$c$。\\
+$X_{pcq},K_{cqm},f_{pcq}$ & 二元决策变量 & 分别表示PW对$p$是否占用腔室$c$的周期$q$，周期$q$是否采用类型$m$，对$p$在腔室$c$的周期$q$是否位于可访问侧。\\
+$g_{pr\tau}$ & 二元决策变量 & 表示对内位置$(p,r)$是否借用辅助晶圆$\tau\in\mathcal D$。\\
+$h_{ou},y^\rho_{oo'},\gamma_{pa}$ & 二元决策变量 & 分别表示动作$o$是否选择物理单元$u$，在同一资源$\rho$时$o$是否先于$o'$，对$p$的两片晶圆在取放段$a$同步搬运，标签$\mathrm{pick}$表示源LP端取片。\\
+$s_o,S_{cq}$ & 非负实数决策变量 & 分别表示物理动作$o$和腔室$c$的周期$q$的开始时刻。\\
+$e_o,b_o$ & 辅助变量 & $e_o$表示动作$o$的结束时刻；$b_o$是二元辅助变量，表示动作$o$是否启用。\\
+$\theta_{j\ell}$ & 非负实数辅助变量 & 任务$j$在相邻非空LP之间切换取片的时间分界点。\\
+$n_{cq}$ & 非负整数辅助变量 & 腔室$c$第$q$个周期结束后，自上次清洁以来累计完成的生产周期数，范围为$0,\ldots,H$。\\
+$F_p,F_p^\psi,X^P_{pcq}$ & 二元辅助变量 & 分别表示对$p$是否含产品，是否含$2\times2$产品，是否参加腔室$c$的周期$q$。\\
+$\beta_{pr},d_{pr}$ & 二元辅助变量 & $\beta_{pr},d_{pr}$ 分别表示对内位置$(p,r)$是否安排产品、是否借用辅助片。\\
+$\chi_{iA},\chi_{iV}$ & 二元辅助变量 & $\chi_{iA},\chi_{iV}$分别表示路线任务$i$是否由大气区、真空区供给。\\
+$C_{\max},C_{\mathrm{end}}$ & 非负实数决策变量 & $C_{\max}$为产品返回原LP时刻的上界；$C_{\mathrm{end}}$为收尾时全部动作结束时刻的上界。\\
+$L_{\max},v_{cq}$ & 非负实数辅助变量 & $L_{\max}$为所有等待项的最大值上界；$v_{cq}$为以$(c,q)$为中心的相邻周期开始间隔变化量的绝对值上界。\\
 \bottomrule
-\end{tabular}}
+\end{tabular}\end{lrbox}\ifdim\wd\CIEtablebox>\linewidth\resizebox{\linewidth}{!}{\usebox{\CIEtablebox}}\else\usebox{\CIEtablebox}\fi
 \end{table}
 
-纯配方实例分别恢复两种旋转逻辑，混流实例则要求两种
-配方、两条装载锁路径、共享机械手和假片复用共存于一条可行轨迹。16片混流实例
-还同时激活了\method{}所针对的离散激活与资源次序耦合约束。这四个实例支持已测试
-实例在同一序列化MILP内的实现一致性，但不能替代独立建模验证、现场验证，或对所有
-规模、在线状态及模型外故障的普适正确性证明。
+\subsection{批次任务与产品晶圆编码}
+\label{sec:model-encoding-cn}
 
-\subsection{\method{}取得最低观察标称平均PDI与时间}
+产品晶圆按工艺模式、可访问腔室及其他调度属性分组，每片恰属于一个批次任务。同任务、同LP的产品须具有相同调度属性，才能以库存数量表示；若释放时刻、工艺要求或槽位可访问性不同，应细分任务或显式增加区分约束。允许腔室集合可为$\{\mathrm{CH2}\}$、$\{\mathrm{CH3}\}$或$\{\mathrm{CH2},\mathrm{CH3}\}$。
 
-表~\ref{tab:main-zh-new}给出完整标称比较。\method{}在七种方法中同时取得最低
-平均PDI和最短平均求解时间，平均PDI较适配HEM和默认SCIP分别降低1.41\%和
-1.97\%，500次运行全部得到可行解。
+输入编码依次完成实际编号、任务内排序和编号映射。$w$表示输入产品晶圆的实际编号，由其LP
+与槽位计算：$w=25(\ell-1)+s$。$\mathcal L_j[k]$表示有序表$\mathcal L_j$的第$k$项，
+$\mathrm{Pjob}_j[k]$表示该项对应晶圆的批次内标识。$k_j(w)$是整数常量，表示晶圆$w$在
+该表中的排序位置；$w'$是计数时遍历该表的实际编号索引。$\mathsf{Code}$是编号映射函数，
+将实际编号转换为批次内标识：
 
-七种条件使用相同且已经求解器检查的预计算SPBS初始解、时间与内存限制及求解器种子；
-报告时间不含SPBS构造。因此，该表在共同原始引导下比较割选择与解码配置，不估计
-SPBS总效应或SPBS--策略交互；下一节另行评价预计算SPBS输入。SCIP
-表示共同初始解下的默认割选择器；自适应割选择（ACS）为调优后的四分数SCIP规则。
-HEM-13D与HEM-13D+Beam共享13维策略，仅解码方式不同；仅23维特征配置采用重构
-特征但不进行结构重排，结构+贪心加入角色补全，\method{}再结合束解码。
+\begin{equation}
+\begin{aligned}
+k_j(w)&=1+|\{w'\in\mathcal L_j:w'<w\}|,\\
+\mathsf{Code}(w)&=\mathrm{Pjob}_j[k_j(w)],\\
+\ell_{jk}&=1+\left\lfloor\frac{\mathcal L_j[k]-1}{25}\right\rfloor,
+\quad k=1,\ldots,N_j.
+\end{aligned}
+\label{eq:pjob-input-code-cn}
+\end{equation}
 
-\begin{table}[htbp]
-\centering
-\caption{共同SPBS初始解下20个制造实例的完整标称比较}
-\label{tab:main-zh-new}
-\resizebox{\linewidth}{!}{%
-\begin{tabular}{lrrrr}
+其中，$\mathsf{Code}^{-1}$是上述编号映射的逆函数，可通过$\mathsf{Code}^{-1}(\mathrm{Pjob}_j[k])=\mathcal L_j[k]$还原实际编号。
+按来源LP计数可得$N_{j\ell}=|\{k:\ell_{jk}=\ell\}|$。批次内编号连续，实
+际编号可因槽位空缺或属于其他任务而不连续。编码实例见表~\ref{tab:pjob-code-example-cn}。
+
+\begin{table}[!htbp]
+\centering\footnotesize
+\caption{实际晶圆编号到批次内编号的映射示例}
+\label{tab:pjob-code-example-cn}
+\begin{lrbox}{\CIEtablebox}\begin{tabular}{cccc}
 \toprule
-方法 & 平均PDI & 平均gap(\%) & 平均时间(s) & 最优率(\%) \\
+实际编号$w$ & LP/槽位$(\ell,s)$ & 批次内序号$k$ & $\mathsf{Code}(w)$\\
 \midrule
-SCIP默认割选择 & 16919.01 & \textbf{119.54} & 226.05 & \textbf{64.0} \\
-自适应割选择（ACS） & 16854.87 & 127.18 & 222.34 & 62.0 \\
-HEM-13D & 16823.18 & 127.24 & 219.65 & 62.4 \\
-HEM-13D+Beam & 16829.59 & 127.19 & 219.95 & 62.4 \\
-仅23维特征 & 16620.91 & 125.33 & 219.42 & 62.6 \\
-结构+贪心 & 16598.11 & 126.03 & 218.44 & 63.2 \\
-\method{} & \textbf{16585.70} & 126.01 & \textbf{218.32} & 63.2 \\
+1 & $(1,1)$ & 1 & $\mathrm{Pjob}_1[1]$\\
+3 & $(1,3)$ & 2 & $\mathrm{Pjob}_1[2]$\\
+26 & $(2,1)$ & 3 & $\mathrm{Pjob}_1[3]$\\
+27 & $(2,2)$ & 4 & $\mathrm{Pjob}_1[4]$\\
+2 & $(1,2)$ & 1 & $\mathrm{Pjob}_2[1]$\\
 \bottomrule
-\end{tabular}}
+\end{tabular}\end{lrbox}\ifdim\wd\CIEtablebox>\linewidth\resizebox{\linewidth}{!}{\usebox{\CIEtablebox}}\else\usebox{\CIEtablebox}\fi
 \end{table}
 
-方法间的观察均值呈现递进模式：从13维表示到23维变量角色表示对应最大的均值差，
-加入结构补全后均值继续下降；束解码在结构感知表示与补全上略降PDI，但单独用于
-13维HEM时略升PDI。这些消融均值说明更宽解码本身不足以解释完整方法的排名，并与
-“在区分数学变量角色的表示上探索替代割序列”这一设计动机一致；它们不构成各组件
-独立因果效应或组件交互显著性的证据。
+Pjob是同质产品的任务与库存组，PW对是两片晶圆的搬运单位，一个满片周期同时处理两个PW对；三者不等同。批次内出片顺序由第~\ref{sec:model-assignment-cn}节的指派与时间约束保证。
 
-SCIP的最终gap和最优率略好，\method{}则在PDI和耗时均值领先。这与两种目标侧重
-相一致：默认选择对最终证明仍然强健，\method{}面向整个限时轨迹。对于有固定计算
-窗口、需要尽快得到高质量排程的工业场景，
-\method{}取得最低的标称观察平均PDI和时间。相对HEM和SCIP的实例优先平均PDI
-改善分别为237.49（95\% bootstrap区间$[-446.71,846.26]$）和333.31
-（区间$[-382.16,999.70]$），两项Holm校正$p$均为1。因此，标称排名明确反映
-该矩阵上的平均观察优势，而非统计显著的总体优越性。下述SPBS输入和同预算工作流
-比较分别提供统计显著的配对差异，但其解释边界并不相同。
+\subsection{单源与双源混流物理加工路径}
+\label{sec:model-path-cn}
 
-\subsection{预计算SPBS输入改善求解窗口内的原始搜索}
+来源选择变量与晶圆类型及配置$\sigma$满足：
 
-配对SPBS实验评价向SCIP注入预计算且经求解器检查的初始排程。表~\ref{tab:spbs-zh-new}
-显示，相对无初始解条件，可行解获得率由51.67\%升至100\%，平均PDI低26.19\%；
-两项实例级配对差异经Holm校正后仍显著（$p=2.55\times10^{-5}$和
-$p=3.46\times10^{-8}$）。
+\begin{equation}
+\begin{aligned}
+\chi_{iA}&=\beta_{pr}+(1-\sigma)d_{pr},\quad
+\chi_{iV}=\sigma d_{pr},\\
+\chi_{iA}+\chi_{iV}&=v_p,\qquad i=(p,r)\in\mathcal I.
+\end{aligned}
+\label{eq:source-membership-cn}
+\end{equation}
 
-\begin{table}[htbp]
+式~\eqref{eq:source-membership-cn}规定每个晶圆路线任务的来源区域。单源配置下，产品位于LP1--LP4，辅
+助晶圆位于LP4旁的大气存储区，两者共享ATR和装载锁接口，但只有产品需要AL对准。双源配置下，产品晶圆仍来自
+LP1--LP4，辅助晶圆则由真空区存储位供给。
+
+产品路线采用图~\ref{fig:system-zh-new}所示的物理路径。
+
+辅助晶圆不执行AL对准。单源辅助晶圆从LP4旁的大气存储区出发，经ATR、上装载锁和VTR进入工艺腔室，使用后经
+VTR、下装载锁和ATR返回原存储区。单独供给时，辅助晶圆绕过AL直接入锁；随产品入片时，辅助晶圆在产品对准期
+间保持在ATR上，待产品取回后共同入LL,见图~\ref{fig:single-source-cn}。双源辅助晶圆从真空存储区出发，
+经VTR进入工艺腔室，使用后由VTR返回真空存储区。上述路径确定晶圆必须经历的物理环节，成对搬运选择及其时间
+条件在第~\ref{sec:model-time-cn}节给出。
+
+\begin{figure}[!htbp]
 \centering
-\caption{48个实例和10个配对种子上的预计算SPBS输入比较}
-\label{tab:spbs-zh-new}
-\begin{tabular}{lrrrr}
-\toprule
-初始解 & 运行数 & 可行解率(\%) & 最优率(\%) & 平均PDI \\
-\midrule
-预计算自动SPBS & 480 & \textbf{100.00} & 54.58 & \textbf{20278.78} \\
-无初始解 & 480 & 51.67 & 51.67 & 27473.05 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-工业含义十分直接：无初始解条件下，近一半运行在限时内未形成完整排程；输入SPBS
-使SCIP从已验证incumbent开始，并可继续改进和利用该解剪枝。观察到的PDI差异与更早
-的原始可行性及其和后续精确搜索的交互一致，但实验没有分解二者贡献。由于计时明确
-排除SPBS构造，该结果支持把预计算初始解作为求解架构输入，不能解释为包含构造成本
-的端到端26.19\%加速。
-
-\subsection{同总预算两阶段工作流获得更低的运行指标}
-
-两阶段内部约束保持其540~s主求解所得离散排程和最大完工时间，但同预算对照把全部
-600~s用于单阶段主求解。因此，本节比较的是完整工作流：完整线性精修和二次目标流程
-均采用540~s主求解加至多60~s精修，单阶段流程采用600~s主求解。三者的路线等待均
-由产品事件时刻重构，节拍均由活动腔室加工开始时刻重构，从而避免把目标辅助slack
-当作绩效指标，并保持指标定义一致。由于主求解时域不同，PDI与用时不用于第二阶段
-因果论证，保存排程指标的差值也不应全部归因于“仅增加第二阶段”。表~\ref{tab:stability-zh-new}
-报告三个工作流在制造实例内先聚合后的均值。
-
-\begin{table}[htbp]
-\centering
-\caption{相同600~s总预算下三种完整工作流的保存排程指标}
-\label{tab:stability-zh-new}
-\resizebox{\linewidth}{!}{%
-\begin{tabular}{lrrrr}
-\toprule
-配置 & 路线总等待 & 路线最大等待 & 节拍CV & 节拍偏差 \\
-\midrule
-完整两阶段（540+至多60~s） & 2596.01 & 296.33 & \textbf{0.130} & \textbf{22.04} \\
-二次目标流程（540+至多60~s） & \textbf{2469.47} & \textbf{293.27} & 0.134 & 60.18 \\
-单阶段流程（600+0~s） & 5398.60 & 952.57 & 0.216 & 370.41 \\
-\bottomrule
-\end{tabular}}
-\end{table}
-
-相对单阶段工作流，完整两阶段工作流保存排程的路线总等待、最大单段等待、节拍CV和
-节拍偏差分别低51.91\%、68.89\%、39.70\%和94.05\%，四项实例级配对差异经Holm
-校正后均显著。这些结果表明，在相同总墙钟预算下采用该两阶段分配能够得到等待更短、
-节拍更规则的最终排程；它们支持工作流层面的运行价值，但不识别纯第二阶段效应。
-
-与同样采用540+至多60~s预算的二次目标流程相比，线性精修流程的节拍偏差低63.38\%，
-且该差异经Holm校正后显著；路线总等待、路线最大等待和节拍CV差异则未通过Holm校正。
-因此，证据支持线性目标在该预算下取得更规则的节拍，而不支持其在全部运行指标上
-优于二次目标。每次精修均在数值容差内保持其自身主求解incumbent的最大完工时间。
-
-\subsection{测试网格中规模--配方构成交互与难度关联最强}
-
-表~\ref{tab:doe-zh-new}显示明显的复杂度转折：8和16晶圆的运行全部证明最优，
-24和32晶圆的最优率降到36\%和20\%；平均PDI则由28.13和1876.54升至
-31155.94和32959.89。
-
-\begin{table}[htbp]
-\centering
-\caption{晶圆规模引起的计算转折}
-\label{tab:doe-zh-new}
-\begin{tabular}{rrrrr}
-\toprule
-晶圆数 & 运行数 & 最优率(\%) & 平均PDI & 平均时间(s) \\
-\midrule
-8 & 75 & 100 & 28.13 & 0.34 \\
-16 & 75 & 100 & 1876.54 & 33.86 \\
-24 & 75 & 36 & 31155.94 & 408.55 \\
-32 & 75 & 20 & 32959.89 & 433.20 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-析因设计包含$4\times5\times3=60$个完整的晶圆数--配方构成--加工尺度单元，每个
-单元使用5个求解器种子。预设PDI OLS模型在该300次设计上有$R^2=0.998$。在模型编码
-下，$1{:}1$混流中24和32晶圆的附加交互系数分别为37729.48和40788.63；所有预设
-加工尺度主效应和交互效应的95\%区间均包含零。图~\ref{fig:doe-zh-new}给出系数及其
-区间。结果表明，在所测试网格与线性模型内，观察到的PDI变化主要与晶圆数和混流构成
-的交互相关，而没有检测到统一加工尺度效应；它不是对网格外难度成因的普适因果证明。
-这一模式与算法采用离散激活--连续时序角色的设计动机一致。
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.96\linewidth]{Figure_DOE_PDI_effects.png}
-\caption{PDI预设析因效应。点为OLS系数，误差线为95\%置信区间，竖线表示零。}
-\label{fig:doe-zh-new}
+\includegraphics[width=\linewidth]{fig_single_source_pjob_cn}
+\caption{单源旋转腔组合设备的拓扑与晶圆路线。}
+\label{fig:single-source-cn}
 \end{figure}
 
-\subsection{敏感性验证预设扰动下的可运行性}
+\subsection{晶圆、PW对与腔室周期的匹配关系}
+\label{sec:model-assignment-cn}
 
-80次单因素敏感性运行全部返回经求解器检查的incumbent。较长清洗间隔对应最低平均
-PDI（28899.41），较慢搬运对应最高平均PDI（42478.32）。该模式与较长清洗间隔减少
-假片专用中断、较慢搬运收紧共享机械手时序相容，但单因素实验不能识别这两种机制的
-因果作用。全部预设扰动下均保持可行排程交付；由于实验只包含默认SCIP一种方法，
-它不支持跨方法稳健性排名。
+在两种加工模式中，并行加工的最小执行单位是4，即最少更换4片晶圆进行下一次加工，而链式加工的最小单位是2，因此
+将晶圆组织为PW对，再将PW对分配到兼容腔室及其加工周期，每个PW对包含两片晶圆，对内位置r是配对索引，实际承片位
+置和腔内占位由后续资源与周期变量确定。生产与清洁共用候选加工周期，具体生产次数和清洁规则见第~\ref{sec:model-process-cn}节。
 
-\subsection{分布外压力实验验证规模扩展可行性}
+\noindent\textbf{晶圆配对与腔室选择：}
+一个PW对可由两片产品、一片产品与一片辅助晶圆，或两片辅助晶圆组成。所有产品均须安排加工，且每个启用对内位置恰好安排一片晶圆。因此，有
+\begin{equation}
+\begin{aligned}
+\sum_{p,r}x_{j\ell pr}&=N_{j\ell},\\
+\beta_{pr}=\sum_{j,\ell}x_{j\ell pr},\qquad
+\beta_{pr}+d_{pr}&=v_p.
+\end{aligned}
+\label{eq:joint-membership-cn}
+\end{equation}
+式~\eqref{eq:joint-membership-cn}保证每个任务在各LP的产品均被使用，且同一对内位置不会同时安排产品和辅助晶圆。
+各位置保留完整加工路线，实际产品编号在求解后按出片次序恢复，例如，$x_{1,1,1,0}=1$表示来自LP1，但不区分表~\ref{tab:pjob-code-example-cn}
+中的晶圆1还是3。
 
-分布外测试把批次扩大到40--64片并改变产品混流组成。729次运行全部获得保存解，
-且均通过SCIP及针对同一MILP的后处理检查。由于全部运行均使用完整搜索窗口，表~\ref{tab:ood-zh-new}采用
-PDI和终止gap区分求解轨迹。
+动作时刻统一采用表~\ref{tab:symbol-cn-b}中的$s_o,e_o$，为明确动作，下标$o$可写成$(i,a)$、$(p,a)$或$(c,q,a)$，
+分别定位晶圆路线$i$、PW对$p$或腔室周期$(c,q)$的动作；$a$是取片、放片或旋转等动作标签。这些下标只定位已有动作，方
+便表达，不增加时刻变量。
 
-\begin{table}[htbp]
+\noindent\textbf{批次内非递减顺序出片：}
+本文将同一批次任务按输入编号非递减出片作为给定业务规则。由于实际编号按LP分段，较小编号LP中的该任务产品应先于下一非空LP中的产品取片；这一跨LP先后限制并非单纯的身份对称性消除，编码对照的逐片模型也执行相同规则。
+$h_j(\ell)=\min\{\ell'>\ell:N_{j\ell'}>0\}$表示任务$j$在LP $\ell$之后的首个非空LP编号，集合为空时不
+建立对应变量。对每个对内位置$(p,r)$，以下$o=((p,r),\mathrm{pick})$定位其LP取片动作。相邻非空LP之间满足：
+\begin{equation}
+\begin{aligned}
+0\le\theta_{j\ell}&\le B,\\
+s_o&\le\theta_{j\ell}+M(1-x_{j\ell pr}),\\
+s_o&\ge\theta_{j\ell}-M(1-x_{j,h_j(\ell),pr}).
+\end{aligned}
+\label{eq:pjob-release-boundary-cn}
+\end{equation}
+于是，较小编号LP中属于该任务的产品取片开始时刻均不晚于下一非空LP中该任务产品的取片开始时刻。$o_{jk}$是$\mathrm{Pjob}_j[k]$的
+LP取片动作，因此批次内顺序可直接写为：
+\begin{equation}
+s_{o_{j,k+1}}\ge s_{o_{jk}},
+\quad j\in\mathcal J,\ k=1,\ldots,N_j-1.
+\label{eq:pjob-nondecreasing-pick-cn}
+\end{equation}
+式~\eqref{eq:pjob-nondecreasing-pick-cn}允许相邻产品具有相同的取片开始时刻，当两片产品属于同一PW对且来自同一LP时，可令$\gamma_{p,\rm pick}=1$
+并同步取片，该动作仍须满足式~\eqref{eq:double-transfer-cn}及机械手容量约束。不同PW对或不同LP的取片须满足ATR互斥与换位条件。
+同时刻取片的产品按来源LP、对编号及对内位置依次排序，其来源与式~\eqref{eq:pjob-input-code-cn}一致。不同Pjob可以交错取片，并
+在工艺相容时分配到同一个PW对成对搬运。
+
+同一PW对中的两片晶圆应采用相容的工艺模式，并进入共同允许的腔室。因此，模式与腔室选择满足：
+\begin{equation}
+\begin{aligned}
+\sum_m\mu_{pm}&=v_p,\qquad \sum_c z_{pc}=v_p,\\
+x_{j\ell pr}&\le\mu_{p,m_j},\qquad
+x_{j\ell pr}\le\sum_{c\in\mathcal C_j}z_{pc},\\
+z_{pc}+\mu_{pm}&\le1\qquad(c\notin\mathcal C(m)).
+\end{aligned}
+\label{eq:joint-chamber-cn}
+\end{equation}
+同模式的不同任务可组对，但所选腔室必须属于对内全部产品晶圆允许腔室集合的交集。仅CH2与仅CH3的产品不能组成同一对；两腔均可的任务
+可以与任一专属任务组对，并可把不同执行实例分配至不同腔室。
+
+产品状态、链式模式标记与清洁类型之间满足：
+\begin{equation}
+\begin{aligned}
+F_p&\le\sum_r\beta_{pr}\le2F_p,\qquad F_p+\mu_{p,\mathrm{cl}}\le1,\\
+F_p^\psi&\le F_p,\quad F_p^\psi\le\mu_{p\psi},\quad
+F_p^\psi\ge F_p+\mu_{p\psi}-1.
+\end{aligned}
+\label{eq:pair-type-cn}
+\end{equation}
+位置$(p,r)$的产品来源及回片LP直接由$\sum_jx_{j\ell pr}$确定，辅助来源位置分别由$(1-\sigma)d_{pr}$与$\sigma d_{pr}$确定。
+
+\noindent\textbf{候选容量上界：}
+为联合配对与周期决策预留足够的候选编号，采用以下保守容量上界：
+\begin{equation}
+\begin{gathered}
+T=N_{\zeta}+2N_{\psi},\qquad J_{\max}=T,\\
+P_{\max}=N+T+2J_{\max},\qquad Q_{\max}=T+J_{\max}.
+\end{gathered}
+\label{eq:candidate-bounds-cn}
+\end{equation}
+按两种配方的产品处理次数累计得到$T$；每个生产周期至少包含一片产品晶圆，故生产周期总数不超过$T$。初始空清洁和连续清洁均被禁止，因此每次清洁前至少有一个生产周期，全设备清洁总次数不超过$T$。
+该上界保留所有合法的提前清洁选择，并不要求实际执行$T$次清洁。
+
+含产品对至少包含一片产品晶圆，且每片产品晶圆仅归属一个对，故此类PW对至多为$N$个；每个生产周期容纳两个PW对且至少一个含产品，故
+纯辅助补位对至多为$T$个；每次清洁使用两个纯辅助对，故清洁对至多为$2J_{\max}$个。三类相加得到式~\eqref{eq:candidate-bounds-cn}
+中的$P_{\max}$，实际启用对数满足$\sum_{p\in\mathcal P}v_p\le P_{\max}$。
+
+PW对按一次装入至卸出的占位任务编号，候选对容量与可复用的实体辅助晶圆库存分别计量。
+
+\noindent\textbf{PW对与加工周期匹配：}
+腔室执行生产或清洁时均应保持四工位满片，即每个周期恰好容纳两个PW对。$U_{cq}$是二元辅助变量，表示腔室$c$的周期$q$是否启用。所选
+PW对的腔室与加工类型须与周期一致，因此，有：
+\begin{equation}
+\begin{aligned}
+\sum_mK_{cqm}&=U_{cq}, &\sum_pX_{pcq}&=2U_{cq},\\
+X_{pcq}&\le z_{pc}, &X_{pcq}+\mu_{pm}&\le1+K_{cqm},\\
+\sum_pX^P_{pcq}&\ge K_{cq\zeta}+K_{cq\psi}, &U_{c,q+1}&\le U_{cq},\\
+\sum_{c,q}U_{cq}&\le Q_{\max}, &\sum_{c,q}K_{cq,\mathrm{cl}}&\le J_{\max}.
+\end{aligned}
+\label{eq:cycle-capacity-cn}
+\end{equation}
+含产品对的周期占位满足以下线性联结：
+\begin{equation}
+X^P_{pcq}\le X_{pcq},\quad X^P_{pcq}\le F_p,\quad
+X^P_{pcq}\ge X_{pcq}+F_p-1.
+\label{eq:cycle-products-cn}
+\end{equation}
+式~\eqref{eq:cycle-capacity-cn}保证满片加工、PW对与周期相容及候选容量限制；式~\eqref{eq:cycle-products-cn}保证只有含产品对的
+占位计入生产要求。由此，生产周期至少含一个产品对，清洁周期只含辅助对。周期按编号连续启用，但不同加工模式的先后次序仍由模型确定。
+
+\subsection{动作时间与先后逻辑}
+\label{sec:model-time-cn}
+
+晶圆只有完成前一道操作后才能进入下一道操作。成对搬运时，两片晶圆还应同步取放；共享资源引起的服务次序在第~\ref{sec:model-resource-cn}节讨论。
+
+\noindent\textbf{动作启用与持续时间：}
+所选晶圆路线、腔室周期及搬运方式决定哪些动作需要执行。已启用动作的持续时间为输入参数，未启用动作的起止时刻均置零；其中LP取片时长满足$d_o>0$。因此，有：
+\begin{equation}
+0\le s_o\le B b_o,\qquad
+0\le e_o\le B b_o,\qquad
+e_o=s_o+d_ob_o.
+\label{eq:operation-time-cn}
+\end{equation}
+式~\eqref{eq:operation-time-cn}保证取放、对准、压力转换、旋转及加工动作按给定时长执行，等待只能发生在动作之间。对准动作只有产品晶
+圆才有，因此通过$\beta_{pr}$判断是否启用，源端、ATR与装载锁动作启用为$\beta_{pr}+(1-\sigma)d_{pr}$，VTR供回
+动作启用为$v_p$。
+
+\noindent\textbf{路径对应的动作先后关系：}
+$\mathcal A^{\rm int}$是给定的腔内共同先后弧集合；$\gamma$是二元决策变量向量的统称，包含成对搬运与单源随行入片选择；$\mathcal A_{i\varsigma}(\gamma)$
+是路线弧集合，表示路线任务$i$在来源区域$\varsigma$及选择$\gamma$下启用的供回片先后关系。弧$(o,o')$表示动作$o$是$o'$的前驱。$\mathcal A$
+是完整的已启用先后弧集合，由下式合并，按晶圆来源和搬运选择启用对应路径，将产品路线、辅助晶圆供回路线与腔内动作链连接起来：
+
+\begin{equation}
+\mathcal A=\mathcal A^{\rm int}\cup
+\bigcup_{i\in\mathcal I}\ \bigcup_{\substack{\varsigma\in\mathcal S:\\ \chi_{i\varsigma}=1}}\mathcal A_{i\varsigma}(\gamma).
+\label{eq:route-union-cn}
+\end{equation}
+
+对弧$(o,o')\in\mathcal A$，后继动作只能在前驱完成并经过必要间隔后开始。若后继启用，则前驱也必须启用。因此，有
+\begin{equation}
+b_{o'}\le b_o,\qquad
+s_{o'}\ge e_o+\delta_{oo'}-M(2-b_o-b_{o'}).
+\label{eq:precedence-cn}
+\end{equation}
+式~\eqref{eq:precedence-cn}保证产品与辅助晶圆沿所选路线依次运行，并使装载、加工和卸载事件遵守工艺顺序。由于参与
+比较的时刻均位于$[0,B]$内，任意两时刻之差不超过$B$；$M$再覆盖所需间隔，因而在条件未满足时可放松对应时序约束。
+
+\noindent\textbf{阶段联结与成对动作同步：}
+产品晶圆与辅助晶圆的单片动作须与所选批次、链位置或清洁任务中的对应动作一致。对待联结的两个动作$o,o'$，$x$引用相应LP
+所属、周期占位或搬运选择的既有二元变量。
+\begin{equation}
+\begin{aligned}
+-M(1-x)&\le s_o-s_{o'}\le M(1-x),\\
+-M(1-x)&\le e_o-e_{o'}\le M(1-x).
+\end{aligned}
+\label{eq:stage-link-cn}
+\end{equation}
+式~\eqref{eq:stage-link-cn}表示$x=1$时个体动作与其物理批次阶段同步，把PW对位置、产品路线、辅助晶圆需求和腔室加工窗口连接成同一时间模型。
+
+对同一PW对的需要同步执行的动作子段$a$，取$o=((p,0),a)$、$o'=((p,1),a)$，分别定位PW对$p$中两片晶圆的动作。成对搬运要求
+\begin{equation}
+\begin{aligned}
+-M(1-\gamma_{pa})&\le s_o-s_{o'}\le M(1-\gamma_{pa}),\\
+-M(1-\gamma_{pa})&\le e_o-e_{o'}\le M(1-\gamma_{pa}).
+\end{aligned}
+\label{eq:double-transfer-cn}
+\end{equation}
+式~\eqref{eq:double-transfer-cn}保证成对搬运的两条晶圆事件具有相同的起止时刻。此时机械手只执行一次共同动作，该动作仍须与其他动作互斥。未选
+择成对搬运时，两片晶圆的动作分别按式~\eqref{eq:resource-order-cn}排序。
+
+\noindent\textbf{单源产品--辅助对的入片逻辑：}
+对于单源产品--辅助对，$i_{\rm P},i_{\rm D}$是路线任务索引，分别表示该对中产品与辅助晶圆的路线，下标$\mathrm P,\mathrm D$是晶圆类型标签。
+$\gamma^{\rm early}_p,\gamma^{\rm late}_p,\gamma_{p,\mathrm{in}}$是二元决策变量，分别表示是否选择辅助晶圆先行入锁、产品放至AL后再取辅助
+晶圆、辅助晶圆随产品入锁。动作标签$\mathrm{ALput,ALpick,LLput}$分别表示放至AL、从AL取回和放入上装载锁。三种路线择一：
+\begin{equation}
+\begin{gathered}
+\gamma^{\rm early}_p+\gamma^{\rm late}_p+\gamma_{p,\mathrm{in}}=1,\\
+\gamma^{\rm early}_p=1\Rightarrow e_{(i_{\rm D},\mathrm{LLput})}\le s_{(i_{\rm P},\mathrm{ALput})},\\
+\gamma^{\rm late}_p=1\Rightarrow s_{(i_{\rm D},\mathrm{pick})}\ge e_{(i_{\rm P},\mathrm{ALput})},\\
+\gamma_{p,\mathrm{in}}=1\ \Longrightarrow
+\begin{cases}
+e_{(i_{\rm D},\mathrm{pick})}\le s_{(i_{\rm P},\mathrm{ALput})},\\
+s_{(i_{\rm D},\mathrm{LLput})}=s_{(i_{\rm P},\mathrm{LLput})},\\
+e_{(i_{\rm D},\mathrm{LLput})}=e_{(i_{\rm P},\mathrm{LLput})},\\
+s_{(i_{\rm P},\mathrm{LLput})}\ge e_{(i_{\rm P},\mathrm{ALpick})}.
+\end{cases}\end{gathered}
+\label{eq:single-source-accompany-cn}
+\end{equation}
+该条件表示辅助晶圆在产品放至AL前已由ATR承载，并与完成对准的产品同时放入上装载锁。辅助晶圆从源端取片至入锁结束持续占用一个ATR承片位置；产品占
+用AL期间不占用ATR承片位置，取回后恢复占用。若辅助晶圆单独供给，则直接连接其源端取片与入锁事件。
+
+\subsection{两种工艺模式与清洁处理}
+\label{sec:model-process-cn}
+
+第~\ref{sec:model-assignment-cn}节确定周期中有哪些PW对，本节进一步规定各对参与生产的次数、相邻周期的保留与退出、旋转装卸次序及清洁边界。所
+有时刻均沿用第~\ref{sec:model-time-cn}节的动作时间表示。
+
+\noindent\textbf{生产模式与连续占位：}
+图~\ref{fig:chain-zh}和图~\ref{fig:parallel-zh}给出两种工艺模式的事件顺序，下面用周期占位约束描述其加工次数与连续性。
+
+\begin{figure}[t]
 \centering
-\caption{分布外压力实验；统计量先在9个制造实例内聚合。}
-\label{tab:ood-zh-new}
-\resizebox{\linewidth}{!}{%
-\begin{tabular}{lrrrr}
+\includegraphics[width=0.65\linewidth]{fig_chain_cn_nature}
+\caption{$2\times2$链式生产的事件顺序，D表示辅助PW对。}
+\label{fig:chain-zh}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.70\linewidth]{fig_parallel_cn_nature}
+\caption{$4\times1$并行生产的事件顺序。}
+\label{fig:parallel-zh}
+\end{figure}
+
+$A_{pcq},Z_{pcq}$是二元辅助变量，分别表示对$p$是否在腔室$c$的周期$q$首次、末次参加处理；$A^\psi_{pcq},Z^\psi_{pcq}$是二元辅助变量，分别表示上
+述首次、末次参加处理的对是否为$2\times2$含产品对。取边界$X_{pc0}=X_{pc,Q_{\max}+1}=A_{pc,Q_{\max}+1}=0$，且$A_{pc1}=X_{pc1}$直接代入，有：
+\begin{equation}
+\begin{aligned}
+A_{pcq}&\ge X_{pcq}-X_{pc,q-1}, &A_{pcq}&\le X_{pcq},\\
+A_{pcq}&\le1-X_{pc,q-1},\\
+Z_{pcq}&=X_{pcq}-X_{pc,q+1}+A_{pc,q+1},\\
+\sum_{c,q}X_{pcq}&=v_p+F_p^{\psi}, &\sum_{c,q}A_{pcq}&=v_p,\\
+A^{\psi}_{pcq}&=X_{pcq}-Z_{pcq}, &Z^{\psi}_{pcq}&=X_{pcq}-A_{pcq},\\
+\sum_pA^{\psi}_{pcq}&\le1, &\sum_pZ^{\psi}_{pcq}&\le1.
+\end{aligned}
+\label{eq:cycle-exposures-cn}
+\end{equation}
+式~\eqref{eq:cycle-exposures-cn}使每个启用PW对只进入腔室一次，并连续参加一个或两个周期。前三条不等式给出$A_{pcq}=X_{pcq}(1-X_{pc,q-1})$，结合末
+次参加标记可得$\sum_{c,q}Z_{pcq}=\sum_{c,q}A_{pcq}=v_p$。含产品的$4\times1$对参加一次处理，含产品的$2\times2$对在同腔参加相邻两次处理，纯辅助补
+位对与清洁对均只参加一个周期。
+
+\noindent\textbf{加工时长与周期衔接：}
+一个加工周期只有在前一周期结束后才能开始，持续时间由所选加工类型确定，周期结束时刻为$S_{cq}+\sum_m d_mK_{cqm}$，因此，有
+\begin{equation}
+\begin{aligned}
+S_{cq}&\ge0,\\
+S_{cq}+\sum_m d_mK_{cqm}&\le B U_{cq},\\
+S_{cq}&\ge S_{c,q-1}+\sum_m d_mK_{c,q-1,m}\\
+&\quad-M(1-U_{cq})\qquad(q>1).
+\end{aligned}
+\label{eq:cycle-time-cn}
+\end{equation}
+该约束固定各类加工周期的持续时间，等待仅发生在动作之间；装卸与旋转的持续时间由相应事件单独计入。
+
+\noindent\textbf{前后侧占位与旋转装卸：}
+机械手只能访问腔室前侧，故新装入的PW对位于前侧，保留自上一周期的PW对经旋转转至后侧。$\kappa_{cq},\upsilon_{cq}$是二元辅助变量，分别表示周期$q$是否保
+留来自$q-1$的一个PW对、周期$q$结束后是否两个PW对全部退出。根据相邻周期的占位关系，有
+\begin{equation}
+\begin{aligned}
+\kappa_{cq}&=\sum_p(X_{pcq}-A_{pcq}),\\
+\upsilon_{cq}&=U_{cq}-\sum_p(X_{pcq}-Z_{pcq}),\\
+f_{pcq}&\le A_{pcq},\qquad\sum_pf_{pcq}=U_{cq},\\
+f_{pc,q-1}&\ge X_{pcq}-A_{pcq}\quad(q>1),\\
+f_{pcq}&\ge F_p+K_{cq\psi}+X_{pcq}-2-\kappa_{cq}.
+\end{aligned}
+\label{eq:cycle-side-cn}
+\end{equation}
+动作$(p,\mathrm{load})$与$(p,\mathrm{unload})$分别是PW对$p$的装入与卸出；$(c,q,\mathrm{rot-})$与$(c,q,\mathrm{rot+})$分别是该周期前、后的半周旋转，
+由$U_{cq}$与$\upsilon_{cq}$启用，各持续$r_c$，装载联结为
+\begin{equation}
+\begin{aligned}
+X_{pcq}=1\ \Rightarrow\quad
+&S_{cq}\ge e_{(p,\mathrm{load})},\\
+&s_{(p,\mathrm{unload})}\ge S_{cq}+\sum_m d_mK_{cqm};\\
+A_{pcq}=1,\ f_{pcq}=0\ \Rightarrow\quad
+&e_{(p,\mathrm{load})}\le s_{(c,q,\mathrm{rot-})};\\
+A_{pcq}=1,\ f_{pcq}=1\ \Rightarrow\quad
+&s_{(p,\mathrm{load})}\ge e_{(c,q,\mathrm{rot-})},\\
+&S_{cq}=e_{(p,\mathrm{load})};\\
+\kappa_{cq}=1\ \Rightarrow\quad
+&s_{(c,q,\mathrm{rot-})}\ge S_{c,q-1}\\
+&\qquad+\sum_m d_mK_{c,q-1,m}.
+\end{aligned}
+\label{eq:cycle-load-cn}
+\end{equation}
+全部退出时，周期后旋转在加工结束后开始。最后一次加工后的卸片关系为
+\begin{equation}
+\begin{aligned}
+Z_{pcq}=1,\ f_{pcq}=1\quad
+&\Rightarrow e_{(p,\mathrm{unload})}\le s_{(c,q,\mathrm{rot+})},\\
+Z_{pcq}=1,\ f_{pcq}=0,\ \upsilon_{cq}=1\quad
+&\Rightarrow s_{(p,\mathrm{unload})}\ge e_{(c,q,\mathrm{rot+})},\\
+Z_{pcq}=1,\ f_{pcq}=0,\ \upsilon_{cq}=0\quad
+&\Rightarrow s_{(p,\mathrm{unload})}\ge e_{(c,q+1,\mathrm{rot-})}.
+\end{aligned}
+\label{eq:cycle-unload-cn}
+\end{equation}
+由此得到，若下一周期保留一个对，则新对的装载须等待被替换的后侧对完成卸载；若不保留，则下一周期装载须等待上一周期的两个对均卸完，并与
+VTR动作互斥共同约束换片。
+
+\noindent\textbf{清洁触发与清洁动作链：}
+用清洁计数器累计自上次清洁以来的生产周期数，完成清洁后计数归零。达到阈值时须执行清洁，未达到阈值时可在合法工艺边界提前清洁；初始清洁与连续清洁均不允许。
+取候选尾部$U_{c,Q_{\max}+1}=0$，有：
+\begin{equation}
+\begin{aligned}
+0\le n_{cq}&\le H U_{cq},\qquad n_{c0}=0,\\
+K_{cq,\mathrm{cl}}=1&\Rightarrow n_{cq}=0,\\
+U_{cq}=1,\ K_{cq,\mathrm{cl}}=0
+&\Rightarrow n_{cq}=n_{c,q-1}+1,\quad n_{c,q-1}\le H-1,\\
+K_{cq,\mathrm{cl}}=1&\Rightarrow 1\le n_{c,q-1}\le H,\\
+n_{cq}&\le H-1+H U_{c,q+1},\\
+K_{c1,\mathrm{cl}}&=0,\qquad
+K_{cq,\mathrm{cl}}+K_{c,q-1,\mathrm{cl}}\le1\quad(q>1).
+\end{aligned}
+\label{eq:clean-counter-cn}
+\end{equation}
+式~\eqref{eq:clean-counter-cn}限制相邻两次清洁之间的生产次数，并在达到阈值时强制清洁，包括最后一个生产段。由式~\eqref{eq:cycle-capacity-cn}
+与式~\eqref{eq:cycle-exposures-cn}，同一链式产品对须连续参加两个生产周期，故清洁不能插入这两次处理之间。
+
+$h$是清洁区段索引，按腔室$c$内清洁边界之间的生产段依次编号。$\mathcal V_c$是该腔室已安排的生产任务集合，一个任务对应一个$4\times1$批次或一个
+$2\times2$生产周期；$v$是其中的任务索引。$a_{vch},q^{\rm cl}_{ch}$是二元辅助变量，分别表示任务$v$是否属于腔室$c$的第$h$段、该段之后是否执行
+清洁。区段及这些变量由周期结构确定，不另作区段划分决策；$q^{\rm cl}_{ch}$中的$q$不是周期编号。内部段以清洁结束，末段是否清洁由
+式~\eqref{eq:clean-counter-cn}确定。
+
+$o_v^-,o_v^+$分别是生产任务$v$的首个与末个动作索引；$o_{ch}^{\nu}$是区段$h$后清洁任务的阶段动作索引，其中$\nu\in\{FL,BL,P,BU,FU\}$依次标识
+前装、后装、清洁、后卸与前卸。完整清洁任务从前装开始至前卸结束，各阶段直接使用对应动作的起止时刻。清洁前后关系及动作链为：
+
+\begin{equation}
+\begin{aligned}
+s_{o_v^-}&\ge e_{o_{c,h-1}^{FU}}-M(1-a_{vch}) &&(h>1),\\
+e_{o_v^+}&\le s_{o_{ch}^{FL}}+M(1-a_{vch})+M(1-q^{\rm cl}_{ch}),\\
+s_{o_{ch}^{BL}}&\ge e_{o_{ch}^{FL}}+r_c-M(1-q^{\rm cl}_{ch}),\\
+s_{o_{ch}^{P}}&\ge e_{o_{ch}^{BL}}-M(1-q^{\rm cl}_{ch}),\\
+s_{o_{ch}^{BU}}&\ge e_{o_{ch}^{P}}-M(1-q^{\rm cl}_{ch}),\\
+s_{o_{ch}^{FU}}&\ge e_{o_{ch}^{BU}}+r_c-M(1-q^{\rm cl}_{ch}).
+\end{aligned}
+\label{eq:clean-time-cn}
+\end{equation}
+式~\eqref{eq:clean-time-cn}表示第$h$区段只能在前一次清洁完成后开始，并须在下一次清洁开始前结束。一次完整清洁任务包含两侧辅助晶圆装载、腔室旋转
+、清洁处理和反向卸载，其持续时间与资源占用共同约束VTR、旋转腔及四片辅助晶圆的可用时刻。
+
+\subsection{辅助晶圆复用与机械手、模块资源}
+\label{sec:model-resource-cn}
+
+晶圆路线和腔内加工规则还需满足实体资源的可用性。本节先为辅助晶圆借用任务选择实体身份，再分配机械手承片位置和模块槽位，最后通过互斥次序及驻留上限
+协调资源占用。
+
+\noindent\textbf{辅助晶圆与循环复用：}
+两腔共享辅助晶圆库存，一片辅助晶圆在归还之前不能再次借出。因此，每项有效借用需求应选定一片实体晶圆，同一PW对的两个位置应使用不同晶圆，有
+\begin{equation}
+\sum_{\tau\in\mathcal D}g_{pr\tau}=d_{pr},\qquad
+\sum_{r=0}^{1}g_{pr\tau}\le1.
+\label{eq:dummy-assign-cn}
+\end{equation}
+式~\eqref{eq:dummy-assign-cn}保证每项辅助需求恰好分配一片晶圆。借用区间按共享资源约束排序，使同一晶圆只能在完成归还后再次使用。该条件同样适用于跨
+腔借用，允许两腔使用不同辅助晶圆并行生产。
+
+\noindent\textbf{机械手与模块容量：}
+资源排序区分执行机构的动作互斥与承片位置的容量限制。ATR、VTR、AL及各旋转腔的执行机构作为独占动作资源；机械手承片位置、装载锁槽位和辅助晶圆身份分别分配物理单元，容量采用表~\ref{tab:symbol-cn-a}的配置。腔内占位已由式~\eqref{eq:cycle-capacity-cn}约束。
+
+资源分配以单个占用区间为单位：一次单片承片位置占用、一次辅助晶圆借用或一次执行机构互斥占用均选择一个允许单元。对$\mathcal O^{\rm occ}$中的占用区间，
+$\Gamma_o$是允许物理单元的集合，按晶圆类型与资源资格确定；若资格依赖晶圆类型选择，则通过相应条件约束联结。占用分配满足：
+\begin{equation}
+\sum_{u\in\Gamma_o}h_{ou}=b_o,\qquad 0\le s_o,e_o\le B.
+\label{eq:slot-select-cn}
+\end{equation}
+式~\eqref{eq:slot-select-cn}保证启用占用恰好选择一个允许单元；占用结束时刻计入复位尾部后仍须满足统一时间界。两片晶圆成对搬运时，各自保留承片位置占
+用，动作同步由式~\eqref{eq:double-transfer-cn}协调。同一单元的占用区间不重叠，由式~\eqref{eq:resource-order-cn}保证。当$\Gamma_o$仅含一个单元时，$h_{ou}=b_o$可直接代入。
+
+装载锁槽位占用从放片开始，持续到取片完成并加上复位时间，复位只限制该槽位的再次使用，可与取片后机械手的继续运输重叠。
+
+$D_1,D_2,C_1,C_2$是物理手的固定编号，依次表示VTR的两只脏手和两只洁净手。对于未完成工艺处理的产品晶圆的承片任务要由脏手处理，$\Gamma_o=\{D_1,D_2\}$；
+对于完成全部工艺处理的产品晶圆的承片任务要由洁净手处理，$\Gamma_o=\{C_1,C_2\}$。辅助晶圆的输入与返回均允许$\Gamma_o=\{D_1,D_2,C_1,C_2\}$。每项承
+片任务从取片动作开始持续至放片动作完成，式~\eqref{eq:slot-select-cn}选择的物理手在此区间内保持不变。相同手上的占用按式~\eqref{eq:resource-order-cn}
+互斥，其承片区间的换位间隔取零。脏手与洁净手各自最多承载两片，辅助晶圆同时竞争这两类空闲承片位置，但每片辅助晶圆也必须分配到当时空闲的具体手。
+
+\noindent\textbf{资源互斥与地点相关换位：}
+共享资源的先后关系分为给定技术次序和待定服务次序。路线先后弧按工艺执行，其余冲突动作通过资源次序变量协调。
+
+若两个动作占用选择同一资源单元，则其中一个必须在另一个结束后开始，并满足换位或复位间隔。因此，有：
+\begin{equation}
+\begin{aligned}
+s_{o'}&\ge e_o+\delta^\rho_{oo'}-M(1-y^\rho_{oo'})
+-M(1-h_{ou})-M(1-h_{o'u}),\\
+s_o&\ge e_{o'}+\delta^\rho_{o'o}-My^\rho_{oo'}
+-M(1-h_{ou})-M(1-h_{o'u}).
+\end{aligned}
+\label{eq:resource-order-cn}
+\end{equation}
+式~\eqref{eq:resource-order-cn}保证选用同一物理单元的占用区间不重叠；选用不同单元时，该对互斥条件不限制其并行。该约束分别用于机械手
+动作、物理手、模块槽位、腔室执行机构和实体辅助晶圆。
+
+换位时间按地点对给定。对于腔室由$z_{pc}$决定的动作，按候选腔室组合启用相应移动时间间隔，而不预先固定其地点。$p',c'$分别是另一PW对及
+其腔室的索引；$\delta^{\rm VTR}_{cc'}$是非负实数常量，表示VTR从腔室$c$移至$c'$的时长。例如，两动作分别服务于对$p,p'$且均启用时，有：
+\begin{equation}
+\begin{aligned}
+z_{pc}=z_{p'c'}=1,\ y^{\rm VTR}_{oo'}=1
+\ \Rightarrow\ s_{o'}\ge e_o+\delta^{\rm VTR}_{cc'}.
+\end{aligned}
+\label{eq:location-travel-cn}
+\end{equation}
+对固定地点的动作，直接使用式~\eqref{eq:resource-order-cn}。产品源端和回片地点按$\sum_jx_{j\ell pr}$联结，移动间隔同样按地点组合条
+件启用，且回到所选原LP。
+
+\noindent\textbf{驻留限制与死锁预防：}
+对启用的晶圆路线任务，$\operatorname{in}(i,\rho)$和$\operatorname{out}(i,\rho)$分别表示将晶圆$i$放入模块$\rho$、从该模块取出的动
+作索引。对于AL和装载锁，直接限制这两个端点之间的时长；对于工艺腔，先扣除该晶圆所在PW对实际参加的必要工艺处理时长，再限制剩余的非加工
+驻留时间。必要工艺处理包括生产处理和清洁处理，不包括等待、旋转及其他取放动作；扣除时长按式~\eqref{eq:cycle-exposures-cn}确定的参与次数计算。对启用路线$i=(p,r)$，有：
+\begin{equation}
+\begin{aligned}
+0\le\;&s_{\operatorname{out}(i,\rho)}-e_{\operatorname{in}(i,\rho)}
+\le\overline R_{i\rho},\quad \rho\notin\mathcal C;\\
+0\le\;&s_{(p,\mathrm{unload})}-e_{(p,\mathrm{load})}
+-d_\zeta\mu_{p\zeta}\\
+&-d_\psi(\mu_{p\psi}+F_p^\psi)
+-d_{\mathrm{cl}}\mu_{p,\mathrm{cl}}\le\overline R_{i\rho},
+\quad\rho\in\mathcal C.
+\end{aligned}
+\label{eq:residence-cn}
+\end{equation}
+式~\eqref{eq:residence-cn}中的第二组约束用于路线实际访问的工艺腔。占用结束时刻连同复位尾部均不超过$B$。
+
+上述操作先后约束~\eqref{eq:precedence-cn}与资源排序约束~\eqref{eq:resource-order-cn}共同构成本模型的死锁避免机制。对任一候选排程，
+把已激活操作作为节点，把操作先后关系和求解器选择的共享资源先后关系作为有向弧；若机械手、装载锁、旋转腔或辅助晶圆之间出现循环等待，则
+该操作--资源图中必然出现有向环。对于实际资源占用操作，沿环累加相应时间约束会产生正的持续时间或切换时间增量，从而要求某一操作的开始时
+刻严格晚于自身，违反时间可行性。因此，所建模动作中的循环等待不能形成MILP可行解。该论证针对给定参数、完整动作模型下的离线排程，不构成扰动或设备故障发生后的在线无死锁保证。
+
+\subsection{完工时间优先的两阶段优化}
+\label{sec:model-objective-cn}
+
+$\mathcal F$是由前述全部约束确定的联合可行域；$\xi$是变量向量，表示模型全部保留变量的整体赋值。第一阶段优化产品回片完工时间，第二阶
+段在保留第一阶段完工时间上界与主要离散结构的条件下优化等待与生产节拍。
+
+\noindent\textbf{第一阶段：最小化产品回片完工时间：}
+对每个位置$(p,r)$，以下$o=((p,r),\mathrm{return})$定位其返回原LP的动作，$\mathrm{return}$是回片动作标签。只对产品晶圆形成主目标下界：
+\begin{equation}
+\begin{gathered}
+C_{\max}\ge e_o-M(1-\beta_{pr})\quad(p,r),\\
+\min_{\xi\in\mathcal F}C_{\max}.
+\end{gathered}
+\label{eq:primary-objective-cn}
+\end{equation}
+式~\eqref{eq:primary-objective-cn}表示最大完工时间按最后一片产品晶圆完成完整端到端路线并返回LP的时刻计算。若清洁位于两个生产段之间，
+其资源占用和前后关系会推迟后续产品回片，因而自然影响$C_{\max}$；若最后一次清洁之后不再有产品工艺处理，则该末端清洁仍保留在设备动作序列
+中，其完成时刻不直接作为$C_{\max}$的下界。末端清洁仍可能经共享VTR与其他腔室的产品回片竞争资源，因此其间接影响须由完整排程判定。产品产
+出率按$\mathrm{WPH}=3600N/C_{\max}$统计，单位为片/小时；该值是有限批次的等效产出率，未计入产品回片后的全部设备占用尾段，不等同于稳态吞吐率。
+
+\noindent\textbf{第二阶段：限定优化范围并精修时序：}
+$\widehat\xi$是给定常量向量，表示当前优化子问题采用的可行参考赋值；第二阶段采用第一阶段当前最好可行解作为该参考。$\widehat C$是非负
+实数常量，表示该参考解的产品完工时间。$d$是变量向量的分量索引，$\xi_d$是其第$d$个变量，$\widehat\xi_d$是对应参考值。$\mathcal D_{\rm fix}$
+是第二阶段固定的分量索引集合，包含配对、分腔、周期占位、辅助身份、手分配、随行入片与资源次序，排除可继续调整的原子同步选择。第二阶段在原可行域上增加：
+
+\begin{equation}
+\begin{gathered}
+\xi_d=\widehat\xi_d\quad(d\in\mathcal D_{\rm fix}),\qquad
+C_{\max}\le\widehat C+\varepsilon_C.
+\end{gathered}
+\label{eq:secondary-domain-cn}
+\end{equation}
+
+式~\eqref{eq:secondary-domain-cn}保留主要离散结构及产品完工时间上界，同地点原子取放同步选择与连续时刻继续参与优化。第一阶段的当前最
+好可行解为第二阶段提供起点和完工时间上界。
+
+$\mathcal W$是供回片路线等待项的索引集合；$\omega_\alpha$表示等待项$\alpha$对应的时刻差表达式，即后继动作开始时刻减去前驱动作结束时
+刻，再扣除必要操作或移动时长。所有晶圆均计入VTR源端取片结束至对装片开始、对卸片结束至VTR目的端放片开始的间隔，并扣除必要移动时间。经过
+大气侧的晶圆还计入动作之间的衔接间隔，分别扣除移动、对准、抽气或放气时长；绕过AL的辅助片以源端取片至上锁放片代替前三项。各间隔均按前一
+动作结束至后一动作开始计算。腔内加工结束至卸片开始的间隔由周期、驻留和资源约束管理，供回路线等待与腔内驻留分别统计。
+
+总路线等待按$\sum_{\alpha\in\mathcal W}\omega_\alpha$计算，实验统计简记为$L_{\rm sum}$。产品片与辅助片均纳入评价，并行发生的不同晶
+圆等待分别计入。最大单项等待满足：
+\begin{equation}
+L_{\max}\ge\omega_\alpha\ge0,\qquad \alpha\in\mathcal W.
+\label{eq:secondary-wait-cn}
+\end{equation}
+
+$\mathcal I_{\rm rhythm}$是节拍评价中心的索引集合，包含同一腔室、同一$2\times2$链内连续三个生产周期的中心$(c,q)$；相邻两处边界均保
+留一个对，即$\kappa_{cq}=\kappa_{c,q+1}=1$，不跨清洁或链边界计算。第二阶段固定周期结构后，该集合随之确定。后一个开始间隔减去前一个间
+隔为$S_{c,q+1}-2S_{cq}+S_{c,q-1}$，其绝对值上界满足：
+
+\begin{equation}
+\begin{aligned}
+v_{cq}&\ge S_{c,q+1}-2S_{cq}+S_{c,q-1},\\
+v_{cq}&\ge-S_{c,q+1}+2S_{cq}-S_{c,q-1}
+\quad((c,q)\in\mathcal I_{\rm rhythm}).
+\end{aligned}
+\label{eq:secondary-rhythm-cn}
+\end{equation}
+
+$\eta_\alpha$是非负实数辅助变量，表示等待项$\alpha$超过软上限的时长上界，单位s；启用软上限时满足：
+\begin{equation}
+\eta_\alpha\ge\omega_\alpha-\bar\omega_\alpha,\qquad
+\eta_\alpha\ge0.
+\label{eq:secondary-softwait-cn}
+\end{equation}
+
+将上述指标按给定权重组合，第二阶段目标为：
+\begin{equation}
+\begin{aligned}
+\min\ \ &\lambda_1\sum_{\alpha\in\mathcal W}\omega_\alpha+\lambda_2L_{\max}\\
+&+\lambda_3\sum_{(c,q)\in\mathcal I_{\rm rhythm}}v_{cq}
++\lambda_4\sum_{\alpha\in\mathcal W}\eta_\alpha.
+\end{aligned}
+\label{eq:secondary-objective-cn}
+\end{equation}
+
+式~\eqref{eq:secondary-objective-cn}按表~\ref{tab:symbol-cn-a}的权重组合四项时序指标。节拍项对照取$\lambda_3\in\{0,5,25,100\}$，固定前两项权重。本文实现与实验均取$\lambda_4=0$，不生成软等待超额变量，也不据此评价软上限惩罚的效果；式~\eqref{eq:secondary-softwait-cn}仅给出可选扩展形式。
+
+当对应权重严格为正且第二阶段达到最优时，上界辅助变量取紧值：$L_{\max}=\max_\alpha\omega_\alpha$、$v_{cq}=|S_{c,q+1}-2S_{cq}+S_{c,q-1}|$
+及$\eta_\alpha=\max(0,\omega_\alpha-\bar\omega_\alpha)$。实验指标统一由实际事件时刻计算。节拍项衡量相邻生产周期开始间隔的变化，连续三
+个生产周期等间隔开始时该项为零。软等待上限允许超出并施加惩罚，驻留时间上限则作为硬约束执行。
+
+\section{结构化初始化、HEM扩展选割与两阶段求解}
+\label{sec:algorithm-cn}
+
+本节说明如何从批次任务得到具体晶圆排程。输入沿用第~\ref{sec:model-encoding-cn}节的Pjob、LP库存及实际编号映射表，不再重复编码过程。
+算法可先尝试构造并验证一份初始排程，再改善其资源次序与时刻；也可使用预先验证的初始赋值或直接冷启动。随后在完整候选域内搜索产品完工时间更短的排程，并在保留所得主要结构的条件下精修等待与节拍。辅助片归还与复位始终属于物理排程，可选收尾优化只进一步压缩其完成时刻。最终将模型中的产品位置还原为实际晶圆。初始化只提供搜索起点，不限定最终的配对、分腔或周期方案，也不保证每个实例都能构造出可行起点。
+
+\subsection{初始排程构造与结构化改善}
+\label{sec:pjob-encoding-cn}
+
+初始排程按任务资格和批次内序号构造：先将产品划分为连续区段并分配到允许腔室，再按工艺模式组成PW对，以辅助片补齐空位；随后安排生产周期、$2\times2$连续处理链及清洁边界，沿供片、加工和回片路径，结合操作时长、机械手移动与资源释放时刻依次确定各事件的开始时间。所得排程经出片顺序、资源占用和驻留条件检查后记为$\mathcal S^0$。将其中的产品对、辅助身份、分腔、周期占位及动作时刻对应到模型变量，并补齐资源次序与逻辑辅助量，得到完整初始赋值$\xi^0=\mathsf{Enc}(\mathcal S^0)$；其中$\mathsf{Enc}$表示物理排程到模型赋值的映射。
+
+在此起点上，结构保持二元骨架（structure-preserving binary skeleton，SPBS）以缩短$C_{\max}$为目标逐层改善排程。第一层固定主要离散选择，调整连续时刻和原子同步取放；随后依次开放VTR次序、装载锁次序和其余资源次序；最后开放周期占位、前后侧及手分配，保留PW对组成、辅助身份、分腔、库存指派和周期类型。令$t\in\{1,\ldots,5\}$为层号，$\mathcal F_t$为该层固定的离散分量索引集合，以该层起点$\widehat\xi$为参考，临时约束为
+\begin{equation}
+\xi_d=\widehat\xi_d\quad(d\in\mathcal F_t),\qquad
+\mathcal F_1\supseteq\cdots\supseteq\mathcal F_5.
+\label{eq:spbs-fix-cn}
+\end{equation}
+每层至多使用结构化改善预算的五分之一，并将当前最好可行赋值传给下一层。改善后的赋值经完整验证后作为第一阶段的起点；进入第一阶段时解除全部临时固定关系。初始化成本与主求解时间分别记录。
+
+
+\subsection{HEM基础上的变量角色特征与结构重排}
+\label{sec:hem-extension-cn}
+
+学习选割作用于求解器生成的有效割候选，不改变原问题的整数可行解集合。HEM的层次数量控制与有序子集生成沿用已有方法\citep{wang2023hem}；本文在该基础上考察特征表示与推理后处理，并将其与前述SPBS原始解改善连接。SPBS提供可行上界，选割影响松弛与搜索，两者承担不同作用。所用网络及其检查点在本组实验前冻结，当前配置D上不重新训练。
+
+基础HEM使用13维通用割特征，包括目标平行度、有效性、支持比例、整数支持、归一化违约程度，以及割系数和目标系数的均值、最大值、最小值与标准差。扩展表示追加10维变量角色信息。对割$a$的非零系数，按二元、一般整数、连续目标、连续辅助及其他五类变量统计绝对系数占比，记为$p_{ag}$；连续目标变量指目标系数非零的连续变量。再计算有限界系数占比、正系数占比、离散与连续质量的耦合量、主要已识别角色占比及归一化角色熵，组成23维输入。其中耦合量为$4(p_{a1}+p_{a2})(p_{a3}+p_{a4})$，熵为$-\sum_gp_{ag}\log p_{ag}/\log5$，零项按零处理。这里的结构是通用MILP变量角色，不是PW、清洁或物理瓶颈标签。
+
+设$k$为经求解器上限截断后的目标选割数。策略首先给出有序候选，随后以有效性、违约程度、整数支持及角色统计构成的质量分数补充候选。质量原始分数依次按0.36、0.24、0.15、0.15、0.10和$-0.05$加权有效性、违约程度、整数支持、非其他类占比、主导已识别角色占比和角色熵；前三项在候选内做极差归一化，再将合成分数归一化为$q_a\in[0,1]$，零极差取零。策略序列优先、质量次序补齐并去重，形成排序后截取至多$2k$个候选的扩展池$\mathcal E$。
+
+令$\pi_a$为按完整候选排序线性递减的先验分数，$d_g=\sum_{a\in\mathcal E}p_{ag}/\sum_{a\in\mathcal E,g}p_{ag}$为池内角色需求占比。$s_{ab}$为候选前五维通用特征与前四类角色占比拼接向量的余弦相似度，截断至$[0,1]$且对角元素为1。对所选集合$A$，重排采用
+\begin{equation}
+\begin{aligned}
+G(A)={}&\sum_{a\in A}(0.35q_a+0.20\pi_a)\\
+&+0.25\sum_gd_g\sqrt{\sum_{a\in A}p_{ag}}\\
+&+\frac{0.20}{|\mathcal E|}\sum_{b\in\mathcal E}\max_{a\in A}s_{ba}.
+\end{aligned}
+\label{eq:cut-rerank-cn}
+\end{equation}
+保留策略给出的前$\lceil0.25k\rceil$个候选作为锚点，锚点数不超过实际策略输出数；随后每次加入使$G$边际增益最大的候选，直至选满。该准则平衡割质量、策略偏好、角色覆盖与候选代表性。它用于割子集的推理后处理，不提供调度目标改善或全局最优性保证。
+
+实现中每次学习推理至多考察128个候选、选择16个割，网络隐藏维数为128，束搜索宽度为3，并保留求解器对强制割和可选数量的限制。完整扩展策略记为proposed；特征单独扩展使用独立的23维检查点和贪心解码；去重排及改用贪心解码的两臂共享proposed检查点。由此区分训练后特征表示比较与同检查点推理消融。各臂的具体设置与表现见第~\ref{sec:journal-ablation-cn}节。
+
+\subsection{从初始排程到两阶段优化结果}
+
+\paragraph{第一阶段：联合调整配对、分腔、周期与资源次序}
+以通过验证的初始化结果为当前可行解，在第2节的完整可行域$\mathcal F$中按式~\eqref{eq:primary-objective-cn}最小化$C_{\max}$；关闭初始化且无预先验证的输入解时，直接搜索该可行域。搜索同时调整产品配对、合格腔室分配、周期占位、清洁位置及搬运次序，并重新协调动作时刻。各腔室的生产段通过共享VTR、装载锁与辅助片的资源约束衔接，满足工艺和驻留条件的搬运与加工可以重叠执行。每获得产品回片完工时间更短的可行排程，即更新当前最好解。第一阶段由SCIP实现\citep{achterberg2009scip,bestuzheva2023scip}，也可按第~\ref{sec:hem-extension-cn}节接入冻结的HEM或扩展学习选割策略辅助搜索。停止时，若存在通过验证的可行解，将其赋值及产品完工时间记为$\widehat\xi$和$\widehat C$，记录有效下界、间隙与停止状态，并在启用精修时进入第二阶段；否则输出无可行解的停止记录，不执行依赖该解的精修或收尾优化。
+
+\paragraph{第二阶段：保留主要结构并精修时序}
+以$\widehat\xi$为起点，按式~\eqref{eq:secondary-domain-cn}固定配对、分腔、周期占位、辅助身份、手分配及资源次序，并将产品完工时间限定在$\widehat C+\varepsilon_C$内。调整动作开始时刻和原子同步取放选择，以式~\eqref{eq:secondary-objective-cn}协调总等待、最大单项等待与同链相邻周期开始间隔的变化。具体而言，供片动作向后续加工靠近，卸片后的回片衔接被压紧，同一链内的周期开始时刻在资源和驻留条件下重新分布。通过完整验证的改善结果替换第一阶段排程；启用收尾优化时再执行下一小节的后处理，否则直接验证并输出。各阶段分别记录目标值和实际耗时。
+
+\subsection{可选收尾优化与完成边界}
+\label{sec:output-completion-cn}
+
+产品回片之后，排程仍可能包含辅助片归还、末端清洁及装载锁复位。$\widetilde\xi$是给定常量向量，表示第二阶段保留的可行赋值，$\widetilde\xi_d$是其第$d$个分量；$\widetilde C$是非负实数常量，表示该赋值的产品完工时间。$F_2$是式~\eqref{eq:secondary-objective-cn}对应的加权目标函数，$\widetilde F_2=F_2(\widetilde\xi)$是收尾处理采用的目标值常量。波浪号表示收尾输入。$\mathcal D_{\rm disc}$是全部离散变量的分量索引集合，包含第二阶段允许调整的原子同步选择。为使已安排动作尽早完成，在保持产品完工时间及第二阶段目标上界的条件下，求解
+\begin{equation}
+\begin{aligned}
+\min\quad &C_{\mathrm{end}}\\
+\text{s.t.}\quad &\xi\in\mathcal F,\quad \xi_d=\widetilde\xi_d\ (d\in\mathcal D_{\rm disc}),\\
+&C_{\max}\le\widetilde C+\varepsilon_C,\\
+&F_2(\xi)\le\widetilde F_2+\varepsilon_2,\\
+&C_{\mathrm{end}}\ge e_o\quad(o\in\mathcal O\cup\mathcal O^{\rm occ}),\\
+&C_{\mathrm{end}}\ge S_{cq}+\sum_m d_mK_{cqm}\\
+&\hspace{4em}(c\in\mathcal C,q\in\mathcal Q_c).
+\end{aligned}
+\label{eq:output-completion-cn}
+\end{equation}
+式~\eqref{eq:output-completion-cn}固定全部离散选择，仅调整连续时刻；输入排程提供可行起点。装载锁占用的结束端点包含压力复位，因此目标同时计入辅助片归还、末端清洁和复位完成。收尾重新协调这些动作的时刻以缩短全部动作的完工时间，仍保留完整归还、清洁与复位过程。经验证的改进结果予以保留，否则沿用收尾输入；记录产品完工时间与全部动作完工时间，以及路线等待和节拍指标，随后进行晶圆身份解码。
+
+\subsection{晶圆身份恢复、验证与输出}
+\label{sec:pjob-decoding-cn}
+
+$\xi^\star$表示上述构造、搜索及收尾过程最终保留的可行赋值；$\mathcal S^\star$是对应的具体晶圆排程，上标$\star$表示最终保留结果。$\mathsf{Dec}$是排程解码函数，按$\mathcal S^\star=\mathsf{Dec}(\xi^\star)$恢复实际晶圆身份和全部事件时刻。对任务$j$，将满足$\sum_\ell x_{j\ell pr}=1$的对内位置按首次LP取片开始时刻非递减排列；同刻依次按来源LP、对编号和对内位置升序排列。$i_j^{(k)}$是排序后的对内位置索引，表示任务$j$的第$k$片产品对应的位置，上标$(k)$是排序序号。依据输入编码表恢复
+\begin{equation}
+i_j^{(k)}\longmapsto\mathrm{Pjob}_j[k]
+\longmapsto\mathcal L_j[k],\qquad k=1,\ldots,N_j.
+\label{eq:pjob-decoding-cn}
+\end{equation}
+库存与出片顺序约束保证上述映射的来源LP一致，同刻排序使其确定。将恢复的实际编号沿该位置对应的全部事件传播，即得到具体晶圆动作表。在第~\ref{sec:model-encoding-cn}节的可互换条件下，该映射只恢复身份，保留腔室、资源和动作时刻，因而不改变产品完工时间、等待与节拍指标。
+
+以表~\ref{tab:pjob-code-example-cn}的输入为例，若任务1所选的四个对内位置按上述规则排为$(1,0),(1,1),(2,0),(3,0)$，则依次赋予实际编号1、3、26、27。具体地，位置$(2,0)$排第3，故对应$\mathrm{Pjob}_1[3]$，查表得到实际晶圆26；该晶圆执行PW对2的位置0已求得的全部取放、加工和回片动作。前两个位置若同时从LP1取片，则按$r=0,1$分别对应晶圆1和3，不改变相等的取片时刻。任务2的晶圆2独立对应$\mathrm{Pjob}_2[1]$，可以穿插在任务1的取片动作之间。此例只说明身份映射，具体动作时刻仍由模型约束确定。
+
+解码后，按事件时刻生成每片晶圆的来源、PW对、腔室、处理周期及全部取放记录，并以同一时间轴独立重放资源占用。验证须确认每片产品恰好完成规定路线与处理次数，辅助片借还区间不冲突，机械手、装载锁和腔室容量不超限，且出片顺序与驻留条件均成立。验证通过后输出晶圆动作表、产品完工时间、全部动作完工时间及等待与节拍指标，同时保留第一阶段下界、间隙与停止状态。排程的求解状态由第一阶段的可行上界与有效下界共同确定。
+
+\begin{table}[!htbp]
+\raggedright\footnotesize
+\algorithmtitle{从批次任务到具体晶圆排程}
+\label{alg:model4-cn}
+\begin{lrbox}{\CIEtablebox}\begin{tabular}{>{\raggedright\arraybackslash}p{0.94\columnwidth}}
 \toprule
-方法 & 运行数 & 可行解率（\%） & 平均PDI & 平均gap（\%） \\
-\midrule
-SCIP & 27 & 100 & 73670.99 & 171.35 \\
-自适应割选择 & 27 & 100 & \textbf{70915.54} & \textbf{160.78} \\
-HEM-13D & 135 & 100 & 73003.59 & 165.88 \\
-HEM-13D+Beam & 135 & 100 & 73165.58 & 167.04 \\
-仅23维特征 & 135 & 100 & 74187.22 & 169.96 \\
-结构补全+贪心 & 135 & 100 & 73507.76 & 168.54 \\
-\method{} & 135 & 100 & 73919.15 & 170.02 \\
+\textbf{输入：}第2节的批次任务、LP库存与编号映射；设备参数；初始化及两阶段预算。\\
+\textbf{输出：}经验证的晶圆动作表、各阶段目标与第一阶段界；或未获得可行排程的停止记录。\\\midrule
+\textbf{1. 构造候选。}若关闭初始化，跳至步骤4；否则按资格分腔，组建PW对，安排生产链与清洁，沿完整物理路径逐项计算事件时刻。\\
+\textbf{2. 映射起点。}将构造并验证的排程$\mathcal S^0$映射为完整模型赋值$\xi^0$。\\
+\textbf{3. 改善起点。}按五层SPBS逐步开放时序与资源选择，传递当前最好可行赋值；只接收完整验证通过的起点。\\
+\textbf{4. 优化产品完工时间。}解除初始化固定关系，按实验臂配置原生或学习选割，在完整候选域内联合调整配对、分腔、周期与动作，保留最好可行赋值$\widehat\xi$及有效下界。若没有经验证的可行解，输出停止记录并结束。\\
+\textbf{5. 精修等待与节拍（可选）。}固定主要离散结构，保留$\widehat C$上界，优化动作时刻与同步取放；关闭精修或无有效改进时保留步骤4结果。\\
+\textbf{6. 压缩收尾（可选）。}固定全部离散选择，保持产品完工时间及第二阶段目标上界，尽早完成归还、末端清洁和复位；关闭此项或无经验证的改进时保留原排程。\\
+\textbf{7. 解码与输出。}按取片次序恢复实际晶圆编号，独立重放完整物理事件，输出通过验证的排程及最优性或限时可行状态。\\
 \bottomrule
-\end{tabular}}
+\end{tabular}\end{lrbox}\ifdim\wd\CIEtablebox>\linewidth\resizebox{\linewidth}{!}{\usebox{\CIEtablebox}}\else\usebox{\CIEtablebox}\fi
 \end{table}
 
-自适应割选择取得最低分布外PDI，\method{}的观察平均终止gap比默认SCIP低0.78\%。
-全部分布外方法对比经全局Holm校正后均未达到显著。
-完整结果区分出两类证据：\method{}在标称生产范围取得最低观察平均PDI，共享的
-SPBS--MILP--SCIP求解链则在每次更大分布偏移运行中都交付了经求解器检查的可行排程。
-七种方法均使用完整搜索窗口且没有证明分布外最优性，表明全局界闭合是极端规模下
-仍需攻克的核心难点。
+\FloatBarrier
 
-\subsection{工业启示}
+\section{计算实验与结果分析}
+\label{sec:experiments-cn}
 
-完整证据给出三点工业启示。第一，在同一总预算内分层处理吞吐量和排程质量，与仅解
-单阶段相比得到等待和节拍指标更低的保存排程；由于主求解预算分配不同，该差异属于
-工作流证据。第二，预计算且经求解器检查的SPBS输入带来本文最大的显著求解窗口内PDI差异，
-但端到端部署还应另计SPBS构造成本。第三，观察消融结果支持让学习表示对应可迁移的
-MIP数学角色。束搜索效应的符号反转与其和角色表示之间的耦合一致，但该组件比较本身
-既未检验统计交互，也未证明单个组件的因果贡献。
+\subsection{实验设置与证据范围}
 
-本文显式分离的状态、资源和时序层为在线到达、随机加工及模块故障追索提供后续扩展
-接口，但当前结论限于离线有限批次和所测试构型。在此范围内，同预算两阶段工作流的
-保存排程具有显著更低的配对等待与节拍指标，\method{}在比较方法中取得最低观察标称
-平均PDI和时间。
+实验分别考察批次表示的规模与解码一致性、固定结构与联合搜索、二阶段等待压缩、节拍权重以及具体排程可行性。各组保留完整的预设对照，不将不同参数或不同预算的结果合并排名。默认配置D采用100~s模块与机械手上限、工艺腔非加工驻留计时以及$B=10000$~s，复位尾段也须在时域内完成。历史扩展配置E采用模块总驻留和机械手承片上限10000~s、$B=100000$~s，用于复核已完成的机制消融；其工艺腔上限包含加工时间，原协议未额外约束复位尾段在时域内结束。E的结果不作为D的运行性能或成功率估计。两组均采用非递减出片、允许提前清洁、8片辅助晶圆和表~\ref{tab:symbol-cn-a}中的处理及搬运时长。
+
+计算平台为Windows~11、20逻辑处理器和约32~GB内存，使用Python~3.12.12与PySCIPOpt~6.1.0，正式比较每次求解使用单线程。保存实例、输入解、代码与结果的哈希，并核验原始模型赋值检查记录；本文指标由独立物理重放后的事件重新计算。多种子实验先在同一实例内对种子1、2、3取均值，三个种子不视为三个独立实例。主问题下界与产品完工时间上界用于最优性判断；固定结构精修的最优状态不等于完整调度问题最优。
+
+实验流程按各批次的冻结协议执行。此前配置D的小规模、编码、混合、选割与模式扫描批次未调用SPBS；当存在同一配置下预先验证的完整赋值时，各方法及种子共享相同文件，否则冷启动。D的小规模与4/8片混合批次在有可行解时启用精修，选割和模式扫描批次不启用精修；这些批次均未额外求解式~\eqref{eq:output-completion-cn}的收尾子问题。因此，上述历史批次仅评价对应的热启动或冷启动流程。新增的SPBS、选割组件、结构与收尾对照分别按其模块协议报告，仍不作为包含原始构造成本的端到端性能证据。
+
+\subsection{默认配置下的编码补充对照}
+
+为在配置D下检验表示压缩与解码的一致性，选取四个已有完整可行赋值的实例，对Pjob库存表示和显式逐片表示分别运行三个求解种子，共24次。每实例的六次运行共享同一已验证输入，各臂均采用完整候选容量和600~s主问题预算，不调用SPBS、精修或收尾优化。SCIP内存预算为13568~MiB，进程RSS上限为17152~MiB，串行单线程执行；内存准入暂停后沿用冻结协议续跑。比较仅改变产品身份指派表示及其出片顺序映射，设备约束和产品完工目标保持一致。
+
+\begin{table}[!t]
+\centering\small
+\caption{默认配置D的编码对照（24次；每臂三种子均值；时间单位：s）}
+\label{tab:default-encoding-cn}
+\begin{lrbox}{\CIEtablebox}\begin{tabular}{llrrrrrr}\toprule
+实例 & LP分布 & \multicolumn{2}{c}{变量数} & \multicolumn{2}{c}{平均下界/可行上界} & \multicolumn{2}{c}{平均求解时间}\\
+ & & Pjob & 逐片 & Pjob & 逐片 & Pjob & 逐片\\\midrule
+2片/$4\times1$/$H=3$ & 跨LP & 3224 & 3226 & 324.00/324.00 & 324.00/324.00 & 60.00 & 67.67\\
+2片/$4\times1$/$H=3$ & 同LP & 3219 & 3225 & 324.00/324.00 & 324.00/324.00 & 21.00 & 55.33\\
+2片/混合/$H=3$ & 跨LP & 5490 & 5492 & 143.78/518.00 & 225.31/514.33 & 600.00 & 600.00\\
+4片/混合/$H=10$ & 双源 & 20524 & 20528 & 116.00/542.00 & 116.00/542.00 & 600.00 & 600.00\\
+\bottomrule\end{tabular}\end{lrbox}\ifdim\wd\CIEtablebox>\linewidth\resizebox{\linewidth}{!}{\usebox{\CIEtablebox}}\else\usebox{\CIEtablebox}\fi
+\par\smallskip\footnotesize 前两行两臂的全部种子均证明主问题最优；后两行全部限时可行。平均上界为各次可行完工时间的算术均值，不代表一份具体排程；求解时间不含建模、输入映射及验证。
+\end{table}
+
+24份排程均通过保存的原始模型赋值检查、映射回完整Pjob模型的检查记录核对以及本次独立物理重放。表~\ref{tab:default-encoding-cn}前两行共12次均证明$C_{\max}=324$~s最优，支持这两个实例在两种表示下的最优值与实际解码一致。Pjob的平均求解时间分别为60.00~s和21.00~s，低于逐片表示的67.67~s和55.33~s，但这里只涉及两个实例，不能据三个种子重复宣称普遍加速或统计显著性。
+
+同LP纯$4\times1$实例的变量数从3225降至3219，其中二元变量减少4个；约束数由9974降至9955，线性非零项由53106降至52648。其余三个实例的二元变量数未变，主要省去显式逐片取片时刻及其关联约束，说明压缩收益取决于同质库存组的规模。2片混合实例中，Pjob三次均保留518~s输入解，逐片表示的完工时间范围为511--518~s，平均514.33~s，平均下界也更高；4片混合实例两臂均保留542~s输入解。完整对照因而支持表示简化和可验证解码，而不支持所有实例上都改善搜索性能。四个实例均以已有可行赋值为入选条件，本组不用于估计冷启动成功率或较大规模可扩展性。
+
+\subsection{100~s默认配置的最新结果}
+
+配置D的小规模补跑包含8个实例，主问题预算600~s，有可行解时追加60~s精修。表~\ref{tab:default-small-new-cn}列出全部8次运行：4次证明主问题最优，1次得到尚未证明最优的可行解，3次在预算内未得到可行解。表中的等待来自同一运行精修前后的事件；四个最优值均由完整候选主问题的有效下界确认。
+
+\begin{table}[!htbp]
+\centering\small
+\caption{默认配置D的小规模补跑全量结果（单位：s）}
+\label{tab:default-small-new-cn}
+\resizebox{\columnwidth}{!}{%
+\begin{lrbox}{\CIEtablebox}\begin{tabular}{llll}\toprule
+$N$/配方/$H$ & LP分布 & 下界/上界 & 等待：前$\to$后\\\midrule
+1/$4\times1$/3 & LP1 & 296.00/296.00 & $198\to6$\\
+1/$2\times2$/2 & LP1 & 303.00/303.00 & $642\to54$\\
+2/$4\times1$/3 & 跨LP & 324.00/324.00 & $72\to47$\\
+2/$4\times1$/3 & 同LP & 324.00/324.00 & $244\to56$\\
+2/混合/3 & 跨LP & 296.00/518.00 & $207\to55$\\
+2/$2\times2$/2 & 跨LP & 207.10/-- & --\\
+2/$2\times2$/2 & 同LP & 293.50/-- & --\\
+4/混合/3 & 跨LP & 116.00/-- & --\\
+\bottomrule\end{tabular}\end{lrbox}\ifdim\wd\CIEtablebox>\linewidth\resizebox{\linewidth}{!}{\usebox{\CIEtablebox}}\else\usebox{\CIEtablebox}\fi}
+\par\smallskip\footnotesize 前四行主问题最优，第五行可行未证最优，后三行超时无可行解。``--''不表示不可行；精修主目标容差为$10^{-6}$~s。
+\end{table}
+
+默认配置下另完成八个4片或8片混合实例、每实例三个种子的24次运行，主问题300~s、精修60~s。仅4片、$H=10$双源实例的三个种子保留了共同初始可行解，均为$C_{\max}=542$~s、总等待149~s，精修未进一步改善；其余21次超时未得到可行解。这些结果与表~\ref{tab:default-small-new-cn}共同支持当前参数下具体排程的可验证性，但不表明任意规模都能在给定预算内获得可行解。
+
+
+
+\subsection{连续加工、清洁与辅助片复用的同模型见证}
+\label{sec:d-coupled-witness-cn}
+
+表~\ref{tab:default-small-new-cn}中的1片$2\times2$、$H=2$实例还提供了配置D下的耦合机制见证，无需新增求解。该实例有8片可复用辅助片，保留100~s非加工驻留和机械手承片上限，以及含装载锁复位的10000~s时域。对第一阶段及精修后保存的完整赋值重新建立原始D模型检查，并独立重放事件，两份排程均通过。完整主问题的上下界同为303~s；精修阶段的最优状态仅对应固定主要离散结构后的子问题。
+
+如图~\ref{fig:d-coupled-witness-cn}所示，含产品的同一PW对在CH2先后参与$[76,166]$和$[170,260]$~s两个相邻加工周期，累计加工180~s，中间保留在腔内并完成旋转交换。第二次加工后计数达到$H=2$，随后以四片辅助片执行$[284,784]$~s清洁，计数复位为0。辅助片共发生9次借用，涉及7个物理身份；D2、D3均在173~s归还，分别于270、273~s再次借出用于清洁，借用区间互不重叠。同时借用峰值为5片，D8未使用。
+
+\begin{table}[!htbp]
+\centering\small
+\caption{配置D耦合见证的阶段内指标（时间单位：s）}
+\label{tab:d-coupled-witness-cn}
+\begin{lrbox}{\CIEtablebox}\begin{tabular}{lrr}\toprule
+指标 & 第一阶段 & 固定结构精修后\\\midrule
+产品完工时间 & 303 & 303\\
+总等待 & 642 & 54\\
+最大单段等待 & 96 & 16\\
+全部占用结束 & 978 & 796\\
+加工周期/清洁次数 & 2/1 & 2/1\\
+借用次数/实际辅助片数 & 9/7 & 9/7\\
+再次借用次数/同时借用峰值 & 2/5 & 2/5\\
+有效节拍中心数 & 0 & 0\\\bottomrule
+\end{tabular}\end{lrbox}\ifdim\wd\CIEtablebox>\linewidth\resizebox{\linewidth}{!}{\usebox{\CIEtablebox}}\else\usebox{\CIEtablebox}\fi
+\end{table}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\textwidth]{fig_d_coupled_witness_cn}
+\caption{配置D的连续$2\times2$加工、满片清洁与有限辅助片复用见证。上图给出产品借还区间及腔室周期，下图按物理身份显示辅助片的完整借用区间；蓝色对应加工，绿色对应清洁。虚线为303~s产品回片，点线为796~s全部占用结束。该图直接读取已验证的第二阶段事件，不另行优化或补造时刻；它是机制展示，非完整设备资源泳道图。}
+\label{fig:d-coupled-witness-cn}
+\end{figure}
+
+表~\ref{tab:d-coupled-witness-cn}表明，在该固定结构上，总等待从642降至54~s，全部占用结束由978提前至796~s，同时保持已证最优的产品完工时间。清洁及其借还仍在产品回片后继续，说明以产品完工为目标时必须另行报告收尾占用。本例验证了连续加工、满片清洁和辅助身份复用可以在同一原始模型中同时成立，但8片库存下峰值仅为5片，不能据此认定库存约束为瓶颈，也不能证明可选提前清洁优于原触发规则。它仅有两个加工周期，有效节拍中心为0，因此不构成节拍权重有效性的证据；多产品竞争、较长连续链及清洁/库存的配对敏感性仍需补充。
+
+\subsection{默认配置下的初始化与选割组件消融}
+\label{sec:journal-ablation-cn}
+
+\begin{table}[!t]
+\centering\small
+\caption{默认配置D的SPBS与选割对照：三种子平均产品完工时间（s）}
+\label{tab:journal-algorithm-cn}
+\begin{lrbox}{\CIEtablebox}\begin{tabular}{llrrrrrr}\toprule
+实例 & 分离协议 & SCIP & HEM & proposed & SCIP+SPBS & HEM+SPBS & proposed+SPBS\\\midrule
+2片/$4\times1$/跨LP & 根分离 & 324 & 324 & 324 & 324 & 324 & 324\\
+ & 正常分离 & 324 & 324 & 324 & 324 & 324 & 324\\
+2片/$4\times1$/同LP & 根分离 & 324 & 324 & 324 & 324 & 324 & 324\\
+ & 正常分离 & 324 & 324 & 324 & 324 & 324 & 324\\
+2片/混合/$H=3$ & 根分离 & 513.34 & 514.02 & 512.00 & 505.00 & 503.67 & 505.00\\
+ & 正常分离 & 516.67 & 516.75 & 518.00 & 509.00 & 508.67 & 505.00\\
+4片/混合/$H=10$ & 根分离 & 542.00 & 542.00 & 542.00 & 541.00 & 541.00 & 541.00\\
+ & 正常分离 & 542.00 & 542.00 & 542.00 & 541.00 & 541.00 & 541.00\\
+\bottomrule\end{tabular}\end{lrbox}\ifdim\wd\CIEtablebox>\linewidth\resizebox{\linewidth}{!}{\usebox{\CIEtablebox}}\else\usebox{\CIEtablebox}\fi
+\par\smallskip\footnotesize 纯$4\times1$各臂均证明完整主问题最优；混合实例各臂均为限时可行，平均值不代表一份具体排程。4片混合根分离SCIP臂包含一次实际428~s运行，不能视为严格等时对照。SPBS臂预留预算为60+240~s，其余为300~s。
+\end{table}
+
+新增实验采用四个已有完整可行赋值的双源实例：2片纯$4\times1$跨LP与同LP实例、2片混合/$H=3$以及4片混合/$H=10$实例，起点产品完工时间依次为324、324、518和542~s。各实例内全部方法与求解种子共享相同原始赋值；学习检查点的训练种子固定为1，求解种子为1、2、3。入选条件为已有有效输入，故不用于估计冷启动或构造成功率。
+
+根分离协议比较九臂：SCIP、HEM、proposed各自有无SPBS，以及仅扩展特征、去结构重排、贪心替代束搜索三臂，共108次。正常分离协议比较前三种方法有无SPBS，共72次。前者设置根节点最多一轮分离、非根节点不分离，后者保持SCIP正常分离设置；协议参数不等于一次完整运行的学习回调次数。全部实验关闭二阶段精修和收尾。无SPBS臂的主求解名义预算300~s；SPBS臂预留60~s改善起点，随后主求解240~s，未用完的初始化预算不追加到主求解。SPBS内各方法使用相同的非学习求解设置，学习策略仅接入后续主求解。
+
+这180次、下节36次结构对照、12次收尾及9次节拍见证搜索均使用单线程前台队列，不设固定SCIP内存或进程RSS配额，系统可用内存低于10\%时才触发保护。237次均正常退出，未触发该保护；228份可行结果逐一通过重新建立原始完整模型后的赋值检查和独立物理重放。9次无可行解的见证搜索单独报告。根分离协议中4片混合SCIP无SPBS臂的种子1实际主求解为428~s，超出300~s设置，因此该结果保留但不用于严格300~s速度比较。名义优化预算与包含建模、加载、验解的墙钟耗时分别记录。
+
+
+
+表~\ref{tab:journal-algorithm-cn}显示，纯$4\times1$实例的最终目标没有改善空间，差异主要体现为证明最优所需时间。对于2片混合实例，根分离协议下SPBS本身将各种子的起点从518降至505~s，下降2.51\%；后续HEM在一个种子中进一步降至501~s，形成503.67~s的平均上界。正常分离协议下SPBS输出依次为511、505、511~s，proposed后续得到511、501、503~s；其均值505~s小于该协议下HEM加SPBS的508.67~s，但根分离协议中的排序相反。因此，结果支持利用结构改善起点，不支持选割扩展在不同协议下保持同一优势排序。4片混合实例两种协议下SPBS均将542降至541~s，下降0.18\%，后续主求解没有继续改善。
+
+\begin{table}[!htbp]
+\centering\small
+\caption{根分离协议的无SPBS选割组件对照（产品完工均值，s）}
+\label{tab:journal-components-cn}
+\resizebox{\columnwidth}{!}{%
+\begin{lrbox}{\CIEtablebox}\begin{tabular}{lrrrr}\toprule
+方法 & 跨LP纯 & 同LP纯 & 2片混合 & 4片混合\\\midrule
+HEM & 324 & 324 & 514.02 & 542\\
+仅扩展特征 & 324 & 324 & 515.33 & 542\\
+去结构重排 & 324 & 324 & 516.00 & 542\\
+贪心替代束搜索 & 324 & 324 & 511.00 & 542\\
+完整proposed & 324 & 324 & 512.00 & 542\\
+\bottomrule\end{tabular}\end{lrbox}\ifdim\wd\CIEtablebox>\linewidth\resizebox{\linewidth}{!}{\usebox{\CIEtablebox}}\else\usebox{\CIEtablebox}\fi}
+\end{table}
+
+表~\ref{tab:journal-components-cn}保留完整组件对照。两个纯实例均为最优324~s，4片混合各臂保持542~s；仅2片混合体现不同结果。完整proposed优于去重排臂的观察均值，却未优于贪心替代束搜索臂；特征单独扩展也没有超过HEM。三个求解种子不是独立训练，当前四个实例不足以证明各组件普遍有效或统计显著。
+
+正常分离使HEM与proposed的回调次数分别达到每次0--250和2--224，而对应根分离六臂中的学习调用为0--2次；更多回调并未保证更好上界。对于两个纯$4\times1$实例，正常分离无SPBS时，SCIP、HEM、proposed的平均主求解时间在跨LP实例上为69.00、50.67、51.67~s，在同LP实例上为37.33、12.67、52.67~s；相应完整工作进程墙钟均值为71.14、54.36、55.05~s及39.36、16.16、55.52~s。HEM在这两个实例上较快，而完整proposed仅在跨LP实例较快，不能据此推断普遍加速。
+
+根分离与正常分离中，2片混合SPBS臂的工作进程墙钟均值分别为250.46--251.86~s和255.60--257.64~s，包含该次SPBS、主求解及验解等开销，但不包含原始输入排程的离线构造成本。主问题PDI的积分窗口在SPBS臂为240~s、其余为300~s，故不据其直接比较组合算法的全过程效率。产品完工改善也不保证设备占用同步缩短：正常分离4片混合实例加SPBS后产品完工从542降至541~s，全部占用结束却从553延至591~s，说明仍须区分两个目标边界。
+
+\subsection{默认配置下的结构搜索、收尾与节拍见证}
+\label{sec:journal-cleanup-cn}
+
+使用相同四实例和三个求解种子，进一步比较联合搜索、固定原始结构、先固定后联合，共36次。主求解名义预算为300~s，先固定后联合分配60+240~s；固定阶段提前结束时，剩余预留时间不追加到联合阶段。三个策略的最终赋值均在完整D模型中重新验证。
+
+\begin{table}[!htbp]
+\centering\small
+\caption{默认配置D的结构对照（三种子平均产品完工，s）}
+\label{tab:journal-structure-cn}
+\begin{lrbox}{\CIEtablebox}\begin{tabular}{lrrr}\toprule
+实例 & 联合 & 固定 & 先固定后联合\\\midrule
+2片/$4\times1$/跨LP & 324 & 324 & 324\\
+2片/$4\times1$/同LP & 324 & 324 & 324\\
+2片/混合/$H=3$ & 513.34 & 507.00 & 505.67\\
+4片/混合/$H=10$ & 542 & 542 & 542\\
+\bottomrule\end{tabular}\end{lrbox}\ifdim\wd\CIEtablebox>\linewidth\resizebox{\linewidth}{!}{\usebox{\CIEtablebox}}\else\usebox{\CIEtablebox}\fi
+\end{table}
+
+2片混合实例中，固定结构各种子均达到受限子问题最优507~s，平均工作进程墙钟3.37~s；先固定后联合的一次运行进一步达到503~s，三种子均值505.67~s，平均墙钟243.65~s。直接联合的平均上界513.34~s、平均墙钟300.73~s。507~s仅是指定结构下的最优值，503~s已经说明它不是完整问题的全局最优；混合联合臂仍有较大界差。这一实例支持先利用结构再开放联合搜索，但其余三实例的目标没有差异，结论不外推到任意规模。
+
+收尾对照以四实例已有的精修结果为输入，每实例三种子、每次60~s，固定全部离散选择并保留产品完工与二阶段目标上界。12次均达到收尾子问题最优，但全部占用结束时刻在数值容差内未变，依次为342、342、536和553~s；产品完工依次为324、324、518和542~s。因此收尾流程在这些输入上未提供额外收益，不能将产品与设备完成边界的差值当作优化改进量。
+
+为获得有效节拍消融输入，另对4片纯$2\times2$、6片纯$2\times2$、6片混合的双源/$H=10$实例分别搜索三个种子，额外要求至少两个有效节拍中心。九次均限时无可行解，未生成可用于权重消融的赋值，因此后续D节拍权重实验未执行。名义主求解600~s，其中一次实际记录802~s，其余600~s；最低系统可用内存约61.3\%，未触发内存保护。该搜索含额外见证约束，结果既不是完整原问题不可行的证明，也不能归因为固定内存配额。
+
+新增228份可行排程均未发生清洁且有效节拍中心为零，因而这些结果补充了初始化、选割和收尾机制的证据，但没有补齐D下清洁与节拍耦合的实证。相关节拍效果仍限于前述配置E。
+
+\FloatBarrier
+
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.98\textwidth]{fig_current_defaults_gantt_cn}
+\caption{当前默认参数下同Pjob双片$4\times1$实例的资源泳道甘特图。横轴为统一时间，纵向按机械手、对准器、装载锁槽位和工艺腔排列，并补充LP与真空辅助库作为路径端点。色块表示模块动作及状态；W1、W2分别表示$\mathrm{Pjob}_1[1]$、$\mathrm{Pjob}_1[2]$，A1、A2分别表示辅助片D1、D2，相同编号在各资源泳道中标识同一片晶圆，可据此追踪其完整路径。虚线表示324~s产品回片，点线表示342~s全部占用结束。仅以最小时滞给出的动作按可行时序补全：搬运紧接下一取放之前，对准、抽气及放气紧接放片之后；该补全不改变原排程的取放、旋转和加工时刻。槽位编号为等价显示分配。}
+\label{fig:current-defaults-gantt-cn}
+\end{figure}
+
+\subsection{同步取片与最优性验证}
+
+以下使用已通过完整模型检查和独立重放的同LP双片见证解释解码与资源占用。该见证用于物理过程展示，不作为新的算法比较样本；最新补跑的界和等待指标以表~\ref{tab:default-small-new-cn}为准。
+
+同LP双片$4\times1$实例中，两片产品均属于Pjob1，来自LP1，清洁阈值为3。产品指派选择将两片产品放在同一PW对；求解后的确定解码分别恢复$\mathrm{Pjob}_1[1]$、$\mathrm{Pjob}_1[2]$及实际晶圆1、2。两片在0~s同时取片，在CH2于104--284~s完成一次180~s工艺处理，于324~s返回LP1。该排程满足相邻晶圆取片时刻相等的非递减规则。
+
+这份排程在原驻留上限和时域均更宽的松弛模型中已经获得324~s的完整主问题下界。对于当前参数，任一PW对的工艺处理累计时长最多为500~s，非加工驻留最多为100~s，二者之和不超过该松弛模型的总驻留上限；其他驻留限制和时域也收紧，配方、资格及完整候选容量保持一致。因此，原下界仍是当前模型的有效下界。重新核验的排程以324~s达到该下界，从而证明当前参数下$C_{\max}=324$~s全局最优。
+
+产品对在104~s装片结束、284~s开始卸片，扣除180~s工艺处理后，其腔内非加工驻留为0~s。补位辅助对从98~s装片结束至290~s开始卸片，扣除同一处理区间后剩余12~s。最长机械手承片为98~s，其他模块驻留最大为54~s，均不超过100~s。这也说明必要工艺处理时长与非加工驻留必须分别计量。
+
+\subsection{完整排程甘特图与适用范围}
+
+图~\ref{fig:current-defaults-gantt-cn}展示上述排程中四片晶圆的资源使用情况。加工集中于CH2，CH3未被使用；各阶段对应的晶圆由色块内编号辨识。
+
+
+
+两片辅助片在294~s前归还，产品于324~s返回，但下装载锁的压力复位仍持续至342~s。因此，产品完工时间与设备全部占用的完成边界相差18~s。342~s是该见证排程的实际完成边界；第~\ref{sec:journal-cleanup-cn}节的独立收尾对照也未进一步降低该边界。逐片轨迹与资源视角共同说明，优化得到的产品指派能够解码为满足工艺和共享资源约束的完整执行排程。
+
+
+
+\FloatBarrier
+
+\section{工业工程意义与适用边界}
+本文的决策对象是满片条件下产品、辅助晶圆与共享设备资源的联合组织。PW对将成对搬运与周期占位连接，Pjob库存表示在同质条件下消除部分产品身份指派，并通过确定解码恢复具体执行动作。其价值在于能够检查一种生产组织方案是否同时满足库存、处理链和资源时序约束，而不是仅给出抽象工件顺序。
+
+对求解流程，结构化初始化提供可行上界，学习选割调整求解器的搜索过程，固定结构精修改善已有排程的时序。这三种作用应分别评价。现有D数据支持部分实例上的起点改善，但学习排序随分离协议改变，尚不能把组合流程的全部收益归因于学习策略。对实际设备，产品交付与全部设备占用结束还应分别报告；产品完工提前可能伴随复位或辅助片占用延后。
+
+目前不能据四个已有可行输入的小实例决定实际产线的模式选择、辅助片最佳数量或全规模部署。现有1片产品见证已经验证清洁、连续处理和辅助复用同时成立，但不证明库存瓶颈；含构造失败的统一墙钟比较、多产品竞争、长连续链与清洁和库存的配对敏感性，仍是检验工业适用性的必要证据。历史配置E仅用于解释机制，旧固定配对CIE模型的实验也不代表当前PW联合模型的性能。
 
 \section{结论}
 
-本文为双源混流旋转腔室组合设备建立模型与算法一体化框架。两阶段MILP统一表示
-产品晶圆、可复用真空区假片、混合旋转配方、清洗、共享机械手、装载锁和驻留约束。
-同模式产品采用规范配对并固定到规范腔室槽位，故本文不声称内生优化产品分组或腔室
-侧面；第一阶段优化端到端最大完工时间，第二阶段保持其离散排程和最大完工时间并
-优化时序质量。
+本文以PW对联结搬运与腔室周期，以Pjob库存表示并恢复具体晶圆身份，建立满足满片、连续处理、清洁、辅助片有限复用和共享资源约束的两阶段MILP。第一阶段优化产品回片完工时间，第二阶段在保留该上界与主要结构后精修等待和节拍。模型验证区分完整主问题最优、受限子问题最优与限时可行，产品回片和全部设备占用结束也分别计量。
 
-相对采用600~s主求解的单阶段流程，采用540~s主求解加至多60~s精修的完整两阶段
-流程，其保存排程的路线总等待、最大等待、节拍变异和节拍偏差分别低51.91\%、
-68.89\%、39.70\%和94.05\%；这些是同总预算工作流差异，不是纯第二阶段因果量。
-\method{}在完整2700次七方法比较中取得最低观察平均PDI和求解时间，但相对HEM和
-SCIP的差异未达显著。把预计算SPBS输入SCIP后，求解窗口内PDI低26.19\%，可行解率
-达到100\%；SPBS构造时间不在该比较内。析因实验在预设网格内显示规模与混流构成的
-强交互关联。9个更大分布偏移构型的729次运行全部产生经求解器检查与后处理核查的可行解，但未
-证明分布外最优性。
+默认配置D的24次编码对照确认两个纯$4\times1$实例的最优值一致，且Pjob表示在这两个实例上平均求解时间更短；混合实例未显示一致优势。已有八个小规模实例中四个证明主问题最优，一个获得限时可行解，五份可行排程均经精修降低等待。扩展窗口配置E的30组阶段内配对和24次权重消融分别支持固定结构后的等待压缩以及等待与节拍的折中，其改进比例不直接推广到D。
 
-因此，在本文离线有限批次、规范配对和固定槽位的建模边界内，两阶段MILP提供吞吐量--
-运行质量的分层优化机制，同预算两阶段工作流得到更低的保存排程运行指标；结构感知
-学习增强分支割在本次标称比较中取得最低观察平均anytime性能。二者共同覆盖了双源
-混流旋转腔室组合设备的一类集成调度情形。
+新增180次选割与SPBS对照、36次结构比较表明，在已有可行起点条件下，利用结构改善原始解具有实际作用。根分离协议下SPBS将2片混合实例的518~s起点降至505~s，将4片混合实例的542~s起点降至541~s；正常分离协议中proposed加SPBS在2片混合实例上的三种子平均完工时间为505~s，而根分离协议中的HEM加SPBS均值为503.67~s。方法排序依赖实例和求解协议，现有结果不能支持完整扩展选割策略普遍优于HEM或SCIP。12次收尾对照均无额外改善，9次带节拍见证条件的搜索均未获得可行解。
 
-\section*{利益冲突声明}
-作者声明不存在可能影响本文工作的已知财务利益或个人关系。
+本研究的主要限制是当前D算法对照仅覆盖四个已有可行输入的小实例、学习检查点仅采用一个训练种子、构造成本未纳入统一端到端预算。另行核验的1片$2\times2$排程展示了连续加工、清洁与辅助片复用，且精修保持303~s产品完工并缩短等待及收尾占用，但不含有效节拍中心，也未证实辅助库存瓶颈。后续需在预设同模型测试集上分别考察初始化收益与学习增量，以实例为统计单位，区分训练种子和求解种子，并保留资格搜索失败及无改善结果；同时补充多产品竞争、长连续链和清洁/库存敏感性。含构造失败回退和全过程计时的求解流程、较大规模可行解质量及有效下界仍需改进。现有无解与内存停止记录不能作为不可行性证明，也不支持全规模算法优势或模式最优排序。
 
-\section*{数据与代码可用性}
-支撑本文结果的数据、数学实例、训练模型和源代码可向通信作者合理申请。正式发表版
-将给出永久公共归档地址。
 
-\section*{稿件准备过程中生成式AI和AI辅助技术的声明}
-在本文准备及相关软件开发过程中，作者使用OpenAI Codex辅助稿件结构组织与语言润色、
-LaTeX一致性与文献元数据核查、软件实现与调试、实验流程和验证脚本编制，以及代码审查
-与分析文字完善。该工具未用于生成实验观测、改动求解器输出、选择有利运行或决定署名。
-研究问题、模型假设、实验设计、结果解释和投稿决定均由作者作出；作者逐项复核并按需
-修改全部AI辅助输出，核验文献、公式、代码、数据、统计解释与最终文本，并对论文及
-相关研究产物承担全部责任。
+\section*{数据与研究材料可用性}
+研究实例、完整赋值、事件重放记录、冻结配置、策略出处及文件哈希已在项目内保存。可公开范围、匿名评审访问方式和永久归档标识符尚待作者确认；当前稿不声称数据已公开。不同模型与资源协议分别归档，原始失败和无可行解记录保留。
 
-\bibliographystyle{elsarticle-harv}
-\bibliography{rdmct_cie_references}
+\section*{声明与作者信息处理}
+本文件为匿名中文审阅工作稿。逐作者贡献、基金、利益冲突和最终投稿批准信息在单独标题页及提交清单中核对，不在匿名正文中列出可识别信息。完成中文审阅、英文全文同步和作者确认后，方可形成正式英文投稿稿。
 
+\section*{生成式AI和AI辅助技术使用说明}
+本稿修订使用OpenAI ChatGPT和Codex辅助文稿组织、语言编辑、LaTeX与引用一致性检查、实验命令实现及结果边界核对。论文图形沿用确定性绘图结果，未使用生成式图像工具。最终提交版本的人工审阅、事实确认和责任声明须由作者完成。
+\FloatBarrier
+\appendix
+\section{批次表示与逐片表示的对照}
+\label{sec:representation-comparison-cn}
+
+配置E下，在8个实例中比较Pjob库存表示与显式晶圆指派表示。两臂使用相同物理初始排程、完整候选容量、非递减出片规则和600~s主问题预算，不执行二阶段精修。16份结果均通过原始模型检查和物理重放。表~\ref{tab:encoding-ablation-cn}列出所有实例的下界与可行上界；两臂均证明最优的两个实例，其最优值一致。其他实例保留界区间，不用超时结果推断两种表示的最优值不同。
+
+\begin{table}[!htbp]
+\centering\small
+\caption{批次表示消融的完整对照（配置E，600~s；界的单位为s）}
+\label{tab:encoding-ablation-cn}
+\resizebox{\columnwidth}{!}{%
+\begin{lrbox}{\CIEtablebox}\begin{tabular}{llrrrr}\toprule
+$N$/配方/$H$ & LP分布 & \multicolumn{2}{c}{Pjob} & \multicolumn{2}{c}{逐片}\\
+ & & 下界 & 上界 & 下界 & 上界\\\midrule
+1/$4\times1$/3 & LP1 & 296.00 & 296.00 & 296.00 & 296.00\\
+1/$2\times2$/2 & LP1 & 299.40 & 318.00 & 300.66 & 314.00\\
+2/$4\times1$/3 & 跨LP & 296.00 & 339.00 & 324.00 & 324.00\\
+2/$2\times2$/2 & 跨LP & 220.00 & 450.00 & 215.08 & 450.00\\
+2/混合/3 & 跨LP & 143.71 & 639.00 & 144.00 & 627.00\\
+4/混合/3 & 跨LP & 116.00 & 888.00 & 116.00 & 888.00\\
+2/$4\times1$/3 & 同LP & 324.00 & 324.00 & 324.00 & 324.00\\
+2/$2\times2$/2 & 同LP & 294.00 & 450.00 & 220.00 & 450.00\\
+\bottomrule\end{tabular}\end{lrbox}\ifdim\wd\CIEtablebox>\linewidth\resizebox{\linewidth}{!}{\usebox{\CIEtablebox}}\else\usebox{\CIEtablebox}\fi}
+\end{table}
+
+在同LP双片$4\times1$实例中，采用Pjob表示后，完整模型变量数由3225降至3219，约束数由9854降至9835，线性非零项由52908降至52450；对应$2\times2$实例分别由8329、26350、144838降至8323、26331、144380。这些结果支持用库存数量和确定解码消除部分显式身份指派，但压缩幅度依赖同质组的大小，不能由此推断求解速度必然提高。跨LP双片$4\times1$对照中，逐片表示在预算内证明324~s最优，而Pjob表示仅获得339~s可行解，说明表示压缩与有限时间搜索表现需要分别评价。
+
+
+\section{固定结构与联合搜索的预算对照}
+
+配置E下，选择$N\in\{4,8\}$、$H\in\{3,10\}$的四个双源混合实例，比较联合搜索、固定初始结构以及先固定后联合三种策略，共36次运行。每个实例和种子的三臂输入赋值哈希一致，总主问题求解预算均为300~s；先固定后联合分配60~s与240~s。离线初始化与模型构建时间单独记录。表~\ref{tab:structure-ablation-cn}报告产品完工时间，不混入二阶段目标。
+
+\begin{table}[!htbp]
+\centering\small
+\caption{搜索策略消融（配置E，三种子均值，单位：s）}
+\label{tab:structure-ablation-cn}
+\begin{lrbox}{\CIEtablebox}\begin{tabular}{rrrrr}\toprule
+$N$ & $H$ & 联合搜索 & 固定结构 & 先固定后联合\\\midrule
+4 & 3 & 854.53 & 543.67 & 647.00\\
+4 & 10 & 854.53 & 542.00 & 542.00\\
+8 & 3 & 2071.00 & 2029.33 & 2071.00\\
+8 & 10 & 1720.00 & 1249.33 & 1575.00\\
+\bottomrule\end{tabular}\end{lrbox}\ifdim\wd\CIEtablebox>\linewidth\resizebox{\linewidth}{!}{\usebox{\CIEtablebox}}\else\usebox{\CIEtablebox}\fi
+\end{table}
+
+固定结构在这些有限预算实例中给出较小的平均可行上界，表明先利用结构化排程压缩搜索范围具有实际作用。联合模型仍用于表达完整可行域并提供有效下界；本组结果不支持联合搜索在300~s内普遍优于固定结构。固定结构得到的最优状态只针对受限子问题。
+
+\section{二阶段精修与资格约束实验}
+
+配置E下，对八个单源或双源混合实例分别运行三个种子，并增加两个具有异质Pjob腔室资格的8片实例，共30组阶段内配对。每次运行将300~s预算分配为270~s主问题和30~s精修。比较的是同一次运行保存的第一阶段解与其精修解，避免把不同主问题搜索轨迹误当成目标消融。资格实例同时包含仅可访问CH2、仅可访问CH3和可访问两腔的Pjob。
+
+\begin{table}[!htbp]
+\centering\small
+\caption{同一第一阶段排程的时序精修（配置E，三种子均值，单位：s）}
+\label{tab:refinement-ablation-cn}
+\resizebox{\columnwidth}{!}{%
+\begin{lrbox}{\CIEtablebox}\begin{tabular}{llrrr}\toprule
+$N/H$ & 配置 & $C_{\max}$ & 精修前等待 & 精修后等待\\\midrule
+4/3 & 单源 & 1491.00 & 1648.00 & 840.00\\
+4/3 & 双源 & 854.53 & 3991.73 & 333.67\\
+4/10 & 单源 & 1491.00 & 1185.00 & 600.00\\
+4/10 & 双源 & 851.97 & 1259.65 & 626.67\\
+8/3 & 单源 & 3933.00 & 3158.00 & 1680.00\\
+8/3 & 双源 & 2071.00 & 10943.00 & 536.00\\
+8/10 & 单源 & 2985.00 & 2276.00 & 1200.00\\
+8/10 & 双源 & 1720.00 & 10998.02 & 692.00\\
+8/3 & 单源、限资格 & 4707.00 & 3830.00 & 2040.00\\
+8/3 & 双源、限资格 & 2264.00 & 1046.00 & 341.00\\
+\bottomrule\end{tabular}\end{lrbox}\ifdim\wd\CIEtablebox>\linewidth\resizebox{\linewidth}{!}{\usebox{\CIEtablebox}}\else\usebox{\CIEtablebox}\fi}
+\par\smallskip\footnotesize 等待为产品与辅助片全部受计量路径段的总和。$C_{\max}$前后相同，保持容差为$10^{-6}$~s；数值四舍五入。
+\end{table}
+
+30份精修排程全部通过物理重放和原始模型赋值检查，各次运行的产品完工时间在容差内保持不变，总等待均下降。普通资格24次运行的逐次降幅为29.66\%--95.85\%，受限资格6次为46.74\%--67.40\%。这些降幅包含第一阶段目标未惩罚的辅助片等待，且配置E允许较长驻留，因此不等同于产品交付时间下降，也不能直接推广为100~s配置下的改进比例。
+
+\section{节拍项的受控权重消融}
+
+为将节拍项的作用与第一阶段差异分离，配置E下对16片纯$2\times2$、$H=10$及24片混合、$H=5$的两个双源实例，逐种子共享同一已保存主问题赋值，仅改变节拍权重$\lambda\in\{0,5,25,100\}$，每臂精修预算60~s。目标为总等待加10倍最大等待及$\lambda$倍节拍偏差；主要离散结构和产品完工上界保持一致。24次精修均通过验证并达到各自受限子问题的最优状态。
+
+\begin{table}[!htbp]
+\centering\small
+\caption{节拍权重消融（配置E，三种子均值，时间单位：s）}
+\label{tab:rhythm-weight-cn}
+\begin{lrbox}{\CIEtablebox}\begin{tabular}{lrrrr}\toprule
+实例 & $\lambda$ & $C_{\max}$ & 总等待 & 节拍偏差\\\midrule
+16片纯$2\times2$ & 0 & 2537 & 1000 & 792\\
+ & 5 & 2537 & 1016 & 784\\
+ & 25 & 2537 & 1016 & 784\\
+ & 100 & 2537 & 1016 & 784\\
+24片混合 & 0 & 5199 & 1440 & 20\\
+ & 5 & 5199 & 1440 & 20\\
+ & 25 & 5199 & 1440 & 20\\
+ & 100 & 5199 & 1440 & 20\\
+\bottomrule\end{tabular}\end{lrbox}\ifdim\wd\CIEtablebox>\linewidth\resizebox{\linewidth}{!}{\usebox{\CIEtablebox}}\else\usebox{\CIEtablebox}\fi
+\par\smallskip\footnotesize 两实例分别含6个和2个有效节拍中心；各臂最大等待均为65~s。
+\end{table}
+
+16片实例中，加入节拍项使偏差由792降至784~s，代价是总等待由1000增至1016~s，产品完工时间保持2537~s。权重5、25、100得到相同的目标指标，不能据此认定25为全局最佳权重。24片实例四个权重的指标相同，表明节拍项并非在所有固定结构上都会产生额外改善。这组完整对照支持节拍项能够调节等待与节奏之间的权衡，而非保证所有指标同时下降。
+
+
+\section{历史选割评估与规模限制}
+
+新增选割批次对八个混合实例、三个求解种子比较SCIP、HEM迁移策略及冻结策略加结构重排（运行标识为proposed），共72次。三臂主问题预算均为300~s，不做精修；均采用仅根节点最多一轮分离的设置。学习策略的训练种子固定为1，推理候选上限128、学习选择上限16；这里的三个重复种子是求解种子，不是三次独立训练。策略与配置哈希在运行前冻结，评估期间不更新参数。
+
+\begin{table}[H]
+\centering\small
+\caption{补充选割评估的完整覆盖（配置D，300~s）}
+\label{tab:additional-cuts-cn}
+\resizebox{\columnwidth}{!}{%
+\begin{lrbox}{\CIEtablebox}\begin{tabular}{lrrrr}\toprule
+方法 & 可行/总数 & 可行实例下界 & 可行上界 & 有学习回调\\\midrule
+SCIP & 3/24 & 116 & 542 & --\\
+HEM迁移 & 3/24 & 116 & 542 & 16/24\\
+结构重排策略 & 3/24 & 116 & 542 & 15/24\\
+\bottomrule\end{tabular}\end{lrbox}\ifdim\wd\CIEtablebox>\linewidth\resizebox{\linewidth}{!}{\usebox{\CIEtablebox}}\else\usebox{\CIEtablebox}\fi}
+\par\smallskip\footnotesize 界的单位为s；三臂可行结果均来自同一个4片、$H=10$双源实例的三个求解种子。``--''表示SCIP基线不使用学习回调。
+\end{table}
+
+\begin{table}[!t]
+\centering\small
+\caption{历史资源协议下的完整观测及32片补跑（配置D，每次主问题300~s）}
+\label{tab:additional-scale-cn}
+\begin{lrbox}{\CIEtablebox}\begin{tabular}{lrrrrr}\toprule
+批次范围 & 记录数/计划数 & SCIP/RSS预算（MiB） & 有可行解 & 超时无可行解 & SCIP内存限制无可行解\\\midrule
+4/8片选割比较 & 72/72 & 11520/14592 & 9 & 63 & 0\\
+8/16/24片模式扫描 & 216/216 & 11520/14592 & 0 & 192 & 24\\
+32片三配方完整批次 & 9/9 & 12288/18432 & 0 & 3 & 6\\
+32片纯$2\times2$与混合补跑 & 6/6 & 13056/16384 & 0 & 0 & 6\\
+\bottomrule\end{tabular}\end{lrbox}\ifdim\wd\CIEtablebox>\linewidth\resizebox{\linewidth}{!}{\usebox{\CIEtablebox}}\else\usebox{\CIEtablebox}\fi
+\par\smallskip\footnotesize 有可行解的9次也均为限时停止。最后一行仅补跑另一11520/14592~MiB协议下尚未完成的6个单元；该父批次另有3次纯$4\times1$超时无解及1次进程内存保护失败，原失败记录保留。不同预算不合并为统一资源下的九次配方对照。
+\end{table}
+
+新增的9份可行排程均通过原始模型赋值检查记录核对与独立物理重放，产品完工时间542~s、总等待149~s与共同输入解一致。表~\ref{tab:additional-cuts-cn}保留全部实验臂；每个实际触发学习回调的运行仅调用一次，不能把其余零调用运行解释为策略已充分参与搜索。该批次与先前72次选割批次的可行覆盖相同，但资源预算不同，分别报告，既不合并成独立实例，也不据此宣称选割提高了可行率或完工质量。
+
+
+
+表~\ref{tab:additional-scale-cn}将停止状态与可行性分开。新增8、16、24片模式扫描的192次超时与24次内存限制，与先前10000/14000~MiB协议的覆盖结果相同，均无可行解。32片完整批次及随后6次待补运行也未取得可行解。后者的纯$2\times2$模型含1915753个变量、6692232条约束和39419786个线性非零项，混合模型分别含1230300、4408460和27172044项；这一规模记录定位了完整候选表示的内存瓶颈，尚不能说明仅增加内存即可解决。
+
+另有四个16片长预算运行未取得可行解。无可行解时不报告产品完工时间或排程图，求解器的无穷界占位值也不作为有效有限下界。超时、SCIP内存限制与外部进程保护均不是不可行性证明。结合新增模块消融，本文的默认配置实证结论限定为已验证的排程、小规模主问题最优性、有可行输入时的结构改善与时序精修；当前证据不支持32片可行排程、全规模算法优势或模式最优排序。
+
+
+\FloatBarrier
+\printbibliography[title={参考文献}]
 \end{document}

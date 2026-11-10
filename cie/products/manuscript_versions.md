@@ -1,3 +1,7 @@
+> **2026-11-09 当前版本说明（覆盖下方历史状态）：** 模型和实验冲突一律以新版 `JMS-version/JMS_Review_CN.tex` 为准。当前更新稿是 [CIE 中文稿](../products/rdmct_cie_analysis_focused_zh.tex)，补强实验见 [新命令](../docs/CIE_CURRENT_EXPERIMENT_COMMANDS.md)，投稿缺口见 [审查记录](../products/CIE_CURRENT_REVIEW_CN.md)。下方旧模型、旧统计与固定内存命令仅保留历史记录，不适用于当前稿。旧英文正文、旧补充稿及20260817源包尚未同步，不得和当前中文稿/新Highlights/新标题页混合提交。
+
+---
+
 # Manuscript versions
 
 ## Preserved original version
@@ -17,7 +21,7 @@ The original manuscript requested by the author remains unchanged. Its frozen SH
 - `rdmct_cie_analysis_focused_zh.tex/pdf`: synchronized Chinese review manuscript.
 - `manuscript_analysis_focused_anonymous.tex/pdf`: independent anonymous submission entry and compiled PDF for the new version.
 - `highlights_analysis_focused.txt`: English Highlights dedicated to the new version; the original Highlights file is unchanged.
-- `submission_metadata_analysis_focused.md`: submission metadata and outstanding author confirmations for the new version.
+- Current submission gaps and author confirmations are maintained in [CIE_CURRENT_REVIEW_CN.md](CIE_CURRENT_REVIEW_CN.md); the superseded metadata pages have been removed.
 - `CIE_RDMCTHBS_anonymous_source_20260817.zip`: flat anonymous main-manuscript source bundle; SHA-256 `389188585ED0DD758DA354E680F9A206A726BAE0EB274E8A4889808ACA4F9D2C`.
 - `CIE_RDMCTHBS_anonymous_supplement_source_20260817.zip`: separate anonymous supplement source bundle; SHA-256 `FBB5276FB4C20B9B59CE07339D8E35194F39B7DB1E73082ACEF715B9EC8CABB0`.
 

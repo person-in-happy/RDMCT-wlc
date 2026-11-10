@@ -1,3 +1,7 @@
+> **2026-11-09 当前版本说明（覆盖下方历史状态）：** 模型和实验冲突一律以新版 `JMS-version/JMS_Review_CN.tex` 为准。当前更新稿是 [CIE 中文稿](../products/rdmct_cie_analysis_focused_zh.tex)，补强实验见 [新命令](../docs/CIE_CURRENT_EXPERIMENT_COMMANDS.md)，投稿缺口见 [审查记录](../products/CIE_CURRENT_REVIEW_CN.md)。下方旧模型、旧统计与固定内存命令仅保留历史记录，不适用于当前稿。旧英文正文、旧补充稿及20260817源包尚未同步，不得和当前中文稿/新Highlights/新标题页混合提交。
+
+---
+
 # Computers & Industrial Engineering 投稿执行手册
 
 > 审计时间：2026-08-17 14:58:02（Asia/Shanghai）。本文记录已闭合的投稿证据、复现入口和上传前作者事项。实验协议定义仍以 [`../README.md`](../README.md) 为准。本文中的 PowerShell 命令均为单行命令，不使用续行符。

@@ -1,0 +1,1440 @@
+[
+  {
+    "campaign": "gap_d_encoding_20261108_r2",
+    "campaign_sha256": "60624409015144ca6776a49f5c4062135f56f7664861a305d2c61f87cdb202f0",
+    "settings": {
+      "time_limit": 600.0,
+      "stage2_limit": 60,
+      "cleanup_limit": 60,
+      "memory_mb": 13568,
+      "process_memory_mb": 17152,
+      "reserve_mb": 2048,
+      "available_at_prepare_mib": 19328.36328125,
+      "wall_limit": 1800.0,
+      "threads": 1,
+      "jobs": 1,
+      "hybrid_fixed_fraction": 0.2
+    },
+    "expected": 24,
+    "observed": 24,
+    "states": {
+      "optimal": 12,
+      "timelimit": 12
+    },
+    "rows": [
+      {
+        "id": "n2_H3_4x1_dual__s1__pjob",
+        "case": "n2_H3_4x1_dual",
+        "seed": 1,
+        "arm": "pjob",
+        "state": "optimal",
+        "metrics": {
+          "route_wait_sum": 72.00000000000335,
+          "route_wait_max": 25.000000000001705,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 159.00000000000026,
+          "cleanings": 0,
+          "modeled_completion": 341.9999999999999,
+          "product_cmax": 323.9999999999999
+        },
+        "result_sha256": "e7035fc39faf7d9192d32ca55418eedebe14de895ba5eda3d903f9420518efaf",
+        "evidence_sha256": "5b61af6b970424968b7be0368512885971c59655c2e602adfa57386f277d0a38",
+        "resources_sha256": "f26afb4a32c95c9a49bcc20107e6201110e7a9eab7ef30b1b264cb04f8822e60",
+        "replay": {
+          "valid": true,
+          "checks": 1009,
+          "errors": [],
+          "product_return_cmax": 323.9999999999999,
+          "cleaning_count": 0,
+          "processing_cycles": 2,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 323.9999999999999,
+        "upper": 323.9999999999999,
+        "seconds": 47.0,
+        "dimensions": {
+          "variables": 3224,
+          "constraints": 10404,
+          "linear_nonzeros": 55372,
+          "types": {
+            "BINARY": 3003,
+            "INTEGER": 66,
+            "CONTINUOUS": 155
+          }
+        },
+        "warm_sha256": "f4e1344bb5a97bbd668466e252f4127040c9c1400654cb3d34b9ccb8869fff69",
+        "source_cmax": 323.9999999999999
+      },
+      {
+        "id": "n2_H3_4x1_dual__s1__wafer",
+        "case": "n2_H3_4x1_dual",
+        "seed": 1,
+        "arm": "wafer",
+        "state": "optimal",
+        "metrics": {
+          "route_wait_sum": 72.00000000000335,
+          "route_wait_max": 25.000000000001705,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 159.00000000000026,
+          "cleanings": 0,
+          "modeled_completion": 341.9999999999999,
+          "product_cmax": 323.9999999999999
+        },
+        "result_sha256": "63e595c0827beecad801502770b706cafda68a24f96bc7976ff411332ceb5dd2",
+        "evidence_sha256": "568e560e4381fc8fa89c79ce63afcfe5dea9fdb4cdfe42c925ad69a7fbe6c83a",
+        "resources_sha256": "818f73c6326d20ec81fd5eef6df5ec2af81a748b7ec44121e3f1f66e66161e46",
+        "replay": {
+          "valid": true,
+          "checks": 1009,
+          "errors": [],
+          "product_return_cmax": 323.9999999999999,
+          "cleaning_count": 0,
+          "processing_cycles": 2,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 323.9999999999999,
+        "upper": 323.9999999999999,
+        "seconds": 110.0,
+        "dimensions": {
+          "variables": 3226,
+          "constraints": 10423,
+          "linear_nonzeros": 55430,
+          "types": {
+            "BINARY": 3003,
+            "INTEGER": 66,
+            "CONTINUOUS": 157
+          }
+        },
+        "warm_sha256": "f4e1344bb5a97bbd668466e252f4127040c9c1400654cb3d34b9ccb8869fff69",
+        "source_cmax": 323.9999999999999
+      },
+      {
+        "id": "n2_H3_4x1_dual__s2__pjob",
+        "case": "n2_H3_4x1_dual",
+        "seed": 2,
+        "arm": "pjob",
+        "state": "optimal",
+        "metrics": {
+          "route_wait_sum": 72.00000000000335,
+          "route_wait_max": 25.000000000001705,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 159.00000000000026,
+          "cleanings": 0,
+          "modeled_completion": 341.9999999999999,
+          "product_cmax": 323.9999999999999
+        },
+        "result_sha256": "66507a9a75ff9c269fc5b2261550878dbc671479d60112cf10bde5a4c5d50489",
+        "evidence_sha256": "fe299a6f382cf6b8db9ed8a0d621aba6529f1cc4548d9580f5aca9378a3c251d",
+        "resources_sha256": "1dcd7d98593fe64af0d55ddc1868e8fad008110d7d50478a439a0c66d8ae2a79",
+        "replay": {
+          "valid": true,
+          "checks": 1009,
+          "errors": [],
+          "product_return_cmax": 323.9999999999999,
+          "cleaning_count": 0,
+          "processing_cycles": 2,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 323.9999999999999,
+        "upper": 323.9999999999999,
+        "seconds": 67.0,
+        "dimensions": {
+          "variables": 3224,
+          "constraints": 10404,
+          "linear_nonzeros": 55372,
+          "types": {
+            "BINARY": 3003,
+            "INTEGER": 66,
+            "CONTINUOUS": 155
+          }
+        },
+        "warm_sha256": "f4e1344bb5a97bbd668466e252f4127040c9c1400654cb3d34b9ccb8869fff69",
+        "source_cmax": 323.9999999999999
+      },
+      {
+        "id": "n2_H3_4x1_dual__s2__wafer",
+        "case": "n2_H3_4x1_dual",
+        "seed": 2,
+        "arm": "wafer",
+        "state": "optimal",
+        "metrics": {
+          "route_wait_sum": 72.00000000000335,
+          "route_wait_max": 25.000000000001705,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 159.00000000000026,
+          "cleanings": 0,
+          "modeled_completion": 341.9999999999999,
+          "product_cmax": 323.9999999999999
+        },
+        "result_sha256": "90cc9800677c04d0e20d872dcfbdd0e14dcd6ce70a12c88fa77d50ac1d520284",
+        "evidence_sha256": "d1bd63e8454395792b5638d54e800804c6524d27c38dc49cd06bc94019ed93fa",
+        "resources_sha256": "42b086984885bf743d57fb55f748bdd45c84186e2b15a5d98883a502e4f35b80",
+        "replay": {
+          "valid": true,
+          "checks": 1009,
+          "errors": [],
+          "product_return_cmax": 323.9999999999999,
+          "cleaning_count": 0,
+          "processing_cycles": 2,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 323.9999999999999,
+        "upper": 323.9999999999999,
+        "seconds": 50.0,
+        "dimensions": {
+          "variables": 3226,
+          "constraints": 10423,
+          "linear_nonzeros": 55430,
+          "types": {
+            "BINARY": 3003,
+            "INTEGER": 66,
+            "CONTINUOUS": 157
+          }
+        },
+        "warm_sha256": "f4e1344bb5a97bbd668466e252f4127040c9c1400654cb3d34b9ccb8869fff69",
+        "source_cmax": 323.9999999999999
+      },
+      {
+        "id": "n2_H3_4x1_dual__s3__pjob",
+        "case": "n2_H3_4x1_dual",
+        "seed": 3,
+        "arm": "pjob",
+        "state": "optimal",
+        "metrics": {
+          "route_wait_sum": 72.00000000000335,
+          "route_wait_max": 25.000000000001705,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 159.00000000000026,
+          "cleanings": 0,
+          "modeled_completion": 341.9999999999999,
+          "product_cmax": 323.9999999999999
+        },
+        "result_sha256": "30b856bb9b1ad4b47d353377938e28e6e4e705d1925a20dfea8b82251404cefb",
+        "evidence_sha256": "5d59158b4bfc108b5922e03d2b797ea929cb9bf1323694e549a0d0fa8754d91f",
+        "resources_sha256": "acc13612e10ddc9709021c26826574b4e75b40a4862362e7c15430639a5d0627",
+        "replay": {
+          "valid": true,
+          "checks": 1009,
+          "errors": [],
+          "product_return_cmax": 323.9999999999999,
+          "cleaning_count": 0,
+          "processing_cycles": 2,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 323.9999999999999,
+        "upper": 323.9999999999999,
+        "seconds": 66.0,
+        "dimensions": {
+          "variables": 3224,
+          "constraints": 10404,
+          "linear_nonzeros": 55372,
+          "types": {
+            "BINARY": 3003,
+            "INTEGER": 66,
+            "CONTINUOUS": 155
+          }
+        },
+        "warm_sha256": "f4e1344bb5a97bbd668466e252f4127040c9c1400654cb3d34b9ccb8869fff69",
+        "source_cmax": 323.9999999999999
+      },
+      {
+        "id": "n2_H3_4x1_dual__s3__wafer",
+        "case": "n2_H3_4x1_dual",
+        "seed": 3,
+        "arm": "wafer",
+        "state": "optimal",
+        "metrics": {
+          "route_wait_sum": 72.00000000000335,
+          "route_wait_max": 25.000000000001705,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 159.00000000000026,
+          "cleanings": 0,
+          "modeled_completion": 341.9999999999999,
+          "product_cmax": 323.9999999999999
+        },
+        "result_sha256": "17ff0705da21ef52ad0c9fd01311163104c6a8823999ff3865018c0252a07a05",
+        "evidence_sha256": "748408d2c21f6f9da82f5ebe45206a5094b442ccc38c054821c115dbdd917410",
+        "resources_sha256": "b9687cc3547dab69c2d060b68b8cd198effe3a9eb66a13d9e7ee46934be3a949",
+        "replay": {
+          "valid": true,
+          "checks": 1009,
+          "errors": [],
+          "product_return_cmax": 323.9999999999999,
+          "cleaning_count": 0,
+          "processing_cycles": 2,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 323.9999999999999,
+        "upper": 323.9999999999999,
+        "seconds": 43.0,
+        "dimensions": {
+          "variables": 3226,
+          "constraints": 10423,
+          "linear_nonzeros": 55430,
+          "types": {
+            "BINARY": 3003,
+            "INTEGER": 66,
+            "CONTINUOUS": 157
+          }
+        },
+        "warm_sha256": "f4e1344bb5a97bbd668466e252f4127040c9c1400654cb3d34b9ccb8869fff69",
+        "source_cmax": 323.9999999999999
+      },
+      {
+        "id": "n2_H3_4x1_dual_same_lp__s1__pjob",
+        "case": "n2_H3_4x1_dual_same_lp",
+        "seed": 1,
+        "arm": "pjob",
+        "state": "optimal",
+        "metrics": {
+          "route_wait_sum": 244.0,
+          "route_wait_max": 94.0,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 0,
+          "cleanings": 0,
+          "modeled_completion": 342.0,
+          "product_cmax": 324.0
+        },
+        "result_sha256": "40bb1cfd4a3ac50a9d61196caa5a1a10a6526054fa4e1b066e4403a6b3b07956",
+        "evidence_sha256": "8b33da1a1d687533497b87037347771afbb4dda9b7ea5567352697b0f70f5278",
+        "resources_sha256": "fd088911920c99a041f8ae4e8eb96b0b3a18907a0364d835c301a5cad1cf05d4",
+        "replay": {
+          "valid": true,
+          "checks": 537,
+          "errors": [],
+          "product_return_cmax": 324.0,
+          "cleaning_count": 0,
+          "processing_cycles": 1,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 324.0,
+        "upper": 324.0,
+        "seconds": 25.0,
+        "dimensions": {
+          "variables": 3219,
+          "constraints": 9955,
+          "linear_nonzeros": 52648,
+          "types": {
+            "BINARY": 2999,
+            "INTEGER": 66,
+            "CONTINUOUS": 154
+          }
+        },
+        "warm_sha256": "efc2d170721b35cde5bba2963d22ce91f86df43dba4fc64d04f2e1f9575ae366",
+        "source_cmax": 324.0
+      },
+      {
+        "id": "n2_H3_4x1_dual_same_lp__s1__wafer",
+        "case": "n2_H3_4x1_dual_same_lp",
+        "seed": 1,
+        "arm": "wafer",
+        "state": "optimal",
+        "metrics": {
+          "route_wait_sum": 244.0,
+          "route_wait_max": 94.0,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 0,
+          "cleanings": 0,
+          "modeled_completion": 342.0,
+          "product_cmax": 324.0
+        },
+        "result_sha256": "b48a6b480ac8d652786147d60079a524cba864503f49902157e5d1d7d854e310",
+        "evidence_sha256": "7555178786f1af31bc4172a2e821f313bbe0bd812241bb052818d7da452f65a0",
+        "resources_sha256": "79503a1ef5ab1ccc872117eaaacdfd96679b0a7d6b21d63f554b47c30324c45d",
+        "replay": {
+          "valid": true,
+          "checks": 537,
+          "errors": [],
+          "product_return_cmax": 324.0,
+          "cleaning_count": 0,
+          "processing_cycles": 1,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 324.0,
+        "upper": 324.0,
+        "seconds": 55.0,
+        "dimensions": {
+          "variables": 3225,
+          "constraints": 9974,
+          "linear_nonzeros": 53106,
+          "types": {
+            "BINARY": 3003,
+            "INTEGER": 66,
+            "CONTINUOUS": 156
+          }
+        },
+        "warm_sha256": "efc2d170721b35cde5bba2963d22ce91f86df43dba4fc64d04f2e1f9575ae366",
+        "source_cmax": 324.0
+      },
+      {
+        "id": "n2_H3_4x1_dual_same_lp__s2__pjob",
+        "case": "n2_H3_4x1_dual_same_lp",
+        "seed": 2,
+        "arm": "pjob",
+        "state": "optimal",
+        "metrics": {
+          "route_wait_sum": 244.0,
+          "route_wait_max": 94.0,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 0,
+          "cleanings": 0,
+          "modeled_completion": 342.0,
+          "product_cmax": 324.0
+        },
+        "result_sha256": "90254cf453090c09c1c1ed6ce28a575d8f56d0d6041bcf45e0855625fd5b4065",
+        "evidence_sha256": "fb980ff574a70a818a4fcedb61b324b2cf1f9edb4b911d4b2290edbed1267a06",
+        "resources_sha256": "c163b525f5b389d17dbd7090713b2e6915434eb4a279cb8aa176ef7a403a3416",
+        "replay": {
+          "valid": true,
+          "checks": 537,
+          "errors": [],
+          "product_return_cmax": 324.0,
+          "cleaning_count": 0,
+          "processing_cycles": 1,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 324.0,
+        "upper": 324.0,
+        "seconds": 33.0,
+        "dimensions": {
+          "variables": 3219,
+          "constraints": 9955,
+          "linear_nonzeros": 52648,
+          "types": {
+            "BINARY": 2999,
+            "INTEGER": 66,
+            "CONTINUOUS": 154
+          }
+        },
+        "warm_sha256": "efc2d170721b35cde5bba2963d22ce91f86df43dba4fc64d04f2e1f9575ae366",
+        "source_cmax": 324.0
+      },
+      {
+        "id": "n2_H3_4x1_dual_same_lp__s2__wafer",
+        "case": "n2_H3_4x1_dual_same_lp",
+        "seed": 2,
+        "arm": "wafer",
+        "state": "optimal",
+        "metrics": {
+          "route_wait_sum": 244.0,
+          "route_wait_max": 94.0,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 0,
+          "cleanings": 0,
+          "modeled_completion": 342.0,
+          "product_cmax": 324.0
+        },
+        "result_sha256": "ec59a5d45c649e785064af61a5dee95e939fc7eb58b942c878a192ffb0d02ef8",
+        "evidence_sha256": "a699b5b9cbd57932b326accfafa7810a534193c4862711aa641e97827405de98",
+        "resources_sha256": "bfd29faf79ed82a36d8fc5d2d73ee9d5dadf14b2e4ca55cd7c02d51633f40ddc",
+        "replay": {
+          "valid": true,
+          "checks": 537,
+          "errors": [],
+          "product_return_cmax": 324.0,
+          "cleaning_count": 0,
+          "processing_cycles": 1,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 324.0,
+        "upper": 324.0,
+        "seconds": 51.0,
+        "dimensions": {
+          "variables": 3225,
+          "constraints": 9974,
+          "linear_nonzeros": 53106,
+          "types": {
+            "BINARY": 3003,
+            "INTEGER": 66,
+            "CONTINUOUS": 156
+          }
+        },
+        "warm_sha256": "efc2d170721b35cde5bba2963d22ce91f86df43dba4fc64d04f2e1f9575ae366",
+        "source_cmax": 324.0
+      },
+      {
+        "id": "n2_H3_4x1_dual_same_lp__s3__pjob",
+        "case": "n2_H3_4x1_dual_same_lp",
+        "seed": 3,
+        "arm": "pjob",
+        "state": "optimal",
+        "metrics": {
+          "route_wait_sum": 244.0,
+          "route_wait_max": 94.0,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 0,
+          "cleanings": 0,
+          "modeled_completion": 342.0,
+          "product_cmax": 324.0
+        },
+        "result_sha256": "19994e0d7144006875791a87c32bec5909782168be7b49a9a654dc8befb9f3eb",
+        "evidence_sha256": "1a2a6c3c12968fcd80d3048385744321b34b6321d3536723cdc98a27b8295a31",
+        "resources_sha256": "6567fb85e82ed549361e40b785d28be6933c338e58a69f13a76f2b03c92bc93f",
+        "replay": {
+          "valid": true,
+          "checks": 537,
+          "errors": [],
+          "product_return_cmax": 324.0,
+          "cleaning_count": 0,
+          "processing_cycles": 1,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 324.0,
+        "upper": 324.0,
+        "seconds": 5.0,
+        "dimensions": {
+          "variables": 3219,
+          "constraints": 9955,
+          "linear_nonzeros": 52648,
+          "types": {
+            "BINARY": 2999,
+            "INTEGER": 66,
+            "CONTINUOUS": 154
+          }
+        },
+        "warm_sha256": "efc2d170721b35cde5bba2963d22ce91f86df43dba4fc64d04f2e1f9575ae366",
+        "source_cmax": 324.0
+      },
+      {
+        "id": "n2_H3_4x1_dual_same_lp__s3__wafer",
+        "case": "n2_H3_4x1_dual_same_lp",
+        "seed": 3,
+        "arm": "wafer",
+        "state": "optimal",
+        "metrics": {
+          "route_wait_sum": 244.0,
+          "route_wait_max": 94.0,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 0,
+          "cleanings": 0,
+          "modeled_completion": 342.0,
+          "product_cmax": 324.0
+        },
+        "result_sha256": "4246231648ba24fa66f32217bf4d7fbf6dd3b62485a99dac530b7d318f694b00",
+        "evidence_sha256": "7a6989c08a31d85ebaa28d2f8530fcba0930bfe15dd19161973f01825ed92cb0",
+        "resources_sha256": "bc4cc0e964e0167e98aaaeb441d2628255a3e126e566966f7089e484e5536d9e",
+        "replay": {
+          "valid": true,
+          "checks": 537,
+          "errors": [],
+          "product_return_cmax": 324.0,
+          "cleaning_count": 0,
+          "processing_cycles": 1,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 324.0,
+        "upper": 324.0,
+        "seconds": 60.0,
+        "dimensions": {
+          "variables": 3225,
+          "constraints": 9974,
+          "linear_nonzeros": 53106,
+          "types": {
+            "BINARY": 3003,
+            "INTEGER": 66,
+            "CONTINUOUS": 156
+          }
+        },
+        "warm_sha256": "efc2d170721b35cde5bba2963d22ce91f86df43dba4fc64d04f2e1f9575ae366",
+        "source_cmax": 324.0
+      },
+      {
+        "id": "n2_H3_mixed_dual__s1__pjob",
+        "case": "n2_H3_mixed_dual",
+        "seed": 1,
+        "arm": "pjob",
+        "state": "timelimit",
+        "metrics": {
+          "route_wait_sum": 207.0,
+          "route_wait_max": 89.0,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 0,
+          "cleanings": 0,
+          "modeled_completion": 536.0,
+          "product_cmax": 518.0
+        },
+        "result_sha256": "cb32eb927be22ff7b27198f9705df72c8d46fd59153d88e804a5d65a17c6ecb8",
+        "evidence_sha256": "63c24b5a7e419e03e9fd2025d251cf8a6be630e473afd18d243ff0ccc9c4ea90",
+        "resources_sha256": "3e39677a6bb6002d5e0e05543caee704c4b11b0e9250eaacfc7b23f3a1db6203",
+        "replay": {
+          "valid": true,
+          "checks": 1296,
+          "errors": [],
+          "product_return_cmax": 518.0,
+          "cleaning_count": 0,
+          "processing_cycles": 3,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 144.00000000000006,
+        "upper": 518.0,
+        "seconds": 600.0,
+        "dimensions": {
+          "variables": 5490,
+          "constraints": 17618,
+          "linear_nonzeros": 96251,
+          "types": {
+            "BINARY": 5194,
+            "INTEGER": 88,
+            "CONTINUOUS": 208
+          }
+        },
+        "warm_sha256": "f04091bd147e8ebff6425f57e4cc6702f53c6fa8aa4645b8c4919fc25c5828a5",
+        "source_cmax": 518.0
+      },
+      {
+        "id": "n2_H3_mixed_dual__s1__wafer",
+        "case": "n2_H3_mixed_dual",
+        "seed": 1,
+        "arm": "wafer",
+        "state": "timelimit",
+        "metrics": {
+          "route_wait_sum": 463.1814258449305,
+          "route_wait_max": 94.0,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 0,
+          "cleanings": 0,
+          "modeled_completion": 529.0,
+          "product_cmax": 511.0
+        },
+        "result_sha256": "7daf348f6cc04cae9dc3a2d4e793a82d466a2ec72a0789bd6e0adca0311d70e6",
+        "evidence_sha256": "b477334ee20995395837c1f531676fbf08d09a360bd8e76f636d0f71010632d0",
+        "resources_sha256": "53b26e7beadec11e90c76a788be3cc4464ea33f174426c6c9be88374b165d2ce",
+        "replay": {
+          "valid": true,
+          "checks": 1298,
+          "errors": [],
+          "product_return_cmax": 511.0,
+          "cleaning_count": 0,
+          "processing_cycles": 3,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 298.0,
+        "upper": 511.0,
+        "seconds": 600.0,
+        "dimensions": {
+          "variables": 5492,
+          "constraints": 17636,
+          "linear_nonzeros": 96307,
+          "types": {
+            "BINARY": 5194,
+            "INTEGER": 88,
+            "CONTINUOUS": 210
+          }
+        },
+        "warm_sha256": "f04091bd147e8ebff6425f57e4cc6702f53c6fa8aa4645b8c4919fc25c5828a5",
+        "source_cmax": 518.0
+      },
+      {
+        "id": "n2_H3_mixed_dual__s2__pjob",
+        "case": "n2_H3_mixed_dual",
+        "seed": 2,
+        "arm": "pjob",
+        "state": "timelimit",
+        "metrics": {
+          "route_wait_sum": 207.0,
+          "route_wait_max": 89.0,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 0,
+          "cleanings": 0,
+          "modeled_completion": 536.0,
+          "product_cmax": 518.0
+        },
+        "result_sha256": "627b0da49413d543a839c9b16078d7857621167809f440eca513c51d65333caa",
+        "evidence_sha256": "3b42ff70aa2d7b47c3115a9abdeaa0f510180b6d11f69bd61dc5d68fb0a1f4c2",
+        "resources_sha256": "250d296dc2e3d31ecf6a5900b87373906fb44ba8099556b06d7db3e4304739fc",
+        "replay": {
+          "valid": true,
+          "checks": 1296,
+          "errors": [],
+          "product_return_cmax": 518.0,
+          "cleaning_count": 0,
+          "processing_cycles": 3,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 143.99999999999997,
+        "upper": 518.0,
+        "seconds": 600.0,
+        "dimensions": {
+          "variables": 5490,
+          "constraints": 17618,
+          "linear_nonzeros": 96251,
+          "types": {
+            "BINARY": 5194,
+            "INTEGER": 88,
+            "CONTINUOUS": 208
+          }
+        },
+        "warm_sha256": "f04091bd147e8ebff6425f57e4cc6702f53c6fa8aa4645b8c4919fc25c5828a5",
+        "source_cmax": 518.0
+      },
+      {
+        "id": "n2_H3_mixed_dual__s2__wafer",
+        "case": "n2_H3_mixed_dual",
+        "seed": 2,
+        "arm": "wafer",
+        "state": "timelimit",
+        "metrics": {
+          "route_wait_sum": 207.0,
+          "route_wait_max": 89.0,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 0,
+          "cleanings": 0,
+          "modeled_completion": 536.0,
+          "product_cmax": 518.0
+        },
+        "result_sha256": "2e1286bd3a4314e8fd58520d7b5b8d38857b850f1cc1327c42fec131d98f6b8f",
+        "evidence_sha256": "afda4ac6bea2c4c2d13117acdd476ef13e996cefd49042696118bc1bac3e343b",
+        "resources_sha256": "3741eb1303ad86c53603a79f2e0cdffc42350efc0aa00a5a40c75750b67489dc",
+        "replay": {
+          "valid": true,
+          "checks": 1296,
+          "errors": [],
+          "product_return_cmax": 518.0,
+          "cleaning_count": 0,
+          "processing_cycles": 3,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 233.9307535641559,
+        "upper": 518.0,
+        "seconds": 600.0,
+        "dimensions": {
+          "variables": 5492,
+          "constraints": 17636,
+          "linear_nonzeros": 96307,
+          "types": {
+            "BINARY": 5194,
+            "INTEGER": 88,
+            "CONTINUOUS": 210
+          }
+        },
+        "warm_sha256": "f04091bd147e8ebff6425f57e4cc6702f53c6fa8aa4645b8c4919fc25c5828a5",
+        "source_cmax": 518.0
+      },
+      {
+        "id": "n2_H3_mixed_dual__s3__pjob",
+        "case": "n2_H3_mixed_dual",
+        "seed": 3,
+        "arm": "pjob",
+        "state": "timelimit",
+        "metrics": {
+          "route_wait_sum": 207.0,
+          "route_wait_max": 89.0,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 0,
+          "cleanings": 0,
+          "modeled_completion": 536.0,
+          "product_cmax": 518.0
+        },
+        "result_sha256": "79b65a2dda2723e2677d6ccae7e2cc95834ec0ea159363343403fc36ba530cf9",
+        "evidence_sha256": "1cd1925e8c14742244cf6a249198156626f9fc66ee2f959afd38bde6369a751e",
+        "resources_sha256": "18aff56440eeae96060024de63033d741ce291ec00b4cc92beccf2be5b585d67",
+        "replay": {
+          "valid": true,
+          "checks": 1296,
+          "errors": [],
+          "product_return_cmax": 518.0,
+          "cleaning_count": 0,
+          "processing_cycles": 3,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 143.3350013335535,
+        "upper": 518.0,
+        "seconds": 600.0,
+        "dimensions": {
+          "variables": 5490,
+          "constraints": 17618,
+          "linear_nonzeros": 96251,
+          "types": {
+            "BINARY": 5194,
+            "INTEGER": 88,
+            "CONTINUOUS": 208
+          }
+        },
+        "warm_sha256": "f04091bd147e8ebff6425f57e4cc6702f53c6fa8aa4645b8c4919fc25c5828a5",
+        "source_cmax": 518.0
+      },
+      {
+        "id": "n2_H3_mixed_dual__s3__wafer",
+        "case": "n2_H3_mixed_dual",
+        "seed": 3,
+        "arm": "wafer",
+        "state": "timelimit",
+        "metrics": {
+          "route_wait_sum": 388.0,
+          "route_wait_max": 80.0,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 0,
+          "cleanings": 0,
+          "modeled_completion": 532.0,
+          "product_cmax": 514.0
+        },
+        "result_sha256": "477850c66f04937462af51972eb0ecdf856c5cac046688119e6b88239afe9629",
+        "evidence_sha256": "18c1e579841de220c2eebaac3f53a6c756922ce88280ef054f833abd209d5caa",
+        "resources_sha256": "9985445aedf53c6aa50ad711710334026bfb10af605a30d4f2aac2a987063d66",
+        "replay": {
+          "valid": true,
+          "checks": 1296,
+          "errors": [],
+          "product_return_cmax": 514.0,
+          "cleaning_count": 0,
+          "processing_cycles": 3,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 144.0,
+        "upper": 514.0,
+        "seconds": 600.0,
+        "dimensions": {
+          "variables": 5492,
+          "constraints": 17636,
+          "linear_nonzeros": 96307,
+          "types": {
+            "BINARY": 5194,
+            "INTEGER": 88,
+            "CONTINUOUS": 210
+          }
+        },
+        "warm_sha256": "f04091bd147e8ebff6425f57e4cc6702f53c6fa8aa4645b8c4919fc25c5828a5",
+        "source_cmax": 518.0
+      },
+      {
+        "id": "n4_H10_mixed_dual__s1__pjob",
+        "case": "n4_H10_mixed_dual",
+        "seed": 1,
+        "arm": "pjob",
+        "state": "timelimit",
+        "metrics": {
+          "route_wait_sum": 148.99999500006936,
+          "route_wait_max": 35.0,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 0,
+          "cleanings": 0,
+          "modeled_completion": 553.0,
+          "product_cmax": 542.0
+        },
+        "result_sha256": "472ba36c9f9741d1092dd4ae4685982de57bde2a8277e24ec0ddf97ea4c4cc24",
+        "evidence_sha256": "7375cbf1d70536e828c68124b7fbcf59099600e01c3b0fcdfffbda4fbeb05271",
+        "resources_sha256": "417810cc4c6ea9b702949c11f595e19d02febb357d7bf217cd6a92c9666c6383",
+        "replay": {
+          "valid": true,
+          "checks": 1636,
+          "errors": [],
+          "product_return_cmax": 542.0,
+          "cleaning_count": 0,
+          "processing_cycles": 3,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 116.0,
+        "upper": 542.0,
+        "seconds": 600.0,
+        "dimensions": {
+          "variables": 20524,
+          "constraints": 71940,
+          "linear_nonzeros": 414222,
+          "types": {
+            "BINARY": 19924,
+            "INTEGER": 176,
+            "CONTINUOUS": 424
+          }
+        },
+        "warm_sha256": "5835268ed47839b458505a5dcfcdfd1b4931bb92044991cd50d51cd82feab770",
+        "source_cmax": 542.0
+      },
+      {
+        "id": "n4_H10_mixed_dual__s1__wafer",
+        "case": "n4_H10_mixed_dual",
+        "seed": 1,
+        "arm": "wafer",
+        "state": "timelimit",
+        "metrics": {
+          "route_wait_sum": 148.99999500006936,
+          "route_wait_max": 35.0,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 0,
+          "cleanings": 0,
+          "modeled_completion": 553.0,
+          "product_cmax": 542.0
+        },
+        "result_sha256": "a5b2490084ffb01458f9fbb241d7174e5d417257e0ef315a1024bb2e425cfb98",
+        "evidence_sha256": "74db94a0506233ccd07e18478c6f6dab85f5b75b910b4fdc831c6606c4cdabdb",
+        "resources_sha256": "1c570b07d1dc244d11949ddb376920aed00d828958ecfc9ed0f64814e14ee119",
+        "replay": {
+          "valid": true,
+          "checks": 1636,
+          "errors": [],
+          "product_return_cmax": 542.0,
+          "cleaning_count": 0,
+          "processing_cycles": 3,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 116.0,
+        "upper": 542.0,
+        "seconds": 600.0,
+        "dimensions": {
+          "variables": 20528,
+          "constraints": 72010,
+          "linear_nonzeros": 414450,
+          "types": {
+            "BINARY": 19924,
+            "INTEGER": 176,
+            "CONTINUOUS": 428
+          }
+        },
+        "warm_sha256": "5835268ed47839b458505a5dcfcdfd1b4931bb92044991cd50d51cd82feab770",
+        "source_cmax": 542.0
+      },
+      {
+        "id": "n4_H10_mixed_dual__s2__pjob",
+        "case": "n4_H10_mixed_dual",
+        "seed": 2,
+        "arm": "pjob",
+        "state": "timelimit",
+        "metrics": {
+          "route_wait_sum": 148.99999500006936,
+          "route_wait_max": 35.0,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 0,
+          "cleanings": 0,
+          "modeled_completion": 553.0,
+          "product_cmax": 542.0
+        },
+        "result_sha256": "76043c05d97f9cd6523c8645bd585ce7c36e918f8d12318a6da18aed85c91e32",
+        "evidence_sha256": "f74b5a7a7e6ff526e0549af3156618c4bcc1e9b0fcaeeedc8c8a15339ee2bc2f",
+        "resources_sha256": "6d4e314094bb2c57417b9da4cca48045895da24b07d9cac4554ef3f396222a52",
+        "replay": {
+          "valid": true,
+          "checks": 1636,
+          "errors": [],
+          "product_return_cmax": 542.0,
+          "cleaning_count": 0,
+          "processing_cycles": 3,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 116.0,
+        "upper": 542.0,
+        "seconds": 600.0,
+        "dimensions": {
+          "variables": 20524,
+          "constraints": 71940,
+          "linear_nonzeros": 414222,
+          "types": {
+            "BINARY": 19924,
+            "INTEGER": 176,
+            "CONTINUOUS": 424
+          }
+        },
+        "warm_sha256": "5835268ed47839b458505a5dcfcdfd1b4931bb92044991cd50d51cd82feab770",
+        "source_cmax": 542.0
+      },
+      {
+        "id": "n4_H10_mixed_dual__s2__wafer",
+        "case": "n4_H10_mixed_dual",
+        "seed": 2,
+        "arm": "wafer",
+        "state": "timelimit",
+        "metrics": {
+          "route_wait_sum": 148.99999500006936,
+          "route_wait_max": 35.0,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 0,
+          "cleanings": 0,
+          "modeled_completion": 553.0,
+          "product_cmax": 542.0
+        },
+        "result_sha256": "03db8c1633fbf4b9825425d98c139d500cd3c71b9afed587bbe089ec7eff6166",
+        "evidence_sha256": "fe2bd61b2dc0057df3a93dc66d5e2af8cf6302bfbbbcae9f2c0bdc51877e6814",
+        "resources_sha256": "bdc3bd8702f2e8d0747afef670334d18e403177a3ef5c268dd0bbbb7bd14a9b8",
+        "replay": {
+          "valid": true,
+          "checks": 1636,
+          "errors": [],
+          "product_return_cmax": 542.0,
+          "cleaning_count": 0,
+          "processing_cycles": 3,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 116.0,
+        "upper": 542.0,
+        "seconds": 600.0,
+        "dimensions": {
+          "variables": 20528,
+          "constraints": 72010,
+          "linear_nonzeros": 414450,
+          "types": {
+            "BINARY": 19924,
+            "INTEGER": 176,
+            "CONTINUOUS": 428
+          }
+        },
+        "warm_sha256": "5835268ed47839b458505a5dcfcdfd1b4931bb92044991cd50d51cd82feab770",
+        "source_cmax": 542.0
+      },
+      {
+        "id": "n4_H10_mixed_dual__s3__pjob",
+        "case": "n4_H10_mixed_dual",
+        "seed": 3,
+        "arm": "pjob",
+        "state": "timelimit",
+        "metrics": {
+          "route_wait_sum": 148.99999500006936,
+          "route_wait_max": 35.0,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 0,
+          "cleanings": 0,
+          "modeled_completion": 553.0,
+          "product_cmax": 542.0
+        },
+        "result_sha256": "2ace3cf8d43769291cbee0d1dd0df2bfde9f711c1c170e468da879045aad0314",
+        "evidence_sha256": "8cb54f95dba29218e9e8a12f5f046724c39f36e705e03fd95b20811a3b6fead3",
+        "resources_sha256": "d58c95c521b134185c72c7e7a2a9d2ec3ef4f3b6b2d22dc39854e78255bf616b",
+        "replay": {
+          "valid": true,
+          "checks": 1636,
+          "errors": [],
+          "product_return_cmax": 542.0,
+          "cleaning_count": 0,
+          "processing_cycles": 3,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 116.0,
+        "upper": 542.0,
+        "seconds": 600.0,
+        "dimensions": {
+          "variables": 20524,
+          "constraints": 71940,
+          "linear_nonzeros": 414222,
+          "types": {
+            "BINARY": 19924,
+            "INTEGER": 176,
+            "CONTINUOUS": 424
+          }
+        },
+        "warm_sha256": "5835268ed47839b458505a5dcfcdfd1b4931bb92044991cd50d51cd82feab770",
+        "source_cmax": 542.0
+      },
+      {
+        "id": "n4_H10_mixed_dual__s3__wafer",
+        "case": "n4_H10_mixed_dual",
+        "seed": 3,
+        "arm": "wafer",
+        "state": "timelimit",
+        "metrics": {
+          "route_wait_sum": 148.99999500006936,
+          "route_wait_max": 35.0,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 0,
+          "cleanings": 0,
+          "modeled_completion": 553.0,
+          "product_cmax": 542.0
+        },
+        "result_sha256": "17a92a23a356bb707a0c3e542522d8962e4d469141ac501a93fab1a9b0a414bd",
+        "evidence_sha256": "c729d9054cfeb25169c94c4407fc21e1ba4b63c6dbb106d5aff44b74bbb3d8b8",
+        "resources_sha256": "2166d772d85773ec154e72ddf22c136581a33a8bb22d5a314bda957f0835381f",
+        "replay": {
+          "valid": true,
+          "checks": 1636,
+          "errors": [],
+          "product_return_cmax": 542.0,
+          "cleaning_count": 0,
+          "processing_cycles": 3,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "lower": 116.0,
+        "upper": 542.0,
+        "seconds": 600.0,
+        "dimensions": {
+          "variables": 20528,
+          "constraints": 72010,
+          "linear_nonzeros": 414450,
+          "types": {
+            "BINARY": 19924,
+            "INTEGER": 176,
+            "CONTINUOUS": 428
+          }
+        },
+        "warm_sha256": "5835268ed47839b458505a5dcfcdfd1b4931bb92044991cd50d51cd82feab770",
+        "source_cmax": 542.0
+      }
+    ],
+    "summary": [
+      {
+        "case": "n2_H3_4x1_dual",
+        "arm": "pjob",
+        "states": {
+          "optimal": 3
+        },
+        "mean_lower": 323.9999999999999,
+        "mean_upper": 323.9999999999999,
+        "lower_range": [
+          323.9999999999999,
+          323.9999999999999
+        ],
+        "upper_range": [
+          323.9999999999999,
+          323.9999999999999
+        ],
+        "mean_solve_seconds": 60.0,
+        "dimensions": {
+          "variables": 3224,
+          "constraints": 10404,
+          "linear_nonzeros": 55372,
+          "types": {
+            "BINARY": 3003,
+            "INTEGER": 66,
+            "CONTINUOUS": 155
+          }
+        }
+      },
+      {
+        "case": "n2_H3_4x1_dual",
+        "arm": "wafer",
+        "states": {
+          "optimal": 3
+        },
+        "mean_lower": 323.9999999999999,
+        "mean_upper": 323.9999999999999,
+        "lower_range": [
+          323.9999999999999,
+          323.9999999999999
+        ],
+        "upper_range": [
+          323.9999999999999,
+          323.9999999999999
+        ],
+        "mean_solve_seconds": 67.66666666666667,
+        "dimensions": {
+          "variables": 3226,
+          "constraints": 10423,
+          "linear_nonzeros": 55430,
+          "types": {
+            "BINARY": 3003,
+            "INTEGER": 66,
+            "CONTINUOUS": 157
+          }
+        }
+      },
+      {
+        "case": "n2_H3_4x1_dual_same_lp",
+        "arm": "pjob",
+        "states": {
+          "optimal": 3
+        },
+        "mean_lower": 324.0,
+        "mean_upper": 324.0,
+        "lower_range": [
+          324.0,
+          324.0
+        ],
+        "upper_range": [
+          324.0,
+          324.0
+        ],
+        "mean_solve_seconds": 21.0,
+        "dimensions": {
+          "variables": 3219,
+          "constraints": 9955,
+          "linear_nonzeros": 52648,
+          "types": {
+            "BINARY": 2999,
+            "INTEGER": 66,
+            "CONTINUOUS": 154
+          }
+        }
+      },
+      {
+        "case": "n2_H3_4x1_dual_same_lp",
+        "arm": "wafer",
+        "states": {
+          "optimal": 3
+        },
+        "mean_lower": 324.0,
+        "mean_upper": 324.0,
+        "lower_range": [
+          324.0,
+          324.0
+        ],
+        "upper_range": [
+          324.0,
+          324.0
+        ],
+        "mean_solve_seconds": 55.333333333333336,
+        "dimensions": {
+          "variables": 3225,
+          "constraints": 9974,
+          "linear_nonzeros": 53106,
+          "types": {
+            "BINARY": 3003,
+            "INTEGER": 66,
+            "CONTINUOUS": 156
+          }
+        }
+      },
+      {
+        "case": "n2_H3_mixed_dual",
+        "arm": "pjob",
+        "states": {
+          "timelimit": 3
+        },
+        "mean_lower": 143.77833377785117,
+        "mean_upper": 518.0,
+        "lower_range": [
+          143.3350013335535,
+          144.00000000000006
+        ],
+        "upper_range": [
+          518.0,
+          518.0
+        ],
+        "mean_solve_seconds": 600.0,
+        "dimensions": {
+          "variables": 5490,
+          "constraints": 17618,
+          "linear_nonzeros": 96251,
+          "types": {
+            "BINARY": 5194,
+            "INTEGER": 88,
+            "CONTINUOUS": 208
+          }
+        }
+      },
+      {
+        "case": "n2_H3_mixed_dual",
+        "arm": "wafer",
+        "states": {
+          "timelimit": 3
+        },
+        "mean_lower": 225.31025118805198,
+        "mean_upper": 514.3333333333334,
+        "lower_range": [
+          144.0,
+          298.0
+        ],
+        "upper_range": [
+          511.0,
+          518.0
+        ],
+        "mean_solve_seconds": 600.0,
+        "dimensions": {
+          "variables": 5492,
+          "constraints": 17636,
+          "linear_nonzeros": 96307,
+          "types": {
+            "BINARY": 5194,
+            "INTEGER": 88,
+            "CONTINUOUS": 210
+          }
+        }
+      },
+      {
+        "case": "n4_H10_mixed_dual",
+        "arm": "pjob",
+        "states": {
+          "timelimit": 3
+        },
+        "mean_lower": 116.0,
+        "mean_upper": 542.0,
+        "lower_range": [
+          116.0,
+          116.0
+        ],
+        "upper_range": [
+          542.0,
+          542.0
+        ],
+        "mean_solve_seconds": 600.0,
+        "dimensions": {
+          "variables": 20524,
+          "constraints": 71940,
+          "linear_nonzeros": 414222,
+          "types": {
+            "BINARY": 19924,
+            "INTEGER": 176,
+            "CONTINUOUS": 424
+          }
+        }
+      },
+      {
+        "case": "n4_H10_mixed_dual",
+        "arm": "wafer",
+        "states": {
+          "timelimit": 3
+        },
+        "mean_lower": 116.0,
+        "mean_upper": 542.0,
+        "lower_range": [
+          116.0,
+          116.0
+        ],
+        "upper_range": [
+          542.0,
+          542.0
+        ],
+        "mean_solve_seconds": 600.0,
+        "dimensions": {
+          "variables": 20528,
+          "constraints": 72010,
+          "linear_nonzeros": 414450,
+          "types": {
+            "BINARY": 19924,
+            "INTEGER": 176,
+            "CONTINUOUS": 428
+          }
+        }
+      }
+    ],
+    "scope": "Frozen inputs/code/result hashes checked; saved original and lifted-model certificates checked; fresh physical replay and metric recomputation; no solver"
+  },
+  {
+    "campaign": "gap_d_structure_20261108_r1",
+    "campaign_sha256": "daa8274ee17a4adc6683873dae3c4ad40fd4e592ca3b64827efb1a829bbfb1ee",
+    "settings": {
+      "time_limit": 300.0,
+      "stage2_limit": 60,
+      "cleanup_limit": 60,
+      "memory_mb": 15872,
+      "process_memory_mb": 19968,
+      "reserve_mb": 2048,
+      "available_at_prepare_mib": 22046.73828125,
+      "wall_limit": 1800.0,
+      "threads": 1,
+      "jobs": 1,
+      "hybrid_fixed_fraction": 0.2
+    },
+    "expected": 36,
+    "observed": 1,
+    "states": {
+      "optimal": 1
+    },
+    "rows": [
+      {
+        "id": "n2_H3_4x1_dual__s1__joint",
+        "case": "n2_H3_4x1_dual",
+        "seed": 1,
+        "arm": "joint",
+        "state": "optimal",
+        "metrics": {
+          "route_wait_sum": 72.00000000000335,
+          "route_wait_max": 25.000000000001705,
+          "rhythm_deviation": 0,
+          "rhythm_centers": 0,
+          "early_cleanings": 0,
+          "legacy_rule_feasible": true,
+          "production_overlap": 159.00000000000026,
+          "cleanings": 0,
+          "modeled_completion": 341.9999999999999,
+          "product_cmax": 323.9999999999999
+        },
+        "result_sha256": "66e918df2b3c82624bd92206a2865e43b86a578935bc91d5e3d77f879f644007",
+        "evidence_sha256": "44b5536423c5b3bc019a089f0d3eec3bc31d3ff440b440393c6576641dd85df9",
+        "resources_sha256": "a270f8710629aa0596ab7149bd590c5e8cf2f67ab337600989bc2ebe23e8fea7",
+        "replay": {
+          "valid": true,
+          "checks": 1009,
+          "errors": [],
+          "product_return_cmax": 323.9999999999999,
+          "cleaning_count": 0,
+          "processing_cycles": 2,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        }
+      }
+    ],
+    "summary": [],
+    "scope": "Frozen inputs/code/result hashes checked; saved original and lifted-model certificates checked; fresh physical replay and metric recomputation; no solver"
+  }
+]

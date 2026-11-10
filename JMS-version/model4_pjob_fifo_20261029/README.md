@@ -1,8 +1,6 @@
 # Pjob批次内编码与全局严格出片MILP
 
-公式与实现逐项说明见[当前模型公式说明](../MODEL_EXPLANATION_CN.md)（[PDF](../output/pdf/MODEL_EXPLANATION_CN.pdf)，2026-10-30更新）。
-
-本目录独立实现全Pjob跨LP按序取片。当前旧队列仍使用原目录，本轮不启动新的实验批次。
+本目录保留历史严格取片模型，规则与证据归属见[当时的编码审查](../revisions/20261029_pjob_index_encoding/REVIEW_CN.md)。[当前模型公式说明](../MODEL_EXPLANATION_CN.md)采用后续非递减规则，不能与本目录逐项混用。原代码与冻结批次保留供复现。
 
 输入产品先按工艺模式、腔室资格分组，再按实际晶圆全局编号生成 `Pjob_j[k]`。编号表同时保留实际ID及来源LP；同批次两片产品不得同时从LP取出。
 
@@ -19,4 +17,4 @@
 
 29项正确性测试通过，包含完整模型赋值检查、两阶段输出、跨LP逆序/同时取片拒绝以及跨Pjob同步取片保留。它们是开发验证，不计入文稿实验次数。
 
-统一命令见[当前实验清单](../MODEL4_EXPERIMENT_COMMANDS.md)：`paper` 102次、`qualification` 6次、`rhythm` 48次；选割比较 `paper_cuts` 72次可选。所有正式实验在可见前台启动，保存冻结协议与独立目录。
+历史批次入口为本目录 `run_experiments.ps1`；`paper` 102次、`qualification` 6次、`rhythm` 48次及 `paper_cuts` 72次属于当时的严格取片协议。恢复已有批次时使用原冻结配置。当前补充实验见[期刊命令](../JOURNAL_EXPERIMENT_COMMANDS.md)，不得用本目录结果替代当前模型比较。

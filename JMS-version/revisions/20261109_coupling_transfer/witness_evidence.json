@@ -1,0 +1,137 @@
+{
+  "records": [
+    {
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\current_defaults_small_prepared_20261103\\runs\\n1_H2_2x2_dual__s1__scip\\phase1.json",
+      "sha256": "ccbf070d83d7d0145ca65b8b9242f16d43df8cd8fdb1ba9cfaf3577856e29ffa",
+      "variables_sha256": "9602934de0d8393048925e0f4a32da6be2e2566ecaf4d8cff63425d7b48ce80d",
+      "metrics": {
+        "route_wait_sum": 642.0000000000026,
+        "route_wait_max": 96.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 1,
+        "modeled_completion": 978.0000000000018,
+        "product_cmax": 303.0,
+        "auxiliary_loans": 9,
+        "distinct_auxiliaries": 7,
+        "reused_auxiliaries": 2,
+        "repeat_loans": 2,
+        "peak_auxiliary_loans": 5,
+        "continuous_product_pairs": 1,
+        "coupled_witness": true
+      },
+      "full_model_audit": {
+        "valid": true,
+        "original_model_check": true,
+        "physical_validation": {
+          "valid": true,
+          "checks": 1178,
+          "errors": [],
+          "product_return_cmax": 303.0,
+          "cleaning_count": 1,
+          "processing_cycles": 2,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "seconds": 0.09299999999348074,
+        "solver_started": false,
+        "dimensions": {
+          "variables": 2300,
+          "constraints": 7167,
+          "linear_nonzeros": 36630,
+          "types": {
+            "BINARY": 2117,
+            "INTEGER": 55,
+            "CONTINUOUS": 128
+          }
+        }
+      },
+      "status": "optimal",
+      "primary_bound": 303.0,
+      "solver_started": false
+    },
+    {
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\current_defaults_small_prepared_20261103\\runs\\n1_H2_2x2_dual__s1__scip\\result.json",
+      "sha256": "7a497c812c30f52cb3b8ec6b1a2e7706c84b4d8ea055db72d0af9f35175acfc0",
+      "variables_sha256": "ec5181d182e7b115944273e85e3521f44c619472bbbdfba5200b23793b519600",
+      "metrics": {
+        "route_wait_sum": 54.0,
+        "route_wait_max": 16.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 1,
+        "modeled_completion": 796.0,
+        "product_cmax": 303.0,
+        "auxiliary_loans": 9,
+        "distinct_auxiliaries": 7,
+        "reused_auxiliaries": 2,
+        "repeat_loans": 2,
+        "peak_auxiliary_loans": 5,
+        "continuous_product_pairs": 1,
+        "coupled_witness": true
+      },
+      "full_model_audit": {
+        "valid": true,
+        "original_model_check": true,
+        "physical_validation": {
+          "valid": true,
+          "checks": 1176,
+          "errors": [],
+          "product_return_cmax": 303.0,
+          "cleaning_count": 1,
+          "processing_cycles": 2,
+          "pjob_check": true,
+          "pjob_release_order_check": true
+        },
+        "seconds": 0.07800000000861473,
+        "solver_started": false,
+        "dimensions": {
+          "variables": 2300,
+          "constraints": 7167,
+          "linear_nonzeros": 36630,
+          "types": {
+            "BINARY": 2117,
+            "INTEGER": 55,
+            "CONTINUOUS": 128
+          }
+        }
+      },
+      "status": "optimal",
+      "primary_bound": 303.0,
+      "solver_started": false
+    }
+  ],
+  "assets": {
+    "cie\\code\\run_cie_benchmarks.py": "33ab2a81dc120eaa98862aea2386ad19675de96203ef9bdb60c1da9ea7c484c2",
+    "cutsel_agent_parallel.py": "f2b6eb80254b68e21e37f18f3ff50e3064e5b31988e8fa16f04f2fd15a287f50",
+    "environments.py": "1783d0e23bd15ec0c0ad9bd2c04f544865e54384f366069e434882ced18c5194",
+    "global_const.py": "31a70bab931eaaf58445a762f8a9986a2576fbce2de20071dd60ca141dd1e3be",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\evidence_supplement.py": "7f97bcfee08dab975fcdf639d0ac01c8cca2700eaac41e7f10e99535db3b71fa",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\experiment_console.py": "8f85f01c5dcc906e8347bb5b5f2e587eee26cfebb11c5429a480fddc3018a729",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\grippers.py": "5ed898b8c17850b88da8eb8700df33dc5fd1fe3df3bf60df6b5c22281900e0fc",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\joint_algorithms.py": "a41510be8956369ea84dbfb25289b3f115afab741786ea9ac0284cf365dea1f1",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\joint_chamber_cycle_model.py": "d52b0f35f8ce90c7d18c15c0eed55069dd569c92f3b24de90cc8c8b6f993cb30",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\joint_pairing_model.py": "58b09bd4da318cb67ca978284475e2369d1328206b9213f715f4d99815092ced",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\memory_policy.py": "5b8914df0f7b9e70834aa6fef6de5e68223f0ed5c50e9e883a17b2b8c510f382",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\model.py": "1c098c7073ec09d8d762467d6faab04e7534ea558f60877c3ba1a50d7fb3a2be",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\physical_seed.py": "da232cdf3ddf9e5d35a27b36d4084fa12f97720aceb8d6b4e5eea4587f8011b1",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\physical_validate.py": "8b65d627369c496db031ea1638684bb995faca88a74bdc444dcd82bd05328cea",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\pjob_order.py": "cb0ec95bc2d72e39807a941b18e9466f7f8838388d3859b4d4c7e5a1eccd944f",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\pjobs.py": "3705d31ac6201600a4a7447e82660b6b306fcf7c87a75b229c638fe77040b6a5",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\reference_completion.py": "9a2e47d1c8ea110237da7b53e98d21e4ad0af5ee2134e2fed2565ca8d4f72af9",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\run_experiments.py": "bc0335edaffd70844c55c3bcb5e76eda36cd9f48443de90f4af94628d5edc686",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\seed.py": "7be37826a5fb5652ac78eee3ab301a767da6f955861cd42453c711ec4ecc51c3",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\validate.py": "7c5853bb37a0819cde1bf9d970effce230e6c8eb07d65ca12f6233b318259f16",
+    "runtime_compat.py": "28d479887faaa56306dd7ec53f85dad73d006176565e10978f193c99bb6d67d5",
+    "scip_imports.py": "874c497d8c283be8a5233d2c176da3c8afdfc92717d5691161c200ef5146b3d9",
+    "utils.py": "22dd9f831ba8e4f431d2cc17b4b8ab29ab0452e9f5cafa3bcf73f6f2fff1f630"
+  },
+  "lp_sha256": "98d6ed315da39da21560c1aeef17a1cba2f8f951e85eeefcdd3d558d88f99ac9",
+  "manifest_sha256": "7b1b7cf8939dd43a52b9673a43be02d90b7b4f4f4258f81d25eeb435a62c01a0"
+}

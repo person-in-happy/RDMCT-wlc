@@ -1,75 +1,13 @@
-\documentclass[10pt]{letter}
-\usepackage[T1]{fontenc}
-\usepackage[margin=0.68in]{geometry}
-\setlength{\emergencystretch}{3em}
-\setlength{\longindentation}{0.48\textwidth}
-\signature{Lizhen Shao\\Corresponding author\\University of Science and Technology Beijing\\\texttt{lshao@ustb.edu.cn}}
-\address{Department of Control Science and Engineering\\University of Science and Technology Beijing\\No.\ 30 Xueyuan Road, Haidian District\\Beijing 100083, China}
-\date{\today}
-
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
 \begin{document}
-
-\begin{letter}{Editor-in-Chief\\Computers \& Industrial Engineering}
-
-\opening{Dear Editor-in-Chief,}
-
-Please consider our Research Paper entitled ``Two-stage MILP scheduling and
-structure-aware learning-enhanced branch-and-cut for dual-source mixed-flow
-rotating-chamber cluster tools'' for publication in \emph{Computers \&
-Industrial Engineering}.
-
-The paper addresses an industrial scheduling problem arising in rotating-
-chamber cluster tools used in a PECVD process setting. Product wafers and
-reusable vacuum-zone dummy wafers share chambers, load locks, and robots while
-obeying recipe compatibility, residency, cleaning, capacity, and transfer
-constraints. Their concurrent interaction creates a finite-horizon scheduling
-problem that is not captured by single-flow cluster-tool formulations.
-
-The paper makes two connected contributions. First, it develops a finite-
-horizon two-stage MILP that integrates canonical same-recipe pairing and slot
-incidence with transfers, cleaning epochs, reusable dummy-wafer allocation,
-shared-resource ordering, residence limits, and event timing. The canonical
-incidence removes equivalent labels; the second stage preserves the stage-one
-discrete schedule and makespan within numerical tolerance while refining
-physical route waits and processing cadence. Second, it develops RDMCT-HBS, a
-structure-aware learning-enhanced branch-and-cut method combining a
-precomputed SPBS incumbent, reconstructed variable-role features, A3C-inspired
-parallel policy-gradient training, bounded beam decoding, and role-submodular
-completion.
-
-The computational evidence is both extensive and mechanism-specific. In a
-2700-run nominal comparison, RDMCT-HBS records the lowest observed mean
-primal--dual integral and mean solver time among seven methods. A separate
-960-run paired experiment shows that supplying a precomputed SPBS incumbent
-reduces mean primal--dual integral by 26.19\% and increases incumbent
-availability from 51.67\% to 100\% during the timed SCIP stage; offline SPBS
-construction is excluded from that budget. In 1500 matched runs under the same
-600-s total budget, the complete two-stage workflow returns schedules with
-physical route-total wait, route-maximum wait, cadence coefficient of
-variation, and cadence deviation lower by 51.91\%, 68.89\%, 39.70\%, and
-94.05\%, respectively, than the no-refinement workflow. A complete 300-run
-factorial experiment further shows that wafer count and mixed-flow recipe
-composition dominate the observed difficulty variation. The
-larger-scale stress test adds 729 time-limited runs on nine 40--64-wafer
-configurations, every one of which returns an independently validated
-incumbent. Across the complete evidence programme, all 6273 planned runs are
-accounted for and all 6041 saved incumbents pass independent feasibility
-checking against their frozen generated MILPs.
-
-The work fits the journal because it integrates a new industrial-engineering
-model with an explainable, exact-optimization-compatible learning method and
-evaluates both computational and manufacturing consequences. The formulation
-and solution architecture are also transferable to other tightly coupled
-multi-resource scheduling systems with auxiliary flows and shared transport.
-
-% Before submission, the authors must confirm originality, exclusive
-% consideration, approval by all authors, funding, acknowledgements, and
-% individual CRediT roles. These facts are intentionally not asserted here
-% until author confirmation is received.
-
-Thank you for your consideration.
-
-\closing{Sincerely,}
-
-\end{letter}
+\noindent\textbf{Cover letter working draft --- author approval required}\par
+\bigskip
+Dear Editor,\par
+We are preparing the manuscript ``PW-pair-based two-stage MILP scheduling and structured solution methods for dual-source mixed-flow rotating-chamber cluster tools" for consideration by \textit{Computers \& Industrial Engineering}.
+The study develops a wafer-pair and batch-inventory representation of a full-occupancy scheduling problem with shared handling resources and reusable auxiliary wafers. It evaluates structured primal initialization and frozen learning-based cut-selection extensions using explicit model and comparison-budget boundaries.
+The current evidence shows conditional initialization benefits and verifiable execution schedules. It does not establish universal superiority of learned cuts. Historical models are reported separately from the current joint formulation.
+The work addresses computerized decision methods for industrial engineering. Before submission, the authors must complete the English manuscript, end-to-end and coupled-constraint validation, data-access arrangements, and author declarations. This draft does not certify originality, exclusive submission, or approval by all authors.\par
+\bigskip
+Corresponding author details are maintained on the separate title page.
 \end{document}

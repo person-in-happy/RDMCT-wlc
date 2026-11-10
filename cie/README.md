@@ -1,14 +1,16 @@
-# C&IE 投稿级实验复现入口
+> **2026-11-09 当前版本说明（覆盖下方历史状态）：** 模型和实验冲突一律以新版 `JMS-version/JMS_Review_CN.tex` 为准。当前更新稿是 [CIE 中文稿](products/rdmct_cie_analysis_focused_zh.tex)，补强实验见 [新命令](docs/CIE_CURRENT_EXPERIMENT_COMMANDS.md)，投稿缺口见 [审查记录](products/CIE_CURRENT_REVIEW_CN.md)。下方旧模型、旧统计与固定内存命令仅保留历史记录，不适用于当前稿。旧英文正文、旧补充稿及20260817源包尚未同步，不得和当前中文稿/新Highlights/新标题页混合提交。
 
-> 本文是 `cie/` 正式实验的唯一协议，所有命令均从仓库根目录的 PowerShell 执行。当前暂停/恢复、三路单行命令、投稿包和时间表见 [`docs/cie_submission_runbook_zh.md`](docs/cie_submission_runbook_zh.md)。完成流程可得到可审计的实验包，但不能保证录用。
+---
+
+# C&IE 历史固定结构模型复现协议
+
+> 下文记录 2026-08 固定结构模型的冻结复现协议，所有命令从仓库根目录的 PowerShell 执行。历史运行与审计见[执行手册](docs/cie_submission_runbook_zh.md)。当前联合模型 D 使用 [CIE 新实验命令](docs/CIE_CURRENT_EXPERIMENT_COMMANDS.md)，材料入口见 [products/README.md](products/README.md)。
 
 审计日期：2026-08-01。投稿前再次核对 [C&IE 官方 Guide for Authors](https://www.sciencedirect.com/journal/computers-and-industrial-engineering/publish/guide-for-authors) 和 [Elsevier LaTeX instructions](https://www.elsevier.com/en-gb/researcher/author/policies-and-guidelines/latex-instructions)。当前官方指南采用 double-anonymized review，并要求研究数据存储、引用、链接或解释不能共享的原因，同时在投稿时提供 data statement。
 
-## 0. 当前现场结论
+## 0. 历史协议的证据归属
 
-- `cie_ood_1200s_mem4096_final_v1` 截至2026-08-01 23:42为674/729个工程观测，三路均在training seed 5；它可以逐项暂停/恢复，但使用旧checkpoint且跨过代码修改，只能做工程诊断。
-- 严格投稿级 `*_repro_v1` benchmark 当前为0/6273行，可审计模型为0/15。旧Main/OOD/SPBS不能填最终论文表。
-- 今晚停止、明日恢复旧OOD必须使用的新门禁参数、正式重跑顺序和2.5--8周分情景时间估算见[投稿执行手册](docs/cie_submission_runbook_zh.md)。
+2026-08 的运行状态和完成度以[历史实验审计](products/experiment_audit_zh.md)为准。已完成批次不因整理文档重新运行；旧固定结构模型结果不能并入当前联合模型 D 的主比较。下文保留冻结复现参数，不再列过期的现场进度和预计时间。
 
 ## 1. 协议边界
 
@@ -250,6 +252,4 @@ raw 重点字段包括 method、solver/training seed、status、time、nodes、g
 
 ## 10. 历史材料
 
-`docs/cie_single_way_commands.md`、`cie_two_way_parallel_commands.md` 与 `cie_current_parallel_commands.md` 是历史或高级运维记录；不得覆盖本文协议。简版索引见 [`docs/cie_experiment_commands.md`](docs/cie_experiment_commands.md)。
-
-从当前机器继续执行时，以 [`docs/cie_submission_runbook_zh.md`](docs/cie_submission_runbook_zh.md) 中的单行命令和验收顺序为准。
+历史复现命令和验收记录保存在[旧模型执行手册](docs/cie_submission_runbook_zh.md)；当前联合模型的补强实验使用[新命令](docs/CIE_CURRENT_EXPERIMENT_COMMANDS.md)。

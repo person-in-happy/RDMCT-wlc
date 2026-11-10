@@ -1,37 +1,33 @@
-# JMS项目：模型4中文稿与模型2冻结实验
+# JMS 当前中文稿与实验入口
 
-中文主稿采用Pjob批次任务表示，保留同质工艺时长及阈值前可选清洁规则。2026-10-29进一步确认全Pjob跨LP严格按序取片，输入编码为批次内第k片产品，算法末端恢复实际晶圆。原330个可行记录中305个通过新顺序复核，24组阶段内精修数值可复用；旧求解成功率和模式排名已从正文撤下。正文不使用内部模型编号。英文稿未同步。
+当前中文主稿是 [JMS_Review_CN.tex](JMS_Review_CN.tex)（[PDF](JMS_Review_CN.pdf)）。当前配置 D 使用 Pjob 库存与 PW 对联合模型、非递减取片规则、100 s 非加工驻留/承片上限，以及包含装载锁复位的 10000 s 时域。英文稿与 `../JMS/` 中的另一份稿件不自动同步。
 
-- [本次编码与严格顺序审阅](revisions/20261029_pjob_index_encoding/REVIEW_CN.md)：结果复核、证据复用与修改记录。
-- [当前补充实验命令](MODEL4_EXPERIMENT_COMMANDS.md)：新约束下主要156次；学习选割比较另72次。本轮未启动实验。
-- [当前模型公式说明](MODEL_EXPLANATION_CN.md)（[PDF版](output/pdf/MODEL_EXPLANATION_CN.pdf)）：对应全Pjob非递减取片版本，解释库存选择、对内位置对应晶圆的完整排程、同刻晶圆身份解码、配对、周期、清洁、资源、两阶段目标及历史构造下界，并标注当前代码位置。
+## 当前文档
 
-- 中文主稿：`JMS_Review_CN.tex`、`JMS_Review_CN.pdf`；英文稿：`JMS_Submission_EN.tex`、`JMS_Submission_EN.pdf`。
-- `joint_model/`：模型2原事件实现、物理验解和原实验接口。
-- `model2_compact_20261025/`：模型2等价紧凑实现及测试；续跑协议仍依赖该目录。
-- `model2_lowmem_20261026/`：逐片模型的低进程内存入口，保留原有批次与冻结记录。
-- [`model4_pjob_fifo_20261029/`](model4_pjob_fifo_20261029/README.md)：当前全Pjob严格出片实现及前台实验入口。
-- [`model4_pjob_20261027/`](model4_pjob_20261027/README.md)：此前仅按任务--LP组排序的实现，活动旧队列继续使用，保留冻结记录。
-- `heterogeneous_model_20261022/`及`results/heterogeneous100_80_180_90_20261022/`：模型3后续工作，保留代码、配置、冻结资产和结果。100片现有记录是构造可行上界，尚未证明最优，不作为模型2实验结果。
-- [`gif/kexingyu/`](gif/kexingyu/README.md)：当前模型4可行取放序列及数量下界，含8/16/32片和四配置合并去重口径；模型2历史序列保留原归属。
-- `tools/model4_feasible_orders.py`：Pjob构造、取放输出和任意记录提取验解，不是完整MILP求解器。
-- [先前实验复用审计](revisions/20261027_model4/EXPERIMENT_REUSE_AND_RERUN_CN.md)：保留当时尚未实现模型4后端的审计记录；当前执行命令以上述模型4命令文档为准。
-- `revisions/20261027_model4/`：中文原稿备份、修改差异、哈希和独立导出审计。
+- [期刊实验命令与状态](JOURNAL_EXPERIMENT_COMMANDS.md)：当前补充实验、已完成结果和条件启动要求。
+- [期刊全文审查](JOURNAL_REVIEW_CN.md)：证据边界和待补事项。
+- [学位论文实验命令](EXPERIMENT_COMMANDS.md)及[章节与研究整理方案](THESIS_REVIEW_AND_PLAN_CN.md)：同协议结果复用，避免重复运行。
+- [模型公式说明](MODEL_EXPLANATION_CN.md)（[PDF](output/pdf/MODEL_EXPLANATION_CN.pdf)）：库存、配对、周期、资源和目标的解释。
+- [审查工作流](REVIEW_WORKFLOW.md)：证据核对、验解与文稿交付要求。
 
-模型1的旧图和中间导出仅在未被当前论文、热启动和图件重建引用时删除。仍被直接使用的原始排程、图源、数值结果、冻结模型及检查点保留。不同资源协议的结果不混作同一预算的性能样本。
+## 代码与历史归属
 
-## 运行
+- [当前默认参数后端](model4_pjob_nonprocessing_20261103/README_CN.md)：完整配置 D 模型；当前批次由上述期刊/学位论文入口组织。
+- `model4_pjob_nondecreasing_20261102/`：此前非递减实现，配置和预算按冻结批次解释。
+- [严格取片后端](model4_pjob_fifo_20261029/README.md)、[早期 Pjob 后端](model4_pjob_20261027/README.md)：历史模型与复现依赖。
+- `joint_model/`、`model2_compact_20261025/`、`model2_lowmem_20261026/`：逐片联合模型及等价/低进程内存实现。
+- `heterogeneous_model_20261022/`：异质时长扩展，构造可行解不能当作当前 D 模型最优解。
+- [可行取放序列](gif/kexingyu/README.md)：构造序列及数量下界，按子目录模型归属使用。
+- `review/`、`revisions/`、`results/`：审查记录、修改前原稿、冻结协议、解和验证证据。
 
-从仓库根目录执行环境与资源检查：
+## 运行与构建
+
+实验在可见前台终端启动，使用各命令文档指定的独立目录。先检查已有批次，避免重复启动；活动实验只读检查，恢复时保持原冻结配置。超时无可行解不是不可行性证明。
+
+从仓库根目录构建当前中文稿：
 
 ```powershell
-G:\conda\envs\a3cenv\python.exe -X utf8 JMS-version/model2_lowmem_20261026/low_memory_evidence.py check
+G:\conda\python.exe -X utf8 JMS-version/tools/build_model4_cn.py
 ```
 
-现有批次运行时不要重复启动。恢复批次使用同一入口的`resume --campaign <目录>`，先确认父进程及工作进程均已退出。队列以前台方式显示进度，超时不表示不可行或最优。
-
-当前仅编译模型4中文稿：`G:\conda\python.exe -X utf8 JMS-version/tools/build_model4_cn.py`（从仓库根目录执行）。原`tools/build_submission.ps1`及`tools/package_submission_bilingual.py`用于中英文一致的旧流程；英文未同步期间不能据其生成模型4双语投稿包。审稿证据规则见`REVIEW_WORKFLOW.md`。
-
-## 版本管理
-
-大型原始实验和活动批次保留本地，沿用不提交原始求解资产的策略。Git提交模型代码、测试、现行稿件、必要图源、压缩可行序列及模型3已有成果。清理清单见`cleanup_20261027.json`；本轮未修改活动模型2实验的代码和冻结输入。
+英文稿未同步期间，不使用旧双语打包流程生成当前中文稿的双语投稿包。大型原始实验和冻结资产按原策略保留本地，不得为整理目录删除原始证据或改写活动批次。

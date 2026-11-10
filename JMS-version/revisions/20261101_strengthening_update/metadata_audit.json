@@ -1,0 +1,3900 @@
+{
+  "rows": [
+    {
+      "campaign": "strengthen_rhythm_memory_20261101_161209",
+      "suite": "rhythm_memory",
+      "id": "n24_H5_2x2_dual__s1__w0",
+      "case": "n24_H5_2x2_dual",
+      "seed": 1,
+      "arm": "substituted",
+      "weight": 0,
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s1__joint\\result.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s1__joint\\variables_phase1.json",
+      "state": "optimal",
+      "actual": {
+        "route_wait_sum": 1440.0,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 696.0000010000003,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.000001,
+        "product_cmax": 4785.000001
+      },
+      "initial": {
+        "route_wait_sum": 3109.0,
+        "route_wait_max": 437.0,
+        "rhythm_deviation": 696.0,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.0,
+        "product_cmax": 4785.0
+      },
+      "dimensions": {
+        "variables": 3645,
+        "constraints": 34538,
+        "linear_nonzeros": 66401,
+        "types": {
+          "BINARY": 432,
+          "INTEGER": 0,
+          "CONTINUOUS": 3213
+        }
+      },
+      "original_dimensions": {
+        "variables": 1080365,
+        "constraints": 3768984,
+        "linear_nonzeros": 22174778,
+        "types": {
+          "BINARY": 1075832,
+          "INTEGER": 1320,
+          "CONTINUOUS": 3213
+        }
+      },
+      "selectors": 0,
+      "N": 24,
+      "G": 4,
+      "candidate_pairs": 168,
+      "candidate_cycles": 96,
+      "source_hash": "8e91c6ce4c357122c0b6842389b63db78dde053a67b2d8bb9f76880e7a5bed44",
+      "source_values_hash": "1c118e4eddd1f9ff5f6e4249325d37aaf7936b5fc3256108f191f4ac05c8bd94",
+      "build_and_start_check_seconds": 8.360000000000582,
+      "solve_seconds": 1.0,
+      "worker_seconds": 54.14099999999962,
+      "full_audit_seconds": 41.82900000000154,
+      "build_solve_rss_mb": 475.3046875,
+      "full_worker_rss_mb": 4616.71484375,
+      "bound": 2090.0,
+      "gap": 0.0,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_rhythm_memory_20261101_161209\\runs\\n24_H5_2x2_dual__s1__w0\\variables.json",
+      "hashes": {
+        "result.json": "e1d3cd657d475c71c162875f29ee2357ce01239c0760cf169b3f5d025d365156",
+        "variables.json": "f73f6c0659260f278d677846b86a2746c80f832a021e44f32adbc521cab96103",
+        "evidence.json": "103967571c694da3675683ab90959d70d58f5f4c599bf521afd212f369c22bdf",
+        "full_model_audit.json": "b20d0f06a5247e550d5a514be6d730a7e4c5ae072b3b7b2198c16333ed5831ef",
+        "resources.json": "15c8c0d376542c5bb5998aa111d588c9272dccc091f2a19186a3e3ee3937f74f",
+        "build.json": "87d5c46eb6240de7db069a536cbc033fa634abf2fe960a4b1df195cd57d890f6"
+      }
+    },
+    {
+      "campaign": "strengthen_rhythm_memory_20261101_161209",
+      "suite": "rhythm_memory",
+      "id": "n24_H5_2x2_dual__s1__w5",
+      "case": "n24_H5_2x2_dual",
+      "seed": 1,
+      "arm": "substituted",
+      "weight": 5,
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s1__joint\\result.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s1__joint\\variables_phase1.json",
+      "state": "optimal",
+      "actual": {
+        "route_wait_sum": 1440.0,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 695.9999989999997,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.000001,
+        "product_cmax": 4785.000001
+      },
+      "initial": {
+        "route_wait_sum": 3109.0,
+        "route_wait_max": 437.0,
+        "rhythm_deviation": 696.0,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.0,
+        "product_cmax": 4785.0
+      },
+      "dimensions": {
+        "variables": 3645,
+        "constraints": 34538,
+        "linear_nonzeros": 66401,
+        "types": {
+          "BINARY": 432,
+          "INTEGER": 0,
+          "CONTINUOUS": 3213
+        }
+      },
+      "original_dimensions": {
+        "variables": 1080365,
+        "constraints": 3768984,
+        "linear_nonzeros": 22174778,
+        "types": {
+          "BINARY": 1075832,
+          "INTEGER": 1320,
+          "CONTINUOUS": 3213
+        }
+      },
+      "selectors": 0,
+      "N": 24,
+      "G": 4,
+      "candidate_pairs": 168,
+      "candidate_cycles": 96,
+      "source_hash": "8e91c6ce4c357122c0b6842389b63db78dde053a67b2d8bb9f76880e7a5bed44",
+      "source_values_hash": "1c118e4eddd1f9ff5f6e4249325d37aaf7936b5fc3256108f191f4ac05c8bd94",
+      "build_and_start_check_seconds": 8.171999999998661,
+      "solve_seconds": 1.0,
+      "worker_seconds": 56.5,
+      "full_audit_seconds": 44.23500000000058,
+      "build_solve_rss_mb": 503.53125,
+      "full_worker_rss_mb": 4574.51171875,
+      "bound": 5569.999994999998,
+      "gap": 0.0,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_rhythm_memory_20261101_161209\\runs\\n24_H5_2x2_dual__s1__w5\\variables.json",
+      "hashes": {
+        "result.json": "b56a356b00bd4626856969d54b3cbe9f7c8bf6043563f4e2c543975d572ec29f",
+        "variables.json": "93fd7bd761988d5b0472e992563071fc9038ea146d6033a21e5b5a3e3881f1b6",
+        "evidence.json": "579b372353eeb6ffa30766c521cc30c692998cae00146b2b71e7202fb2772753",
+        "full_model_audit.json": "62cedcf31a95d7c57d8fe105b109e5d9a6619b3bf78c9339066edfc5fec9ea13",
+        "resources.json": "7aa2731475ae9d49c16dcf3464dabc60ff5e5ea343bade6ca6b3822516142ee1",
+        "build.json": "0a6e63ff1d88d0582e3b40885fe9b23ff7418c8c3894a4cd1e1d7d8821c8faae"
+      }
+    },
+    {
+      "campaign": "strengthen_rhythm_memory_20261101_161209",
+      "suite": "rhythm_memory",
+      "id": "n24_H5_2x2_dual__s1__w25",
+      "case": "n24_H5_2x2_dual",
+      "seed": 1,
+      "arm": "substituted",
+      "weight": 25,
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s1__joint\\result.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s1__joint\\variables_phase1.json",
+      "state": "optimal",
+      "actual": {
+        "route_wait_sum": 1440.0,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 695.9999989999997,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.000001,
+        "product_cmax": 4785.000001
+      },
+      "initial": {
+        "route_wait_sum": 3109.0,
+        "route_wait_max": 437.0,
+        "rhythm_deviation": 696.0,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.0,
+        "product_cmax": 4785.0
+      },
+      "dimensions": {
+        "variables": 3645,
+        "constraints": 34538,
+        "linear_nonzeros": 66401,
+        "types": {
+          "BINARY": 432,
+          "INTEGER": 0,
+          "CONTINUOUS": 3213
+        }
+      },
+      "original_dimensions": {
+        "variables": 1080365,
+        "constraints": 3768984,
+        "linear_nonzeros": 22174778,
+        "types": {
+          "BINARY": 1075832,
+          "INTEGER": 1320,
+          "CONTINUOUS": 3213
+        }
+      },
+      "selectors": 0,
+      "N": 24,
+      "G": 4,
+      "candidate_pairs": 168,
+      "candidate_cycles": 96,
+      "source_hash": "8e91c6ce4c357122c0b6842389b63db78dde053a67b2d8bb9f76880e7a5bed44",
+      "source_values_hash": "1c118e4eddd1f9ff5f6e4249325d37aaf7936b5fc3256108f191f4ac05c8bd94",
+      "build_and_start_check_seconds": 8.796999999998661,
+      "solve_seconds": 1.0,
+      "worker_seconds": 58.04699999999866,
+      "full_audit_seconds": 45.1720000000023,
+      "build_solve_rss_mb": 474.6875,
+      "full_worker_rss_mb": 4575.24609375,
+      "bound": 19489.99997499999,
+      "gap": 0.0,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_rhythm_memory_20261101_161209\\runs\\n24_H5_2x2_dual__s1__w25\\variables.json",
+      "hashes": {
+        "result.json": "9cf50897588411c1c3881f5758a7f5e6eec98d3c4327265c697228252db75569",
+        "variables.json": "5f724a878df39820e7aad556c6f06694d5d5783d435e3b295b0e40abb7d853f5",
+        "evidence.json": "217421be8b79e43cab152aef5064fdddeb9590e93b13d6b3eaee2b6085e21466",
+        "full_model_audit.json": "ba4697f896c15bb0b5013222e33b2d92eaa06c98afc6e5ffc6e3cc220f133f16",
+        "resources.json": "f165752152b199a7387b7fa640beba3a2df0349a8e8d5367e576eaa64b357c6c",
+        "build.json": "d0e2581719164890b4ea05a17024164cf09048b3dd01e028c570916f4a7679ef"
+      }
+    },
+    {
+      "campaign": "strengthen_rhythm_memory_20261101_161209",
+      "suite": "rhythm_memory",
+      "id": "n24_H5_2x2_dual__s1__w100",
+      "case": "n24_H5_2x2_dual",
+      "seed": 1,
+      "arm": "substituted",
+      "weight": 100,
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s1__joint\\result.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s1__joint\\variables_phase1.json",
+      "state": "optimal",
+      "actual": {
+        "route_wait_sum": 1440.0,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 695.9999989999997,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.000001,
+        "product_cmax": 4785.000001
+      },
+      "initial": {
+        "route_wait_sum": 3109.0,
+        "route_wait_max": 437.0,
+        "rhythm_deviation": 696.0,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.0,
+        "product_cmax": 4785.0
+      },
+      "dimensions": {
+        "variables": 3645,
+        "constraints": 34538,
+        "linear_nonzeros": 66401,
+        "types": {
+          "BINARY": 432,
+          "INTEGER": 0,
+          "CONTINUOUS": 3213
+        }
+      },
+      "original_dimensions": {
+        "variables": 1080365,
+        "constraints": 3768984,
+        "linear_nonzeros": 22174778,
+        "types": {
+          "BINARY": 1075832,
+          "INTEGER": 1320,
+          "CONTINUOUS": 3213
+        }
+      },
+      "selectors": 0,
+      "N": 24,
+      "G": 4,
+      "candidate_pairs": 168,
+      "candidate_cycles": 96,
+      "source_hash": "8e91c6ce4c357122c0b6842389b63db78dde053a67b2d8bb9f76880e7a5bed44",
+      "source_values_hash": "1c118e4eddd1f9ff5f6e4249325d37aaf7936b5fc3256108f191f4ac05c8bd94",
+      "build_and_start_check_seconds": 8.875,
+      "solve_seconds": 1.0,
+      "worker_seconds": 58.29699999999866,
+      "full_audit_seconds": 45.25,
+      "build_solve_rss_mb": 473.6953125,
+      "full_worker_rss_mb": 4616.01953125,
+      "bound": 71689.99989999997,
+      "gap": 0.0,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_rhythm_memory_20261101_161209\\runs\\n24_H5_2x2_dual__s1__w100\\variables.json",
+      "hashes": {
+        "result.json": "ee517280ac2440af4b6c94d984d077969602d4643581f814d1c89b5fbbf97adb",
+        "variables.json": "5f724a878df39820e7aad556c6f06694d5d5783d435e3b295b0e40abb7d853f5",
+        "evidence.json": "34b601566a489c51edf2e162eedaa99d8c6ff168578cef130e1cbacbc141fbb1",
+        "full_model_audit.json": "71af0dcfa55a1b7f75881bfc0682eda6149c2c8923a455846fb035916c5d63c3",
+        "resources.json": "2c906700e8088c9fe82bd53bd659a43ee1dddd01b1155a3fe3ab05a05f63a477",
+        "build.json": "f54005c8a04dcdd345804b73b60e065cce9e2cfe38f00d40e8cd59a3ec35d6b5"
+      }
+    },
+    {
+      "campaign": "strengthen_rhythm_memory_20261101_161209",
+      "suite": "rhythm_memory",
+      "id": "n24_H5_2x2_dual__s2__w0",
+      "case": "n24_H5_2x2_dual",
+      "seed": 2,
+      "arm": "substituted",
+      "weight": 0,
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s2__joint\\result.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s2__joint\\variables_phase1.json",
+      "state": "optimal",
+      "actual": {
+        "route_wait_sum": 1440.0,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 696.0000010000003,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.000001,
+        "product_cmax": 4785.000001
+      },
+      "initial": {
+        "route_wait_sum": 3109.0,
+        "route_wait_max": 437.0,
+        "rhythm_deviation": 696.0,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.0,
+        "product_cmax": 4785.0
+      },
+      "dimensions": {
+        "variables": 3645,
+        "constraints": 34538,
+        "linear_nonzeros": 66401,
+        "types": {
+          "BINARY": 432,
+          "INTEGER": 0,
+          "CONTINUOUS": 3213
+        }
+      },
+      "original_dimensions": {
+        "variables": 1080365,
+        "constraints": 3768984,
+        "linear_nonzeros": 22174778,
+        "types": {
+          "BINARY": 1075832,
+          "INTEGER": 1320,
+          "CONTINUOUS": 3213
+        }
+      },
+      "selectors": 0,
+      "N": 24,
+      "G": 4,
+      "candidate_pairs": 168,
+      "candidate_cycles": 96,
+      "source_hash": "8e91c6ce4c357122c0b6842389b63db78dde053a67b2d8bb9f76880e7a5bed44",
+      "source_values_hash": "78cfa62af063406f48cad4820c8cae148002c0757a20e8b8648362601a81695b",
+      "build_and_start_check_seconds": 8.84400000000096,
+      "solve_seconds": 1.0,
+      "worker_seconds": 58.65600000000268,
+      "full_audit_seconds": 45.6720000000023,
+      "build_solve_rss_mb": 474.109375,
+      "full_worker_rss_mb": 4562.50390625,
+      "bound": 2090.0,
+      "gap": 0.0,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_rhythm_memory_20261101_161209\\runs\\n24_H5_2x2_dual__s2__w0\\variables.json",
+      "hashes": {
+        "result.json": "e1d3cd657d475c71c162875f29ee2357ce01239c0760cf169b3f5d025d365156",
+        "variables.json": "f73f6c0659260f278d677846b86a2746c80f832a021e44f32adbc521cab96103",
+        "evidence.json": "ba0762c8bcbb7a7f83b36b0b8211ac17d479dbd39a6b7d20530500c5045c92ff",
+        "full_model_audit.json": "0176298f4f20c58e68b98307aee3ca5ad6c7975b6769766c86c7cc2281daa299",
+        "resources.json": "1dcc4abdcf3456033dc5ff3ba190ed8dba63fe4119bde9140d86c4c798cbe8ee",
+        "build.json": "d1a841397d4934577cd0c89d296822643773730aa6ea9ef6c63f3fea883b0f30"
+      }
+    },
+    {
+      "campaign": "strengthen_rhythm_memory_20261101_161209",
+      "suite": "rhythm_memory",
+      "id": "n24_H5_2x2_dual__s2__w5",
+      "case": "n24_H5_2x2_dual",
+      "seed": 2,
+      "arm": "substituted",
+      "weight": 5,
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s2__joint\\result.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s2__joint\\variables_phase1.json",
+      "state": "optimal",
+      "actual": {
+        "route_wait_sum": 1440.0,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 695.9999989999997,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.000001,
+        "product_cmax": 4785.000001
+      },
+      "initial": {
+        "route_wait_sum": 3109.0,
+        "route_wait_max": 437.0,
+        "rhythm_deviation": 696.0,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.0,
+        "product_cmax": 4785.0
+      },
+      "dimensions": {
+        "variables": 3645,
+        "constraints": 34538,
+        "linear_nonzeros": 66401,
+        "types": {
+          "BINARY": 432,
+          "INTEGER": 0,
+          "CONTINUOUS": 3213
+        }
+      },
+      "original_dimensions": {
+        "variables": 1080365,
+        "constraints": 3768984,
+        "linear_nonzeros": 22174778,
+        "types": {
+          "BINARY": 1075832,
+          "INTEGER": 1320,
+          "CONTINUOUS": 3213
+        }
+      },
+      "selectors": 0,
+      "N": 24,
+      "G": 4,
+      "candidate_pairs": 168,
+      "candidate_cycles": 96,
+      "source_hash": "8e91c6ce4c357122c0b6842389b63db78dde053a67b2d8bb9f76880e7a5bed44",
+      "source_values_hash": "78cfa62af063406f48cad4820c8cae148002c0757a20e8b8648362601a81695b",
+      "build_and_start_check_seconds": 9.06300000000192,
+      "solve_seconds": 1.0,
+      "worker_seconds": 59.23400000000038,
+      "full_audit_seconds": 45.875,
+      "build_solve_rss_mb": 473.640625,
+      "full_worker_rss_mb": 4536.9453125,
+      "bound": 5569.999994999998,
+      "gap": 0.0,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_rhythm_memory_20261101_161209\\runs\\n24_H5_2x2_dual__s2__w5\\variables.json",
+      "hashes": {
+        "result.json": "b56a356b00bd4626856969d54b3cbe9f7c8bf6043563f4e2c543975d572ec29f",
+        "variables.json": "d253f1142796fbfa73cdc35a95826e6b3fa0d721a86562d3433749cbe2da33f0",
+        "evidence.json": "587ec4f8efe1ba5eeb2ed3450195868c1c4980e3e96ceacfb21bfba18f05ae95",
+        "full_model_audit.json": "7e3b2d8ffa2fedee53d66918305ee583803af9dcef9d94a327499cbfb9e8487b",
+        "resources.json": "931b7a334b7a29ab35b77bdd618b3e6f88c0f9efd81f2e5ae10313e4062e44ee",
+        "build.json": "5eb7a8aa605ef56d20f2dc633d9b6206910f2eaed7b634f44bc9c9f6a9d4230e"
+      }
+    },
+    {
+      "campaign": "strengthen_rhythm_memory_20261101_161209",
+      "suite": "rhythm_memory",
+      "id": "n24_H5_2x2_dual__s2__w25",
+      "case": "n24_H5_2x2_dual",
+      "seed": 2,
+      "arm": "substituted",
+      "weight": 25,
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s2__joint\\result.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s2__joint\\variables_phase1.json",
+      "state": "optimal",
+      "actual": {
+        "route_wait_sum": 1440.0,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 695.9999989999997,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.000001,
+        "product_cmax": 4785.000001
+      },
+      "initial": {
+        "route_wait_sum": 3109.0,
+        "route_wait_max": 437.0,
+        "rhythm_deviation": 696.0,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.0,
+        "product_cmax": 4785.0
+      },
+      "dimensions": {
+        "variables": 3645,
+        "constraints": 34538,
+        "linear_nonzeros": 66401,
+        "types": {
+          "BINARY": 432,
+          "INTEGER": 0,
+          "CONTINUOUS": 3213
+        }
+      },
+      "original_dimensions": {
+        "variables": 1080365,
+        "constraints": 3768984,
+        "linear_nonzeros": 22174778,
+        "types": {
+          "BINARY": 1075832,
+          "INTEGER": 1320,
+          "CONTINUOUS": 3213
+        }
+      },
+      "selectors": 0,
+      "N": 24,
+      "G": 4,
+      "candidate_pairs": 168,
+      "candidate_cycles": 96,
+      "source_hash": "8e91c6ce4c357122c0b6842389b63db78dde053a67b2d8bb9f76880e7a5bed44",
+      "source_values_hash": "78cfa62af063406f48cad4820c8cae148002c0757a20e8b8648362601a81695b",
+      "build_and_start_check_seconds": 8.860000000000582,
+      "solve_seconds": 1.0,
+      "worker_seconds": 59.0,
+      "full_audit_seconds": 45.96899999999732,
+      "build_solve_rss_mb": 473.546875,
+      "full_worker_rss_mb": 4535.9296875,
+      "bound": 19489.99997499999,
+      "gap": 0.0,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_rhythm_memory_20261101_161209\\runs\\n24_H5_2x2_dual__s2__w25\\variables.json",
+      "hashes": {
+        "result.json": "9cf50897588411c1c3881f5758a7f5e6eec98d3c4327265c697228252db75569",
+        "variables.json": "51932e24c2ab73c953e7f3dd8c70e4ce0027bee4eaaed9d7cde525ce3680be90",
+        "evidence.json": "2911a355c2421deb6f174aff8aa7f25a58afe238db1d3dc92c6a9739fc4a2bbd",
+        "full_model_audit.json": "c476fa8fac3505de32934c6abf27d5f7ac6648abb6046ce3a629d7aab7a1489c",
+        "resources.json": "933e8a363b130b6a2dfc87ef2178c880a7b463d39b4e25e0e22e4bf9c2b9ad70",
+        "build.json": "70618d309af270889a7eecb4eda619ca4739ad758579c5b97be0ad790b5cd172"
+      }
+    },
+    {
+      "campaign": "strengthen_rhythm_memory_20261101_161209",
+      "suite": "rhythm_memory",
+      "id": "n24_H5_2x2_dual__s2__w100",
+      "case": "n24_H5_2x2_dual",
+      "seed": 2,
+      "arm": "substituted",
+      "weight": 100,
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s2__joint\\result.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s2__joint\\variables_phase1.json",
+      "state": "optimal",
+      "actual": {
+        "route_wait_sum": 1440.0,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 695.9999989999997,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.000001,
+        "product_cmax": 4785.000001
+      },
+      "initial": {
+        "route_wait_sum": 3109.0,
+        "route_wait_max": 437.0,
+        "rhythm_deviation": 696.0,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.0,
+        "product_cmax": 4785.0
+      },
+      "dimensions": {
+        "variables": 3645,
+        "constraints": 34538,
+        "linear_nonzeros": 66401,
+        "types": {
+          "BINARY": 432,
+          "INTEGER": 0,
+          "CONTINUOUS": 3213
+        }
+      },
+      "original_dimensions": {
+        "variables": 1080365,
+        "constraints": 3768984,
+        "linear_nonzeros": 22174778,
+        "types": {
+          "BINARY": 1075832,
+          "INTEGER": 1320,
+          "CONTINUOUS": 3213
+        }
+      },
+      "selectors": 0,
+      "N": 24,
+      "G": 4,
+      "candidate_pairs": 168,
+      "candidate_cycles": 96,
+      "source_hash": "8e91c6ce4c357122c0b6842389b63db78dde053a67b2d8bb9f76880e7a5bed44",
+      "source_values_hash": "78cfa62af063406f48cad4820c8cae148002c0757a20e8b8648362601a81695b",
+      "build_and_start_check_seconds": 9.15599999999904,
+      "solve_seconds": 0.0,
+      "worker_seconds": 59.23500000000058,
+      "full_audit_seconds": 45.86000000000058,
+      "build_solve_rss_mb": 474.6328125,
+      "full_worker_rss_mb": 4536.1328125,
+      "bound": 71689.99989999997,
+      "gap": 0.0,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_rhythm_memory_20261101_161209\\runs\\n24_H5_2x2_dual__s2__w100\\variables.json",
+      "hashes": {
+        "result.json": "c6e9bd205788a13aec612ce3dab4d6f7268e66567d466950c1a3bda5b2bf812f",
+        "variables.json": "51932e24c2ab73c953e7f3dd8c70e4ce0027bee4eaaed9d7cde525ce3680be90",
+        "evidence.json": "a44bfb768ef882ebd1b0ea9744d08f8ebae8b7d263e4c0a0bf70e801756f2129",
+        "full_model_audit.json": "25d81b05577cac52a6f8c747ba08e90f5282391e5e7cbbae9d81de2e22f369af",
+        "resources.json": "157c210bbd62eb6a5f9d5888d630ef73419e189513be393c51857aa16b9d3095",
+        "build.json": "4b59c7f71f78d3d6a0fb414e5a1545bdb9501f4cfaf208e290d83ebb42495c05"
+      }
+    },
+    {
+      "campaign": "strengthen_rhythm_memory_20261101_161209",
+      "suite": "rhythm_memory",
+      "id": "n24_H5_2x2_dual__s3__w0",
+      "case": "n24_H5_2x2_dual",
+      "seed": 3,
+      "arm": "substituted",
+      "weight": 0,
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s3__joint\\result.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s3__joint\\variables_phase1.json",
+      "state": "optimal",
+      "actual": {
+        "route_wait_sum": 1440.0,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 696.0000010000003,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.000001,
+        "product_cmax": 4785.000001
+      },
+      "initial": {
+        "route_wait_sum": 3109.0,
+        "route_wait_max": 437.0,
+        "rhythm_deviation": 696.0,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.0,
+        "product_cmax": 4785.0
+      },
+      "dimensions": {
+        "variables": 3645,
+        "constraints": 34538,
+        "linear_nonzeros": 66401,
+        "types": {
+          "BINARY": 432,
+          "INTEGER": 0,
+          "CONTINUOUS": 3213
+        }
+      },
+      "original_dimensions": {
+        "variables": 1080365,
+        "constraints": 3768984,
+        "linear_nonzeros": 22174778,
+        "types": {
+          "BINARY": 1075832,
+          "INTEGER": 1320,
+          "CONTINUOUS": 3213
+        }
+      },
+      "selectors": 0,
+      "N": 24,
+      "G": 4,
+      "candidate_pairs": 168,
+      "candidate_cycles": 96,
+      "source_hash": "8e91c6ce4c357122c0b6842389b63db78dde053a67b2d8bb9f76880e7a5bed44",
+      "source_values_hash": "ea07cdebf0fb74613b7d04432d0d53fac638f875bb25214e2c6f28f1d3316097",
+      "build_and_start_check_seconds": 8.937999999998283,
+      "solve_seconds": 1.0,
+      "worker_seconds": 59.2029999999977,
+      "full_audit_seconds": 46.0,
+      "build_solve_rss_mb": 474.46484375,
+      "full_worker_rss_mb": 4535.34765625,
+      "bound": 2090.0,
+      "gap": 0.0,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_rhythm_memory_20261101_161209\\runs\\n24_H5_2x2_dual__s3__w0\\variables.json",
+      "hashes": {
+        "result.json": "e1d3cd657d475c71c162875f29ee2357ce01239c0760cf169b3f5d025d365156",
+        "variables.json": "f73f6c0659260f278d677846b86a2746c80f832a021e44f32adbc521cab96103",
+        "evidence.json": "a446b82237e2222d526a1c6e94ca18e5d6baaf928fbf8579e11878a8ac0f546d",
+        "full_model_audit.json": "a3b9fabb47eff83074ade8a14e4ce6443f0a01c5a3c7b460406ace64cc05b825",
+        "resources.json": "f4d57997fcd41d5713286d5aa4aeff70285d4b2c27732c63ef60c2e4c9161704",
+        "build.json": "031e0061805c401858d0c7d6c751af355c5bd742cf1dd15beb0a59cb7a87e5e8"
+      }
+    },
+    {
+      "campaign": "strengthen_rhythm_memory_20261101_161209",
+      "suite": "rhythm_memory",
+      "id": "n24_H5_2x2_dual__s3__w5",
+      "case": "n24_H5_2x2_dual",
+      "seed": 3,
+      "arm": "substituted",
+      "weight": 5,
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s3__joint\\result.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s3__joint\\variables_phase1.json",
+      "state": "optimal",
+      "actual": {
+        "route_wait_sum": 1440.0,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 695.9999989999997,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.000001,
+        "product_cmax": 4785.000001
+      },
+      "initial": {
+        "route_wait_sum": 3109.0,
+        "route_wait_max": 437.0,
+        "rhythm_deviation": 696.0,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.0,
+        "product_cmax": 4785.0
+      },
+      "dimensions": {
+        "variables": 3645,
+        "constraints": 34538,
+        "linear_nonzeros": 66401,
+        "types": {
+          "BINARY": 432,
+          "INTEGER": 0,
+          "CONTINUOUS": 3213
+        }
+      },
+      "original_dimensions": {
+        "variables": 1080365,
+        "constraints": 3768984,
+        "linear_nonzeros": 22174778,
+        "types": {
+          "BINARY": 1075832,
+          "INTEGER": 1320,
+          "CONTINUOUS": 3213
+        }
+      },
+      "selectors": 0,
+      "N": 24,
+      "G": 4,
+      "candidate_pairs": 168,
+      "candidate_cycles": 96,
+      "source_hash": "8e91c6ce4c357122c0b6842389b63db78dde053a67b2d8bb9f76880e7a5bed44",
+      "source_values_hash": "ea07cdebf0fb74613b7d04432d0d53fac638f875bb25214e2c6f28f1d3316097",
+      "build_and_start_check_seconds": 9.014999999999418,
+      "solve_seconds": 1.0,
+      "worker_seconds": 58.875,
+      "full_audit_seconds": 45.5779999999977,
+      "build_solve_rss_mb": 474.4375,
+      "full_worker_rss_mb": 4544.82421875,
+      "bound": 5569.999994999998,
+      "gap": 0.0,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_rhythm_memory_20261101_161209\\runs\\n24_H5_2x2_dual__s3__w5\\variables.json",
+      "hashes": {
+        "result.json": "b56a356b00bd4626856969d54b3cbe9f7c8bf6043563f4e2c543975d572ec29f",
+        "variables.json": "d253f1142796fbfa73cdc35a95826e6b3fa0d721a86562d3433749cbe2da33f0",
+        "evidence.json": "b515d475a6d61a79f4a495b014b4661806ab688ee02209754352f57b7f15b135",
+        "full_model_audit.json": "3f5543169d0ea8bfb14090feb7e357759ed550e4c308061f4e6df6344cf12f82",
+        "resources.json": "ec95677b274beb0b9b6a01ee6a7ed9f23e88fa8c98d977cd987a9cd2f09b0959",
+        "build.json": "316a5e00d7e2eb01a3597f2a36513d479984e61da275700e4950be923d281b2d"
+      }
+    },
+    {
+      "campaign": "strengthen_rhythm_memory_20261101_161209",
+      "suite": "rhythm_memory",
+      "id": "n24_H5_2x2_dual__s3__w25",
+      "case": "n24_H5_2x2_dual",
+      "seed": 3,
+      "arm": "substituted",
+      "weight": 25,
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s3__joint\\result.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s3__joint\\variables_phase1.json",
+      "state": "optimal",
+      "actual": {
+        "route_wait_sum": 1440.0,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 695.9999989999997,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.000001,
+        "product_cmax": 4785.000001
+      },
+      "initial": {
+        "route_wait_sum": 3109.0,
+        "route_wait_max": 437.0,
+        "rhythm_deviation": 696.0,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.0,
+        "product_cmax": 4785.0
+      },
+      "dimensions": {
+        "variables": 3645,
+        "constraints": 34538,
+        "linear_nonzeros": 66401,
+        "types": {
+          "BINARY": 432,
+          "INTEGER": 0,
+          "CONTINUOUS": 3213
+        }
+      },
+      "original_dimensions": {
+        "variables": 1080365,
+        "constraints": 3768984,
+        "linear_nonzeros": 22174778,
+        "types": {
+          "BINARY": 1075832,
+          "INTEGER": 1320,
+          "CONTINUOUS": 3213
+        }
+      },
+      "selectors": 0,
+      "N": 24,
+      "G": 4,
+      "candidate_pairs": 168,
+      "candidate_cycles": 96,
+      "source_hash": "8e91c6ce4c357122c0b6842389b63db78dde053a67b2d8bb9f76880e7a5bed44",
+      "source_values_hash": "ea07cdebf0fb74613b7d04432d0d53fac638f875bb25214e2c6f28f1d3316097",
+      "build_and_start_check_seconds": 9.09400000000096,
+      "solve_seconds": 1.0,
+      "worker_seconds": 58.90599999999904,
+      "full_audit_seconds": 45.59400000000096,
+      "build_solve_rss_mb": 474.39453125,
+      "full_worker_rss_mb": 4536.96484375,
+      "bound": 19489.99997499999,
+      "gap": 0.0,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_rhythm_memory_20261101_161209\\runs\\n24_H5_2x2_dual__s3__w25\\variables.json",
+      "hashes": {
+        "result.json": "9cf50897588411c1c3881f5758a7f5e6eec98d3c4327265c697228252db75569",
+        "variables.json": "51932e24c2ab73c953e7f3dd8c70e4ce0027bee4eaaed9d7cde525ce3680be90",
+        "evidence.json": "e34aee47e4c730547687ae3d9dfa16acb3828baea7a1a6d6bfd00641184c8285",
+        "full_model_audit.json": "11911c1728581f49926edc4e1e052a18a312ce506732f78368da233c2c038ef5",
+        "resources.json": "52ff7509eded52266860a23ce9c32a516064ac98bed09ae0e9d5ba3ab9842ffa",
+        "build.json": "ab39d546aa2a9a7cd65d9a439abd232a58c4d4047ecd76a6b4e471619944bf88"
+      }
+    },
+    {
+      "campaign": "strengthen_rhythm_memory_20261101_161209",
+      "suite": "rhythm_memory",
+      "id": "n24_H5_2x2_dual__s3__w100",
+      "case": "n24_H5_2x2_dual",
+      "seed": 3,
+      "arm": "substituted",
+      "weight": 100,
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s3__joint\\result.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\runs\\n24_H5_2x2_dual__s3__joint\\variables_phase1.json",
+      "state": "optimal",
+      "actual": {
+        "route_wait_sum": 1440.0,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 695.9999989999997,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.000001,
+        "product_cmax": 4785.000001
+      },
+      "initial": {
+        "route_wait_sum": 3109.0,
+        "route_wait_max": 437.0,
+        "rhythm_deviation": 696.0,
+        "rhythm_centers": 8,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 4803.0,
+        "product_cmax": 4785.0
+      },
+      "dimensions": {
+        "variables": 3645,
+        "constraints": 34538,
+        "linear_nonzeros": 66401,
+        "types": {
+          "BINARY": 432,
+          "INTEGER": 0,
+          "CONTINUOUS": 3213
+        }
+      },
+      "original_dimensions": {
+        "variables": 1080365,
+        "constraints": 3768984,
+        "linear_nonzeros": 22174778,
+        "types": {
+          "BINARY": 1075832,
+          "INTEGER": 1320,
+          "CONTINUOUS": 3213
+        }
+      },
+      "selectors": 0,
+      "N": 24,
+      "G": 4,
+      "candidate_pairs": 168,
+      "candidate_cycles": 96,
+      "source_hash": "8e91c6ce4c357122c0b6842389b63db78dde053a67b2d8bb9f76880e7a5bed44",
+      "source_values_hash": "ea07cdebf0fb74613b7d04432d0d53fac638f875bb25214e2c6f28f1d3316097",
+      "build_and_start_check_seconds": 8.90599999999904,
+      "solve_seconds": 1.0,
+      "worker_seconds": 59.06299999999828,
+      "full_audit_seconds": 45.93699999999808,
+      "build_solve_rss_mb": 474.0703125,
+      "full_worker_rss_mb": 4535.5546875,
+      "bound": 71689.99989999997,
+      "gap": 0.0,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_rhythm_memory_20261101_161209\\runs\\n24_H5_2x2_dual__s3__w100\\variables.json",
+      "hashes": {
+        "result.json": "ee517280ac2440af4b6c94d984d077969602d4643581f814d1c89b5fbbf97adb",
+        "variables.json": "51932e24c2ab73c953e7f3dd8c70e4ce0027bee4eaaed9d7cde525ce3680be90",
+        "evidence.json": "4938f2ee4f600b90327551c84b372d0ab7fe9d39b363907a63989e074da6751e",
+        "full_model_audit.json": "f4dd6157d318adbc8861783a272d95220d19bf99f218c9d3a04a5417de76e3d8",
+        "resources.json": "2f00acf88f85fddc5d3aaec2baf5d5a27b7bd56520ab2df0d385556fe047ce7d",
+        "build.json": "59db5ae9dc0202090c6e7254f89635a04bd258b7813a89e730987ab46c55c116"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n8_H5_4x1_dual__s1__pjob",
+      "case": "n8_H5_4x1_dual",
+      "seed": 1,
+      "arm": "pjob",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_4x1_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_4x1_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 727.0,
+        "route_wait_max": 120.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1196.0,
+        "product_cmax": 1178.0
+      },
+      "initial": {
+        "route_wait_sum": 727.0,
+        "route_wait_max": 120.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1196.0,
+        "product_cmax": 1178.0
+      },
+      "dimensions": {
+        "variables": 45525,
+        "constraints": 170136,
+        "linear_nonzeros": 1006450,
+        "types": {
+          "BINARY": 44624,
+          "INTEGER": 264,
+          "CONTINUOUS": 637
+        }
+      },
+      "original_dimensions": {
+        "variables": 45525,
+        "constraints": 170136,
+        "linear_nonzeros": 1006450,
+        "types": {
+          "BINARY": 44624,
+          "INTEGER": 264,
+          "CONTINUOUS": 637
+        }
+      },
+      "selectors": 64,
+      "N": 8,
+      "G": 4,
+      "candidate_pairs": 32,
+      "candidate_cycles": 16,
+      "source_hash": "092a9facf37f1940f75f13b3a8d3f38614ae89af5aa0f9678a88a6d2aa93999c",
+      "source_values_hash": "0e6879b962d7d45f29875126c010b7878c81aa22efb721f4a6cf7b98cb0c4abb",
+      "build_and_start_check_seconds": 1.875,
+      "solve_seconds": 303.0,
+      "worker_seconds": 306.375,
+      "full_audit_seconds": 1.7659999999996217,
+      "build_solve_rss_mb": 1032.96484375,
+      "full_worker_rss_mb": 1032.96484375,
+      "bound": 29.74916075201426,
+      "gap": 38.597755708797266,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n8_H5_4x1_dual__s1__pjob\\variables.json",
+      "hashes": {
+        "result.json": "cc9bde74cd9d8a637e9f17233a606b747330b8b22cb3d6276eb5b3deae86fdf6",
+        "variables.json": "cf795026391e14117282a5986b4cc65fd35f1c63e934017c0e7692a07b6b4333",
+        "evidence.json": "41cb7e7e8c5d2964514bef0bf3c56ed8b01722bb19e473d2ea1f84b9f28ea3b0",
+        "full_model_audit.json": "3fa536e32b44d44f4b6cec06b974875f9468295f102aa0110365138c2e282048",
+        "resources.json": "905eed230658cca9377114315ed4f82af47198feb9d88d2b314da03f7a735636",
+        "build.json": "04610007e24b3971e90444793e0b1410c7e92e8396bf370b903c22563ecfd1a8"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n8_H5_4x1_dual__s1__wafer",
+      "case": "n8_H5_4x1_dual",
+      "seed": 1,
+      "arm": "wafer",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_4x1_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_4x1_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 727.0,
+        "route_wait_max": 120.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1196.0,
+        "product_cmax": 1178.0
+      },
+      "initial": {
+        "route_wait_sum": 727.0,
+        "route_wait_max": 120.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1196.0,
+        "product_cmax": 1178.0
+      },
+      "dimensions": {
+        "variables": 45597,
+        "constraints": 170407,
+        "linear_nonzeros": 1056160,
+        "types": {
+          "BINARY": 44688,
+          "INTEGER": 264,
+          "CONTINUOUS": 645
+        }
+      },
+      "original_dimensions": {
+        "variables": 45525,
+        "constraints": 170136,
+        "linear_nonzeros": 1006450,
+        "types": {
+          "BINARY": 44624,
+          "INTEGER": 264,
+          "CONTINUOUS": 637
+        }
+      },
+      "selectors": 128,
+      "N": 8,
+      "G": 4,
+      "candidate_pairs": 32,
+      "candidate_cycles": 16,
+      "source_hash": "092a9facf37f1940f75f13b3a8d3f38614ae89af5aa0f9678a88a6d2aa93999c",
+      "source_values_hash": "0e6879b962d7d45f29875126c010b7878c81aa22efb721f4a6cf7b98cb0c4abb",
+      "build_and_start_check_seconds": 2.2189999999973224,
+      "solve_seconds": 300.0,
+      "worker_seconds": 304.3590000000004,
+      "full_audit_seconds": 1.875,
+      "build_solve_rss_mb": 1385.4921875,
+      "full_worker_rss_mb": 1385.4921875,
+      "bound": 34.971456268407884,
+      "gap": 32.684613845039344,
+      "nodes": 2,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n8_H5_4x1_dual__s1__wafer\\variables.json",
+      "hashes": {
+        "result.json": "4203bdec694e5994b30d70c3477d4f2b2125328a095c3ff2d5fcd10f351d72af",
+        "variables.json": "50da7e7ecabcd0344f7dbd1f52aaed3eec6dfa5137048f0ab5d45eb3a4c62413",
+        "evidence.json": "5b91ba6abb8327f56bcae850f39a26c092703546c2fec8e3c49cd802255b8e4a",
+        "full_model_audit.json": "fde2b43d1ba03e966514ad49270921c4e6ee35c00442c8eb96d1cb089b409bde",
+        "resources.json": "25261f54ba5e5f799420f0f32fcbb6faffc4541393c77653595e7c661b9831e1",
+        "build.json": "94e94adb82b15af470c2d350657a52f8043573bade5b4a2d3e2e53cd10cccc8b"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n8_H5_4x1_dual__s2__wafer",
+      "case": "n8_H5_4x1_dual",
+      "seed": 2,
+      "arm": "wafer",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_4x1_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_4x1_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 727.0,
+        "route_wait_max": 120.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1196.0,
+        "product_cmax": 1178.0
+      },
+      "initial": {
+        "route_wait_sum": 727.0,
+        "route_wait_max": 120.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1196.0,
+        "product_cmax": 1178.0
+      },
+      "dimensions": {
+        "variables": 45597,
+        "constraints": 170407,
+        "linear_nonzeros": 1056160,
+        "types": {
+          "BINARY": 44688,
+          "INTEGER": 264,
+          "CONTINUOUS": 645
+        }
+      },
+      "original_dimensions": {
+        "variables": 45525,
+        "constraints": 170136,
+        "linear_nonzeros": 1006450,
+        "types": {
+          "BINARY": 44624,
+          "INTEGER": 264,
+          "CONTINUOUS": 637
+        }
+      },
+      "selectors": 128,
+      "N": 8,
+      "G": 4,
+      "candidate_pairs": 32,
+      "candidate_cycles": 16,
+      "source_hash": "092a9facf37f1940f75f13b3a8d3f38614ae89af5aa0f9678a88a6d2aa93999c",
+      "source_values_hash": "0e6879b962d7d45f29875126c010b7878c81aa22efb721f4a6cf7b98cb0c4abb",
+      "build_and_start_check_seconds": 2.313000000001921,
+      "solve_seconds": 300.0,
+      "worker_seconds": 303.96900000000096,
+      "full_audit_seconds": 1.7969999999986612,
+      "build_solve_rss_mb": 1042.26171875,
+      "full_worker_rss_mb": 1042.21875,
+      "bound": 20.0,
+      "gap": 57.9,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n8_H5_4x1_dual__s2__wafer\\variables.json",
+      "hashes": {
+        "result.json": "ef1c07a293b76635ee3545237904ce9f3c5d3c82cedbd3bfe144659b675027fd",
+        "variables.json": "50da7e7ecabcd0344f7dbd1f52aaed3eec6dfa5137048f0ab5d45eb3a4c62413",
+        "evidence.json": "d4f761e3a62e6f9edbff02621e183d4c32f0c4193b85748a574c7148b19711f3",
+        "full_model_audit.json": "5849da245d8fca8e59d7a8a35b3a5898614b5923a250772709277a672d59f8e4",
+        "resources.json": "5845a5d7f5756eaf8fe49b1be1c0ef9bd209d1ed1804cf9a5193b8162eeed0cf",
+        "build.json": "6f1bd00831ff62fe48c9ac899c9bbb49b573a168f6042c780bc10e7307d5a3b6"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n8_H5_4x1_dual__s2__pjob",
+      "case": "n8_H5_4x1_dual",
+      "seed": 2,
+      "arm": "pjob",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_4x1_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_4x1_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 727.0,
+        "route_wait_max": 120.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1196.0,
+        "product_cmax": 1178.0
+      },
+      "initial": {
+        "route_wait_sum": 727.0,
+        "route_wait_max": 120.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1196.0,
+        "product_cmax": 1178.0
+      },
+      "dimensions": {
+        "variables": 45525,
+        "constraints": 170136,
+        "linear_nonzeros": 1006450,
+        "types": {
+          "BINARY": 44624,
+          "INTEGER": 264,
+          "CONTINUOUS": 637
+        }
+      },
+      "original_dimensions": {
+        "variables": 45525,
+        "constraints": 170136,
+        "linear_nonzeros": 1006450,
+        "types": {
+          "BINARY": 44624,
+          "INTEGER": 264,
+          "CONTINUOUS": 637
+        }
+      },
+      "selectors": 64,
+      "N": 8,
+      "G": 4,
+      "candidate_pairs": 32,
+      "candidate_cycles": 16,
+      "source_hash": "092a9facf37f1940f75f13b3a8d3f38614ae89af5aa0f9678a88a6d2aa93999c",
+      "source_values_hash": "0e6879b962d7d45f29875126c010b7878c81aa22efb721f4a6cf7b98cb0c4abb",
+      "build_and_start_check_seconds": 1.9369999999980791,
+      "solve_seconds": 300.0,
+      "worker_seconds": 303.65599999999904,
+      "full_audit_seconds": 1.8119999999980791,
+      "build_solve_rss_mb": 999.94140625,
+      "full_worker_rss_mb": 999.89453125,
+      "bound": 19.999999999999996,
+      "gap": 57.90000000000001,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n8_H5_4x1_dual__s2__pjob\\variables.json",
+      "hashes": {
+        "result.json": "226495b5013001522e9d0aa7d7c41c7db16b934ed6e13db3e3874c5f4302bbc4",
+        "variables.json": "cf795026391e14117282a5986b4cc65fd35f1c63e934017c0e7692a07b6b4333",
+        "evidence.json": "a5b15cee7964802df1f126fd0a07d43bd06145de0ae94154f06e73d263f1c3b3",
+        "full_model_audit.json": "8230fb866c28944f24926225de4b269c00de9483d1db35419e7fbe3792830b41",
+        "resources.json": "df408f78d9e9c9359011a34fa5fb1fc114c18a5080211350e0072118c326c224",
+        "build.json": "41742c2d62baa52d3520f31d1a3970fede05d1392e0e149aae3e9d38ff2bf7be"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n8_H5_4x1_dual__s3__pjob",
+      "case": "n8_H5_4x1_dual",
+      "seed": 3,
+      "arm": "pjob",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_4x1_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_4x1_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 727.0,
+        "route_wait_max": 120.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1196.0,
+        "product_cmax": 1178.0
+      },
+      "initial": {
+        "route_wait_sum": 727.0,
+        "route_wait_max": 120.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1196.0,
+        "product_cmax": 1178.0
+      },
+      "dimensions": {
+        "variables": 45525,
+        "constraints": 170136,
+        "linear_nonzeros": 1006450,
+        "types": {
+          "BINARY": 44624,
+          "INTEGER": 264,
+          "CONTINUOUS": 637
+        }
+      },
+      "original_dimensions": {
+        "variables": 45525,
+        "constraints": 170136,
+        "linear_nonzeros": 1006450,
+        "types": {
+          "BINARY": 44624,
+          "INTEGER": 264,
+          "CONTINUOUS": 637
+        }
+      },
+      "selectors": 64,
+      "N": 8,
+      "G": 4,
+      "candidate_pairs": 32,
+      "candidate_cycles": 16,
+      "source_hash": "092a9facf37f1940f75f13b3a8d3f38614ae89af5aa0f9678a88a6d2aa93999c",
+      "source_values_hash": "0e6879b962d7d45f29875126c010b7878c81aa22efb721f4a6cf7b98cb0c4abb",
+      "build_and_start_check_seconds": 1.9540000000015425,
+      "solve_seconds": 300.0,
+      "worker_seconds": 304.45300000000134,
+      "full_audit_seconds": 1.8119999999980791,
+      "build_solve_rss_mb": 1034.21484375,
+      "full_worker_rss_mb": 1034.21484375,
+      "bound": 27.603157090723926,
+      "gap": 41.67627779417552,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n8_H5_4x1_dual__s3__pjob\\variables.json",
+      "hashes": {
+        "result.json": "a4f2e2c62137be2a9216f8b859688a2069c4e0d57df4b09ae2b3f03d703b5f15",
+        "variables.json": "cf795026391e14117282a5986b4cc65fd35f1c63e934017c0e7692a07b6b4333",
+        "evidence.json": "1b2590b84f715c29e20be3ab558364ea6630e79facfb21f1c55f3249050ad11a",
+        "full_model_audit.json": "8230fb866c28944f24926225de4b269c00de9483d1db35419e7fbe3792830b41",
+        "resources.json": "be2507cd9bef0f5ae7ce0b69d5050e20c320ec472dee67ecdad29ad1cdbb3fb5",
+        "build.json": "9384e7f5d6286944e19bce4c38b5cd104d80838bf957fe8ac2724bcd2c1ebd48"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n8_H5_4x1_dual__s3__wafer",
+      "case": "n8_H5_4x1_dual",
+      "seed": 3,
+      "arm": "wafer",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_4x1_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_4x1_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 727.0,
+        "route_wait_max": 120.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1196.0,
+        "product_cmax": 1178.0
+      },
+      "initial": {
+        "route_wait_sum": 727.0,
+        "route_wait_max": 120.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1196.0,
+        "product_cmax": 1178.0
+      },
+      "dimensions": {
+        "variables": 45597,
+        "constraints": 170407,
+        "linear_nonzeros": 1056160,
+        "types": {
+          "BINARY": 44688,
+          "INTEGER": 264,
+          "CONTINUOUS": 645
+        }
+      },
+      "original_dimensions": {
+        "variables": 45525,
+        "constraints": 170136,
+        "linear_nonzeros": 1006450,
+        "types": {
+          "BINARY": 44624,
+          "INTEGER": 264,
+          "CONTINUOUS": 637
+        }
+      },
+      "selectors": 128,
+      "N": 8,
+      "G": 4,
+      "candidate_pairs": 32,
+      "candidate_cycles": 16,
+      "source_hash": "092a9facf37f1940f75f13b3a8d3f38614ae89af5aa0f9678a88a6d2aa93999c",
+      "source_values_hash": "0e6879b962d7d45f29875126c010b7878c81aa22efb721f4a6cf7b98cb0c4abb",
+      "build_and_start_check_seconds": 2.25,
+      "solve_seconds": 300.0,
+      "worker_seconds": 303.96900000000096,
+      "full_audit_seconds": 1.8129999999982829,
+      "build_solve_rss_mb": 1033.87109375,
+      "full_worker_rss_mb": 1033.80859375,
+      "bound": 20.0,
+      "gap": 57.9,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n8_H5_4x1_dual__s3__wafer\\variables.json",
+      "hashes": {
+        "result.json": "b722d969ce15cafb543eede52cc3e149afba8693deb555d865baf57ddcd2bfca",
+        "variables.json": "50da7e7ecabcd0344f7dbd1f52aaed3eec6dfa5137048f0ab5d45eb3a4c62413",
+        "evidence.json": "80b4e49ebd5c25b53edfa4ead54c3ab2e9684edcd9dac7fdc1afba472696e594",
+        "full_model_audit.json": "8cfe29a33cea9f5796509751bbf70c14dafa7d51330f68876610f7a4668d8b3f",
+        "resources.json": "4b9699489fc95f3a7501b6e3515fa9748806404f56abadc6017a4e95dddda1cd",
+        "build.json": "19f8d05c915643dc68f4824e22ca589de4426be4af5c20eb76f9b1e262f4c274"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n8_H5_2x2_dual__s1__pjob",
+      "case": "n8_H5_2x2_dual",
+      "seed": 1,
+      "arm": "pjob",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_2x2_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_2x2_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 1286.0,
+        "route_wait_max": 93.0,
+        "rhythm_deviation": 136.00000000000023,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1231.0,
+        "product_cmax": 1213.0
+      },
+      "initial": {
+        "route_wait_sum": 1286.0,
+        "route_wait_max": 93.0,
+        "rhythm_deviation": 136.00000000000023,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1231.0,
+        "product_cmax": 1213.0
+      },
+      "dimensions": {
+        "variables": 122485,
+        "constraints": 424184,
+        "linear_nonzeros": 2466842,
+        "types": {
+          "BINARY": 120976,
+          "INTEGER": 440,
+          "CONTINUOUS": 1069
+        }
+      },
+      "original_dimensions": {
+        "variables": 122485,
+        "constraints": 424184,
+        "linear_nonzeros": 2466842,
+        "types": {
+          "BINARY": 120976,
+          "INTEGER": 440,
+          "CONTINUOUS": 1069
+        }
+      },
+      "selectors": 64,
+      "N": 8,
+      "G": 4,
+      "candidate_pairs": 56,
+      "candidate_cycles": 32,
+      "source_hash": "55e392d0df839a09cd973ad0b05b04071c5baef61df5f397a91769d361686af2",
+      "source_values_hash": "1ec97e6611da5e157b9799cd2f6e15e87e676fff168a27c9580293500d1ec4df",
+      "build_and_start_check_seconds": 5.264999999999418,
+      "solve_seconds": 300.0,
+      "worker_seconds": 311.4840000000004,
+      "full_audit_seconds": 4.7810000000026776,
+      "build_solve_rss_mb": 2354.68359375,
+      "full_worker_rss_mb": 2354.68359375,
+      "bound": 20.0,
+      "gap": 59.65,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n8_H5_2x2_dual__s1__pjob\\variables.json",
+      "hashes": {
+        "result.json": "bed5b95103715b4aa746177f8cec67a15b1bb535315a451331741dcf2ff4fa6d",
+        "variables.json": "fbbe94062372c402bdf0879847b5495af44dfa78bbf79efc548cc9799e71bcf3",
+        "evidence.json": "7aa2ed81f7eb487f8440f1d5d5be97814bf6e12d5b7adf53d0775a37c4878e0c",
+        "full_model_audit.json": "1a70155a28a7c8f60d8d34ff4361fa82767b7b3b8cb2c905693d4386fcea94fa",
+        "resources.json": "b56ad3c73dffbb7cd9f4103398f436637389f8b67010f48a2919578df259d2cb",
+        "build.json": "bee4eda083f75245670767c7c3f7f3b86264e75c8e93700d57081f042c679cc7"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n8_H5_2x2_dual__s1__wafer",
+      "case": "n8_H5_2x2_dual",
+      "seed": 1,
+      "arm": "wafer",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_2x2_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_2x2_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 1286.0,
+        "route_wait_max": 93.0,
+        "rhythm_deviation": 136.00000000000023,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1231.0,
+        "product_cmax": 1213.0
+      },
+      "initial": {
+        "route_wait_sum": 1286.0,
+        "route_wait_max": 93.0,
+        "rhythm_deviation": 136.00000000000023,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1231.0,
+        "product_cmax": 1213.0
+      },
+      "dimensions": {
+        "variables": 122557,
+        "constraints": 424455,
+        "linear_nonzeros": 2516552,
+        "types": {
+          "BINARY": 121040,
+          "INTEGER": 440,
+          "CONTINUOUS": 1077
+        }
+      },
+      "original_dimensions": {
+        "variables": 122485,
+        "constraints": 424184,
+        "linear_nonzeros": 2466842,
+        "types": {
+          "BINARY": 120976,
+          "INTEGER": 440,
+          "CONTINUOUS": 1069
+        }
+      },
+      "selectors": 128,
+      "N": 8,
+      "G": 4,
+      "candidate_pairs": 56,
+      "candidate_cycles": 32,
+      "source_hash": "55e392d0df839a09cd973ad0b05b04071c5baef61df5f397a91769d361686af2",
+      "source_values_hash": "1ec97e6611da5e157b9799cd2f6e15e87e676fff168a27c9580293500d1ec4df",
+      "build_and_start_check_seconds": 5.889999999999418,
+      "solve_seconds": 300.0,
+      "worker_seconds": 311.8590000000004,
+      "full_audit_seconds": 4.672000000002299,
+      "build_solve_rss_mb": 2278.453125,
+      "full_worker_rss_mb": 2273.59375,
+      "bound": 0.0,
+      "gap": 1e+20,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n8_H5_2x2_dual__s1__wafer\\variables.json",
+      "hashes": {
+        "result.json": "ce0414a87c4e125e6d78004d6fe0b4425e63a246b2ac9e114948ff7960eefbe1",
+        "variables.json": "c42f1b6ed5474d8e79dc8710b537adc3d32ffc0a5a31e45c071831724c3b6778",
+        "evidence.json": "fa9934c19c8b7764158f9f34016ed425cbfa47fdc9643c9f0a43133ae0e0bee2",
+        "full_model_audit.json": "6151c00473d151c8fb416e2a4d4a96ef0d8c90d0aae703beaa8cce24f001671d",
+        "resources.json": "c94cec60c92955a60cd29d28a94d5bde3c81cc74ffc5b088287eb0d523c83357",
+        "build.json": "33809842813cecbad8ff5fb053c2b2324c61195c5837a140e444f6a4e8bf3d42"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n8_H5_2x2_dual__s2__wafer",
+      "case": "n8_H5_2x2_dual",
+      "seed": 2,
+      "arm": "wafer",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_2x2_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_2x2_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 1286.0,
+        "route_wait_max": 93.0,
+        "rhythm_deviation": 136.00000000000023,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1231.0,
+        "product_cmax": 1213.0
+      },
+      "initial": {
+        "route_wait_sum": 1286.0,
+        "route_wait_max": 93.0,
+        "rhythm_deviation": 136.00000000000023,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1231.0,
+        "product_cmax": 1213.0
+      },
+      "dimensions": {
+        "variables": 122557,
+        "constraints": 424455,
+        "linear_nonzeros": 2516552,
+        "types": {
+          "BINARY": 121040,
+          "INTEGER": 440,
+          "CONTINUOUS": 1077
+        }
+      },
+      "original_dimensions": {
+        "variables": 122485,
+        "constraints": 424184,
+        "linear_nonzeros": 2466842,
+        "types": {
+          "BINARY": 120976,
+          "INTEGER": 440,
+          "CONTINUOUS": 1069
+        }
+      },
+      "selectors": 128,
+      "N": 8,
+      "G": 4,
+      "candidate_pairs": 56,
+      "candidate_cycles": 32,
+      "source_hash": "55e392d0df839a09cd973ad0b05b04071c5baef61df5f397a91769d361686af2",
+      "source_values_hash": "1ec97e6611da5e157b9799cd2f6e15e87e676fff168a27c9580293500d1ec4df",
+      "build_and_start_check_seconds": 5.8290000000015425,
+      "solve_seconds": 300.0,
+      "worker_seconds": 311.46800000000076,
+      "full_audit_seconds": 4.797000000002299,
+      "build_solve_rss_mb": 2280.34765625,
+      "full_worker_rss_mb": 2273.2109375,
+      "bound": 0.0,
+      "gap": 1e+20,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n8_H5_2x2_dual__s2__wafer\\variables.json",
+      "hashes": {
+        "result.json": "3c844e21a3b38dadbfa87a1a9643954dc0166e8b64706d7bbf69df7eb1d33ce7",
+        "variables.json": "c42f1b6ed5474d8e79dc8710b537adc3d32ffc0a5a31e45c071831724c3b6778",
+        "evidence.json": "27e14506a4fee905f4cdaaedf452bf4b6c758d9fbcd0b1631cc06c217f646273",
+        "full_model_audit.json": "197a0d58db1df4cc2be28b9e39659668ec2f27d9114ddb65bdf282af8050f7ff",
+        "resources.json": "109ae622444070f8d5f5d924797a06c126c4f986c58f9f50005f943521c4363f",
+        "build.json": "35d361a04ed66727347e64186cc5f6e106a24cacd2c52a9194e605b14c1c1502"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n8_H5_2x2_dual__s2__pjob",
+      "case": "n8_H5_2x2_dual",
+      "seed": 2,
+      "arm": "pjob",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_2x2_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_2x2_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 1286.0,
+        "route_wait_max": 93.0,
+        "rhythm_deviation": 136.00000000000023,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1231.0,
+        "product_cmax": 1213.0
+      },
+      "initial": {
+        "route_wait_sum": 1286.0,
+        "route_wait_max": 93.0,
+        "rhythm_deviation": 136.00000000000023,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1231.0,
+        "product_cmax": 1213.0
+      },
+      "dimensions": {
+        "variables": 122485,
+        "constraints": 424184,
+        "linear_nonzeros": 2466842,
+        "types": {
+          "BINARY": 120976,
+          "INTEGER": 440,
+          "CONTINUOUS": 1069
+        }
+      },
+      "original_dimensions": {
+        "variables": 122485,
+        "constraints": 424184,
+        "linear_nonzeros": 2466842,
+        "types": {
+          "BINARY": 120976,
+          "INTEGER": 440,
+          "CONTINUOUS": 1069
+        }
+      },
+      "selectors": 64,
+      "N": 8,
+      "G": 4,
+      "candidate_pairs": 56,
+      "candidate_cycles": 32,
+      "source_hash": "55e392d0df839a09cd973ad0b05b04071c5baef61df5f397a91769d361686af2",
+      "source_values_hash": "1ec97e6611da5e157b9799cd2f6e15e87e676fff168a27c9580293500d1ec4df",
+      "build_and_start_check_seconds": 5.264999999999418,
+      "solve_seconds": 300.0,
+      "worker_seconds": 310.32800000000134,
+      "full_audit_seconds": 4.328000000001339,
+      "build_solve_rss_mb": 2294.95703125,
+      "full_worker_rss_mb": 2281.55078125,
+      "bound": 20.0,
+      "gap": 59.65,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n8_H5_2x2_dual__s2__pjob\\variables.json",
+      "hashes": {
+        "result.json": "38f330d7b1cb6de58836da6cda31f0ccbb4fe10af9f8ccea6326a77b36c14a99",
+        "variables.json": "fbbe94062372c402bdf0879847b5495af44dfa78bbf79efc548cc9799e71bcf3",
+        "evidence.json": "da3c7b940e1f403b485761707b49609417d767216e10c37f2defad151927f939",
+        "full_model_audit.json": "dacf58d87d21f04dfb6105aa243e146822d9c352a8dc59cd2aacb0a02fb17b07",
+        "resources.json": "6d912332f5a17ced9b6836fbe0eca2994d5c7fecbed02f62ea0c2342ec094df2",
+        "build.json": "892ccc9898978bb8ac11eb5bc3e94809f9b91aaae510852cdadd83988febec9d"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n8_H5_2x2_dual__s3__pjob",
+      "case": "n8_H5_2x2_dual",
+      "seed": 3,
+      "arm": "pjob",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_2x2_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_2x2_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 1286.0,
+        "route_wait_max": 93.0,
+        "rhythm_deviation": 136.00000000000023,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1231.0,
+        "product_cmax": 1213.0
+      },
+      "initial": {
+        "route_wait_sum": 1286.0,
+        "route_wait_max": 93.0,
+        "rhythm_deviation": 136.00000000000023,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1231.0,
+        "product_cmax": 1213.0
+      },
+      "dimensions": {
+        "variables": 122485,
+        "constraints": 424184,
+        "linear_nonzeros": 2466842,
+        "types": {
+          "BINARY": 120976,
+          "INTEGER": 440,
+          "CONTINUOUS": 1069
+        }
+      },
+      "original_dimensions": {
+        "variables": 122485,
+        "constraints": 424184,
+        "linear_nonzeros": 2466842,
+        "types": {
+          "BINARY": 120976,
+          "INTEGER": 440,
+          "CONTINUOUS": 1069
+        }
+      },
+      "selectors": 64,
+      "N": 8,
+      "G": 4,
+      "candidate_pairs": 56,
+      "candidate_cycles": 32,
+      "source_hash": "55e392d0df839a09cd973ad0b05b04071c5baef61df5f397a91769d361686af2",
+      "source_values_hash": "1ec97e6611da5e157b9799cd2f6e15e87e676fff168a27c9580293500d1ec4df",
+      "build_and_start_check_seconds": 4.7959999999984575,
+      "solve_seconds": 300.0,
+      "worker_seconds": 310.40599999999904,
+      "full_audit_seconds": 4.890999999999622,
+      "build_solve_rss_mb": 2345.23828125,
+      "full_worker_rss_mb": 2345.23828125,
+      "bound": 19.999999999999996,
+      "gap": 59.65000000000001,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n8_H5_2x2_dual__s3__pjob\\variables.json",
+      "hashes": {
+        "result.json": "7f2bfaeacda40e469c49a26a487a3cf539e3c23e5f888cfe8d46827bde39acd1",
+        "variables.json": "fbbe94062372c402bdf0879847b5495af44dfa78bbf79efc548cc9799e71bcf3",
+        "evidence.json": "87fb374866a3ccf0e651dac83d5e58a22341d78fb547f81e396c995a2f1b3cd6",
+        "full_model_audit.json": "b0e4a1a0a3cc6bac829002220229d7d711cdef001403a67aa90607d000b18114",
+        "resources.json": "ff4b5b39f539a5ee54e610299c59f2f0956a4aa22a18a365d8cffa7246eb12ce",
+        "build.json": "29ab273a2084836aa4d74ab3254970c6708ec4e072c71d5a8c805847a06e7e1a"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n8_H5_2x2_dual__s3__wafer",
+      "case": "n8_H5_2x2_dual",
+      "seed": 3,
+      "arm": "wafer",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_2x2_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_2x2_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 1286.0,
+        "route_wait_max": 93.0,
+        "rhythm_deviation": 136.00000000000023,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1231.0,
+        "product_cmax": 1213.0
+      },
+      "initial": {
+        "route_wait_sum": 1286.0,
+        "route_wait_max": 93.0,
+        "rhythm_deviation": 136.00000000000023,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1231.0,
+        "product_cmax": 1213.0
+      },
+      "dimensions": {
+        "variables": 122557,
+        "constraints": 424455,
+        "linear_nonzeros": 2516552,
+        "types": {
+          "BINARY": 121040,
+          "INTEGER": 440,
+          "CONTINUOUS": 1077
+        }
+      },
+      "original_dimensions": {
+        "variables": 122485,
+        "constraints": 424184,
+        "linear_nonzeros": 2466842,
+        "types": {
+          "BINARY": 120976,
+          "INTEGER": 440,
+          "CONTINUOUS": 1069
+        }
+      },
+      "selectors": 128,
+      "N": 8,
+      "G": 4,
+      "candidate_pairs": 56,
+      "candidate_cycles": 32,
+      "source_hash": "55e392d0df839a09cd973ad0b05b04071c5baef61df5f397a91769d361686af2",
+      "source_values_hash": "1ec97e6611da5e157b9799cd2f6e15e87e676fff168a27c9580293500d1ec4df",
+      "build_and_start_check_seconds": 6.015999999999622,
+      "solve_seconds": 300.0,
+      "worker_seconds": 312.90599999999904,
+      "full_audit_seconds": 4.797000000002299,
+      "build_solve_rss_mb": 2327.33984375,
+      "full_worker_rss_mb": 2313.83984375,
+      "bound": 20.0,
+      "gap": 59.65,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n8_H5_2x2_dual__s3__wafer\\variables.json",
+      "hashes": {
+        "result.json": "c1da4cfec110352e8808bf04cfae319fa6e24ebab8a64d049e283fdc796ae2b4",
+        "variables.json": "c42f1b6ed5474d8e79dc8710b537adc3d32ffc0a5a31e45c071831724c3b6778",
+        "evidence.json": "497fc8732ac2206d3d5fd56b7a5382b4c5cb2d1c836b42021662ecf4948e52ab",
+        "full_model_audit.json": "197a0d58db1df4cc2be28b9e39659668ec2f27d9114ddb65bdf282af8050f7ff",
+        "resources.json": "02ec58d5bb70f4861453bde8487555a59a59b364e41d3c93f5253c78c3558baf",
+        "build.json": "0df20ef805b585dd5c6235eafe9b9a9f088dcf5fa6d56929a3a25d0bd050be38"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n8_H5_mixed_dual__s1__pjob",
+      "case": "n8_H5_mixed_dual",
+      "seed": 1,
+      "arm": "pjob",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 760.999999999998,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1738.0,
+        "product_cmax": 1720.0
+      },
+      "initial": {
+        "route_wait_sum": 760.999999999998,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1738.0,
+        "product_cmax": 1720.0
+      },
+      "dimensions": {
+        "variables": 79188,
+        "constraints": 280452,
+        "linear_nonzeros": 1700980,
+        "types": {
+          "BINARY": 77980,
+          "INTEGER": 352,
+          "CONTINUOUS": 856
+        }
+      },
+      "original_dimensions": {
+        "variables": 79188,
+        "constraints": 280452,
+        "linear_nonzeros": 1700980,
+        "types": {
+          "BINARY": 77980,
+          "INTEGER": 352,
+          "CONTINUOUS": 856
+        }
+      },
+      "selectors": 128,
+      "N": 8,
+      "G": 8,
+      "candidate_pairs": 44,
+      "candidate_cycles": 24,
+      "source_hash": "0ad08885e625fd7660d25cc341d3fb12ee15098345a13d4171b7ac9ec44cb64f",
+      "source_values_hash": "2b56354a367e43069ddc58fef5da79ecd74315648008849854d2573cd0ab0467",
+      "build_and_start_check_seconds": 3.4839999999967404,
+      "solve_seconds": 300.0,
+      "worker_seconds": 307.5630000000019,
+      "full_audit_seconds": 3.0469999999986612,
+      "build_solve_rss_mb": 1598.09765625,
+      "full_worker_rss_mb": 1589.92578125,
+      "bound": 116.0,
+      "gap": 13.827586206896552,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n8_H5_mixed_dual__s1__pjob\\variables.json",
+      "hashes": {
+        "result.json": "c175efd804c9baf98041a56449a49c1ec1bb752b84cab7e1067f5c08fbd67b09",
+        "variables.json": "75eaf8204dfd857260714238fb60d46ff54f39790d39f72f9a220667aa97ccc5",
+        "evidence.json": "4fb9f89791b747fbff23836cae36cec89e3af219bfd058c4e2aa9781e38af13d",
+        "full_model_audit.json": "637a1ad1dbec09e125b244dd4a441b9c8f481e3a729ccbfbe52e8cf204445401",
+        "resources.json": "06077faecf3a67fc54bc347f81427341682e1962d51329a468c996eccbd4ebcc",
+        "build.json": "a9766f8e59c5c85c24906e2048df788e5fd7a15e73aba0c9d3afc4b11659787b"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n8_H5_mixed_dual__s1__wafer",
+      "case": "n8_H5_mixed_dual",
+      "seed": 1,
+      "arm": "wafer",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 760.999999999998,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1738.0,
+        "product_cmax": 1720.0
+      },
+      "initial": {
+        "route_wait_sum": 760.999999999998,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1738.0,
+        "product_cmax": 1720.0
+      },
+      "dimensions": {
+        "variables": 79196,
+        "constraints": 280722,
+        "linear_nonzeros": 1701888,
+        "types": {
+          "BINARY": 77980,
+          "INTEGER": 352,
+          "CONTINUOUS": 864
+        }
+      },
+      "original_dimensions": {
+        "variables": 79188,
+        "constraints": 280452,
+        "linear_nonzeros": 1700980,
+        "types": {
+          "BINARY": 77980,
+          "INTEGER": 352,
+          "CONTINUOUS": 856
+        }
+      },
+      "selectors": 128,
+      "N": 8,
+      "G": 8,
+      "candidate_pairs": 44,
+      "candidate_cycles": 24,
+      "source_hash": "0ad08885e625fd7660d25cc341d3fb12ee15098345a13d4171b7ac9ec44cb64f",
+      "source_values_hash": "2b56354a367e43069ddc58fef5da79ecd74315648008849854d2573cd0ab0467",
+      "build_and_start_check_seconds": 3.7809999999990396,
+      "solve_seconds": 392.0,
+      "worker_seconds": 400.0320000000029,
+      "full_audit_seconds": 3.139999999999418,
+      "build_solve_rss_mb": 1646.61328125,
+      "full_worker_rss_mb": 1646.54296875,
+      "bound": 116.0,
+      "gap": 13.827586206896552,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n8_H5_mixed_dual__s1__wafer\\variables.json",
+      "hashes": {
+        "result.json": "fb1b80a8d89fd1f40f930a5e336e217e6c4e232b92f283363b8ef0496ec7747b",
+        "variables.json": "ff14dee81d49cde3e30639d92a23ad95cdeadde2b073446f38fb4dbf30d44bf8",
+        "evidence.json": "094ab8fcaa88846bd56a3f9b777aaf71c958f7fc48715dc003775c338d4aa14b",
+        "full_model_audit.json": "0ab8342bfe12d9589044517b954117cc47bd45112a256049e2a0c6bb55906d50",
+        "resources.json": "5564c4cc2782da0e1054ecb28c48eee3a228f5b172434a03c35ed8bfc5b0cd94",
+        "build.json": "f8e29167202caceffa99cb66dda3ae6e6f05bfa27c572c924e0e5af5831f31c0"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n8_H5_mixed_dual__s2__wafer",
+      "case": "n8_H5_mixed_dual",
+      "seed": 2,
+      "arm": "wafer",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 760.999999999998,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1738.0,
+        "product_cmax": 1720.0
+      },
+      "initial": {
+        "route_wait_sum": 760.999999999998,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1738.0,
+        "product_cmax": 1720.0
+      },
+      "dimensions": {
+        "variables": 79196,
+        "constraints": 280722,
+        "linear_nonzeros": 1701888,
+        "types": {
+          "BINARY": 77980,
+          "INTEGER": 352,
+          "CONTINUOUS": 864
+        }
+      },
+      "original_dimensions": {
+        "variables": 79188,
+        "constraints": 280452,
+        "linear_nonzeros": 1700980,
+        "types": {
+          "BINARY": 77980,
+          "INTEGER": 352,
+          "CONTINUOUS": 856
+        }
+      },
+      "selectors": 128,
+      "N": 8,
+      "G": 8,
+      "candidate_pairs": 44,
+      "candidate_cycles": 24,
+      "source_hash": "0ad08885e625fd7660d25cc341d3fb12ee15098345a13d4171b7ac9ec44cb64f",
+      "source_values_hash": "2b56354a367e43069ddc58fef5da79ecd74315648008849854d2573cd0ab0467",
+      "build_and_start_check_seconds": 3.8909999999996217,
+      "solve_seconds": 300.0,
+      "worker_seconds": 307.5310000000027,
+      "full_audit_seconds": 3.0939999999973224,
+      "build_solve_rss_mb": 1617.65234375,
+      "full_worker_rss_mb": 1617.65234375,
+      "bound": 116.0,
+      "gap": 13.827586206896552,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n8_H5_mixed_dual__s2__wafer\\variables.json",
+      "hashes": {
+        "result.json": "a4963e6b06aedbaa0ad12f4b41af943debb38db8e1fd568d6f59f970db3acd32",
+        "variables.json": "ff14dee81d49cde3e30639d92a23ad95cdeadde2b073446f38fb4dbf30d44bf8",
+        "evidence.json": "ef9a89bc9e6b3da86f8bfa8852f7329b44670a505d5e188653b520a513135072",
+        "full_model_audit.json": "bf33a9353f985d3cd5d5a522c510ab9e91889b0677ffeccb813bc9782561a15f",
+        "resources.json": "b9f682b7ad97e50d9615e4a50d4d7807c0d73d4c02492ce30c5b55bda48e6ad5",
+        "build.json": "4f917606128a6cb210cb91b04e1035b429e6b1c2d6d9681402f7a62f31351c73"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n8_H5_mixed_dual__s2__pjob",
+      "case": "n8_H5_mixed_dual",
+      "seed": 2,
+      "arm": "pjob",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 760.999999999998,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1738.0,
+        "product_cmax": 1720.0
+      },
+      "initial": {
+        "route_wait_sum": 760.999999999998,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1738.0,
+        "product_cmax": 1720.0
+      },
+      "dimensions": {
+        "variables": 79188,
+        "constraints": 280452,
+        "linear_nonzeros": 1700980,
+        "types": {
+          "BINARY": 77980,
+          "INTEGER": 352,
+          "CONTINUOUS": 856
+        }
+      },
+      "original_dimensions": {
+        "variables": 79188,
+        "constraints": 280452,
+        "linear_nonzeros": 1700980,
+        "types": {
+          "BINARY": 77980,
+          "INTEGER": 352,
+          "CONTINUOUS": 856
+        }
+      },
+      "selectors": 128,
+      "N": 8,
+      "G": 8,
+      "candidate_pairs": 44,
+      "candidate_cycles": 24,
+      "source_hash": "0ad08885e625fd7660d25cc341d3fb12ee15098345a13d4171b7ac9ec44cb64f",
+      "source_values_hash": "2b56354a367e43069ddc58fef5da79ecd74315648008849854d2573cd0ab0467",
+      "build_and_start_check_seconds": 3.437000000001717,
+      "solve_seconds": 300.0,
+      "worker_seconds": 307.7340000000004,
+      "full_audit_seconds": 3.1560000000026776,
+      "build_solve_rss_mb": 1681.21484375,
+      "full_worker_rss_mb": 1681.21484375,
+      "bound": 116.0,
+      "gap": 13.827586206896552,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n8_H5_mixed_dual__s2__pjob\\variables.json",
+      "hashes": {
+        "result.json": "422a0d52d1fc83d85d8200dd124c4f4bca8eb287c7e973f0ea88e0fa8df6c0b3",
+        "variables.json": "75eaf8204dfd857260714238fb60d46ff54f39790d39f72f9a220667aa97ccc5",
+        "evidence.json": "5ab06799a0b80b2692f5be8e09ba0916366061b277f52aaecb69ed8dc2b82bb6",
+        "full_model_audit.json": "43f1384ca20b7eeab6a44920646a29ceb1fdfac10f51731f4784fa72221b15b5",
+        "resources.json": "dbb7897786444db6a521d7c562f7df17b74fbe14febc574fa66697ecc900fdd9",
+        "build.json": "d4dbccff720ccbd212d09d4d659905d6fef02e71c4ec8cacd6daf6e95e2b5d8a"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n8_H5_mixed_dual__s3__pjob",
+      "case": "n8_H5_mixed_dual",
+      "seed": 3,
+      "arm": "pjob",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 760.999999999998,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1738.0,
+        "product_cmax": 1720.0
+      },
+      "initial": {
+        "route_wait_sum": 760.999999999998,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1738.0,
+        "product_cmax": 1720.0
+      },
+      "dimensions": {
+        "variables": 79188,
+        "constraints": 280452,
+        "linear_nonzeros": 1700980,
+        "types": {
+          "BINARY": 77980,
+          "INTEGER": 352,
+          "CONTINUOUS": 856
+        }
+      },
+      "original_dimensions": {
+        "variables": 79188,
+        "constraints": 280452,
+        "linear_nonzeros": 1700980,
+        "types": {
+          "BINARY": 77980,
+          "INTEGER": 352,
+          "CONTINUOUS": 856
+        }
+      },
+      "selectors": 128,
+      "N": 8,
+      "G": 8,
+      "candidate_pairs": 44,
+      "candidate_cycles": 24,
+      "source_hash": "0ad08885e625fd7660d25cc341d3fb12ee15098345a13d4171b7ac9ec44cb64f",
+      "source_values_hash": "2b56354a367e43069ddc58fef5da79ecd74315648008849854d2573cd0ab0467",
+      "build_and_start_check_seconds": 3.5,
+      "solve_seconds": 323.0,
+      "worker_seconds": 331.3120000000017,
+      "full_audit_seconds": 3.0939999999973224,
+      "build_solve_rss_mb": 1620.046875,
+      "full_worker_rss_mb": 1619.96875,
+      "bound": 116.0,
+      "gap": 13.827586206896552,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n8_H5_mixed_dual__s3__pjob\\variables.json",
+      "hashes": {
+        "result.json": "bd10e8135555d090b60c7501fa69a240cf3ca79a4f898a1cf68679fb9b8bc950",
+        "variables.json": "75eaf8204dfd857260714238fb60d46ff54f39790d39f72f9a220667aa97ccc5",
+        "evidence.json": "bc6db1793c0062ac0b7926f857ecb66ba70097d00fe77c0d078d819eec410bc3",
+        "full_model_audit.json": "bf33a9353f985d3cd5d5a522c510ab9e91889b0677ffeccb813bc9782561a15f",
+        "resources.json": "dad3997d21eb22e4138dad6115938832319cf5d920bec936c846b147f14b4f07",
+        "build.json": "7f01b1e97936466a7e05b368b264c44bcb788ab993d943612d5ede84eab69f45"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n8_H5_mixed_dual__s3__wafer",
+      "case": "n8_H5_mixed_dual",
+      "seed": 3,
+      "arm": "wafer",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n8_H5_mixed_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 760.999999999998,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1738.0,
+        "product_cmax": 1720.0
+      },
+      "initial": {
+        "route_wait_sum": 760.999999999998,
+        "route_wait_max": 65.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 1738.0,
+        "product_cmax": 1720.0
+      },
+      "dimensions": {
+        "variables": 79196,
+        "constraints": 280722,
+        "linear_nonzeros": 1701888,
+        "types": {
+          "BINARY": 77980,
+          "INTEGER": 352,
+          "CONTINUOUS": 864
+        }
+      },
+      "original_dimensions": {
+        "variables": 79188,
+        "constraints": 280452,
+        "linear_nonzeros": 1700980,
+        "types": {
+          "BINARY": 77980,
+          "INTEGER": 352,
+          "CONTINUOUS": 856
+        }
+      },
+      "selectors": 128,
+      "N": 8,
+      "G": 8,
+      "candidate_pairs": 44,
+      "candidate_cycles": 24,
+      "source_hash": "0ad08885e625fd7660d25cc341d3fb12ee15098345a13d4171b7ac9ec44cb64f",
+      "source_values_hash": "2b56354a367e43069ddc58fef5da79ecd74315648008849854d2573cd0ab0467",
+      "build_and_start_check_seconds": 3.812000000001717,
+      "solve_seconds": 300.0,
+      "worker_seconds": 307.375,
+      "full_audit_seconds": 3.0,
+      "build_solve_rss_mb": 1604.7265625,
+      "full_worker_rss_mb": 1604.7265625,
+      "bound": 116.0,
+      "gap": 13.827586206896552,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n8_H5_mixed_dual__s3__wafer\\variables.json",
+      "hashes": {
+        "result.json": "ad4bc7012b66b366e8c2cb0e1a0a817b929a035351e3b46aa191b8f779a13a3c",
+        "variables.json": "ff14dee81d49cde3e30639d92a23ad95cdeadde2b073446f38fb4dbf30d44bf8",
+        "evidence.json": "09a7a924047ea2e1d8906e195ae6efd1bce95257926748d1fd952cb2c782c6c4",
+        "full_model_audit.json": "931c1d6925bb624bf260c1c8bcd7f4a943f036a9ebdcd3354041b09a7d3e9bf7",
+        "resources.json": "9a9fb06b1e0556df6f140b84e7671149d841696da13bd470d5bcb5cd018b3986",
+        "build.json": "a829adf8a66cea6d18558276214d9856341289519c17f7b4b3016ae14eba0a23"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n16_H5_4x1_dual__s1__pjob",
+      "case": "n16_H5_4x1_dual",
+      "seed": 1,
+      "arm": "pjob",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_4x1_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_4x1_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 1320.0,
+        "route_wait_max": 118.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2418.0,
+        "product_cmax": 2400.0
+      },
+      "initial": {
+        "route_wait_sum": 1320.0,
+        "route_wait_max": 118.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2418.0,
+        "product_cmax": 2400.0
+      },
+      "dimensions": {
+        "variables": 177905,
+        "constraints": 670920,
+        "linear_nonzeros": 4023898,
+        "types": {
+          "BINARY": 176100,
+          "INTEGER": 528,
+          "CONTINUOUS": 1277
+        }
+      },
+      "original_dimensions": {
+        "variables": 177905,
+        "constraints": 670920,
+        "linear_nonzeros": 4023898,
+        "types": {
+          "BINARY": 176100,
+          "INTEGER": 528,
+          "CONTINUOUS": 1277
+        }
+      },
+      "selectors": 128,
+      "N": 16,
+      "G": 4,
+      "candidate_pairs": 64,
+      "candidate_cycles": 32,
+      "source_hash": "35fbf0e8339216c1a8ee7587126db168cfa76dc76f25f833e21831e602f646da",
+      "source_values_hash": "2f29ab9fc9a2b9a6bef8f4a5bb33d2afa9e2d7d6419065a1c4744db357d86168",
+      "build_and_start_check_seconds": 8.562000000001717,
+      "solve_seconds": 300.0,
+      "worker_seconds": 318.5779999999977,
+      "full_audit_seconds": 7.702999999997701,
+      "build_solve_rss_mb": 3513.5546875,
+      "full_worker_rss_mb": 3513.5546875,
+      "bound": 0.0,
+      "gap": 1e+20,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n16_H5_4x1_dual__s1__pjob\\variables.json",
+      "hashes": {
+        "result.json": "a1c719b2f822a91371d69fc71015fa08b806e29e543950c5f947f2af2f208fb4",
+        "variables.json": "264536b0694811a302646d9af03f1a64e466a085b0b4a74c05524d2e585f5f50",
+        "evidence.json": "f2d9aca0ea13be761cb5aa3d5fb5b1908424638bbc671ec114b21b0216e8c08c",
+        "full_model_audit.json": "45331d79ccaaa35a3709db01544e5bd9bb78af0f3648554dfa76f2da352120d3",
+        "resources.json": "7c605752edd4af4dfbace8a158355278539f2ae16f850daf869106a34f63b73e",
+        "build.json": "62de9855dae4ad982639bfd890316912f0b3b7679a5c928b8d9cfb773535f2fe"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n16_H5_4x1_dual__s1__wafer",
+      "case": "n16_H5_4x1_dual",
+      "seed": 1,
+      "arm": "wafer",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_4x1_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_4x1_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 1320.0,
+        "route_wait_max": 118.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2418.0,
+        "product_cmax": 2400.0
+      },
+      "initial": {
+        "route_wait_sum": 1320.0,
+        "route_wait_max": 118.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2418.0,
+        "product_cmax": 2400.0
+      },
+      "dimensions": {
+        "variables": 178305,
+        "constraints": 671975,
+        "linear_nonzeros": 4615224,
+        "types": {
+          "BINARY": 176484,
+          "INTEGER": 528,
+          "CONTINUOUS": 1293
+        }
+      },
+      "original_dimensions": {
+        "variables": 177905,
+        "constraints": 670920,
+        "linear_nonzeros": 4023898,
+        "types": {
+          "BINARY": 176100,
+          "INTEGER": 528,
+          "CONTINUOUS": 1277
+        }
+      },
+      "selectors": 512,
+      "N": 16,
+      "G": 4,
+      "candidate_pairs": 64,
+      "candidate_cycles": 32,
+      "source_hash": "35fbf0e8339216c1a8ee7587126db168cfa76dc76f25f833e21831e602f646da",
+      "source_values_hash": "2f29ab9fc9a2b9a6bef8f4a5bb33d2afa9e2d7d6419065a1c4744db357d86168",
+      "build_and_start_check_seconds": 10.3279999999977,
+      "solve_seconds": 300.0,
+      "worker_seconds": 320.67099999999846,
+      "full_audit_seconds": 7.092999999997119,
+      "build_solve_rss_mb": 3677.80859375,
+      "full_worker_rss_mb": 3677.80859375,
+      "bound": 19.999999999999993,
+      "gap": 119.00000000000004,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n16_H5_4x1_dual__s1__wafer\\variables.json",
+      "hashes": {
+        "result.json": "9696807b8a1a8bf37be8cd188fd4fa3f739e40221341eee683171dfe17628c76",
+        "variables.json": "fe12891c23f499509a78f4783b65bd169cc17838cc114618e0f9c8d6062fb89c",
+        "evidence.json": "252fa94ca46b60618e2d81ff09892b7fcc742ea2bfb931bf6773d3e82ef3ed59",
+        "full_model_audit.json": "32ce644d70d6a3f9c41f410b6891b3268605383f8b9b8d0b150169573a959f25",
+        "resources.json": "8cbb28bf6976d5dd19417e7735ab352893a4daf18eeb6f90ec2a399ce1f0f19e",
+        "build.json": "f2531187ee309c395ec467f59847e3f3081e8f5ec213f9dff4e4f791b0a36844"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n16_H5_4x1_dual__s2__wafer",
+      "case": "n16_H5_4x1_dual",
+      "seed": 2,
+      "arm": "wafer",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_4x1_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_4x1_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 1320.0,
+        "route_wait_max": 118.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2418.0,
+        "product_cmax": 2400.0
+      },
+      "initial": {
+        "route_wait_sum": 1320.0,
+        "route_wait_max": 118.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2418.0,
+        "product_cmax": 2400.0
+      },
+      "dimensions": {
+        "variables": 178305,
+        "constraints": 671975,
+        "linear_nonzeros": 4615224,
+        "types": {
+          "BINARY": 176484,
+          "INTEGER": 528,
+          "CONTINUOUS": 1293
+        }
+      },
+      "original_dimensions": {
+        "variables": 177905,
+        "constraints": 670920,
+        "linear_nonzeros": 4023898,
+        "types": {
+          "BINARY": 176100,
+          "INTEGER": 528,
+          "CONTINUOUS": 1277
+        }
+      },
+      "selectors": 512,
+      "N": 16,
+      "G": 4,
+      "candidate_pairs": 64,
+      "candidate_cycles": 32,
+      "source_hash": "35fbf0e8339216c1a8ee7587126db168cfa76dc76f25f833e21831e602f646da",
+      "source_values_hash": "2f29ab9fc9a2b9a6bef8f4a5bb33d2afa9e2d7d6419065a1c4744db357d86168",
+      "build_and_start_check_seconds": 9.389999999999418,
+      "solve_seconds": 300.0,
+      "worker_seconds": 319.3439999999973,
+      "full_audit_seconds": 7.71900000000096,
+      "build_solve_rss_mb": 3684.0234375,
+      "full_worker_rss_mb": 3672.96875,
+      "bound": 20.0,
+      "gap": 119.0,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n16_H5_4x1_dual__s2__wafer\\variables.json",
+      "hashes": {
+        "result.json": "5714bd1815a5f0536f4fcdcaa05845a98fb913c2c586de239d44c56850a8c0d6",
+        "variables.json": "fe12891c23f499509a78f4783b65bd169cc17838cc114618e0f9c8d6062fb89c",
+        "evidence.json": "d3808d9677746a4d2c3fe945fd4b4ce558f75f1a7eb9fc83129302e8692a41f4",
+        "full_model_audit.json": "8ef12ca4c2e9b9f39eabe343feda0977beb76e98984cb120a5ec9d5a1e52e6c4",
+        "resources.json": "85e8737bd9d072e43700f9e60bc75b1a9854506ce5f7ae4b7f3eb2535bbfb3c8",
+        "build.json": "098e4e5e90b0820bfedfe9200270bc1574d226a47c6536339326377571fb11e1"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n16_H5_4x1_dual__s2__pjob",
+      "case": "n16_H5_4x1_dual",
+      "seed": 2,
+      "arm": "pjob",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_4x1_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_4x1_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 1320.0,
+        "route_wait_max": 118.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2418.0,
+        "product_cmax": 2400.0
+      },
+      "initial": {
+        "route_wait_sum": 1320.0,
+        "route_wait_max": 118.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2418.0,
+        "product_cmax": 2400.0
+      },
+      "dimensions": {
+        "variables": 177905,
+        "constraints": 670920,
+        "linear_nonzeros": 4023898,
+        "types": {
+          "BINARY": 176100,
+          "INTEGER": 528,
+          "CONTINUOUS": 1277
+        }
+      },
+      "original_dimensions": {
+        "variables": 177905,
+        "constraints": 670920,
+        "linear_nonzeros": 4023898,
+        "types": {
+          "BINARY": 176100,
+          "INTEGER": 528,
+          "CONTINUOUS": 1277
+        }
+      },
+      "selectors": 128,
+      "N": 16,
+      "G": 4,
+      "candidate_pairs": 64,
+      "candidate_cycles": 32,
+      "source_hash": "35fbf0e8339216c1a8ee7587126db168cfa76dc76f25f833e21831e602f646da",
+      "source_values_hash": "2f29ab9fc9a2b9a6bef8f4a5bb33d2afa9e2d7d6419065a1c4744db357d86168",
+      "build_and_start_check_seconds": 8.828000000001339,
+      "solve_seconds": 300.0,
+      "worker_seconds": 318.71900000000096,
+      "full_audit_seconds": 7.562999999998283,
+      "build_solve_rss_mb": 3511.98046875,
+      "full_worker_rss_mb": 3511.98046875,
+      "bound": 0.0,
+      "gap": 1e+20,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n16_H5_4x1_dual__s2__pjob\\variables.json",
+      "hashes": {
+        "result.json": "ff9d75f98b554d407ff4e237bd147bbff2e81428d3e0d16f399e1629f95996b3",
+        "variables.json": "264536b0694811a302646d9af03f1a64e466a085b0b4a74c05524d2e585f5f50",
+        "evidence.json": "b9d8a6aab3f220de465ca02d18bdf8b48271cefd1088c5f1ef3b1cbb9778d208",
+        "full_model_audit.json": "b171f59cdda8d08256adf0201438fe51c6af39beb821497894418bbfd2a30e64",
+        "resources.json": "b75c1d422e4b07886e9bed8c3d407699e5917c5c80f6fd301697b8dad10155ba",
+        "build.json": "b1132eb877ab8a41a440e63c716150c75526a67cc29303db4a963cf62c9563d7"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n16_H5_4x1_dual__s3__pjob",
+      "case": "n16_H5_4x1_dual",
+      "seed": 3,
+      "arm": "pjob",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_4x1_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_4x1_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 1320.0,
+        "route_wait_max": 118.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2418.0,
+        "product_cmax": 2400.0
+      },
+      "initial": {
+        "route_wait_sum": 1320.0,
+        "route_wait_max": 118.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2418.0,
+        "product_cmax": 2400.0
+      },
+      "dimensions": {
+        "variables": 177905,
+        "constraints": 670920,
+        "linear_nonzeros": 4023898,
+        "types": {
+          "BINARY": 176100,
+          "INTEGER": 528,
+          "CONTINUOUS": 1277
+        }
+      },
+      "original_dimensions": {
+        "variables": 177905,
+        "constraints": 670920,
+        "linear_nonzeros": 4023898,
+        "types": {
+          "BINARY": 176100,
+          "INTEGER": 528,
+          "CONTINUOUS": 1277
+        }
+      },
+      "selectors": 128,
+      "N": 16,
+      "G": 4,
+      "candidate_pairs": 64,
+      "candidate_cycles": 32,
+      "source_hash": "35fbf0e8339216c1a8ee7587126db168cfa76dc76f25f833e21831e602f646da",
+      "source_values_hash": "2f29ab9fc9a2b9a6bef8f4a5bb33d2afa9e2d7d6419065a1c4744db357d86168",
+      "build_and_start_check_seconds": 8.704000000001543,
+      "solve_seconds": 300.0,
+      "worker_seconds": 318.5779999999977,
+      "full_audit_seconds": 7.734000000000378,
+      "build_solve_rss_mb": 3486.31640625,
+      "full_worker_rss_mb": 3482.453125,
+      "bound": 0.0,
+      "gap": 1e+20,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n16_H5_4x1_dual__s3__pjob\\variables.json",
+      "hashes": {
+        "result.json": "076cc6a9f9fef130ad24fb882b9a6d80b3d041dc824910004427a27c4d1a5111",
+        "variables.json": "264536b0694811a302646d9af03f1a64e466a085b0b4a74c05524d2e585f5f50",
+        "evidence.json": "d174a1a54b09f81213428ed1ef4272576486500ed89e1980250dfda294c6f002",
+        "full_model_audit.json": "a17c1d0a63593eceb21ab4a70240a94d8418d26714b442fc06d8f7acb4b5ac91",
+        "resources.json": "53dd9ad6c897f9346018bd9067b4aadb09dc96e5770393393ffc43c8cda59f34",
+        "build.json": "a6b3bd33f728a3a615a835ea86a1e69708ed039a76a9d728aca2a27f4197a3b0"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n16_H5_4x1_dual__s3__wafer",
+      "case": "n16_H5_4x1_dual",
+      "seed": 3,
+      "arm": "wafer",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_4x1_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_4x1_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 1320.0,
+        "route_wait_max": 118.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2418.0,
+        "product_cmax": 2400.0
+      },
+      "initial": {
+        "route_wait_sum": 1320.0,
+        "route_wait_max": 118.0,
+        "rhythm_deviation": 0,
+        "rhythm_centers": 0,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2418.0,
+        "product_cmax": 2400.0
+      },
+      "dimensions": {
+        "variables": 178305,
+        "constraints": 671975,
+        "linear_nonzeros": 4615224,
+        "types": {
+          "BINARY": 176484,
+          "INTEGER": 528,
+          "CONTINUOUS": 1293
+        }
+      },
+      "original_dimensions": {
+        "variables": 177905,
+        "constraints": 670920,
+        "linear_nonzeros": 4023898,
+        "types": {
+          "BINARY": 176100,
+          "INTEGER": 528,
+          "CONTINUOUS": 1277
+        }
+      },
+      "selectors": 512,
+      "N": 16,
+      "G": 4,
+      "candidate_pairs": 64,
+      "candidate_cycles": 32,
+      "source_hash": "35fbf0e8339216c1a8ee7587126db168cfa76dc76f25f833e21831e602f646da",
+      "source_values_hash": "2f29ab9fc9a2b9a6bef8f4a5bb33d2afa9e2d7d6419065a1c4744db357d86168",
+      "build_and_start_check_seconds": 10.359000000000378,
+      "solve_seconds": 300.0,
+      "worker_seconds": 319.3899999999994,
+      "full_audit_seconds": 6.985000000000582,
+      "build_solve_rss_mb": 3681.8828125,
+      "full_worker_rss_mb": 3655.98828125,
+      "bound": 19.999999999999996,
+      "gap": 119.00000000000001,
+      "nodes": 1,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n16_H5_4x1_dual__s3__wafer\\variables.json",
+      "hashes": {
+        "result.json": "dcac609f36bd72567253c16b1a70fbce4c487c7a710299fae0eef31ebc4d3fa8",
+        "variables.json": "fe12891c23f499509a78f4783b65bd169cc17838cc114618e0f9c8d6062fb89c",
+        "evidence.json": "2adcb450a516b3680a90b4f9bd1f55f115912c49a518e561790cbc5e77457259",
+        "full_model_audit.json": "a34a2ebccd61d18a864e7cdd87cd1970636740f5f5293ada0bee465997726663",
+        "resources.json": "13e2d5258f3c7eceef59c88bbddba37831629f1ca4ddf89ac1a71f4ab89c53a9",
+        "build.json": "f33de6dcfa1ffa196effea59c3341cff80069f181c9000c6d6a40d62dae1508c"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n16_H5_2x2_dual__s1__pjob",
+      "case": "n16_H5_2x2_dual",
+      "seed": 1,
+      "arm": "pjob",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_2x2_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_2x2_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 2275.9999999999995,
+        "route_wait_max": 409.0,
+        "rhythm_deviation": 731.0,
+        "rhythm_centers": 6,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 3431.0,
+        "product_cmax": 2943.0
+      },
+      "initial": {
+        "route_wait_sum": 2275.9999999999995,
+        "route_wait_max": 409.0,
+        "rhythm_deviation": 731.0,
+        "rhythm_centers": 6,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 3431.0,
+        "product_cmax": 2943.0
+      },
+      "dimensions": {
+        "variables": 482609,
+        "constraints": 1680520,
+        "linear_nonzeros": 9858474,
+        "types": {
+          "BINARY": 479588,
+          "INTEGER": 880,
+          "CONTINUOUS": 2141
+        }
+      },
+      "original_dimensions": {
+        "variables": 482609,
+        "constraints": 1680520,
+        "linear_nonzeros": 9858474,
+        "types": {
+          "BINARY": 479588,
+          "INTEGER": 880,
+          "CONTINUOUS": 2141
+        }
+      },
+      "selectors": 128,
+      "N": 16,
+      "G": 4,
+      "candidate_pairs": 112,
+      "candidate_cycles": 64,
+      "source_hash": "8dab23e06e03fd442f8ec7c5a75b6602700aecee1689455969473028a4db1b95",
+      "source_values_hash": "8c0f0383534ebb1ce20989f964e9305b23014485b684d9431c5345680a0b9a36",
+      "build_and_start_check_seconds": 20.32800000000134,
+      "solve_seconds": 300.0,
+      "worker_seconds": 346.25,
+      "full_audit_seconds": 19.51599999999962,
+      "build_solve_rss_mb": 5465.0,
+      "full_worker_rss_mb": 5465.0,
+      "bound": -1e+20,
+      "gap": 1e+20,
+      "nodes": 0,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n16_H5_2x2_dual__s1__pjob\\variables.json",
+      "hashes": {
+        "result.json": "22d316465f42b4ef40e576e8da0d67879ba248b57058e898c3bcda139662feda",
+        "variables.json": "d31b664011fc0724e09c900db7284bec2a5778e3c73398ccebf167e90835eaa7",
+        "evidence.json": "5015fcb4a71c73b6ee4b5868cee28d19cef7707b8da1e4f5fc6b7217ee59cd0d",
+        "full_model_audit.json": "11e38d12a476c195c4dfefda4267ff5b7044793c6721ff63b80b40164c607b2c",
+        "resources.json": "48e3a4300c09be18d70e1d38d07f4129114b1aaee638b39eb50a512121e071af",
+        "build.json": "22c0e248da638ac6a3dc60eadb3e6b0e0a4d2b417f5cad224e7204e099ec71a9"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n16_H5_2x2_dual__s1__wafer",
+      "case": "n16_H5_2x2_dual",
+      "seed": 1,
+      "arm": "wafer",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_2x2_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_2x2_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 2275.9999999999995,
+        "route_wait_max": 409.0,
+        "rhythm_deviation": 731.0,
+        "rhythm_centers": 6,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 3431.0,
+        "product_cmax": 2943.0
+      },
+      "initial": {
+        "route_wait_sum": 2275.9999999999995,
+        "route_wait_max": 409.0,
+        "rhythm_deviation": 731.0,
+        "rhythm_centers": 6,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 3431.0,
+        "product_cmax": 2943.0
+      },
+      "dimensions": {
+        "variables": 483009,
+        "constraints": 1681575,
+        "linear_nonzeros": 10449800,
+        "types": {
+          "BINARY": 479972,
+          "INTEGER": 880,
+          "CONTINUOUS": 2157
+        }
+      },
+      "original_dimensions": {
+        "variables": 482609,
+        "constraints": 1680520,
+        "linear_nonzeros": 9858474,
+        "types": {
+          "BINARY": 479588,
+          "INTEGER": 880,
+          "CONTINUOUS": 2141
+        }
+      },
+      "selectors": 512,
+      "N": 16,
+      "G": 4,
+      "candidate_pairs": 112,
+      "candidate_cycles": 64,
+      "source_hash": "8dab23e06e03fd442f8ec7c5a75b6602700aecee1689455969473028a4db1b95",
+      "source_values_hash": "8c0f0383534ebb1ce20989f964e9305b23014485b684d9431c5345680a0b9a36",
+      "build_and_start_check_seconds": 22.0,
+      "solve_seconds": 300.0,
+      "worker_seconds": 340.375,
+      "full_audit_seconds": 16.45300000000134,
+      "build_solve_rss_mb": 5489.890625,
+      "full_worker_rss_mb": 5489.890625,
+      "bound": -1e+20,
+      "gap": 1e+20,
+      "nodes": 0,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n16_H5_2x2_dual__s1__wafer\\variables.json",
+      "hashes": {
+        "result.json": "df056db1a15f20428a317a1c4499ed603876be6ecf095d51b9e40ef017ea31d3",
+        "variables.json": "f8e4d8a68ac543fa2495c53c4752072fbc9d65fc9a4dde8f3ef58eeda9835154",
+        "evidence.json": "e9491cfe7564b581358221df8db7cc49a4bddd9f4a132554428a6d64ceaf8177",
+        "full_model_audit.json": "c76aab61c3a2cb0dc2cead85ea365b8f17f1c633a19089686cd1b9fd16db38a0",
+        "resources.json": "d3f5391e000b4b74e186d127101b7a06e8459651ee5f3f7099558ccd5df66a7b",
+        "build.json": "dfa192007162bd8a59abf6d40c5a1423bfeba04a6a820a7deabda163315bf759"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n16_H5_2x2_dual__s2__wafer",
+      "case": "n16_H5_2x2_dual",
+      "seed": 2,
+      "arm": "wafer",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_2x2_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_2x2_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 2275.9999999999995,
+        "route_wait_max": 409.0,
+        "rhythm_deviation": 731.0,
+        "rhythm_centers": 6,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 3431.0,
+        "product_cmax": 2943.0
+      },
+      "initial": {
+        "route_wait_sum": 2275.9999999999995,
+        "route_wait_max": 409.0,
+        "rhythm_deviation": 731.0,
+        "rhythm_centers": 6,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 3431.0,
+        "product_cmax": 2943.0
+      },
+      "dimensions": {
+        "variables": 483009,
+        "constraints": 1681575,
+        "linear_nonzeros": 10449800,
+        "types": {
+          "BINARY": 479972,
+          "INTEGER": 880,
+          "CONTINUOUS": 2157
+        }
+      },
+      "original_dimensions": {
+        "variables": 482609,
+        "constraints": 1680520,
+        "linear_nonzeros": 9858474,
+        "types": {
+          "BINARY": 479588,
+          "INTEGER": 880,
+          "CONTINUOUS": 2141
+        }
+      },
+      "selectors": 512,
+      "N": 16,
+      "G": 4,
+      "candidate_pairs": 112,
+      "candidate_cycles": 64,
+      "source_hash": "8dab23e06e03fd442f8ec7c5a75b6602700aecee1689455969473028a4db1b95",
+      "source_values_hash": "8c0f0383534ebb1ce20989f964e9305b23014485b684d9431c5345680a0b9a36",
+      "build_and_start_check_seconds": 21.23399999999674,
+      "solve_seconds": 300.0,
+      "worker_seconds": 343.0,
+      "full_audit_seconds": 16.39100000000326,
+      "build_solve_rss_mb": 5490.515625,
+      "full_worker_rss_mb": 5490.48046875,
+      "bound": -1e+20,
+      "gap": 1e+20,
+      "nodes": 0,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n16_H5_2x2_dual__s2__wafer\\variables.json",
+      "hashes": {
+        "result.json": "df056db1a15f20428a317a1c4499ed603876be6ecf095d51b9e40ef017ea31d3",
+        "variables.json": "f8e4d8a68ac543fa2495c53c4752072fbc9d65fc9a4dde8f3ef58eeda9835154",
+        "evidence.json": "e6f6cd6783180fc3c778e62242052173f5e7b82eca03ff93c9354d6a98832810",
+        "full_model_audit.json": "a31a59b5e9a83fa24674ccafb36896008f70a4ea16d72926ecbceab695a7c473",
+        "resources.json": "2cfb98099d622aaf81d9e305cdff01f5b10ec82e5b5678f05afeeca2a6fae4ff",
+        "build.json": "45528d30a1403f0cbe6bdeaea4c351a4dacda3e0db236c5be1892c4e03a19330"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n16_H5_2x2_dual__s2__pjob",
+      "case": "n16_H5_2x2_dual",
+      "seed": 2,
+      "arm": "pjob",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_2x2_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_2x2_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 2275.9999999999995,
+        "route_wait_max": 409.0,
+        "rhythm_deviation": 731.0,
+        "rhythm_centers": 6,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 3431.0,
+        "product_cmax": 2943.0
+      },
+      "initial": {
+        "route_wait_sum": 2275.9999999999995,
+        "route_wait_max": 409.0,
+        "rhythm_deviation": 731.0,
+        "rhythm_centers": 6,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 3431.0,
+        "product_cmax": 2943.0
+      },
+      "dimensions": {
+        "variables": 482609,
+        "constraints": 1680520,
+        "linear_nonzeros": 9858474,
+        "types": {
+          "BINARY": 479588,
+          "INTEGER": 880,
+          "CONTINUOUS": 2141
+        }
+      },
+      "original_dimensions": {
+        "variables": 482609,
+        "constraints": 1680520,
+        "linear_nonzeros": 9858474,
+        "types": {
+          "BINARY": 479588,
+          "INTEGER": 880,
+          "CONTINUOUS": 2141
+        }
+      },
+      "selectors": 128,
+      "N": 16,
+      "G": 4,
+      "candidate_pairs": 112,
+      "candidate_cycles": 64,
+      "source_hash": "8dab23e06e03fd442f8ec7c5a75b6602700aecee1689455969473028a4db1b95",
+      "source_values_hash": "8c0f0383534ebb1ce20989f964e9305b23014485b684d9431c5345680a0b9a36",
+      "build_and_start_check_seconds": 18.79699999999866,
+      "solve_seconds": 300.0,
+      "worker_seconds": 341.2810000000027,
+      "full_audit_seconds": 17.20300000000134,
+      "build_solve_rss_mb": 5462.19921875,
+      "full_worker_rss_mb": 5462.19921875,
+      "bound": -1e+20,
+      "gap": 1e+20,
+      "nodes": 0,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n16_H5_2x2_dual__s2__pjob\\variables.json",
+      "hashes": {
+        "result.json": "22d316465f42b4ef40e576e8da0d67879ba248b57058e898c3bcda139662feda",
+        "variables.json": "d31b664011fc0724e09c900db7284bec2a5778e3c73398ccebf167e90835eaa7",
+        "evidence.json": "b6f45db84dd1692af520a08e1b3cf74ff0792958061bf7bc6484343eb343ddbb",
+        "full_model_audit.json": "50d5cbbff75c938766b30b24b1e7839ff9faac3f0a7c7803e61dff8104ca8db9",
+        "resources.json": "c2f6919bdf6f5575db6039df852fb836bdb2908fd914e323f9fc1c4f391870ec",
+        "build.json": "f50afa45d078c65ce1696c36c7e3eb5692a8c6d40619441fc7daf4b23d3c5a86"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n16_H5_2x2_dual__s3__pjob",
+      "case": "n16_H5_2x2_dual",
+      "seed": 3,
+      "arm": "pjob",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_2x2_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_2x2_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 2275.9999999999995,
+        "route_wait_max": 409.0,
+        "rhythm_deviation": 731.0,
+        "rhythm_centers": 6,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 3431.0,
+        "product_cmax": 2943.0
+      },
+      "initial": {
+        "route_wait_sum": 2275.9999999999995,
+        "route_wait_max": 409.0,
+        "rhythm_deviation": 731.0,
+        "rhythm_centers": 6,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 3431.0,
+        "product_cmax": 2943.0
+      },
+      "dimensions": {
+        "variables": 482609,
+        "constraints": 1680520,
+        "linear_nonzeros": 9858474,
+        "types": {
+          "BINARY": 479588,
+          "INTEGER": 880,
+          "CONTINUOUS": 2141
+        }
+      },
+      "original_dimensions": {
+        "variables": 482609,
+        "constraints": 1680520,
+        "linear_nonzeros": 9858474,
+        "types": {
+          "BINARY": 479588,
+          "INTEGER": 880,
+          "CONTINUOUS": 2141
+        }
+      },
+      "selectors": 128,
+      "N": 16,
+      "G": 4,
+      "candidate_pairs": 112,
+      "candidate_cycles": 64,
+      "source_hash": "8dab23e06e03fd442f8ec7c5a75b6602700aecee1689455969473028a4db1b95",
+      "source_values_hash": "8c0f0383534ebb1ce20989f964e9305b23014485b684d9431c5345680a0b9a36",
+      "build_and_start_check_seconds": 20.109000000004016,
+      "solve_seconds": 300.0,
+      "worker_seconds": 342.6560000000027,
+      "full_audit_seconds": 17.171000000002095,
+      "build_solve_rss_mb": 5490.35546875,
+      "full_worker_rss_mb": 5490.35546875,
+      "bound": -1e+20,
+      "gap": 1e+20,
+      "nodes": 0,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n16_H5_2x2_dual__s3__pjob\\variables.json",
+      "hashes": {
+        "result.json": "22d316465f42b4ef40e576e8da0d67879ba248b57058e898c3bcda139662feda",
+        "variables.json": "d31b664011fc0724e09c900db7284bec2a5778e3c73398ccebf167e90835eaa7",
+        "evidence.json": "fb0b526b30db31e5cfe98a76407b18cdef74a8f626220376ddef6912881baf05",
+        "full_model_audit.json": "66fb667ecaa2bafe0034c49fbde31b63a77667547b2058e96160a8a5ea4132f0",
+        "resources.json": "cef0b108334b538694d9fc162db24495d77e935edf98b4610aed2e87ccd6acf7",
+        "build.json": "db4ff84dee08fd10d223c3f248da823a1103984aecdd8a03dd2fd993e91e6de1"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n16_H5_2x2_dual__s3__wafer",
+      "case": "n16_H5_2x2_dual",
+      "seed": 3,
+      "arm": "wafer",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_2x2_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_2x2_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 2275.9999999999995,
+        "route_wait_max": 409.0,
+        "rhythm_deviation": 731.0,
+        "rhythm_centers": 6,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 3431.0,
+        "product_cmax": 2943.0
+      },
+      "initial": {
+        "route_wait_sum": 2275.9999999999995,
+        "route_wait_max": 409.0,
+        "rhythm_deviation": 731.0,
+        "rhythm_centers": 6,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 2,
+        "modeled_completion": 3431.0,
+        "product_cmax": 2943.0
+      },
+      "dimensions": {
+        "variables": 483009,
+        "constraints": 1681575,
+        "linear_nonzeros": 10449800,
+        "types": {
+          "BINARY": 479972,
+          "INTEGER": 880,
+          "CONTINUOUS": 2157
+        }
+      },
+      "original_dimensions": {
+        "variables": 482609,
+        "constraints": 1680520,
+        "linear_nonzeros": 9858474,
+        "types": {
+          "BINARY": 479588,
+          "INTEGER": 880,
+          "CONTINUOUS": 2141
+        }
+      },
+      "selectors": 512,
+      "N": 16,
+      "G": 4,
+      "candidate_pairs": 112,
+      "candidate_cycles": 64,
+      "source_hash": "8dab23e06e03fd442f8ec7c5a75b6602700aecee1689455969473028a4db1b95",
+      "source_values_hash": "8c0f0383534ebb1ce20989f964e9305b23014485b684d9431c5345680a0b9a36",
+      "build_and_start_check_seconds": 22.42199999999866,
+      "solve_seconds": 300.0,
+      "worker_seconds": 344.0789999999979,
+      "full_audit_seconds": 16.32800000000134,
+      "build_solve_rss_mb": 5549.9765625,
+      "full_worker_rss_mb": 5549.9765625,
+      "bound": -1e+20,
+      "gap": 1e+20,
+      "nodes": 0,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n16_H5_2x2_dual__s3__wafer\\variables.json",
+      "hashes": {
+        "result.json": "df056db1a15f20428a317a1c4499ed603876be6ecf095d51b9e40ef017ea31d3",
+        "variables.json": "f8e4d8a68ac543fa2495c53c4752072fbc9d65fc9a4dde8f3ef58eeda9835154",
+        "evidence.json": "d7ec6a884f71ffe2384951b2e0dcc16be875ce5ea07b10b537e96fff9d157a54",
+        "full_model_audit.json": "ec711c07b6d3fe947726bfd82f44d7a7d09c89ef68c5056fc176dbf8a946960b",
+        "resources.json": "0aa0f21fb544bccb108bc184ebc0b5dd43fffacbee1e200157e54fedf5713c1a",
+        "build.json": "5d6d18741ca8515a1d4c5f266fc88ca032a992dd5bb3d1890107d8a5711d57ec"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n16_H5_mixed_dual__s1__pjob",
+      "case": "n16_H5_mixed_dual",
+      "seed": 1,
+      "arm": "pjob",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_mixed_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_mixed_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 3021.0,
+        "route_wait_max": 237.00000000000023,
+        "rhythm_deviation": 136.00000000000068,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2543.0,
+        "product_cmax": 2525.0
+      },
+      "initial": {
+        "route_wait_sum": 3021.0,
+        "route_wait_max": 237.00000000000023,
+        "rhythm_deviation": 136.00000000000068,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2543.0,
+        "product_cmax": 2525.0
+      },
+      "dimensions": {
+        "variables": 310636,
+        "constraints": 1108316,
+        "linear_nonzeros": 6796204,
+        "types": {
+          "BINARY": 308220,
+          "INTEGER": 704,
+          "CONTINUOUS": 1712
+        }
+      },
+      "original_dimensions": {
+        "variables": 310636,
+        "constraints": 1108316,
+        "linear_nonzeros": 6796204,
+        "types": {
+          "BINARY": 308220,
+          "INTEGER": 704,
+          "CONTINUOUS": 1712
+        }
+      },
+      "selectors": 256,
+      "N": 16,
+      "G": 8,
+      "candidate_pairs": 88,
+      "candidate_cycles": 48,
+      "source_hash": "23ff821f169bc7959d767189287328d46b17dbabc89ce5be8a2f0cd6fec3e63f",
+      "source_values_hash": "d11e3ac2b7c04f51bf8ccf7b86b44847ed039641c48ab38a2e2e5a93e37134b1",
+      "build_and_start_check_seconds": 13.139999999999418,
+      "solve_seconds": 300.0,
+      "worker_seconds": 326.57800000000134,
+      "full_audit_seconds": 11.0,
+      "build_solve_rss_mb": 3674.74609375,
+      "full_worker_rss_mb": 3674.74609375,
+      "bound": -1e+20,
+      "gap": 1e+20,
+      "nodes": 0,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n16_H5_mixed_dual__s1__pjob\\variables.json",
+      "hashes": {
+        "result.json": "bdda7b148d66b0df46f664d9402e8fcea357ffcaf8a3791658e9e7a100bb42fd",
+        "variables.json": "2d89192fe145df5a55dd8880a40e5c7f136b02d7b5709547347d797b09de1f95",
+        "evidence.json": "394468993b32866031665c78a14705c9405306c9370d9224b2e67017382a8fda",
+        "full_model_audit.json": "2cd0a1e6e76d8d1bc6e8f2f4fc4a1929a84d2f78bfbc152e201ccf4fdda3bf4e",
+        "resources.json": "4313354549450a4ec86980c6f3d20b760738c2e2efd0c4b72f955595f6e0646c",
+        "build.json": "518d0d6e9682267bab4b77f1587185e1d3ae89afae8fea06685245d0b7863eed"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n16_H5_mixed_dual__s1__wafer",
+      "case": "n16_H5_mixed_dual",
+      "seed": 1,
+      "arm": "wafer",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_mixed_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_mixed_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 3021.0,
+        "route_wait_max": 237.00000000000023,
+        "rhythm_deviation": 136.00000000000068,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2543.0,
+        "product_cmax": 2525.0
+      },
+      "initial": {
+        "route_wait_sum": 3021.0,
+        "route_wait_max": 237.00000000000023,
+        "rhythm_deviation": 136.00000000000068,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2543.0,
+        "product_cmax": 2525.0
+      },
+      "dimensions": {
+        "variables": 310908,
+        "constraints": 1109370,
+        "linear_nonzeros": 7191624,
+        "types": {
+          "BINARY": 308476,
+          "INTEGER": 704,
+          "CONTINUOUS": 1728
+        }
+      },
+      "original_dimensions": {
+        "variables": 310636,
+        "constraints": 1108316,
+        "linear_nonzeros": 6796204,
+        "types": {
+          "BINARY": 308220,
+          "INTEGER": 704,
+          "CONTINUOUS": 1712
+        }
+      },
+      "selectors": 512,
+      "N": 16,
+      "G": 8,
+      "candidate_pairs": 88,
+      "candidate_cycles": 48,
+      "source_hash": "23ff821f169bc7959d767189287328d46b17dbabc89ce5be8a2f0cd6fec3e63f",
+      "source_values_hash": "d11e3ac2b7c04f51bf8ccf7b86b44847ed039641c48ab38a2e2e5a93e37134b1",
+      "build_and_start_check_seconds": 14.639999999999418,
+      "solve_seconds": 300.0,
+      "worker_seconds": 329.5310000000027,
+      "full_audit_seconds": 11.562000000005355,
+      "build_solve_rss_mb": 3717.578125,
+      "full_worker_rss_mb": 3717.578125,
+      "bound": -1e+20,
+      "gap": 1e+20,
+      "nodes": 0,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n16_H5_mixed_dual__s1__wafer\\variables.json",
+      "hashes": {
+        "result.json": "c926e1a9e3bb0f8fd01433e529e7ef5c676a8400a6eb5f97e190b5091e286785",
+        "variables.json": "a3c46dcc1ea4e23a4bd266f7dfc2c08e6b4c4101dd3e0dbfe39fb67fee5d936f",
+        "evidence.json": "b9e66d48d47998be71c601a7c9dd0f67b214fec10a786cf491d7310effc8a762",
+        "full_model_audit.json": "775ab79193caa6c21136aa83241ed05ef60bfc71cbc86262a09ffed95b1c98e2",
+        "resources.json": "13092b6cd8a589eacd9bbc72b0e0d8f547db427f4b4059dbec0ef5fbdee84b81",
+        "build.json": "7f9e88607aeb47297526c60ba950353c3b4e363061756537b762a776a42ffdf3"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n16_H5_mixed_dual__s2__wafer",
+      "case": "n16_H5_mixed_dual",
+      "seed": 2,
+      "arm": "wafer",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_mixed_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_mixed_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 3021.0,
+        "route_wait_max": 237.00000000000023,
+        "rhythm_deviation": 136.00000000000068,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2543.0,
+        "product_cmax": 2525.0
+      },
+      "initial": {
+        "route_wait_sum": 3021.0,
+        "route_wait_max": 237.00000000000023,
+        "rhythm_deviation": 136.00000000000068,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2543.0,
+        "product_cmax": 2525.0
+      },
+      "dimensions": {
+        "variables": 310908,
+        "constraints": 1109370,
+        "linear_nonzeros": 7191624,
+        "types": {
+          "BINARY": 308476,
+          "INTEGER": 704,
+          "CONTINUOUS": 1728
+        }
+      },
+      "original_dimensions": {
+        "variables": 310636,
+        "constraints": 1108316,
+        "linear_nonzeros": 6796204,
+        "types": {
+          "BINARY": 308220,
+          "INTEGER": 704,
+          "CONTINUOUS": 1712
+        }
+      },
+      "selectors": 512,
+      "N": 16,
+      "G": 8,
+      "candidate_pairs": 88,
+      "candidate_cycles": 48,
+      "source_hash": "23ff821f169bc7959d767189287328d46b17dbabc89ce5be8a2f0cd6fec3e63f",
+      "source_values_hash": "d11e3ac2b7c04f51bf8ccf7b86b44847ed039641c48ab38a2e2e5a93e37134b1",
+      "build_and_start_check_seconds": 14.671999999998661,
+      "solve_seconds": 300.0,
+      "worker_seconds": 328.0940000000046,
+      "full_audit_seconds": 11.06300000000192,
+      "build_solve_rss_mb": 3678.86328125,
+      "full_worker_rss_mb": 3678.796875,
+      "bound": -1e+20,
+      "gap": 1e+20,
+      "nodes": 0,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n16_H5_mixed_dual__s2__wafer\\variables.json",
+      "hashes": {
+        "result.json": "c926e1a9e3bb0f8fd01433e529e7ef5c676a8400a6eb5f97e190b5091e286785",
+        "variables.json": "a3c46dcc1ea4e23a4bd266f7dfc2c08e6b4c4101dd3e0dbfe39fb67fee5d936f",
+        "evidence.json": "8a05ee219f11eade863f43c3fddf290170b352d96c533657243cb616ce473a31",
+        "full_model_audit.json": "2dad0fabce80341b9cacb1fc59fc7ce50d5c5721fb78aaa8a68b4fa84a1878c3",
+        "resources.json": "a035d7f64452b487c7becf8b1c55e3b2ab90d061110f82e7434c1c59335facbc",
+        "build.json": "622d3c145a0973137ea82583f9847fbd04a245f3386dc4f94fc0c309a67bd396"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n16_H5_mixed_dual__s2__pjob",
+      "case": "n16_H5_mixed_dual",
+      "seed": 2,
+      "arm": "pjob",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_mixed_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_mixed_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 3021.0,
+        "route_wait_max": 237.00000000000023,
+        "rhythm_deviation": 136.00000000000068,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2543.0,
+        "product_cmax": 2525.0
+      },
+      "initial": {
+        "route_wait_sum": 3021.0,
+        "route_wait_max": 237.00000000000023,
+        "rhythm_deviation": 136.00000000000068,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2543.0,
+        "product_cmax": 2525.0
+      },
+      "dimensions": {
+        "variables": 310636,
+        "constraints": 1108316,
+        "linear_nonzeros": 6796204,
+        "types": {
+          "BINARY": 308220,
+          "INTEGER": 704,
+          "CONTINUOUS": 1712
+        }
+      },
+      "original_dimensions": {
+        "variables": 310636,
+        "constraints": 1108316,
+        "linear_nonzeros": 6796204,
+        "types": {
+          "BINARY": 308220,
+          "INTEGER": 704,
+          "CONTINUOUS": 1712
+        }
+      },
+      "selectors": 256,
+      "N": 16,
+      "G": 8,
+      "candidate_pairs": 88,
+      "candidate_cycles": 48,
+      "source_hash": "23ff821f169bc7959d767189287328d46b17dbabc89ce5be8a2f0cd6fec3e63f",
+      "source_values_hash": "d11e3ac2b7c04f51bf8ccf7b86b44847ed039641c48ab38a2e2e5a93e37134b1",
+      "build_and_start_check_seconds": 12.515999999995984,
+      "solve_seconds": 300.0,
+      "worker_seconds": 331.484000000004,
+      "full_audit_seconds": 15.187000000005355,
+      "build_solve_rss_mb": 3684.2890625,
+      "full_worker_rss_mb": 3684.2890625,
+      "bound": -1e+20,
+      "gap": 1e+20,
+      "nodes": 0,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n16_H5_mixed_dual__s2__pjob\\variables.json",
+      "hashes": {
+        "result.json": "bdda7b148d66b0df46f664d9402e8fcea357ffcaf8a3791658e9e7a100bb42fd",
+        "variables.json": "2d89192fe145df5a55dd8880a40e5c7f136b02d7b5709547347d797b09de1f95",
+        "evidence.json": "b6b999c5783b57b3254c29fb38dc4ec688aa6c18b308f21fccffa2b5ddb30b4d",
+        "full_model_audit.json": "bf4878f34b0f67dd08824be2cb50787f39bdd28d00dce0a0a0d6046fe57eb64c",
+        "resources.json": "7bbac20ed757437e8f2cecb33b36b166b9c7d5fb72ab133d2fed6580223a1da5",
+        "build.json": "145bc5916cba6bc1261f6ab6e3ef795ad91873ab2458a3d5dbd1c95889457bd3"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n16_H5_mixed_dual__s3__pjob",
+      "case": "n16_H5_mixed_dual",
+      "seed": 3,
+      "arm": "pjob",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_mixed_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_mixed_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 3021.0,
+        "route_wait_max": 237.00000000000023,
+        "rhythm_deviation": 136.00000000000068,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2543.0,
+        "product_cmax": 2525.0
+      },
+      "initial": {
+        "route_wait_sum": 3021.0,
+        "route_wait_max": 237.00000000000023,
+        "rhythm_deviation": 136.00000000000068,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2543.0,
+        "product_cmax": 2525.0
+      },
+      "dimensions": {
+        "variables": 310636,
+        "constraints": 1108316,
+        "linear_nonzeros": 6796204,
+        "types": {
+          "BINARY": 308220,
+          "INTEGER": 704,
+          "CONTINUOUS": 1712
+        }
+      },
+      "original_dimensions": {
+        "variables": 310636,
+        "constraints": 1108316,
+        "linear_nonzeros": 6796204,
+        "types": {
+          "BINARY": 308220,
+          "INTEGER": 704,
+          "CONTINUOUS": 1712
+        }
+      },
+      "selectors": 256,
+      "N": 16,
+      "G": 8,
+      "candidate_pairs": 88,
+      "candidate_cycles": 48,
+      "source_hash": "23ff821f169bc7959d767189287328d46b17dbabc89ce5be8a2f0cd6fec3e63f",
+      "source_values_hash": "d11e3ac2b7c04f51bf8ccf7b86b44847ed039641c48ab38a2e2e5a93e37134b1",
+      "build_and_start_check_seconds": 17.23399999999674,
+      "solve_seconds": 300.0,
+      "worker_seconds": 336.7189999999973,
+      "full_audit_seconds": 15.23399999999674,
+      "build_solve_rss_mb": 3642.78515625,
+      "full_worker_rss_mb": 3642.69140625,
+      "bound": -1e+20,
+      "gap": 1e+20,
+      "nodes": 0,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n16_H5_mixed_dual__s3__pjob\\variables.json",
+      "hashes": {
+        "result.json": "bdda7b148d66b0df46f664d9402e8fcea357ffcaf8a3791658e9e7a100bb42fd",
+        "variables.json": "2d89192fe145df5a55dd8880a40e5c7f136b02d7b5709547347d797b09de1f95",
+        "evidence.json": "df05051be94a94d225e3cdcc7d62e64d5c3c033a7aa7b0d0ee9305b466c638d6",
+        "full_model_audit.json": "dbc9d302015ae8270640af5b7a1b8e34d4102e4c364d2c0813746555116eb23a",
+        "resources.json": "46bc03b2aeece7f1b4c32e87e8beedfea7a79e203ab187671ff0ebe7dfca0f5a",
+        "build.json": "980bb9d93419e66f264d2621435a0a5226e9a9de4a51d9807095f1fedad2635b"
+      }
+    },
+    {
+      "campaign": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "id": "n16_H5_mixed_dual__s3__wafer",
+      "case": "n16_H5_mixed_dual",
+      "seed": 3,
+      "arm": "wafer",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_mixed_dual\\reference.json",
+      "values": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_crossover_all_20261030_190540\\references\\n16_H5_mixed_dual\\common.json",
+      "state": "timelimit",
+      "actual": {
+        "route_wait_sum": 3021.0,
+        "route_wait_max": 237.00000000000023,
+        "rhythm_deviation": 136.00000000000068,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2543.0,
+        "product_cmax": 2525.0
+      },
+      "initial": {
+        "route_wait_sum": 3021.0,
+        "route_wait_max": 237.00000000000023,
+        "rhythm_deviation": 136.00000000000068,
+        "rhythm_centers": 2,
+        "early_cleanings": 0,
+        "legacy_rule_feasible": true,
+        "production_overlap": 0,
+        "cleanings": 0,
+        "modeled_completion": 2543.0,
+        "product_cmax": 2525.0
+      },
+      "dimensions": {
+        "variables": 310908,
+        "constraints": 1109370,
+        "linear_nonzeros": 7191624,
+        "types": {
+          "BINARY": 308476,
+          "INTEGER": 704,
+          "CONTINUOUS": 1728
+        }
+      },
+      "original_dimensions": {
+        "variables": 310636,
+        "constraints": 1108316,
+        "linear_nonzeros": 6796204,
+        "types": {
+          "BINARY": 308220,
+          "INTEGER": 704,
+          "CONTINUOUS": 1712
+        }
+      },
+      "selectors": 512,
+      "N": 16,
+      "G": 8,
+      "candidate_pairs": 88,
+      "candidate_cycles": 48,
+      "source_hash": "23ff821f169bc7959d767189287328d46b17dbabc89ce5be8a2f0cd6fec3e63f",
+      "source_values_hash": "d11e3ac2b7c04f51bf8ccf7b86b44847ed039641c48ab38a2e2e5a93e37134b1",
+      "build_and_start_check_seconds": 19.35899999999674,
+      "solve_seconds": 300.0,
+      "worker_seconds": 338.92199999999866,
+      "full_audit_seconds": 15.172000000005937,
+      "build_solve_rss_mb": 3677.421875,
+      "full_worker_rss_mb": 3677.36328125,
+      "bound": -1e+20,
+      "gap": 1e+20,
+      "nodes": 0,
+      "assignment": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\strengthen_representation_20261101_162725\\runs\\n16_H5_mixed_dual__s3__wafer\\variables.json",
+      "hashes": {
+        "result.json": "c926e1a9e3bb0f8fd01433e529e7ef5c676a8400a6eb5f97e190b5091e286785",
+        "variables.json": "a3c46dcc1ea4e23a4bd266f7dfc2c08e6b4c4101dd3e0dbfe39fb67fee5d936f",
+        "evidence.json": "a294b270134efb6a0347a1662726479f5d281984d7e7252e9b4acd684ad8a825",
+        "full_model_audit.json": "0eea87671cff1d3b0319f6006ab334d675ae24fa9ad1a3c7383673b5f242796a",
+        "resources.json": "9628b23852630454ba2b1036102a0d2122e51fd2acc7cc3f5e3fbabae13cc892",
+        "build.json": "3d8e8e6106c2d4b8ed0a52f8e4c2ab96bfea1188fae82c0fabb5804f72ee12b2"
+      }
+    }
+  ],
+  "campaigns": [
+    {
+      "name": "strengthen_rhythm_memory_20261101_161209",
+      "suite": "rhythm_memory",
+      "settings": {
+        "time_limit": 300.0,
+        "stage2_limit": 60.0,
+        "memory_mb": 10000,
+        "process_memory_mb": 14000,
+        "wall_limit": 3600.0,
+        "seeds": [
+          1,
+          2,
+          3
+        ],
+        "jobs": 1,
+        "threads": 1,
+        "reserve_mb": 2048
+      },
+      "completed": 12,
+      "campaign_sha256": "5bafc858147b03195e680bcbf116c43ee0c1f3f278b1ab1e8ca561482a04b814"
+    },
+    {
+      "name": "strengthen_representation_20261101_162725",
+      "suite": "representation",
+      "settings": {
+        "time_limit": 300.0,
+        "stage2_limit": 60.0,
+        "memory_mb": 10000,
+        "process_memory_mb": 14000,
+        "wall_limit": 3600.0,
+        "seeds": [
+          1,
+          2,
+          3
+        ],
+        "jobs": 1,
+        "threads": 1,
+        "reserve_mb": 2048
+      },
+      "completed": 36,
+      "campaign_sha256": "c744d688307ccad7f9d58efc9df9cf7fd305fc0aacf2127dae248cf0e42a2e4b"
+    }
+  ]
+}

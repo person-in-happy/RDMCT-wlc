@@ -1,0 +1,88 @@
+{
+  "source_sha256": "e8304bd224cece8a225900a3efcf1381a5de52c309f2e1588d3c51353af8f63d",
+  "protected_prefix_including_introduction_tables_1_2_unchanged": true,
+  "experiments_and_following_sections_unchanged": true,
+  "only_external_model_change": "eq:output-completion-cn: substitute eliminated cycle-end alias",
+  "numbered_equation_labels_preserved": 39,
+  "changed_equations": [
+    "eq:pjob-release-boundary-cn",
+    "eq:pjob-nondecreasing-pick-cn",
+    "eq:stage-link-cn",
+    "eq:double-transfer-cn",
+    "eq:single-source-accompany-cn",
+    "eq:cycle-time-cn",
+    "eq:cycle-load-cn",
+    "eq:cycle-unload-cn",
+    "eq:clean-time-cn",
+    "eq:primary-objective-cn",
+    "eq:output-completion-cn"
+  ],
+  "exact_substitution_checks_ignoring_layout": {
+    "eq:pjob-release-boundary-cn": true,
+    "eq:pjob-nondecreasing-pick-cn": true,
+    "eq:stage-link-cn": true,
+    "eq:double-transfer-cn": true,
+    "eq:single-source-accompany-cn": true,
+    "eq:cycle-load-cn": true,
+    "eq:cycle-unload-cn": true,
+    "eq:clean-time-cn": true,
+    "eq:primary-objective-cn": true,
+    "eq:output-completion-cn": true
+  },
+  "cycle_time_equivalence": "For nonnegative selected processing duration D=sum_m d_m K_cqm, S>=0 and S+D<=B U imply 0<=S,E<=B U under E=S+D; predecessor constraint follows by substitution.",
+  "cleaning_timing_constraints_preserved": 6,
+  "formal_experiments_started": false,
+  "solver_code_modified": false,
+  "build": {
+    "pages": 15,
+    "reviewed_page_candidates": [
+      3,
+      4,
+      11,
+      14
+    ],
+    "source_sha256": "e8304bd224cece8a225900a3efcf1381a5de52c309f2e1588d3c51353af8f63d",
+    "pdf_sha256": "f512a951734fcdc3fd478db244b9793a758bfacec391ab5f2428834e14d4c608",
+    "undefined_references": 0,
+    "overfull_boxes": 3,
+    "duplicate_labels": 0,
+    "compilation_passes": 3,
+    "preexisting_protected_table_warnings": [
+      "Overfull \\hbox (3.58151pt too wide) in paragraph at lines 161--161",
+      "Overfull \\hbox (8.0pt too wide) in paragraph at lines 153--178",
+      "Overfull \\hbox (6.04988pt too wide) in paragraph at lines 191--191"
+    ],
+    "new_overfull_boxes": 0,
+    "protected_table_layout_preserved": true
+  },
+  "visual_review": {
+    "contact_sheet_pages": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "enlarged_formula_pages": [
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      11
+    ],
+    "new_body_layout_defects": 0,
+    "protected_tables": "Three baseline width warnings retained under explicit user instruction not to edit Tables 1 and 2."
+  }
+}

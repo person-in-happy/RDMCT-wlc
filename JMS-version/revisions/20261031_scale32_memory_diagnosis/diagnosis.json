@@ -1,0 +1,120 @@
+{
+  "parent": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_scale32_all_20261031_174246",
+  "retry": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\pjob_fifo_scale32_memory_retry_20261031_01",
+  "validated_completed_results": [
+    {
+      "id": "n32_H3_4x1_dual__s1__joint",
+      "status": "timelimit",
+      "upper": 6537.0,
+      "lower": null,
+      "nodes": 0,
+      "lp_iterations": 0,
+      "primary_solve_seconds": 300.0,
+      "initial_cmax": 6537.0
+    },
+    {
+      "id": "n32_H3_mixed_dual__s1__joint",
+      "status": "timelimit",
+      "upper": 8510.0,
+      "lower": null,
+      "nodes": 0,
+      "lp_iterations": 0,
+      "primary_solve_seconds": 300.0,
+      "initial_cmax": 8510.0
+    },
+    {
+      "id": "n32_H3_4x1_dual__s2__joint",
+      "status": "timelimit",
+      "upper": 6537.0,
+      "lower": null,
+      "nodes": 0,
+      "lp_iterations": 0,
+      "primary_solve_seconds": 300.0,
+      "initial_cmax": 6537.0
+    },
+    {
+      "id": "n32_H3_mixed_dual__s2__joint",
+      "status": "timelimit",
+      "upper": 8510.0,
+      "lower": null,
+      "nodes": 0,
+      "lp_iterations": 0,
+      "primary_solve_seconds": 300.0,
+      "initial_cmax": 8510.0
+    },
+    {
+      "id": "n32_H3_4x1_dual__s3__joint",
+      "status": "timelimit",
+      "upper": 6537.0,
+      "lower": null,
+      "nodes": 0,
+      "lp_iterations": 0,
+      "primary_solve_seconds": 300.0,
+      "initial_cmax": 6537.0
+    },
+    {
+      "id": "n32_H3_mixed_dual__s3__joint",
+      "status": "timelimit",
+      "upper": 8510.0,
+      "lower": null,
+      "nodes": 0,
+      "lp_iterations": 0,
+      "primary_solve_seconds": 300.0,
+      "initial_cmax": 8510.0
+    }
+  ],
+  "memory_failures": [
+    {
+      "id": "n32_H3_2x2_dual__s1__joint",
+      "case": "n32_H3_2x2_dual",
+      "seed": 1,
+      "variant": "joint",
+      "failure": {
+        "reason": "process_memory_guard",
+        "ended_utc": "2026-10-31T09:57:31.332057+00:00"
+      }
+    },
+    {
+      "id": "n32_H3_2x2_dual__s2__joint",
+      "case": "n32_H3_2x2_dual",
+      "seed": 2,
+      "variant": "joint",
+      "failure": {
+        "reason": "process_memory_guard",
+        "ended_utc": "2026-10-31T10:13:57.540120+00:00"
+      }
+    },
+    {
+      "id": "n32_H3_2x2_dual__s3__joint",
+      "case": "n32_H3_2x2_dual",
+      "seed": 3,
+      "variant": "joint",
+      "failure": {
+        "reason": "process_memory_guard",
+        "ended_utc": "2026-10-31T10:30:36.916695+00:00"
+      }
+    }
+  ],
+  "retry_checks": {
+    "three_failed_cells_only": true,
+    "reference_hashes_identical": true,
+    "model_asset_hashes_identical": true,
+    "unrelated_failures_rejected": true,
+    "changed_failure_records_rejected": true,
+    "new_experiments_started": 0
+  },
+  "retry_settings": {
+    "memory_mb": 12288,
+    "jobs": 1,
+    "process_memory_mb": 18432,
+    "memory_wait_seconds": 300,
+    "time_limit": 300,
+    "wall_limit": 3600,
+    "spbs_budget": 20,
+    "seeds": [
+      1,
+      2,
+      3
+    ]
+  }
+}

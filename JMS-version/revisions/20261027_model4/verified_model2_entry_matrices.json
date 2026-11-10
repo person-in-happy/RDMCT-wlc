@@ -1,0 +1,207 @@
+{
+  "basic_core": {
+    "configurations": 13,
+    "runs": 126,
+    "seeds": [
+      1,
+      2,
+      3
+    ]
+  },
+  "basic_crossover": {
+    "configurations": 72,
+    "runs": 216,
+    "seeds": [
+      1,
+      2,
+      3
+    ]
+  },
+  "basic_ablation": {
+    "configurations": 8,
+    "runs": 216,
+    "seeds": [
+      1,
+      2,
+      3
+    ]
+  },
+  "basic_sensitivity": {
+    "configurations": 32,
+    "runs": 96,
+    "seeds": [
+      1,
+      2,
+      3
+    ]
+  },
+  "basic_scale": {
+    "configurations": 12,
+    "runs": 36,
+    "seeds": [
+      1,
+      2,
+      3
+    ]
+  },
+  "basic_doe": {
+    "configurations": 60,
+    "runs": 180,
+    "seeds": [
+      1,
+      2,
+      3
+    ]
+  },
+  "basic_ood": {
+    "configurations": 9,
+    "runs": 81,
+    "seeds": [
+      1,
+      2,
+      3
+    ]
+  },
+  "supplement_fixed": {
+    "configurations": 2,
+    "runs": 12,
+    "defaults": {
+      "memory_mb": 18944,
+      "jobs": 1,
+      "process_memory_mb": 14336,
+      "memory_wait_seconds": 300,
+      "time_limit": 300,
+      "wall_limit": 1800,
+      "spbs_budget": 20,
+      "seeds": [
+        1,
+        2,
+        3
+      ]
+    }
+  },
+  "supplement_mode24": {
+    "configurations": 24,
+    "runs": 72,
+    "defaults": {
+      "memory_mb": 18944,
+      "jobs": 1,
+      "process_memory_mb": 14336,
+      "memory_wait_seconds": 300,
+      "time_limit": 300,
+      "wall_limit": 3600,
+      "spbs_budget": 20,
+      "seeds": [
+        1,
+        2,
+        3
+      ]
+    }
+  },
+  "supplement_scale32": {
+    "configurations": 3,
+    "runs": 9,
+    "defaults": {
+      "memory_mb": 18944,
+      "jobs": 1,
+      "process_memory_mb": 14336,
+      "memory_wait_seconds": 300,
+      "time_limit": 300,
+      "wall_limit": 3600,
+      "spbs_budget": 20,
+      "seeds": [
+        1,
+        2,
+        3
+      ]
+    }
+  },
+  "supplement_gantt16": {
+    "configurations": 4,
+    "runs": 4,
+    "defaults": {
+      "memory_mb": 18944,
+      "jobs": 1,
+      "process_memory_mb": 14336,
+      "memory_wait_seconds": 300,
+      "time_limit": 7200,
+      "wall_limit": 14400,
+      "spbs_budget": 300,
+      "seeds": [
+        1
+      ]
+    }
+  },
+  "supplement_rhythm": {
+    "configurations": 4,
+    "runs": 48,
+    "defaults": {
+      "memory_mb": 18944,
+      "jobs": 1,
+      "process_memory_mb": 14336,
+      "memory_wait_seconds": 300,
+      "time_limit": 300,
+      "wall_limit": 1800,
+      "spbs_budget": 20,
+      "seeds": [
+        1,
+        2,
+        3
+      ]
+    }
+  },
+  "supplement_cleaning": {
+    "configurations": 16,
+    "runs": 96,
+    "defaults": {
+      "memory_mb": 18944,
+      "jobs": 1,
+      "process_memory_mb": 14336,
+      "memory_wait_seconds": 300,
+      "time_limit": 300,
+      "wall_limit": 1800,
+      "spbs_budget": 0,
+      "seeds": [
+        1,
+        2,
+        3
+      ]
+    }
+  },
+  "supplement_doe": {
+    "configurations": 60,
+    "runs": 180,
+    "defaults": {
+      "memory_mb": 18944,
+      "jobs": 1,
+      "process_memory_mb": 14336,
+      "memory_wait_seconds": 300,
+      "time_limit": 300,
+      "wall_limit": 3600,
+      "spbs_budget": 20,
+      "seeds": [
+        1,
+        2,
+        3
+      ]
+    }
+  },
+  "supplement_ood": {
+    "configurations": 9,
+    "runs": 81,
+    "defaults": {
+      "memory_mb": 18944,
+      "jobs": 1,
+      "process_memory_mb": 14336,
+      "memory_wait_seconds": 300,
+      "time_limit": 300,
+      "wall_limit": 3600,
+      "spbs_budget": 20,
+      "seeds": [
+        1,
+        2,
+        3
+      ]
+    }
+  }
+}
