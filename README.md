@@ -175,7 +175,7 @@ python -c "import torch; print('torch', torch.__version__); print('cuda', torch.
 
 ## 版本控制与本地证据
 
-源码、测试、当前稿件和必要审查记录纳入版本控制。部分大型实验、冻结 LP、检查点和历史归档仅保存在本地并由 `.gitignore` 排除；GitHub 克隆不是这些原始证据的完整备份。保留原始解、验证记录和模型哈希，活动批次只读检查。`JMS/` 与 `JMS-version/` 是不同稿件，不自动同步。
+源码、测试、当前稿件、实验命令和必要图件纳入版本控制。审查记录（`review/`、`revisions/` 及独立审查报告）仅保留本地，不随 Git 提交；文档中指向这些记录的链接需在保有本地记录的工作区中查看。`AGENTS.md` 与 `REVIEW_WORKFLOW.md` 等工作规则继续跟踪。部分大型实验、冻结 LP、检查点和历史归档仅保存在本地并由 `.gitignore` 排除；GitHub 克隆不是这些原始证据的完整备份。保留原始解、验证记录和模型哈希，活动批次只读检查。`JMS/` 与 `JMS-version/` 是不同稿件，不自动同步。
 
 ## License
 

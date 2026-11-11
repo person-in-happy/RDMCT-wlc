@@ -232,48 +232,14 @@ anaconda_projects/
 /cie/results/current_jms/
 /JMS-version/gif/kexingyu/model4_pjob_20261027/*.txt
 
-# Revision backups and rendering/build workspaces are local artifacts.
-# Keep review notes, audit summaries, patches, and source scripts visible.
-/JMS-version/revisions/*/before*/
-/JMS-version/revisions/*/original/
-/JMS-version/revisions/*/pages/
-/JMS-version/revisions/*/rendered/
-/JMS-version/revisions/*/baseline_build/
-/JMS-version/revisions/*/compiled_snapshot/
-/JMS-version/revisions/*/work/
-/JMS-version/revisions/*/staged/
-/JMS-version/revisions/*/*.before.tex
-/JMS-version/revisions/*/before_*.tex
-/JMS-version/revisions/*/*.pdf
-/JMS-version/revisions/*/*.png
-/JMS-version/revisions/*/*.jpg
-/JMS-version/revisions/*/*.xml
-/JMS-version/revisions/*/*.zip
-/JMS-version/revisions/*/*.partial.json
-/cie/revisions/*/before*/
-/cie/revisions/*/bundle/
-/cie/revisions/*/bundle_verify/
-/cie/revisions/*/official/
-/cie/revisions/*/rendered/
-
-# Detailed validation outputs remain local; do not treat them as disposable.
-/JMS-version/revisions/*/backend_validation_*/
-/JMS-version/revisions/*/final_test_runs/
-/JMS-version/revisions/*/metadata_test_runs/
-/JMS-version/revisions/*/test_runs/
-/JMS-version/revisions/*/entry_checks/
-/JMS-version/revisions/*/incumbent_publication_smoke/
-/JMS-version/revisions/*/renderer_smoke/
-/JMS-version/revisions/20261027_model4/reuse_gantt16_all_eligible*/
-/JMS-version/revisions/20261027_model4_backend/timeout_comparisons/
-/JMS-version/revisions/20261103_results_default_residency/validated/
-/JMS-version/revisions/20261103_symbol_definitions/references/
-/JMS-version/revisions/20261109_coupling_transfer/verification/
-
-# Intermediate historical manuscript fragments; current sources stay visible.
-/JMS-version/revisions/20261029_model4_focus/*_section.tex
-/JMS-version/revisions/20261031_final_manuscript/*_section.tex
-/JMS-version/revisions/20261101_strengthening_update/applied_manuscript.tex
-/JMS-version/revisions/20261101_supplement_update/*_section.tex
-/JMS-version/revisions/20261109_journal_results/new_experiments.tex
-/cie/revisions/20261109_jms_alignment/authoritative_JMS_Review_CN.tex
+# Review records are local-only, including revision notes, audit summaries,
+# snapshots, and review scripts. Existing Git history is retained.
+# Project rules such as AGENTS.md and REVIEW_WORKFLOW.md remain tracked.
+/JMS-version/revisions/
+/cie/revisions/
+/JMS-version/JOURNAL_REVIEW_CN.md
+/JMS-version/THESIS_REVIEW_AND_PLAN_CN.md
+/JMS/REVIEW_EXPERIMENT_AUDIT_20260905.md
+/JMS/REVIEW_SOURCES_20260905.md
+/cie/products/CIE_CURRENT_REVIEW_CN.md
+/cie/products/experiment_audit_zh.md

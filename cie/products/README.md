@@ -27,3 +27,7 @@
 - [旧版本与冻结哈希](manuscript_versions.md)、[源包审计清单](source_bundle_manifest.md)、[历史实验审计](experiment_audit_zh.md)：用于追溯旧稿和冻结证据。
 
 正式提交前须完成英文全文和图内标签同步、作者信息与逐作者贡献确认、数据/代码评审链接、官方作者指南复核及新增实验审查。具体缺口集中维护在 [CIE_CURRENT_REVIEW_CN.md](CIE_CURRENT_REVIEW_CN.md)，不再使用旧双作者元数据页。
+
+## 2026-11-11 学术写作修订
+
+当前中文源稿及PDF已完成学术写作修订（34页），补入三训练种子与清洁/库存配对结果；独立英文摘要和highlights同步更新。旧英文全文仍为历史模型。详见[三稿审查记录](../../JMS-version/revisions/20261111_academic_writing_review/REVIEW_CN.md)。当前英文参考文献需用XeLaTeX+Biber构建。
