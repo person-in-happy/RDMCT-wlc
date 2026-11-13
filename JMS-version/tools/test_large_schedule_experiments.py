@@ -5,6 +5,13 @@ import pytest
 import large_schedule_experiments as exp
 
 
+@pytest.fixture(autouse=True,params=['large_schedule_experiments','large_schedule_experiments_v2'])
+def engine(request,monkeypatch):
+    """Both protocol versions must retain the same scientific acceptance gates."""
+    import importlib,sys
+    monkeypatch.setattr(sys.modules[__name__],'exp',importlib.import_module(request.param))
+
+
 def fixture_result():
     cfg=exp.configuration(SimpleNamespace(size=100,recipe='mixed',cleaning_interval=3,dummy_count=8))
     return dict(config=exp.asdict(cfg),solutions=1,original_model_check=True,validation=dict(valid=True),

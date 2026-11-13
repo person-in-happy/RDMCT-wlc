@@ -1,6 +1,6 @@
 # 学位论文待补实验命令（更新：2026-11-11）
 
-**新增100片入口：** 见[100片持续求解与甘特图自动更新命令](LARGE_SCHEDULE_COMMANDS.md)。支持与当前批次并行、GPU策略推理及动态整机内存余量保护，不设置固定内存配额。--until-optimal不设时间或节点上限，完整主问题已证最优才记为成功；资源不足会提示。未证最优也自动生成已验证可行解的甘特图，后续改善更新同一路径，历史解独立保留。本次只做预检，未启动100片优化；不能保证现有硬件必能完成证明。
+**100片无保护批次已扩容续跑（2026-11-11 13:52）：** large_schedule_experiments_v2.py对应的n100_H3_mixed_dual_no_ram_guard_20261111_r1此前运行315.25 s后，在构建机器人事件排序约束时申请293.69 MiB扩容失败，25%保护确已关闭。现已设置D盘分页文件64/128 GiB，系统提交上限实测98.35 GiB，未重启即生效；已在可见终端resume，核验时仍在构模，暂无可行解或甘特图。旧失败记录保留，详见[命令清单与实际操作记录](LARGE_SCHEDULE_COMMANDS.md)。运行期间不要重复启动。
 
 当前文稿甘特图已换为完整复验通过的16片纯4×1、920 s可行排程，未证全局最优；旧100片图仍不能作为当前D模型结果。
 
@@ -71,13 +71,13 @@ SPBS为4实例×3种子×2臂=24次；无SPBS主问题300秒，有SPBS为60秒�
 & $ThesisPython -X utf8 -u $ThesisDriver start --suite rhythm_search --campaign JMS-version/results/thesis_d_rhythm_search_20261108_unlimited_r1 --time-limit 600 --wall-limit 1800
 ```
 
-只有上一步全部结束且至少有一个合格输入，才执行权重消融。每实例按预定最小成功种子选择输入，三个求解种子、四权重共享赋值，每臂60秒，条件性12—36次：
+只有上一步全部结束且至少有一个通过可行性验证的输入排程，才执行权重消融。每实例按预定最小成功种子选择输入，三个求解种子、四权重共享赋值，每臂60秒，条件性12—36次：
 
 ```powershell
 & $ThesisPython -X utf8 -u $ThesisDriver start --suite rhythm --source-campaign JMS-version/results/thesis_d_rhythm_search_20261108_unlimited_r1 --campaign JMS-version/results/thesis_d_rhythm_20261108_unlimited_r1 --stage2-limit 60 --wall-limit 1800
 ```
 
-见证搜索额外限制了可行域，其最优/不可行不推广到完整原问题；无合格输入时入口拒绝消融。E的既有有效节拍结果仍可使用，不因D搜索失败而丢弃。
+见证搜索额外限制了可行域，其最优/不可行不推广到完整原问题；无通过可行性验证的输入排程时入口拒绝消融。E的既有有效节拍结果仍可使用，不因D搜索失败而丢弃。
 
 ## 5. 状态与恢复
 

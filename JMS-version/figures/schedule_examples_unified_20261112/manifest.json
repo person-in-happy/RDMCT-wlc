@@ -1,0 +1,122 @@
+{
+  "renderer": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\tools\\render_journal_schedule_examples.py",
+  "renderer_sha256": "4637a9654cddb29ea5c21814ebaaeb4cea2fad503fecac97b09c022e461d4f5b",
+  "interval_builder_sha256": "edc52ea8c647e27a679659fd904b3dca35d583e226dd5c82d252b122f662bd3d",
+  "figures": [
+    {
+      "stem": "fig_schedule_n2_cn",
+      "cmax": 324.0,
+      "resource_end": 342.0,
+      "lanes": 11,
+      "intervals": 66,
+      "intervals_unchanged": true,
+      "events_covered": 26,
+      "legend": [
+        "ATR取片",
+        "ATR放片",
+        "带片移动",
+        "承片等待",
+        "AL对准",
+        "LL抽气",
+        "LL真空等待",
+        "LL放气",
+        "大气侧等待",
+        "VTR取放",
+        "腔室加工",
+        "腔内等待",
+        "腔室旋转",
+        "空载移动/复位"
+      ],
+      "figure_size_inches": [
+        3.55,
+        3.81
+      ],
+      "row_height_inches": 0.21,
+      "fonts_points": {
+        "resource": 7.5,
+        "tick": 7.2,
+        "axis": 8,
+        "cycle": 7.1,
+        "legend": 7.2
+      },
+      "plot_titles_and_notes": 0,
+      "single_column": true,
+      "legend_columns": 3,
+      "cycle_labels": [
+        "4×1 | P1[1:2]/D1/D2"
+      ],
+      "result": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\revisions\\20261103_results_default_residency\\validated\\n2_H3_4x1_dual_same_lp__pjob_a87d0cfeda\\result.json",
+      "result_sha256": "ee029a795ca9228f05cfa1c9e1d5389e82ddcbb7a10d54bd53e9b6fdc32b2330",
+      "evidence": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\figures\\current_defaults_20261103\\swimlane_actions.json",
+      "evidence_sha256": "f432754b2515f26a0ffc29894b7a703784f8633e8ebcfbf6c00f89a00aa6a53e"
+    },
+    {
+      "stem": "fig_schedule_n16_cn",
+      "cmax": 920.0,
+      "resource_end": 938.0,
+      "lanes": 13,
+      "intervals": 462,
+      "intervals_unchanged": true,
+      "events_covered": 152,
+      "legend": [
+        "ATR取片",
+        "ATR放片",
+        "带片移动",
+        "承片等待",
+        "AL对准",
+        "LL抽气",
+        "LL真空等待",
+        "LL放气",
+        "大气侧等待",
+        "VTR取放",
+        "腔室加工",
+        "腔内等待",
+        "腔室旋转",
+        "空载移动/复位"
+      ],
+      "figure_size_inches": [
+        3.55,
+        4.2299999999999995
+      ],
+      "row_height_inches": 0.21,
+      "fonts_points": {
+        "resource": 7.5,
+        "tick": 7.2,
+        "axis": 8,
+        "cycle": 7.1,
+        "legend": 7.2
+      },
+      "plot_titles_and_notes": 0,
+      "single_column": true,
+      "legend_columns": 3,
+      "cycle_labels": [
+        "P1[1:4]",
+        "P1[9:12]",
+        "P1[5:8]",
+        "P1[13:16]"
+      ],
+      "cycle_modes": [
+        "4x1",
+        "4x1",
+        "4x1",
+        "4x1"
+      ],
+      "result": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\review\\gantt_current_model_20261111\\n16_current_D_920\\result.json",
+      "result_sha256": "f15b7747f61eab5c02adc44d9066b93e11550660a4d74a20f62771513029da30",
+      "evidence": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\review\\gantt_current_model_20261111\\n16_current_D_920\\figure_evidence.json",
+      "evidence_sha256": "53c520b337a99f07f012a4f1f59192345f40dc44ba63e2dcf6cded0d21d56e03"
+    }
+  ],
+  "regenerated_figures": [
+    "fig_schedule_n16_cn"
+  ],
+  "optimization_calls": 0,
+  "artifacts": {
+    "fig_schedule_n16_cn.pdf": "c0e333046297d9ec6ea78ed117755a51090d983684bb16a7368a6c36a2ca49da",
+    "fig_schedule_n16_cn.png": "3aa0444e8842746939463b5bcbd6420fa2cf0e2409935df0ed5f290f99eae783",
+    "fig_schedule_n16_cn.svg": "9fd6abe8cdf0bbfd2ca2ec6a4dc92f51ccdb1685d62c0c3216089c6b65efd505",
+    "fig_schedule_n2_cn.pdf": "e92ebd0a24717f4fd33a604407fb2c783ba0aff267d782bc659ca408415dd847",
+    "fig_schedule_n2_cn.png": "bd48fb6ae89d3fdf8604eafcd021361191a24cf3be6b24bd8629ae0294638b8a",
+    "fig_schedule_n2_cn.svg": "7b1561ef0ac8c99cf42a548b4c91bbabe8352a62661a734871709ced87b86b7f"
+  }
+}
