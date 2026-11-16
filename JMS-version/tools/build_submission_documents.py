@@ -1,0 +1,83 @@
+"""Create editable submission documents as standard OOXML; render with native Word."""
+from pathlib import Path
+from xml.sax.saxutils import escape
+from zipfile import ZipFile, ZIP_DEFLATED
+import json
+import re
+
+PAPER=Path(__file__).resolve().parents[1]
+OUT=PAPER/'output/submission'
+TITLE='Two-stage scheduling and structured solution methods for dual-source mixed-flow rotating-chamber cluster tools under full-occupancy processing'
+AFFILIATION='Department of Control Science and Engineering, University of Science and Technology Beijing, No. 30 Xueyuan Road, Haidian District, Beijing 100083, China'
+HIGHLIGHTS=[
+ 'Wafer-pair modeling links full occupancy, cleaning, and finite auxiliary reuse.',
+ 'Structured initialization improves mixed-recipe schedules within limited time.',
+ 'Variable-role features guide learned cut selection and structural reranking.',
+ 'Timing refinement reduces waiting while preserving product completion time.',
+ 'Validated schedules complete two and sixteen products in 324 and 920 seconds.'
+]
+COI='The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.'
+FUNDING='This research did not receive any specific grant from funding agencies in the public, commercial, or not-for-profit sectors.'
+CREDIT=[
+ ('Lincong Wei','Conceptualization, Methodology, Software, Validation, Formal analysis, Investigation, Data curation, Visualization, Writing - original draft, Writing - review & editing.'),
+ ('Lizhen Shao','Conceptualization, Methodology, Formal analysis, Writing - review & editing, Project administration.'),
+ ('Wei Wang','Formal analysis, Investigation, Writing - review & editing, Supervision.')
+]
+COVER=[
+ ('Normal','The Editors'),
+ ('Normal','Journal of Manufacturing Systems'),
+ ('Normal','Dear Editors,'),
+ ('Normal',f'Please consider our research article, "{TITLE}," for publication in the Journal of Manufacturing Systems.'),
+ ('Normal','The study addresses coordination within a semiconductor manufacturing system comprising rotating process chambers, atmospheric and vacuum wafer sources, shared robots, load locks, and a finite reusable auxiliary inventory. Full occupancy during production and cleaning couples wafer supply, consecutive exposures, and resource release. These dependencies require a common scheduling representation rather than separate decisions for product processing and chamber cleaning.'),
+ ('Normal','Our first contribution is a two-stage mixed-integer linear programming model that links wafer transport and chamber cycles through two-wafer pairs and represents homogeneous products by job and source inventories. It minimizes product return completion and then refines waiting and production rhythm. Our second contribution is a solution method combining structured initialization with variable-role features and structure-aware reranking in hierarchical learned cut selection.'),
+ ('Normal','The experiments distinguish initialization gains from cut-selection effects using shared starting schedules and component ablations. Thirty paired stage comparisons reduce waiting while preserving product completion. Inventory and processing-mode comparisons explain the dependence of consecutive processing on auxiliary availability. Full-model checks and independent event replay validate an optimal two-product schedule completing at 324 s and a feasible 16-product schedule completing at 920 s.'),
+ ('Normal','We believe the work will interest readers studying the integrated operation and control of semiconductor manufacturing equipment, particularly the interaction of reusable material resources, processing cycles, and shared handling systems.'),
+ ('Normal','Thank you for considering our manuscript.'),
+ ('Normal','Sincerely,'),
+ ('Normal','Lizhen Shao\nCorresponding author\nUniversity of Science and Technology Beijing\nlshao@ustb.edu.cn'),
+]
+
+def paragraph(style,text):
+    props=f'<w:pStyle w:val="{style}"/>'
+    if style=='ListBullet':props+='<w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>'
+    runs='<w:br/>'.join('<w:t xml:space="preserve">'+escape(line)+'</w:t>' for line in text.split('\n'))
+    return '<w:p><w:pPr>'+props+'</w:pPr><w:r>'+runs+'</w:r></w:p>'
+
+def document(filename,paragraphs):
+    ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main'
+    body=''.join(paragraph(*p) for p in paragraphs)
+    sect='<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1080" w:right="1260" w:bottom="1080" w:left="1260" w:header="360" w:footer="360"/></w:sectPr>'
+    styles=f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="{ns}">
+<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="22"/><w:color w:val="000000"/><w:lang w:val="en-US"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="100" w:line="264" w:lineRule="auto"/><w:widowControl/></w:pPr></w:pPrDefault></w:docDefaults>
+<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>
+<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:after="200"/><w:keepNext/></w:pPr><w:rPr><w:b/><w:sz w:val="30"/><w:color w:val="000000"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:before="160" w:after="100"/><w:keepNext/></w:pPr><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="000000"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="ListBullet"><w:name w:val="List Bullet"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:after="160"/></w:pPr></w:style></w:styles>'''
+    numbering=f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:numbering xmlns:w="{ns}"><w:abstractNum w:abstractNumId="0"><w:multiLevelType w:val="singleLevel"/><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="•"/><w:lvlJc w:val="left"/><w:pPr><w:tabs><w:tab w:val="num" w:pos="300"/></w:tabs><w:ind w:left="300" w:hanging="300"/></w:pPr></w:lvl></w:abstractNum><w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num></w:numbering>'''
+    content_types='''<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>'''
+    rels='''<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>'''
+    docrels='''<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/></Relationships>'''
+    core=f'''<?xml version="1.0" encoding="UTF-8"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>{escape(filename.replace('_',' '))}</dc:title><dc:creator>Lizhen Shao; Lincong Wei; Wei Wang</dc:creator></cp:coreProperties>'''
+    files={'[Content_Types].xml':content_types,'_rels/.rels':rels,'word/_rels/document.xml.rels':docrels,
+           'word/document.xml':f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="{ns}"><w:body>{body}{sect}</w:body></w:document>',
+           'word/styles.xml':styles,'word/numbering.xml':numbering,'docProps/core.xml':core}
+    with ZipFile(OUT/(filename+'.docx'),'w',ZIP_DEFLATED) as z:
+        for name,text in files.items():z.writestr(name,text.encode('utf-8'))
+
+def main():
+    OUT.mkdir(parents=True,exist_ok=True)
+    assert 3<=len(HIGHLIGHTS)<=5 and all(len(x)<=85 for x in HIGHLIGHTS)
+    document('Highlights',[('Title','Highlights')]+[('ListBullet',x) for x in HIGHLIGHTS])
+    document('Cover_Letter',COVER)
+    document('Declaration_of_Interest',[('Title','Declaration of competing interest'),('Normal',TITLE),('Normal','Lizhen Shao, Lincong Wei, Wei Wang'),('Normal',COI)])
+    document('Title_Page',[('Title',TITLE),('Normal','Lizhen Shao, Lincong Wei, Wei Wang'),('Normal',AFFILIATION),('Heading1','Corresponding author'),('Normal','Lizhen Shao\nEmail: lshao@ustb.edu.cn\n'+AFFILIATION),('Heading1','Article type'),('Normal','Research article'),('Heading1','Keywords'),('Normal','Semiconductor manufacturing systems; cluster tools; dual-source material flow; mixed-integer linear programming; learning cut selection'),('Heading1','Funding'),('Normal',FUNDING)])
+    document('CRediT_Statement',[('Title','CRediT authorship contribution statement'),('Normal',TITLE)]+[('Normal',name+': '+roles) for name,roles in CREDIT]+[('Normal','All authors reviewed and approved the final manuscript.')])
+    s=(PAPER/'JMS_Submission_EN.tex').read_text('utf-8')
+    abstract=re.search(r'\\begin\{abstract\}([\s\S]*?)\\end\{abstract\}',s)[1].strip()
+    abstract=abstract.replace('$4\\times1$','4 × 1').replace('$2\\times2$','2 × 2').replace('~',' ')
+    metadata={'title':TITLE,'article_type':'Research article','authors':[{'given_name':'Lizhen','family_name':'Shao','corresponding':True,'email':'lshao@ustb.edu.cn'},{'given_name':'Lincong','family_name':'Wei','corresponding':False},{'given_name':'Wei','family_name':'Wang','corresponding':False}],'affiliation':AFFILIATION,'abstract':abstract,'keywords':['semiconductor manufacturing systems','cluster tools','dual-source material flow','mixed-integer linear programming','learning cut selection'],'funding':FUNDING,'competing_interests':COI,'highlights':HIGHLIGHTS,'highlight_character_counts':[len(x) for x in HIGHLIGHTS]}
+    (PAPER/'submission/submission_metadata.json').write_text(json.dumps(metadata,ensure_ascii=False,indent=2)+'\n','utf-8')
+    (OUT/'Submission_Metadata.txt').write_text('TITLE\n'+TITLE+'\n\nAUTHORS\nLizhen Shao; Lincong Wei; Wei Wang\n\nAFFILIATION\n'+AFFILIATION+'\n\nCORRESPONDING AUTHOR\nLizhen Shao; lshao@ustb.edu.cn\n\nABSTRACT\n'+abstract+'\n\nKEYWORDS\n'+'; '.join(metadata['keywords'])+'\n\nFUNDING\n'+FUNDING+'\n','utf-8')
+    print('Created five editable Word documents. Highlight lengths:',metadata['highlight_character_counts'])
+
+if __name__=='__main__':main()

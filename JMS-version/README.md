@@ -1,6 +1,6 @@
 # JMS 当前中文稿与实验入口
 
-当前中文主稿是 [JMS_Review_CN.tex](JMS_Review_CN.tex)（[PDF](JMS_Review_CN.pdf)）。当前配置 D 使用 Pjob 库存与 PW 对联合模型、非递减取片规则、100 s 非加工驻留/承片上限，以及包含装载锁复位的 10000 s 时域。英文稿与 `../JMS/` 中的另一份稿件不自动同步。
+当前中文主稿是 [JMS_Review_CN.tex](JMS_Review_CN.tex)（[PDF](JMS_Review_CN.pdf)）。当前配置 D 使用 Pjob 库存与 PW 对联合模型、非递减取片规则、100 s 非加工驻留/承片上限，以及包含装载锁复位的 10000 s 时域。英文投稿稿件已依据当前中文稿更新；`../JMS/` 中的另一份稿件不自动同步。
 
 ## 当前文档
 
@@ -30,4 +30,4 @@
 G:\conda\python.exe -X utf8 JMS-version/tools/build_model4_cn.py
 ```
 
-英文稿未同步期间，不使用旧双语打包流程生成当前中文稿的双语投稿包。大型原始实验和冻结资产按原策略保留本地，不得为整理目录删除原始证据或改写活动批次。
+当前英文稿：[JMS_Submission_EN.tex](JMS_Submission_EN.tex)（[PDF](JMS_Submission_EN.pdf)）。[英文投稿包](output/submission/JMS_Submission_EN.zip)包含正文、扁平 LaTeX 源文件包、七张矢量图和五份可编辑 Word 材料；[上传说明](output/submission/UPLOAD_README.txt)列出已核对的官方规范和投稿前仍需确认的事项。构建入口为 `tools/build_submission_en.py --render-docx`，翻译及核对记录见 [submission/README.md](submission/README.md)。旧版双语投稿包不再保留。大型原始实验和冻结资产按原策略保留本地，不得为整理目录删除原始证据或改写活动批次。

@@ -1,0 +1,47 @@
+{
+  "title": "Two-stage scheduling and structured solution methods for dual-source mixed-flow rotating-chamber cluster tools under full-occupancy processing",
+  "article_type": "Research article",
+  "authors": [
+    {
+      "given_name": "Lizhen",
+      "family_name": "Shao",
+      "corresponding": true,
+      "email": "lshao@ustb.edu.cn"
+    },
+    {
+      "given_name": "Lincong",
+      "family_name": "Wei",
+      "corresponding": false
+    },
+    {
+      "given_name": "Wei",
+      "family_name": "Wang",
+      "corresponding": false
+    }
+  ],
+  "affiliation": "Department of Control Science and Engineering, University of Science and Technology Beijing, No. 30 Xueyuan Road, Haidian District, Beijing 100083, China",
+  "abstract": "Full-occupancy processing in rotating chambers requires every position to be occupied during production and cleaning. Reusable auxiliary wafers fill vacant positions, coupling processing and cleaning with a finite auxiliary inventory. For dual-source mixed-flow rotating-chamber cluster tools, this study develops a two-stage mixed-integer linear programming model using two-wafer pairs, termed PW pairs, to link transport and processing cycles and homogeneous product inventories to represent wafer sources. The model jointly determines pairing, chamber assignment, cleaning, and auxiliary-wafer reuse. It first minimizes product completion time and then refines waiting and production rhythm. A scheduling algorithm combines structured initialization with reinforcement-learning-based cut selection, using variable-role features and structure-aware reranking to improve time-limited search. Experiments show that structured initialization improves mixed-recipe schedules, while the complete cut-selection combination further reduces product completion time for continuous-processing and mixed-recipe instances in component comparisons with shared initial solutions. All 30 paired stage comparisons reduce total route waiting while preserving product completion time. In a single-product instance combining continuous processing and cleaning, total waiting decreases from 642 to 54 s. Paired comparisons of processing modes and auxiliary inventories reveal the dependence of continuous processing on auxiliary-wafer availability. An optimal two-product schedule with a completion time of 324 s and a feasible 16-product schedule with a completion time of 920 s demonstrate joint coordination of wafer processing and equipment timing.",
+  "keywords": [
+    "semiconductor manufacturing systems",
+    "cluster tools",
+    "dual-source material flow",
+    "mixed-integer linear programming",
+    "learning cut selection"
+  ],
+  "funding": "This research did not receive any specific grant from funding agencies in the public, commercial, or not-for-profit sectors.",
+  "competing_interests": "The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.",
+  "highlights": [
+    "Wafer-pair modeling links full occupancy, cleaning, and finite auxiliary reuse.",
+    "Structured initialization improves mixed-recipe schedules within limited time.",
+    "Variable-role features guide learned cut selection and structural reranking.",
+    "Timing refinement reduces waiting while preserving product completion time.",
+    "Validated schedules complete two and sixteen products in 324 and 920 seconds."
+  ],
+  "highlight_character_counts": [
+    79,
+    78,
+    76,
+    75,
+    77
+  ]
+}

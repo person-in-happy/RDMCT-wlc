@@ -49,11 +49,11 @@ def cycle_label(cycle, data, include_mode=True):
 def draw(data, evidence, stem, single_column=False):
     width, row_height, bottom, top = WIDTH, ROW_HEIGHT, BOTTOM, TOP
     font = dict(FONT)
-    left, right, legend_columns = .165, .985, 5
+    left, right, legend_columns = .165, .985, 4
     if single_column:
-        width, row_height, bottom, top = 3.55, .21, 1.4, .10
+        width, row_height, bottom, top = 3.55, .21, 1.10, .10
         font = {"resource": 7.5, "tick": 7.2, "axis": 8, "cycle": 7.1, "legend": 7.2}
-        left, right, legend_columns = .23, .985, 3
+        left, right, legend_columns = .23, .985, 4
     lanes, bars, _, _ = build(data)
     assert lanes == evidence["lanes"] and bars == evidence["bars"]
     assert evidence["explicit_events_covered"] == len(data["events"])

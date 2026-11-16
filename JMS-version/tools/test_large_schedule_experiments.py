@@ -5,9 +5,9 @@ import pytest
 import large_schedule_experiments as exp
 
 
-@pytest.fixture(autouse=True,params=['large_schedule_experiments','large_schedule_experiments_v2'])
+@pytest.fixture(autouse=True,params=['large_schedule_experiments','large_schedule_experiments_v2','large_schedule_experiments_v3'])
 def engine(request,monkeypatch):
-    """Both protocol versions must retain the same scientific acceptance gates."""
+    """All protocol versions must retain the same scientific acceptance gates."""
     import importlib,sys
     monkeypatch.setattr(sys.modules[__name__],'exp',importlib.import_module(request.param))
 

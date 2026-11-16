@@ -1,8 +1,6 @@
-﻿param([string]$Python = 'python')
+param([string]$Python = 'G:\conda\python.exe', [switch]$RenderDocx)
 $ErrorActionPreference = 'Stop'
-$paperRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$buildRoot = [IO.Path]::GetFullPath((Join-Path $paperRoot 'output/.build'))
-if (-not $buildRoot.StartsWith($paperRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Invalid build directory.' }
-& $Python (Join-Path $PSScriptRoot 'build_submission.py')
-if ($LASTEXITCODE -ne 0) { throw 'Submission build failed; diagnostic files retained in output/.build.' }
-if (Test-Path -LiteralPath $buildRoot) { Remove-Item -LiteralPath $buildRoot -Recurse -Force }
+$buildArguments = @('-X', 'utf8', (Join-Path $PSScriptRoot 'build_submission_en.py'))
+if ($RenderDocx) { $buildArguments += '--render-docx' }
+& $Python @buildArguments
+if ($LASTEXITCODE -ne 0) { throw 'Submission build failed; diagnostics retained in output/.build_en.' }
