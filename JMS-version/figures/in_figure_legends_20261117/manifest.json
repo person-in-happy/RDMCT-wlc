@@ -1,0 +1,239 @@
+{
+  "renderer": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\tools\\render_in_figure_legends_cn.py",
+  "renderer_sha256": "c2f73890aa1d037311a84e48a19620f23820e104cac785ed9c3077e435d2db6a",
+  "interval_builder_sha256": "edc52ea8c647e27a679659fd904b3dca35d583e226dd5c82d252b122f662bd3d",
+  "optimization_calls": 0,
+  "figures": [
+    {
+      "stem": "fig_coupled_schedule_merged_cn",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\results\\current_defaults_small_prepared_20261103\\runs\\n1_H2_2x2_dual__s1__scip\\result.json",
+      "source_sha256": "7a497c812c30f52cb3b8ec6b1a2e7706c84b4d8ea055db72d0af9f35175acfc0",
+      "previous_manifest": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\figures\\coupled_schedule_merged_20261112\\manifest.json",
+      "previous_manifest_sha256": "3ed69bf3313e1cfd6f461a09348921461b4bf73d95d740babfce743de1b33153",
+      "product_processing_cycles": [
+        {
+          "chamber": 2,
+          "index": 0,
+          "mode": "2x2",
+          "start": 76.0,
+          "end": 166.0,
+          "counter": 1.0,
+          "pairs": [
+            0,
+            4
+          ],
+          "front": 0
+        },
+        {
+          "chamber": 2,
+          "index": 1,
+          "mode": "2x2",
+          "start": 170.0,
+          "end": 260.0,
+          "counter": 2.0,
+          "pairs": [
+            0,
+            2
+          ],
+          "front": 2
+        }
+      ],
+      "auxiliary_loans": [
+        {
+          "identity": "D1",
+          "pair": 0,
+          "loan_start": 69.0,
+          "loan_end": 270.0
+        },
+        {
+          "identity": "D2",
+          "pair": 1,
+          "loan_start": 270.0,
+          "loan_end": 794.0
+        },
+        {
+          "identity": "D3",
+          "pair": 1,
+          "loan_start": 273.0,
+          "loan_end": 796.0
+        },
+        {
+          "identity": "D4",
+          "pair": 2,
+          "loan_start": 165.0,
+          "loan_end": 280.0
+        },
+        {
+          "identity": "D5",
+          "pair": 2,
+          "loan_start": 165.0,
+          "loan_end": 272.0
+        },
+        {
+          "identity": "D6",
+          "pair": 3,
+          "loan_start": 280.0,
+          "loan_end": 788.0
+        },
+        {
+          "identity": "D7",
+          "pair": 3,
+          "loan_start": 272.0,
+          "loan_end": 795.0
+        },
+        {
+          "identity": "D3",
+          "pair": 4,
+          "loan_start": 63.0,
+          "loan_end": 173.0
+        },
+        {
+          "identity": "D2",
+          "pair": 4,
+          "loan_start": 63.0,
+          "loan_end": 173.0
+        }
+      ],
+      "product_cmax": 303.0,
+      "occupied_end": 796.0,
+      "intervals_unchanged": true,
+      "legend_labels": [
+        "生产加工及补位借用",
+        "清洁借用",
+        "产品完工：303 s",
+        "全部占用结束：796 s"
+      ],
+      "symbol_keys": [
+        "D1–D7：辅助晶圆"
+      ],
+      "figure_size_inches": [
+        3.55,
+        3.25
+      ],
+      "legend_count": 2,
+      "symbol_key_lines": 1,
+      "legend_clipping": false,
+      "legend_overlap": false
+    },
+    {
+      "stem": "fig_schedule_n2_cn",
+      "result": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\revisions\\20261103_results_default_residency\\validated\\n2_H3_4x1_dual_same_lp__pjob_a87d0cfeda\\result.json",
+      "result_sha256": "ee029a795ca9228f05cfa1c9e1d5389e82ddcbb7a10d54bd53e9b6fdc32b2330",
+      "evidence": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\figures\\current_defaults_20261103\\swimlane_actions.json",
+      "evidence_sha256": "f432754b2515f26a0ffc29894b7a703784f8633e8ebcfbf6c00f89a00aa6a53e",
+      "lanes": 11,
+      "intervals": 66,
+      "events_covered": 26,
+      "cmax": 324.0,
+      "resource_end": 342.0,
+      "intervals_unchanged": true,
+      "action_legend": [
+        "ATR取片",
+        "ATR放片",
+        "带片移动",
+        "承片等待",
+        "AL对准",
+        "LL抽气",
+        "LL真空等待",
+        "LL放气",
+        "大气侧等待",
+        "VTR取放",
+        "腔室加工",
+        "腔内等待",
+        "腔室旋转",
+        "空载移动/复位"
+      ],
+      "end_marker_legend": [
+        "产品回片：324 s",
+        "全部占用结束：342 s"
+      ],
+      "symbol_keys": [
+        "P1[1:2]：Pjob1的两片产品    D1、D2：辅助片"
+      ],
+      "figure_size_inches": [
+        3.55,
+        4.01
+      ],
+      "row_height_inches": 0.21,
+      "legend_count": 2,
+      "symbol_key_lines": 1,
+      "legend_clipping": false,
+      "legend_overlap": false
+    },
+    {
+      "stem": "fig_schedule_n16_cn",
+      "result": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\review\\gantt_current_model_20261111\\n16_current_D_920\\result.json",
+      "result_sha256": "f15b7747f61eab5c02adc44d9066b93e11550660a4d74a20f62771513029da30",
+      "evidence": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\review\\gantt_current_model_20261111\\n16_current_D_920\\figure_evidence.json",
+      "evidence_sha256": "53c520b337a99f07f012a4f1f59192345f40dc44ba63e2dcf6cded0d21d56e03",
+      "lanes": 13,
+      "intervals": 462,
+      "events_covered": 152,
+      "cmax": 920.0,
+      "resource_end": 938.0,
+      "intervals_unchanged": true,
+      "action_legend": [
+        "ATR取片",
+        "ATR放片",
+        "带片移动",
+        "承片等待",
+        "AL对准",
+        "LL抽气",
+        "LL真空等待",
+        "LL放气",
+        "大气侧等待",
+        "VTR取放",
+        "腔室加工",
+        "腔内等待",
+        "腔室旋转",
+        "空载移动/复位"
+      ],
+      "end_marker_legend": [
+        "产品回片：920 s",
+        "全部占用结束：938 s"
+      ],
+      "symbol_keys": [
+        "P1[i:j]：Pjob1中第i至j片产品"
+      ],
+      "figure_size_inches": [
+        3.55,
+        4.43
+      ],
+      "row_height_inches": 0.21,
+      "legend_count": 2,
+      "symbol_key_lines": 1,
+      "legend_clipping": false,
+      "legend_overlap": false
+    },
+    {
+      "stem": "fig_chain_cn_nature",
+      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\figures\\terminology_cn\\fig_chain_cn_nature.pdf",
+      "source_sha256": "8ae2c0ad3e6dffd68d08c766310e8f0887c1d86911a936b68fa6d1c0ba5dffc2",
+      "page_size_points": [
+        198.89999389648438,
+        235.9396514892578
+      ],
+      "original_drawing_unchanged": true,
+      "legend": {
+        "symbol": "two yellow dashed D circles",
+        "label": "辅助PW对",
+        "center_y_points": 220.0,
+        "fontsize_points": 6.8
+      }
+    }
+  ],
+  "artifacts": {
+    "fig_chain_cn_nature.pdf": "db3be721db52be030ce4ad462d22cb548b219fefaed7735b7c15e10167e2674c",
+    "fig_chain_cn_nature.png": "7eb1c7992c329f2c7cc0252a89011eb0b714fe991d52fb06bf32d51416e543d5",
+    "fig_chain_cn_nature.svg": "a2d8f4f17442013bce22013c213c733f6fe5d3a109295a11df7dc11df3c99c95",
+    "fig_coupled_schedule_merged_cn.pdf": "055cdab64690ce781a409d67f1d7a0fd86077bf53c904474259707a403bdf4ac",
+    "fig_coupled_schedule_merged_cn.png": "53a27e72eacd008ab7e6431a0d7cf506f13b16156e2aab64061df96d306903cb",
+    "fig_coupled_schedule_merged_cn.svg": "b20feb5a524b3ff0d26a3982a8f59b22cd2339124c72a76cbd85f54ea0c63e51",
+    "fig_schedule_n16_cn.pdf": "b382cd6aeb48cef6684c713828e3c9b7d4e88a8f83ff8303fa00f298ff40ecf0",
+    "fig_schedule_n16_cn.png": "94745431d11143ef82dd791c00590f4317fa8358262c2978c93e922c4d24b8a1",
+    "fig_schedule_n16_cn.svg": "e77943788920c25ddbb275530e3cfc498f74994cb33c2e029b5f7bfedbc31d4e",
+    "fig_schedule_n2_cn.pdf": "2ca1da9b51e6d23c5db88399cdcf455ad2a4287d5eebd2bee05ab630db83eecf",
+    "fig_schedule_n2_cn.png": "c716eb46804a7356baf8856b2cdc4bdc511523b6d29d33aaf5cb00a68b22ca18",
+    "fig_schedule_n2_cn.svg": "bd499aaf03d3b574bd5065686c37a47379fe952cd2cdd5289c80a2c0651527b9"
+  }
+}

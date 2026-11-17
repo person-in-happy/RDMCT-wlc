@@ -1,29 +1,73 @@
 {
-  "date": "2026-11-14",
-  "english_pdf_sha256": "ba2d34e9079f13772ad1cb54ad1b1a2c88e1a3449782523d14151ba7b7414114",
-  "pages": 18,
-  "visual_review": "Final 18-page overview inspected; detailed table, figure, legend, and end-page inspections completed during layout iterations.",
-  "word_review": "All five documents rendered with Microsoft Word, checked as page images, one page each.",
-  "layout_changes": [
-    "Paragraph breaks around floats",
-    "Centered table cells and wrapped headings",
-    "Single-column Figures 5-7",
-    "Four-column Gantt legends",
-    "Compact float and figure spacing",
-    "Widow, orphan, and page-break hyphenation control",
-    "Balanced final columns",
-    "Nonbreaking spaces before numerical citations"
-  ],
-  "final_page_text_extent_points": [
-    83.52713012695312,
-    697.4156494140625
-  ],
-  "final_page_text_characters": 7691,
+  "date": "2026-11-17",
+  "chinese_source_sha256": "7078c4ce14e5c33f6848686c962aebbffc6d81070f62704763a119e25574927b",
+  "chinese_pdf_sha256": "1a31f1c0e86b4c2e609af5a1bffecc5edf8a1329f495ea5489ea546af80b1c31",
+  "english_source_sha256": "c5b94e9ff674425f730d9e335067077d05c30979b365e424ee18b73627ea4ecf",
+  "english_pdf_sha256": "c81491fa282f580b33dde0a96b00a7d43eb83e284972d02858385b226fe9ceb7",
+  "chinese_pages": 15,
+  "pages": 17,
+  "previous_chinese_pages": 15,
+  "previous_english_pages": 17,
+  "visual_review": "Inspected all changed-page overviews (CN 9-15, EN 11-17) and detailed Table 8/Table 9 pages. CN pages 1-8 and EN pages 1-10 are pixel-identical to the prior reviewed version. No table clipping or overlap observed.",
+  "word_review": "Five Word documents and submission metadata are byte-identical to the pre-revision snapshot; their previously completed native Microsoft Word rendering review remains applicable.",
   "cross_language_checks_pass": true,
+  "numbered_equations": 34,
+  "unnumbered_objective_expressions": 1,
+  "tables": 11,
+  "figures": 6,
+  "references": 32,
+  "abstract_word_count": 199,
+  "author_order": [
+    "Lincong Wei",
+    "Lizhen Shao",
+    "Wei Wang"
+  ],
+  "corresponding_author": "Lizhen Shao",
+  "editorial_changes": [
+    "Removed four root-separation rows and the separation-setting column from Table 8",
+    "Retained 24 default-setting values unchanged; corrected run count to 72",
+    "Removed dependent comparisons, ablations and interpretations in both languages"
+  ],
+  "joint_objective_table": "Single column; three instance groups; no pair-count column; horizontal and vertical centering retained.",
+  "in_figure_legends": [
+    3,
+    5,
+    6
+  ],
+  "schedule_intervals_unchanged": true,
+  "figure_crop_checks": {
+    "EN": {
+      "figures": 6,
+      "schedules_unchanged": true,
+      "time_label_inline": true,
+      "vertical_margins_trimmed": true,
+      "visible_crop_pixels_unchanged": true
+    },
+    "CN": {
+      "figures": 6,
+      "schedules_unchanged": true,
+      "time_label_inline": true,
+      "vertical_margins_trimmed": true,
+      "visible_crop_pixels_unchanged": true
+    }
+  },
   "independent_flat_source_rebuild_pass": true,
+  "independent_rebuild_all_pages_pixel_identical": true,
   "delivery_archive_bytes_verified": true,
-  "chinese_source_unchanged": true,
-  "journal_specific_guide": "HTTP 403; full current journal-specific requirements unverified",
-  "additional_ai_figure_disclosure": "Author confirmed on 2026-11-15: retain only the existing AI declaration. Historical tool versions and figure-specific policy compliance remain unverified.",
-  "submitted_externally": false
+  "submission_archive_sha256": "a22cbae20d9e807d7127d08bbee26f84d533649259a5fd651b40fd0811da4cf5",
+  "latex_warnings": [],
+  "chinese_latex_warnings": [
+    "Package fixltx2e Warning: fixltx2e is not required with releases after 2015",
+    "Package hyperref Warning: Token not allowed in a PDF string (Unicode):",
+    "Package hyperref Warning: Token not allowed in a PDF string (Unicode):",
+    "Package hyperref Warning: Token not allowed in a PDF string (Unicode):",
+    "Package hyperref Warning: Token not allowed in a PDF string (Unicode):",
+    "Package caption Warning: Unused \\captionsetup[subfigure] on input line 19."
+  ],
+  "revision_audit": "revisions/20261117_remove_root_separation/audit.json",
+  "optimization_calls": 0,
+  "submitted_externally": false,
+  "journal_specific_guide": "No new journal-policy review in this editorial revision; previous review status is recorded in UPLOAD_README.txt.",
+  "additional_ai_figure_disclosure": "Preserved the author-confirmed choice from 2026-11-15.",
+  "table8": "Four default-separation instance rows and six method columns. No separation-setting column; 24 retained result values unchanged; 72 runs."
 }

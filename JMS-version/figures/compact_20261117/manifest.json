@@ -1,0 +1,239 @@
+{
+  "renderer": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\tools\\render_compact_figures_cn.py",
+  "renderer_sha256": "d496b142f2f17e492798a882c647a8afd6c8933b7f1a210922034ae91b943555",
+  "optimization_calls": 0,
+  "copied_sources": [
+    {
+      "source": "figures\\pjob_sequence_cn\\fig_system_pjob_cn.pdf",
+      "source_sha256": "d5abcd20648e325ddbea8e3d8949f92272de248aecd3c1164b7ed15c6c13c4eb"
+    },
+    {
+      "source": "figures\\pjob_sequence_cn\\fig_single_source_pjob_cn.pdf",
+      "source_sha256": "0ec6f3ef5d94405977b4f04603d839b185b87f445dfe37e2b3f0bfeed61f5573"
+    },
+    {
+      "source": "figures\\terminology_cn\\fig_parallel_cn_nature.pdf",
+      "source_sha256": "54cf04043099e4a5ec655260749625fb87fc2a11c1dc45f5e83c5794e74670c4"
+    }
+  ],
+  "chain": {
+    "stem": "fig_chain_cn_nature",
+    "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\figures\\terminology_cn\\fig_chain_cn_nature.pdf",
+    "source_sha256": "8ae2c0ad3e6dffd68d08c766310e8f0887c1d86911a936b68fa6d1c0ba5dffc2",
+    "page_size_points": [
+      198.89999389648438,
+      235.9396514892578
+    ],
+    "original_drawing_unchanged": true,
+    "legend": {
+      "symbol": "two yellow dashed D circles",
+      "label": "辅助PW对",
+      "center_y_points": 214.0,
+      "fontsize_points": 6.8
+    }
+  },
+  "schedules": [
+    {
+      "stem": "fig_schedule_n2_cn",
+      "result": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\revisions\\20261103_results_default_residency\\validated\\n2_H3_4x1_dual_same_lp__pjob_a87d0cfeda\\result.json",
+      "result_sha256": "ee029a795ca9228f05cfa1c9e1d5389e82ddcbb7a10d54bd53e9b6fdc32b2330",
+      "evidence": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\figures\\current_defaults_20261103\\swimlane_actions.json",
+      "evidence_sha256": "f432754b2515f26a0ffc29894b7a703784f8633e8ebcfbf6c00f89a00aa6a53e",
+      "lanes": 11,
+      "intervals": 66,
+      "events_covered": 26,
+      "cmax": 324.0,
+      "resource_end": 342.0,
+      "intervals_unchanged": true,
+      "action_legend": [
+        "ATR取片",
+        "ATR放片",
+        "带片移动",
+        "承片等待",
+        "AL对准",
+        "LL抽气",
+        "LL真空等待",
+        "LL放气",
+        "大气侧等待",
+        "VTR取放",
+        "腔室加工",
+        "腔内等待",
+        "腔室旋转",
+        "空载移动/复位"
+      ],
+      "end_marker_legend": [
+        "产品回片：324 s",
+        "全部占用结束：342 s"
+      ],
+      "symbol_keys": [
+        "P1[1:2]：Pjob1的两片产品    D1、D2：辅助片"
+      ],
+      "figure_size_inches": [
+        3.55,
+        3.81
+      ],
+      "row_height_inches": 0.21,
+      "axis_label_placement": "after final tick on the same line",
+      "last_tick": 300.0,
+      "display_xlim": [
+        0.0,
+        367.3136099179636
+      ],
+      "legend_count": 2,
+      "symbol_key_lines": 1,
+      "legend_clipping": false,
+      "legend_overlap": false
+    },
+    {
+      "stem": "fig_schedule_n16_cn",
+      "result": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\review\\gantt_current_model_20261111\\n16_current_D_920\\result.json",
+      "result_sha256": "f15b7747f61eab5c02adc44d9066b93e11550660a4d74a20f62771513029da30",
+      "evidence": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\review\\gantt_current_model_20261111\\n16_current_D_920\\figure_evidence.json",
+      "evidence_sha256": "53c520b337a99f07f012a4f1f59192345f40dc44ba63e2dcf6cded0d21d56e03",
+      "lanes": 13,
+      "intervals": 462,
+      "events_covered": 152,
+      "cmax": 920.0,
+      "resource_end": 938.0,
+      "intervals_unchanged": true,
+      "action_legend": [
+        "ATR取片",
+        "ATR放片",
+        "带片移动",
+        "承片等待",
+        "AL对准",
+        "LL抽气",
+        "LL真空等待",
+        "LL放气",
+        "大气侧等待",
+        "VTR取放",
+        "腔室加工",
+        "腔内等待",
+        "腔室旋转",
+        "空载移动/复位"
+      ],
+      "end_marker_legend": [
+        "产品回片：920 s",
+        "全部占用结束：938 s"
+      ],
+      "symbol_keys": [
+        "P1[i:j]：Pjob1中第i至j片产品"
+      ],
+      "figure_size_inches": [
+        3.55,
+        4.2299999999999995
+      ],
+      "row_height_inches": 0.21,
+      "axis_label_placement": "after final tick on the same line",
+      "last_tick": 800.0,
+      "display_xlim": [
+        0.0,
+        979.5029597812363
+      ],
+      "legend_count": 2,
+      "symbol_key_lines": 1,
+      "legend_clipping": false,
+      "legend_overlap": false
+    }
+  ],
+  "cropping": {
+    "fig_chain_cn_nature": {
+      "original_size_points": [
+        198.89999389648438,
+        235.9396514892578
+      ],
+      "cropped_size_points": [
+        198.89999389648438,
+        217.75
+      ],
+      "padding_points": 2,
+      "horizontal_scale_preserved": true,
+      "visible_pixels_unchanged": true
+    },
+    "fig_parallel_cn_nature": {
+      "original_size_points": [
+        198.89999389648438,
+        149.65562438964844
+      ],
+      "cropped_size_points": [
+        198.89999389648438,
+        147.25
+      ],
+      "padding_points": 2,
+      "horizontal_scale_preserved": true,
+      "visible_pixels_unchanged": true
+    },
+    "fig_schedule_n16_cn": {
+      "original_size_points": [
+        255.60000610351562,
+        304.55999755859375
+      ],
+      "cropped_size_points": [
+        255.60000610351562,
+        294.5
+      ],
+      "padding_points": 2,
+      "horizontal_scale_preserved": true,
+      "visible_pixels_unchanged": true
+    },
+    "fig_schedule_n2_cn": {
+      "original_size_points": [
+        255.60000610351562,
+        274.32000732421875
+      ],
+      "cropped_size_points": [
+        255.60000610351562,
+        264.25
+      ],
+      "padding_points": 2,
+      "horizontal_scale_preserved": true,
+      "visible_pixels_unchanged": true
+    },
+    "fig_single_source_pjob_cn": {
+      "original_size_points": [
+        198.89999389648438,
+        175.4304656982422
+      ],
+      "cropped_size_points": [
+        198.89999389648438,
+        170.0
+      ],
+      "padding_points": 2,
+      "horizontal_scale_preserved": true,
+      "visible_pixels_unchanged": true
+    },
+    "fig_system_pjob_cn": {
+      "original_size_points": [
+        198.89999389648438,
+        167.38377380371094
+      ],
+      "cropped_size_points": [
+        198.89999389648438,
+        162.0
+      ],
+      "padding_points": 2,
+      "horizontal_scale_preserved": true,
+      "visible_pixels_unchanged": true
+    }
+  },
+  "artifacts": {
+    "fig_chain_cn_nature.pdf": "ce4e864edb7c16912dc86e37e93be70593c4ef25bb41b2bd2c2ea2ebac4d55d0",
+    "fig_chain_cn_nature.png": "01ac0d910cca97611a48472f171faaa073eafb951e51963455f41a79bdcf411a",
+    "fig_chain_cn_nature.svg": "6e96d489d95a830115851e79c1a4724506bcea2c68578ca04255d5e08e889bbe",
+    "fig_parallel_cn_nature.pdf": "10064a211cd61d323bdbf566d31edc91d2ab848373bafe8d951b3ae9340773a3",
+    "fig_parallel_cn_nature.png": "d7575ed487a54c9e21de7bc579b016dba07a406db095599dc8e3399a06675c8e",
+    "fig_parallel_cn_nature.svg": "b55221f6e53e27a6449ed449a71ffc04d96276df5e1f47824e0d58e16a1d53fd",
+    "fig_schedule_n16_cn.pdf": "8075e480fa565fe75be871175885cf7ba4d63aef9e2165f2d7b5acee3e9dfe57",
+    "fig_schedule_n16_cn.png": "a707bd12c2c649a04f6e62cda0e19c247bf9108b6ecb23b09a9870562d3ea7f1",
+    "fig_schedule_n16_cn.svg": "63436ec75e0e80b51b7212d3329ed7c03726dd41bbe1850fc5aea6278f8ac17d",
+    "fig_schedule_n2_cn.pdf": "e6a34fb01227149c2041dd34ac104b0255e9fc1f760ee7b051632a515fc35eb6",
+    "fig_schedule_n2_cn.png": "53a00229a5bbdc9ce344834476a4c7e3d67eaebfd354d7d8a9335f00b219a2d2",
+    "fig_schedule_n2_cn.svg": "b9e2da021b730293478c1512e2dfe8cb145b145b8f9dffaf2dde4c4cdc13f6ac",
+    "fig_single_source_pjob_cn.pdf": "9232e53973841561c1b0d69a19ae51f5098d6318ccc987ac8a87630a034301da",
+    "fig_single_source_pjob_cn.png": "1703450e87db3d78d927a8009d27f29b9d42c76c0c8aaf07cf8da1b27d234a0d",
+    "fig_single_source_pjob_cn.svg": "67471f03d4760c30b2af370d96e5f31e97c4e015e857b0cb1737c114ac552401",
+    "fig_system_pjob_cn.pdf": "ec97cf9c36b9737dd6ba1fa0e9e0b9c98ba5e49130c8a06f3edbfb7e782de1e3",
+    "fig_system_pjob_cn.png": "91b350a415cce34ffc1031d17f8ab9adbcb827c46fa9ce2a033ed41bb4d5cdab",
+    "fig_system_pjob_cn.svg": "7d0956773c8b0de6e491644485af6d575f2cb1f48d089ae1413fe08660050a5f"
+  }
+}

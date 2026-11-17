@@ -8,6 +8,7 @@ import types
 import shutil
 import copy
 import pymupdf
+from compact_figure_layout import crop_vector_figure
 
 PAPER=Path(__file__).resolve().parents[1]
 OUT=PAPER/'figures/submission_en'
@@ -55,17 +56,27 @@ def topology(stem, number):
     pdf[0].get_pixmap(matrix=pymupdf.Matrix(4,4),alpha=False).save(target.with_suffix('.png'))
     return {'source':str(source.relative_to(PAPER)),'source_sha256':sha(source),'figure':number}
 
-def schedules():
-    source=Path(__file__).with_name('render_journal_schedule_examples.py')
+def legended_figures():
+    source=Path(__file__).with_name('render_in_figure_legends_cn.py')
     code=source.read_text('utf-8')
-    # Reuse the validated interval builder and assertions; change display text only.
-    code=code.replace('"时间 / s"','"Time / s"')
+    translations={
+        '"产品晶圆"':'"Product"', '"时间 / s"':'"Time / s"',
+        '"生产加工及补位借用"':'"Production / filling"',
+        '"清洁借用"':'"Cleaning loans"',
+        '产品完工：':'Product return: ', '产品回片：':'Product return: ',
+        '全部占用结束：':'All occupancy ends: ',
+        'D1–D7：辅助晶圆':'D1-D7: auxiliary wafers',
+        'P1[i:j]：Pjob1中第i至j片产品':'P1[i:j]: Pjob1 products i-j',
+        'P1[1:2]：Pjob1的两片产品    D1、D2：辅助片':'P1[1:2]: Pjob1 products 1-2; D1, D2: auxiliaries',
+        'fig_coupled_schedule_merged_cn':'Figure5',
+    }
+    for a,b in translations.items():code=code.replace(a,b)
     code=code.replace('ax.set_yticks(range(len(lanes)), display_lanes,',
                       'ax.set_yticks(range(len(lanes)), [lane_en(x) for x in display_lanes],')
-    code=code.replace('"legend": 7.2','"legend": 6.6')
-    code=code.replace('3.55, .21, 1.10, .10','3.55, .21, .90, .10')
-    module=types.ModuleType('english_schedule_renderer')
-    module.__file__=str(source)
+    # Keep four action-legend columns within the single-column figure width.
+    code=code.replace('ncol=4, frameon=False, fontsize=7.2, columnspacing=.85',
+                      'ncol=4, frameon=False, fontsize=6.6, columnspacing=.7')
+    module=types.ModuleType('english_legended_renderer');module.__file__=str(source)
     exec(compile(code,str(source),'exec'),module.__dict__)
     module.OUT=OUT
     module.LEGEND_LABELS={
@@ -82,40 +93,46 @@ def schedules():
     module.lane_en=lane_en
     module.plt.rcParams.update({'font.family':'Arial','font.sans-serif':['Arial','DejaVu Sans'],
                                 'pdf.fonttype':42,'svg.fonttype':'none','axes.unicode_minus':False})
-    sm=module.read(PAPER/'figures/current_defaults_20261103/manifest.json')
-    lg=module.read(PAPER/'figures/current_d_n16_20261111/manifest.json')
-    entries=[(Path(sm['result']),sm['result_sha256'],PAPER/'figures/current_defaults_20261103/swimlane_actions.json',6),
-             (Path(lg['source']),lg['source_sha256'],PAPER/'review/gantt_current_model_20261111/n16_current_D_920/figure_evidence.json',7)]
-    report=[]
-    for path,digest,evidence,n in entries:
-        assert sha(path)==digest
-        info=module.draw(module.read(path),module.read(evidence),f'Figure{n}',single_column=True)
-        info.update(source=str(path),source_sha256=digest)
-        report.append(info)
-    return report
+    old=module.read(PAPER/'figures/schedule_examples_unified_20261112/manifest.json')
+    schedules=[]
+    for number,entry in enumerate(old['figures'],5):
+        entry=dict(entry,stem=f'Figure{number}')
+        info=module.draw_schedule(entry, compact_layout=True)
+        info.update(legend_columns=4,single_column=True)
+        schedules.append(info)
+    return schedules
 
-def coupled():
-    source=Path(__file__).with_name('render_coupled_schedule_cn.py')
-    code=source.read_text('utf-8').replace('"Microsoft YaHei"','"Arial"').replace('"产品晶圆"','"Product"').replace('"时间 / s"','"Time / s"')
-    code=code.replace('"fig_coupled_schedule_merged_cn"','"Figure5"').replace('for ext in ("pdf", "png"):','for ext in ("pdf", "png", "svg"):')
-    code=code.replace('"ps.fonttype": 42','"ps.fonttype": 42, "svg.fonttype": "none"')
-    module=types.ModuleType('english_coupled_renderer');module.__file__=str(source)
-    exec(compile(code,str(source),'exec'),module.__dict__)
-    module.OUTPUT=OUT
-    module.main()
-    report=json.loads((OUT/'manifest.json').read_text('utf-8'))
-    return report
+def chain_legend():
+    source=PAPER/'figures/terminology_en/fig_chain_en_nature.pdf'
+    doc=pymupdf.open(source);page=doc[0]
+    assert max(w[3] for w in page.get_text('words'))<216
+    font=pymupdf.Font(fontfile='C:/Windows/Fonts/arial.ttf')
+    label,size='Auxiliary PW pair',6.8
+    x=(page.rect.width-23-font.text_length(label,fontsize=size))/2
+    y,radius=223.,3.9
+    page.insert_font(fontname='LegendEN',fontbuffer=font.buffer)
+    for dx in (4,14):
+        page.draw_circle((x+dx,y),radius,color=(.17,.17,.17),fill=(1.,.82,.36),width=.6,dashes='[2 1] 0')
+        page.insert_text((x+dx-font.text_length('D',fontsize=6)/2,y+2.15),'D',fontsize=6,fontname='LegendEN')
+    page.insert_text((x+23,y+2.5),label,fontsize=size,fontname='LegendEN')
+    doc.subset_fonts();doc.save(OUT/'Figure3.pdf',garbage=4,deflate=True)
+    page.get_pixmap(matrix=pymupdf.Matrix(3,3),alpha=False).save(OUT/'Figure3.png')
+    (OUT/'Figure3.svg').write_text(page.get_svg_image(),'utf-8')
+    original=pymupdf.open(source);clip=pymupdf.Rect(0,0,page.rect.width,216)
+    assert original[0].get_pixmap(clip=clip).samples==page.get_pixmap(clip=clip).samples
+    return {'source':str(source),'source_sha256':sha(source),'legend':label,'original_drawing_unchanged':True}
 
 def main():
     OUT.mkdir(parents=True,exist_ok=True)
     report={'topology':[topology('fig_system_pjob_cn',1),topology('fig_single_source_pjob_cn',2)]}
     # These unchanged English diagrams have the same events and pair identities as the Chinese figures.
-    for n,folder,stem in [(3,'terminology_en','fig_chain_en_nature'),(4,'','fig_parallel_en_nature')]:
+    for n,folder,stem in [(4,'','fig_parallel_en_nature')]:
         for ext in ('pdf','png','svg'):
             p=PAPER/'figures'/folder/(stem+'.'+ext)
             shutil.copyfile(p,OUT/f'Figure{n}.{ext}')
-    report['coupled']=coupled()
-    report['schedules']=schedules()
+    report['chain']=chain_legend()
+    report['schedules']=legended_figures()
+    report['cropping']={f'Figure{i}':crop_vector_figure(OUT/f'Figure{i}.pdf') for i in range(1,7)}
     for p in OUT.glob('*.pdf'):
         d=pymupdf.open(p)
         assert not re.search('[\u4e00-\u9fff]', ''.join(pg.get_text() for pg in d)),p
@@ -123,6 +140,6 @@ def main():
     report['renderer_sha256']=sha(Path(__file__))
     report['artifacts']={p.name:sha(p) for p in OUT.iterdir() if p.suffix in ('.pdf','.svg','.png')}
     (OUT/'manifest.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n','utf-8')
-    print('English figures 1-7 generated; frozen schedule intervals retained; no optimizer used.')
+    print('English figures 1-6 generated; frozen schedule intervals retained; no optimizer used.')
 
 if __name__=='__main__':main()

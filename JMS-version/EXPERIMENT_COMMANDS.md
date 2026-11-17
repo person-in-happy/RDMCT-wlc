@@ -1,114 +1,60 @@
-# 学位论文待补实验命令（更新：2026-11-11）
+# 学位论文实验状态与补充入口（2026-11-16更新）
 
-**100片无保护批次已扩容续跑（2026-11-11 13:52）：** large_schedule_experiments_v2.py对应的n100_H3_mixed_dual_no_ram_guard_20261111_r1此前运行315.25 s后，在构建机器人事件排序约束时申请293.69 MiB扩容失败，25%保护确已关闭。现已设置D盘分页文件64/128 GiB，系统提交上限实测98.35 GiB，未重启即生效；已在可见终端resume，核验时仍在构模，暂无可行解或甘特图。旧失败记录保留，详见[命令清单与实际操作记录](LARGE_SCHEDULE_COMMANDS.md)。运行期间不要重复启动。
+已按当前文稿同步硕士论文。完整缺口、实验设计与条件命令见[硕士论文清单](D:/git/git/硕士毕设/论文初稿_20261110/缺口与实验命令.md)；章节与证据对应见[六章方案](THESIS_REVIEW_AND_PLAN_CN.md)。18:52正文同步阶段未干预实验；19:08按用户后续要求启动了新的前台并行接续队列，详见第四节。
 
-当前文稿甘特图已换为完整复验通过的16片纯4×1、920 s可行排程，未证全局最优；旧100片图仍不能作为当前D模型结果。
+## 1. 已完成，不重跑
 
-仅整理第一、第二创新点的期刊稿，请另见 [期刊稿独立审查](JOURNAL_REVIEW_CN.md)和[期刊缺失实验命令](JOURNAL_EXPERIMENT_COMMANDS.md)。两份清单的同协议实验应复用，不要重复运行。
+D编码24次、根分离108次、正常分离合并168次（含原72）、结构36次、库存/清洁144次、资格搜索27次、迁移432单元（414算法＋18准备），以及E结构36次、精修30组与权重24次，均按原模型/预算复用。收尾12次仅归档；旧节拍搜索9次没有见证。2片324 s最优和16片920 s可行排程已入稿。不能将432单元当作432个独立实例或100片证据。
 
-对应[项目审查与六章整理方案](THESIS_REVIEW_AND_PLAN_CN.md)。本次只整理和检查入口，**未启动正式实验**。
+## 2. 优先验收已启动的162单元批次
 
-## 1. 已有结果先用
+状态文件时间为 **2026-11-16 18:52:14（北京时间）**，本轮读取于 2026-11-16T18:52:20+08:00：已完成84/162，失败0，待处理78；有效赋值84，其中预算合格78。监督器保存状态为 `waiting_for_large_model_RAM`。这是运行中快照，尚未作为完整比较入稿；最终进度以批次自己的 `live_status.json` 为准。
 
-- D编码对照 `gap_d_encoding_20261108_r2` 已24/24完成，不重跑。
-- CIE正式七阶段6273条记录、E下30组阶段内精修和24次权重消融，保留原模型与预算归属直接使用，不为换章节重跑。
-- 100片混合排程及全流程/腔室/资源图已存在于旧固定结构模型，Cmax约9998秒；异质时长模型有28658秒构造排程。两者均不是当前D的100片最优结果。
-- 原结构批次 `gap_d_structure_20261108_r1` 为1/36，属于旧固定内存协议。原文件和已完成结果保留；本清单不再推荐其固定内存等待/续跑命令。新协议完整36次单列，旧1次仅作旧协议观察，不能拼作统一资源条件的比较。
-- 原命令全文已备份到 [EXPERIMENT_COMMANDS.before.md](review/thesis_workspace_20261108/EXPERIMENT_COMMANDS.before.md)。
+批次：[finite_budget_20261116_r1](results/finite_budget_20261116_r1)。协议：[有限预算实验README](experiments/finite_budget_20261116/README.md)。60次目标组织对照＋96次较大输入组件比较＋6次共享SPBS准备；计划名义求解总预算11.5 h，不含资源等待和构模验证。正在运行时不重复prepare/run，也不修改冻结协议。
 
-## 2. 新入口：不设置固定内存配额
-
-`tools/thesis_gap_experiments.py` 是隔离的新入口，复用当前D后端，不修改旧驱动、冻结协议、LP或结果。
-
-- 不设固定SCIP内存或进程RSS上限；使用SCIP原生默认的无限内存标记。协议中的 `memory_mb` 巨大数值是该标记，不是预留这么多物理内存。
-- 每秒监测系统可用内存，默认低于物理总内存10%时停止当前单元并保留失败记录；下一单元启动前也检查该比例。此为整机可用内存保护，不是固定给每个实验若干GiB，也不会因启动时的空闲量冻结一个RSS配额。
-- 前台、单线程、一次一个单元；每10秒显示完成/失败数、当前耗时、RSS与预计剩余时间。暂按完整模型的资源开销选择串行。新批次保存机器、输入、代码哈希、求解预算和实际峰值RSS。
-- 不同资源协议分别报告。取消内存配额不能保证32/100片模型可构建或可求解。
-- 入口已通过20项已有赋值的建模/检查，未做正式优化；这只验证入口和输入，不承诺算法产生改善。
-
-在可见PowerShell终端执行：
+只读查看：
 
 ```powershell
 Set-Location D:\git\git\RDMCT-A3C
-$ThesisPython = 'G:\conda\envs\a3cenv\python.exe'
-$ThesisDriver = 'JMS-version/tools/thesis_gap_experiments.py'
+Get-Content -Encoding UTF8 JMS-version/results/finite_budget_20261116_r1/live_status.json
+Get-Content -Encoding UTF8 JMS-version/results/finite_budget_20261116_r1/summary/coverage.json
 ```
 
-## 3. P1：结构对照与SPBS后续流程
-
-先检查矩阵，不求解、不创建正式批次：
+整批结束且监督器退出后，必要时重建报告（只更新汇总，不求解）：
 
 ```powershell
-& $ThesisPython -X utf8 -u $ThesisDriver plan --suite structure
-& $ThesisPython -X utf8 -u $ThesisDriver plan --suite spbs
+& 'G:\conda\envs\a3cenv\python.exe' -X utf8 -u JMS-version/experiments/finite_budget_20261116/finite_budget.py report --campaign JMS-version/results/finite_budget_20261116_r1
 ```
 
-四个已有D可行输入；结构为4实例×3种子×3臂=36次，三臂分别联合300秒、固定300秒、先固定60秒后联合240秒：
+完成后检查全量覆盖、退出记录、实际预算、恢复完整可行域后的赋值检查与独立重放，以及共同输入哈希。预算不合格数据保留并单列，按有效配对比较，D/E分开。联合目标下界不能作为Cmax下界。当前入口没有status/resume参数。
 
-```powershell
-& $ThesisPython -X utf8 -u $ThesisDriver start --suite structure --campaign JMS-version/results/thesis_d_structure_20261108_unlimited_r1 --time-limit 300 --stage2-limit 60 --wall-limit 1800
-```
+## 3. 后续必补与条件性任务
 
-SPBS为4实例×3种子×2臂=24次；无SPBS主问题300秒，有SPBS为60秒结构改进＋240秒主问题，两臂均追加60秒精修与60秒收尾：
-
-```powershell
-& $ThesisPython -X utf8 -u $ThesisDriver start --suite spbs --campaign JMS-version/results/thesis_d_spbs_20261108_unlimited_r1 --time-limit 300 --stage2-limit 60 --wall-limit 1800
-```
-
-这两组从共同已验证赋值开始，仅检验已有起点后的搜索/改善；不是冷启动构造成功率，也不是HEM网络独立贡献实验。原输入构造成本需另报。
-
-## 4. P2：收尾与节拍机制
-
-收尾12次，保持产品完工时间和二阶段目标上界，仅改善全部占用结束时间：
-
-```powershell
-& $ThesisPython -X utf8 -u $ThesisDriver start --suite cleanup --campaign JMS-version/results/thesis_d_cleanup_20261108_unlimited_r1 --stage2-limit 60 --wall-limit 1800
-```
-
-节拍见证搜索9次：4片纯2×2、6片纯2×2、6片混合，H=10，每例三种子；要求至少2个有效节拍中心：
-
-```powershell
-& $ThesisPython -X utf8 -u $ThesisDriver start --suite rhythm_search --campaign JMS-version/results/thesis_d_rhythm_search_20261108_unlimited_r1 --time-limit 600 --wall-limit 1800
-```
-
-只有上一步全部结束且至少有一个通过可行性验证的输入排程，才执行权重消融。每实例按预定最小成功种子选择输入，三个求解种子、四权重共享赋值，每臂60秒，条件性12—36次：
-
-```powershell
-& $ThesisPython -X utf8 -u $ThesisDriver start --suite rhythm --source-campaign JMS-version/results/thesis_d_rhythm_search_20261108_unlimited_r1 --campaign JMS-version/results/thesis_d_rhythm_20261108_unlimited_r1 --stage2-limit 60 --wall-limit 1800
-```
-
-见证搜索额外限制了可行域，其最优/不可行不推广到完整原问题；无通过可行性验证的输入排程时入口拒绝消融。E的既有有效节拍结果仍可使用，不因D搜索失败而丢弃。
-
-## 5. 状态与恢复
-
-只对已创建的新批次使用；其他批次替换目录，不要重复start：
-
-```powershell
-& $ThesisPython -X utf8 -u $ThesisDriver status --campaign JMS-version/results/thesis_d_structure_20261108_unlimited_r1
-& $ThesisPython -X utf8 -u $ThesisDriver resume --campaign JMS-version/results/thesis_d_structure_20261108_unlimited_r1
-```
-
-启动前内存比例不足时，没有创建新运行单元，释放内存后直接resume。若工作单元因系统可用内存保护、worker错误或墙钟保护停止，先检查 `runs/单元/failure.json` 和日志；解决原因后可显式恢复，旧尝试会归档：
-
-```powershell
-& $ThesisPython -X utf8 -u $ThesisDriver resume --campaign JMS-version/results/thesis_d_structure_20261108_unlimited_r1 --retry-failed
-```
-
-Ctrl+C的 `foreground_interrupted` 尝试可直接resume；未知半成品必须先诊断。恢复以单元为单位，不恢复SCIP搜索树。不并行启动这份清单的多个队列。
-
-## 6. 尚缺实现或成功证据的事项
-
-| 必补事项 | 为什么不能仅给一条现成命令 | 先完成什么 |
+| 优先级 | 实验 | 当前状态与入口 |
 |---|---|---|
-| 第三创新点算法及消融 | 尚无完整瓶颈识别、解池共识/分歧、联合邻域、质量引导MILP修复入口 | 实现方法与通用LNS/SPBS基线、固定总预算及结果验收；不能把现有SPBS重新命名当新方法 |
-| 当前D的完整100片三模式×清洁矩阵 | 已新增100片混合单例完整主问题入口，尚未运行；完整表示仍有内存障碍 | 先按[100片命令](LARGE_SCHEDULE_COMMANDS.md)核验混合实例的可行性与界，再扩展可比矩阵；不能承诺必得全局最优 |
-| 当前D下HEM增强端到端比较 | 当前选割结果只保留共同起点、回调有限；旧模型checkpoint迁移不能等同于重新训练 | 当前模型训练/验证/测试协议、构造成本入账、训练种子独立重复及回调诊断 |
+| P0 | 端到端有限预算 | 尚无统一截止时间入口；须把原始输入构造、映射、构模、SPBS、学习和验证入账。现成组件命令不能代替。 |
+| P0 | 可行构造与规模覆盖 | 从资格失败的4/8片与混合/连续模式入手，逐步扩到16/32/100；16片纯4×1是一份有效见证，不是全场景构造成功率。 |
+| P0扩展 | 瓶颈驱动原始解改进 | 先实现，再做完整/去瓶颈/去解池/去耦合/去质量引导及等预算SCIP、HEM、SPBS、LNS比较；暂无完整可执行入口。 |
+| P1 | D长链与节拍 | `journal_support_experiments.py` 的chain及成功后的rhythm；完整条件命令见硕士论文清单。旧9次无见证，E权重实验不重跑。 |
+| P1 | D的100片三模式×清洁 | 最近两次恢复记录分别为system_available_memory_guard和system_commit_memory_guard；尚无有效排程证据。先解决可构建/可行性，再做6场景矩阵。 |
 
-第三创新点和端到端训练评价仍有实现或设计前置条件。新增100片命令对应已实现的入口，但尚无成功求解证据。审查索引可随时只读重建：
+旧11月12日16片21次无SPBS对照与本次96次组件比较协议不同，优先完成当前批次，不再同时新开旧队列。原 `thesis_gap_experiments.py` 的结构、SPBS和收尾清单已被后续完成证据或当前研究取舍覆盖，不作为本轮必补任务。
 
-```powershell
-& $ThesisPython -X utf8 JMS-version/review/thesis_workspace_20261108/catalog.py
-& $ThesisPython -X utf8 JMS-version/review/thesis_workspace_20261108/check_evidence.py
-```
+历史命令和11月11日100片运行描述已保存在[修改前备份](revisions/20261116_thesis_sync/before/EXPERIMENT_COMMANDS.md)，不把历史“正在运行”当作当前进度。新实验仍应在可见前台、隔离输出、保存并发与资源设置；原批次保持不变；新增接续队列的状态和依赖见下节。
 
-所有结果都要保留optimal、限时有解、限时无解、memlimit、外部保护和失败的区别。命令执行完成不等于模型可行、最优或算法优于基线。
+## 4. 已启用的并行接续队列（2026-11-16 19:08）
+
+2026-11-16 19:12:20（北京时间）读取：原批次89/162完成、失败0；新长链队列0/24完成，实际运行0路，状态`waiting_for_existing_experiments`。可用内存约13.9 GiB。这是启动状态快照，实时进度以各批次的`live_status.json`为准。
+
+| 实验 | 哪些单元可并行 | 必须串行的依赖与当前安排 |
+|---|---|---|
+| 现有162单元 | 独立实例/种子、共同SPBS输入冻结后的对照臂 | 同一输入SPBS准备一次；同一GPU最多1个学习任务。沿用原最多2路，不改正在运行的冻结协议。 |
+| D长链见证24次 | 8个配置×3求解种子互相独立，可CPU并行 | 已加入前台接续队列，最多4路、每路1线程；现有批次退出后按资源余量启动。 |
+| D节拍权重消融 | 同一合格见证下4权重×3种子，每配置12次可并行 | 必须等全部24次搜索结束、没有执行失败并验证成功；每配置固定选最低成功种子。满足条件后队列自动派生，最多4路。 |
+| 端到端有限预算 | 不同实例/种子可并行 | 单元内部构造、映射、构模、SPBS、主求解与验证有顺序；统一截止时间入口尚未实现，不启动。 |
+| 构造扩展/瓶颈方法消融 | 冻结输入/解池后的独立臂与种子可并行 | 先完成方法、解池与修复实现及验证，共享参考只准备一次；暂无完整可执行入口。 |
+| 当前D的100片六场景 | 数学上场景相互独立 | 当前机器有RAM/提交内存保护失败史，暂不叠加100片大模型；先逐例建立有效排程再扩大并行。 |
+
+新入口：[前台启动器](experiments/thesis_parallel_20261116/launch.ps1)；[完整执行说明](experiments/thesis_parallel_20261116/README.md)；[实时状态](results/thesis_parallel_20261116_r1/live_status.json)。窗口已经运行，不重复启动。长链预算24×1200 s；条件性节拍每配置12×60 s。最多4个CPU单线程工作进程，实际并发按资源准入；同一GPU不叠加学习任务。
+
+原162单元批次要求其他研究进程空闲，16片模型启动门槛20 GiB可用内存，因此新队列等待原监督器退出及锁释放后自动接续。可用内存不足时仍可能等待，不能将四路理想求解下限当作总墙钟ETA。失败/限时无解完整保留；搜索执行失败阻止派生消融，无合格见证明确跳过。未运行的新结果不写入论文结论。

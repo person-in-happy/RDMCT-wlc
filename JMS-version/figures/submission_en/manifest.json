@@ -11,172 +11,26 @@
       "figure": 2
     }
   ],
-  "coupled": {
-    "source": "results\\current_defaults_small_prepared_20261103\\runs\\n1_H2_2x2_dual__s1__scip\\result.json",
-    "source_sha256": "7a497c812c30f52cb3b8ec6b1a2e7706c84b4d8ea055db72d0af9f35175acfc0",
-    "validation_record": "revisions\\20261109_coupling_transfer\\witness_evidence.json",
-    "solver_started": false,
-    "axes_count": 1,
-    "lane_labels": [
-      "Product",
-      "D1",
-      "D2",
-      "D3",
-      "D4",
-      "D5",
-      "D6",
-      "D7"
-    ],
-    "product_loan_lane_rendered": false,
-    "cleaning_cycle_lane_rendered": false,
-    "product_identity": "LP1_W1",
-    "product_processing_cycles": [
-      {
-        "chamber": 2,
-        "index": 0,
-        "mode": "2x2",
-        "start": 76.0,
-        "end": 166.0,
-        "counter": 1.0,
-        "pairs": [
-          0,
-          4
-        ],
-        "front": 0
-      },
-      {
-        "chamber": 2,
-        "index": 1,
-        "mode": "2x2",
-        "start": 170.0,
-        "end": 260.0,
-        "counter": 2.0,
-        "pairs": [
-          0,
-          2
-        ],
-        "front": 2
-      }
-    ],
-    "source_cycles": [
-      {
-        "chamber": 2,
-        "index": 0,
-        "mode": "2x2",
-        "start": 76.0,
-        "end": 166.0,
-        "counter": 1.0,
-        "pairs": [
-          0,
-          4
-        ],
-        "front": 0
-      },
-      {
-        "chamber": 2,
-        "index": 1,
-        "mode": "2x2",
-        "start": 170.0,
-        "end": 260.0,
-        "counter": 2.0,
-        "pairs": [
-          0,
-          2
-        ],
-        "front": 2
-      },
-      {
-        "chamber": 2,
-        "index": 2,
-        "mode": "clean",
-        "start": 284.0,
-        "end": 784.0,
-        "counter": 0.0,
-        "pairs": [
-          1,
-          3
-        ],
-        "front": 3
-      }
-    ],
-    "single_column": true,
-    "figure_size_inches": [
-      3.55,
-      2.5
-    ],
-    "auxiliary_loans": [
-      {
-        "identity": "D1",
-        "pair": 0,
-        "loan_start": 69.0,
-        "loan_end": 270.0
-      },
-      {
-        "identity": "D2",
-        "pair": 1,
-        "loan_start": 270.0,
-        "loan_end": 794.0
-      },
-      {
-        "identity": "D3",
-        "pair": 1,
-        "loan_start": 273.0,
-        "loan_end": 796.0
-      },
-      {
-        "identity": "D4",
-        "pair": 2,
-        "loan_start": 165.0,
-        "loan_end": 280.0
-      },
-      {
-        "identity": "D5",
-        "pair": 2,
-        "loan_start": 165.0,
-        "loan_end": 272.0
-      },
-      {
-        "identity": "D6",
-        "pair": 3,
-        "loan_start": 280.0,
-        "loan_end": 788.0
-      },
-      {
-        "identity": "D7",
-        "pair": 3,
-        "loan_start": 272.0,
-        "loan_end": 795.0
-      },
-      {
-        "identity": "D3",
-        "pair": 4,
-        "loan_start": 63.0,
-        "loan_end": 173.0
-      },
-      {
-        "identity": "D2",
-        "pair": 4,
-        "loan_start": 63.0,
-        "loan_end": 173.0
-      }
-    ],
-    "product_cmax": 303.0,
-    "occupied_end": 796.0,
-    "outputs": {
-      "pdf": "9bffdd99f10a78902f113a91755e55ec86c7ab294a4de6f7abe64426760eda75",
-      "png": "ecbe0aa5a47afa061e51f456b48cbd42a084651d8807225a092176c4cbbdba12"
-    }
+  "chain": {
+    "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\figures\\terminology_en\\fig_chain_en_nature.pdf",
+    "source_sha256": "4e84a929fc065a3342c7a244c2fccfe85d2a7b1b53fab644f4203daa37badeba",
+    "legend": "Auxiliary PW pair",
+    "original_drawing_unchanged": true
   },
   "schedules": [
     {
-      "stem": "Figure6",
-      "cmax": 324.0,
-      "resource_end": 342.0,
+      "stem": "Figure5",
+      "result": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\revisions\\20261103_results_default_residency\\validated\\n2_H3_4x1_dual_same_lp__pjob_a87d0cfeda\\result.json",
+      "result_sha256": "ee029a795ca9228f05cfa1c9e1d5389e82ddcbb7a10d54bd53e9b6fdc32b2330",
+      "evidence": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\figures\\current_defaults_20261103\\swimlane_actions.json",
+      "evidence_sha256": "f432754b2515f26a0ffc29894b7a703784f8633e8ebcfbf6c00f89a00aa6a53e",
       "lanes": 11,
       "intervals": 66,
-      "intervals_unchanged": true,
       "events_covered": 26,
-      "legend": [
+      "cmax": 324.0,
+      "resource_end": 342.0,
+      "intervals_unchanged": true,
+      "action_legend": [
         "ATR pick",
         "ATR place",
         "Loaded move",
@@ -192,39 +46,44 @@
         "Rotate",
         "Empty/reset"
       ],
+      "end_marker_legend": [
+        "Product return: 324 s",
+        "All occupancy ends: 342 s"
+      ],
+      "symbol_keys": [
+        "P1[1:2]: Pjob1 products 1-2; D1, D2: auxiliaries"
+      ],
       "figure_size_inches": [
         3.55,
-        3.31
+        3.81
       ],
       "row_height_inches": 0.21,
-      "fonts_points": {
-        "resource": 7.5,
-        "tick": 7.2,
-        "axis": 8,
-        "cycle": 7.1,
-        "legend": 6.6
-      },
-      "plot_titles_and_notes": 0,
-      "single_column": true,
+      "axis_label_placement": "after final tick on the same line",
+      "last_tick": 300.0,
+      "display_xlim": [
+        0.0,
+        366.99926464994803
+      ],
+      "legend_count": 2,
+      "symbol_key_lines": 1,
+      "legend_clipping": false,
+      "legend_overlap": false,
       "legend_columns": 4,
-      "cycle_labels": [
-        "4×1 | P1[1:2]/D1/D2"
-      ],
-      "cycle_modes": [
-        "4x1"
-      ],
-      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\revisions\\20261103_results_default_residency\\validated\\n2_H3_4x1_dual_same_lp__pjob_a87d0cfeda\\result.json",
-      "source_sha256": "ee029a795ca9228f05cfa1c9e1d5389e82ddcbb7a10d54bd53e9b6fdc32b2330"
+      "single_column": true
     },
     {
-      "stem": "Figure7",
-      "cmax": 920.0,
-      "resource_end": 938.0,
+      "stem": "Figure6",
+      "result": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\review\\gantt_current_model_20261111\\n16_current_D_920\\result.json",
+      "result_sha256": "f15b7747f61eab5c02adc44d9066b93e11550660a4d74a20f62771513029da30",
+      "evidence": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\review\\gantt_current_model_20261111\\n16_current_D_920\\figure_evidence.json",
+      "evidence_sha256": "53c520b337a99f07f012a4f1f59192345f40dc44ba63e2dcf6cded0d21d56e03",
       "lanes": 13,
       "intervals": 462,
-      "intervals_unchanged": true,
       "events_covered": 152,
-      "legend": [
+      "cmax": 920.0,
+      "resource_end": 938.0,
+      "intervals_unchanged": true,
+      "action_legend": [
         "ATR pick",
         "ATR place",
         "Loaded move",
@@ -240,60 +99,132 @@
         "Rotate",
         "Empty/reset"
       ],
+      "end_marker_legend": [
+        "Product return: 920 s",
+        "All occupancy ends: 938 s"
+      ],
+      "symbol_keys": [
+        "P1[i:j]: Pjob1 products i-j"
+      ],
       "figure_size_inches": [
         3.55,
-        3.73
+        4.2299999999999995
       ],
       "row_height_inches": 0.21,
-      "fonts_points": {
-        "resource": 7.5,
-        "tick": 7.2,
-        "axis": 8,
-        "cycle": 7.1,
-        "legend": 6.6
-      },
-      "plot_titles_and_notes": 0,
-      "single_column": true,
+      "axis_label_placement": "after final tick on the same line",
+      "last_tick": 800.0,
+      "display_xlim": [
+        0.0,
+        978.6647057331946
+      ],
+      "legend_count": 2,
+      "symbol_key_lines": 1,
+      "legend_clipping": false,
+      "legend_overlap": false,
       "legend_columns": 4,
-      "cycle_labels": [
-        "P1[1:4]",
-        "P1[9:12]",
-        "P1[5:8]",
-        "P1[13:16]"
-      ],
-      "cycle_modes": [
-        "4x1",
-        "4x1",
-        "4x1",
-        "4x1"
-      ],
-      "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\review\\gantt_current_model_20261111\\n16_current_D_920\\result.json",
-      "source_sha256": "f15b7747f61eab5c02adc44d9066b93e11550660a4d74a20f62771513029da30"
+      "single_column": true
     }
   ],
+  "cropping": {
+    "Figure1": {
+      "original_size_points": [
+        198.89999389648438,
+        167.38377380371094
+      ],
+      "cropped_size_points": [
+        198.89999389648438,
+        162.5
+      ],
+      "padding_points": 2,
+      "horizontal_scale_preserved": true,
+      "visible_pixels_unchanged": true
+    },
+    "Figure2": {
+      "original_size_points": [
+        198.89999389648438,
+        175.4304656982422
+      ],
+      "cropped_size_points": [
+        198.89999389648438,
+        170.0
+      ],
+      "padding_points": 2,
+      "horizontal_scale_preserved": true,
+      "visible_pixels_unchanged": true
+    },
+    "Figure3": {
+      "original_size_points": [
+        198.89999389648438,
+        242.67413330078125
+      ],
+      "cropped_size_points": [
+        198.89999389648438,
+        226.25
+      ],
+      "padding_points": 2,
+      "horizontal_scale_preserved": true,
+      "visible_pixels_unchanged": true
+    },
+    "Figure4": {
+      "original_size_points": [
+        198.89999389648438,
+        149.44090270996094
+      ],
+      "cropped_size_points": [
+        198.89999389648438,
+        146.0
+      ],
+      "padding_points": 2,
+      "horizontal_scale_preserved": true,
+      "visible_pixels_unchanged": true
+    },
+    "Figure5": {
+      "original_size_points": [
+        255.60000610351562,
+        274.32000732421875
+      ],
+      "cropped_size_points": [
+        255.60000610351562,
+        264.25
+      ],
+      "padding_points": 2,
+      "horizontal_scale_preserved": true,
+      "visible_pixels_unchanged": true
+    },
+    "Figure6": {
+      "original_size_points": [
+        255.60000610351562,
+        304.55999755859375
+      ],
+      "cropped_size_points": [
+        255.60000610351562,
+        294.5
+      ],
+      "padding_points": 2,
+      "horizontal_scale_preserved": true,
+      "visible_pixels_unchanged": true
+    }
+  },
   "optimization_calls": 0,
-  "renderer_sha256": "1bf06a84f8f0070d889200336238f4c4939f5f765f82e4ddacce83bdb9badeb8",
+  "renderer_sha256": "b4d20a1ca0ea7da7ed8c9d88e02f33446442394b42c19c9c13b1c587f2734400",
   "artifacts": {
-    "Figure1.pdf": "08a73ee49534d7193c56e41edcc1249782221e32e8a49593cc035a82760b79c4",
-    "Figure1.png": "9286ec2106a5fd6e3c08f860ca6d0a104b9759a36b7a83605c9b069790b7cf2a",
-    "Figure1.svg": "828f98f4484d0f3ba858e98beda30d741dbb0ef62d855616fdab22f9eff80a2a",
-    "Figure2.pdf": "7a1f9565a92381e8fe8802d049299acd4864252e79c7948b9e8e8dbd8fd766cc",
-    "Figure2.png": "f6df2e6ffcdeb69bc16a737e50a73bbfc6f6e6ff8cb3410a94d1937eb910d421",
-    "Figure2.svg": "1aa208f328c7266f7a941e6ff45e2ddb586a73c41ed9b7fd576ad708d89aea3b",
-    "Figure3.pdf": "4e84a929fc065a3342c7a244c2fccfe85d2a7b1b53fab644f4203daa37badeba",
-    "Figure3.png": "a0c6e3f08c1e9c13bfdd1936059cd360a99d5ff02ed1208e3090891a58373dbb",
-    "Figure3.svg": "3543192d525682072ed93d4d3f2608f6bb4d230d0518d5f4112a45daa3c8b775",
-    "Figure4.pdf": "25a826f7f3c2ac1978a94ed986ed9e64afdd13ec65aa868122852490e88a8827",
-    "Figure4.png": "3d07172f1647b186756956ed68d0a53c5f9dd9058b40c0bc2c497f3ba8e965c5",
-    "Figure4.svg": "71fe8dd4418f892bb6e7bd10f4bee5b7dad3ad0fbee3717dc9ef9be055a3ad50",
-    "Figure5.pdf": "9bffdd99f10a78902f113a91755e55ec86c7ab294a4de6f7abe64426760eda75",
-    "Figure5.png": "ecbe0aa5a47afa061e51f456b48cbd42a084651d8807225a092176c4cbbdba12",
-    "Figure5.svg": "902e322fcba0540dc0ab7ad06864731fab2656dcefe3873d1ef0763347d5eddf",
-    "Figure6.pdf": "c12639650cd68746bef36527da6930d37cb88aeb011901ae6200445fc90a96a7",
-    "Figure6.png": "3551dde36f718780c9571f7c22e687b8c251816e86be666230dca99a5683b0e6",
-    "Figure6.svg": "e688a2d6566208bdfbba633689a3470fab2def1e05c03f7ee0ceb0869f5f9ad1",
-    "Figure7.pdf": "0f024a976e4380c680a3b70a31c051f4f22992d20656f50f1633bd40712d5706",
-    "Figure7.png": "c9258edfe583c9ee2a43fc620df6ae2882287999e2278b809dae02dcc0944f0e",
-    "Figure7.svg": "526c1db9788b338c0987324b50f90029d56c0e057bdbce502a965ad6cc8a21b6"
+    "Figure1.pdf": "b7aa6cdf3dddfd4ae6ba47eae39f0690f594d2126f101ecc28d0fe11e54dae92",
+    "Figure1.png": "9180cef8011dd0cfc8e316be11b9b2c788e23fd41b9f3ec894dd2b22553d9c50",
+    "Figure1.svg": "3da794cf89639afc086aff8e25ef7951de97cf7c1a522b072cc01aa26646ac68",
+    "Figure2.pdf": "c7ecc72f84a1a1db0b16d16c64b9ce89bc3e1b1717ad9ee4383663acd6106201",
+    "Figure2.png": "c395af7099972f79200143ab0aa251ff1ece4c6b6eacb097ac1368157e7b9da7",
+    "Figure2.svg": "7efe9f510724301c149ded8cb45349a471746f632188bcfb52ff61d5c6d6d357",
+    "Figure3.pdf": "9452987ec5dcbe76a599615551f1fd3b42e15c3b1655810ee50b600d5c4762a8",
+    "Figure3.png": "4c840d5c33dccb8c5716f7f6a3e60e26d38b14619c1abd9123ae464afbf57f64",
+    "Figure3.svg": "55d29b0919ab619eed618b82fe7867a257c3e9230f18a4c717cb149a400fb371",
+    "Figure4.pdf": "0ce72fb65330170ed87eba1657d5c8a235f25f2710dfbece82e642c37fa2c5a0",
+    "Figure4.png": "4e84b944e6659ceca575c05aaed5afd25a66245ac537eff8ca339f5a7eb59df3",
+    "Figure4.svg": "cf53e40ddd3907d35f0d8fd7af6dc497433108b109d47ef49cea0f65e1402401",
+    "Figure5.pdf": "6707233ca3b92d1d96801febd99773c1e8deb5cf07a4247c04eb455e234b95d2",
+    "Figure5.png": "f0923cfc661414626893c64adf2da2bea4af3d2c990e74fe620fec3b511951fe",
+    "Figure5.svg": "85e5d68a25623823e956ecf82df19209ed145f1be24f34e2c5fde876aec141e0",
+    "Figure6.pdf": "9ff0346043ee69c9a5d7bbc3643a8bd65fd4099303ac90ccf41ffd89fbcf9cb9",
+    "Figure6.png": "3e0e1d1d87f0efa060df15153a7cdbac65835d0968b9166cf179d1351fbbaa40",
+    "Figure6.svg": "637d5e9a3b7d131f06820103ec56fcf467351a18c670e3f709123ca7f17d8919"
   }
 }

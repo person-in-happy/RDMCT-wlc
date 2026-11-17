@@ -7,14 +7,14 @@ import re
 
 PAPER=Path(__file__).resolve().parents[1]
 OUT=PAPER/'output/submission'
-TITLE='Two-stage scheduling and structured solution methods for dual-source mixed-flow rotating-chamber cluster tools under full-occupancy processing'
+TITLE=re.search(r'\\title\{([^}]+)\}',(PAPER/'JMS_Submission_EN.tex').read_text('utf-8'))[1]
 AFFILIATION='Department of Control Science and Engineering, University of Science and Technology Beijing, No. 30 Xueyuan Road, Haidian District, Beijing 100083, China'
 HIGHLIGHTS=[
- 'Wafer-pair modeling links full occupancy, cleaning, and finite auxiliary reuse.',
+ 'PW-pair modeling links full occupancy, cleaning, and finite auxiliary reuse.',
+ 'Two-stage solving improves the secondary objective at equal 300 s budgets.',
  'Structured initialization improves mixed-recipe schedules within limited time.',
  'Variable-role features guide learned cut selection and structural reranking.',
- 'Timing refinement reduces waiting while preserving product completion time.',
- 'Validated schedules complete two and sixteen products in 324 and 920 seconds.'
+ 'Shared-start ablations and event replay validate the proposed methods.'
 ]
 COI='The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.'
 FUNDING='This research did not receive any specific grant from funding agencies in the public, commercial, or not-for-profit sectors.'
@@ -28,9 +28,9 @@ COVER=[
  ('Normal','Journal of Manufacturing Systems'),
  ('Normal','Dear Editors,'),
  ('Normal',f'Please consider our research article, "{TITLE}," for publication in the Journal of Manufacturing Systems.'),
- ('Normal','The study addresses coordination within a semiconductor manufacturing system comprising rotating process chambers, atmospheric and vacuum wafer sources, shared robots, load locks, and a finite reusable auxiliary inventory. Full occupancy during production and cleaning couples wafer supply, consecutive exposures, and resource release. These dependencies require a common scheduling representation rather than separate decisions for product processing and chamber cleaning.'),
- ('Normal','Our first contribution is a two-stage mixed-integer linear programming model that links wafer transport and chamber cycles through two-wafer pairs and represents homogeneous products by job and source inventories. It minimizes product return completion and then refines waiting and production rhythm. Our second contribution is a solution method combining structured initialization with variable-role features and structure-aware reranking in hierarchical learned cut selection.'),
- ('Normal','The experiments distinguish initialization gains from cut-selection effects using shared starting schedules and component ablations. Thirty paired stage comparisons reduce waiting while preserving product completion. Inventory and processing-mode comparisons explain the dependence of consecutive processing on auxiliary availability. Full-model checks and independent event replay validate an optimal two-product schedule completing at 324 s and a feasible 16-product schedule completing at 920 s.'),
+ ('Normal','Advanced fabrication combines complex process requirements with high throughput, requiring timely schedules for rotating-chamber cluster tools. Full occupancy, continuous processing, cleaning, and a finite reusable auxiliary inventory couple wafer pairing and processing with shared transport. Four-finger vacuum and two-finger atmospheric robots motivate two-wafer PW pairs as the minimum modeling unit, while individual wafer operations retain their own timing variables.'),
+ ('Normal','The study makes three contributions. A two-stage mixed-integer linear programming model first minimizes batch makespan, then optimizes waiting and production rhythm while preserving the makespan bound and principal discrete structure. Structured initialization progressively releases resource service orders to improve the starting schedule. Variable-role features and structure-aware reranking combine with reinforcement-learning-based cut selection to account for cut quality and complementarity.'),
+ ('Normal','With equal 300 s solve budgets, the two-stage method matches the batch makespans of normalized joint objectives on two 16-product instances and reduces the weighted waiting-and-rhythm objective by 31.45% and 5.47%. Structured initialization reduces mean batch makespan for mixed S2 from 521 to 492 s. With shared initial solutions, the complete cut-selection combination improves on all three ablations on two instances and ties on the other four. Full-model checks and independent event replay also validate the two- and 16-product schedules.'),
  ('Normal','We believe the work will interest readers studying the integrated operation and control of semiconductor manufacturing equipment, particularly the interaction of reusable material resources, processing cycles, and shared handling systems.'),
  ('Normal','Thank you for considering our manuscript.'),
  ('Normal','Sincerely,'),
@@ -57,7 +57,7 @@ def document(filename,paragraphs):
     content_types='''<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>'''
     rels='''<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>'''
     docrels='''<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/></Relationships>'''
-    core=f'''<?xml version="1.0" encoding="UTF-8"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>{escape(filename.replace('_',' '))}</dc:title><dc:creator>Lizhen Shao; Lincong Wei; Wei Wang</dc:creator></cp:coreProperties>'''
+    core=f'''<?xml version="1.0" encoding="UTF-8"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>{escape(filename.replace('_',' '))}</dc:title><dc:creator>Lincong Wei; Lizhen Shao; Wei Wang</dc:creator></cp:coreProperties>'''
     files={'[Content_Types].xml':content_types,'_rels/.rels':rels,'word/_rels/document.xml.rels':docrels,
            'word/document.xml':f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="{ns}"><w:body>{body}{sect}</w:body></w:document>',
            'word/styles.xml':styles,'word/numbering.xml':numbering,'docProps/core.xml':core}
@@ -69,15 +69,15 @@ def main():
     assert 3<=len(HIGHLIGHTS)<=5 and all(len(x)<=85 for x in HIGHLIGHTS)
     document('Highlights',[('Title','Highlights')]+[('ListBullet',x) for x in HIGHLIGHTS])
     document('Cover_Letter',COVER)
-    document('Declaration_of_Interest',[('Title','Declaration of competing interest'),('Normal',TITLE),('Normal','Lizhen Shao, Lincong Wei, Wei Wang'),('Normal',COI)])
-    document('Title_Page',[('Title',TITLE),('Normal','Lizhen Shao, Lincong Wei, Wei Wang'),('Normal',AFFILIATION),('Heading1','Corresponding author'),('Normal','Lizhen Shao\nEmail: lshao@ustb.edu.cn\n'+AFFILIATION),('Heading1','Article type'),('Normal','Research article'),('Heading1','Keywords'),('Normal','Semiconductor manufacturing systems; cluster tools; dual-source material flow; mixed-integer linear programming; learning cut selection'),('Heading1','Funding'),('Normal',FUNDING)])
+    document('Declaration_of_Interest',[('Title','Declaration of competing interest'),('Normal',TITLE),('Normal','Lincong Wei, Lizhen Shao, Wei Wang'),('Normal',COI)])
+    document('Title_Page',[('Title',TITLE),('Normal','Lincong Wei, Lizhen Shao, Wei Wang'),('Normal',AFFILIATION),('Heading1','Corresponding author'),('Normal','Lizhen Shao\nEmail: lshao@ustb.edu.cn\n'+AFFILIATION),('Heading1','Article type'),('Normal','Research article'),('Heading1','Keywords'),('Normal','Semiconductor manufacturing systems; cluster tools; dual-source material flow; mixed-integer linear programming; learning cut selection'),('Heading1','Funding'),('Normal',FUNDING)])
     document('CRediT_Statement',[('Title','CRediT authorship contribution statement'),('Normal',TITLE)]+[('Normal',name+': '+roles) for name,roles in CREDIT]+[('Normal','All authors reviewed and approved the final manuscript.')])
     s=(PAPER/'JMS_Submission_EN.tex').read_text('utf-8')
     abstract=re.search(r'\\begin\{abstract\}([\s\S]*?)\\end\{abstract\}',s)[1].strip()
-    abstract=abstract.replace('$4\\times1$','4 × 1').replace('$2\\times2$','2 × 2').replace('~',' ')
-    metadata={'title':TITLE,'article_type':'Research article','authors':[{'given_name':'Lizhen','family_name':'Shao','corresponding':True,'email':'lshao@ustb.edu.cn'},{'given_name':'Lincong','family_name':'Wei','corresponding':False},{'given_name':'Wei','family_name':'Wang','corresponding':False}],'affiliation':AFFILIATION,'abstract':abstract,'keywords':['semiconductor manufacturing systems','cluster tools','dual-source material flow','mixed-integer linear programming','learning cut selection'],'funding':FUNDING,'competing_interests':COI,'highlights':HIGHLIGHTS,'highlight_character_counts':[len(x) for x in HIGHLIGHTS]}
+    abstract=abstract.replace('$4\\times1$','4 × 1').replace('$2\\times2$','2 × 2').replace('~',' ').replace('\\%','%')
+    metadata={'title':TITLE,'article_type':'Research article','authors':[{'given_name':'Lincong','family_name':'Wei','corresponding':False},{'given_name':'Lizhen','family_name':'Shao','corresponding':True,'email':'lshao@ustb.edu.cn'},{'given_name':'Wei','family_name':'Wang','corresponding':False}],'affiliation':AFFILIATION,'abstract':abstract,'keywords':['semiconductor manufacturing systems','cluster tools','dual-source material flow','mixed-integer linear programming','learning cut selection'],'funding':FUNDING,'competing_interests':COI,'highlights':HIGHLIGHTS,'highlight_character_counts':[len(x) for x in HIGHLIGHTS]}
     (PAPER/'submission/submission_metadata.json').write_text(json.dumps(metadata,ensure_ascii=False,indent=2)+'\n','utf-8')
-    (OUT/'Submission_Metadata.txt').write_text('TITLE\n'+TITLE+'\n\nAUTHORS\nLizhen Shao; Lincong Wei; Wei Wang\n\nAFFILIATION\n'+AFFILIATION+'\n\nCORRESPONDING AUTHOR\nLizhen Shao; lshao@ustb.edu.cn\n\nABSTRACT\n'+abstract+'\n\nKEYWORDS\n'+'; '.join(metadata['keywords'])+'\n\nFUNDING\n'+FUNDING+'\n','utf-8')
+    (OUT/'Submission_Metadata.txt').write_text('TITLE\n'+TITLE+'\n\nAUTHORS\nLincong Wei; Lizhen Shao; Wei Wang\n\nAFFILIATION\n'+AFFILIATION+'\n\nCORRESPONDING AUTHOR\nLizhen Shao; lshao@ustb.edu.cn\n\nABSTRACT\n'+abstract+'\n\nKEYWORDS\n'+'; '.join(metadata['keywords'])+'\n\nFUNDING\n'+FUNDING+'\n','utf-8')
     print('Created five editable Word documents. Highlight lengths:',metadata['highlight_character_counts'])
 
 if __name__=='__main__':main()
