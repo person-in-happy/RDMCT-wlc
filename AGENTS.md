@@ -13,3 +13,7 @@ For future experiments, run in a visible foreground terminal with live progress,
 ## Default Git push target (confirmed by user 2026-11-07)
 
 The user-confirmed project remote is `origin`, URL `https://github.com/person-in-happy/RDMCT-wlc.git`, and the default target branch is `RL-SAT` (`https://github.com/person-in-happy/RDMCT-wlc/tree/RL-SAT`). Use this target for future project push requests unless the user specifies otherwise. Do not ask the user to identify this remote again; verify the local configuration against this record before pushing. This does not authorize force pushes or bypassing approval requirements.
+
+## 默认 PPT 制作技能（用户确认：2026-11-19）
+
+制作、修改和审查 PPT 默认读取 `C:/Users/Administrator/.codex/skills/nature-ppt/SKILL.md`。源副本为 `D:/git/git/nature-skills/skills/nature-ppt/SKILL.md`。遵从用户明确指定的其他技能、语言、模板和格式；学术结果直接按已核验证据陈述，制作汇报不授权重跑或干预实验。

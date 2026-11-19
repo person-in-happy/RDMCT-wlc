@@ -11,6 +11,14 @@
       "figure": 2
     }
   ],
+  "parallel": {
+    "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\figures\\fig_parallel_en_nature.pdf",
+    "source_sha256": "25a826f7f3c2ac1978a94ed986ed9e64afdd13ec65aa868122852490e88a8827",
+    "label_replacements": {
+      "four slots full": "full occupancy",
+      "four spaces": "all four wafers"
+    }
+  },
   "chain": {
     "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\figures\\terminology_en\\fig_chain_en_nature.pdf",
     "source_sha256": "4e84a929fc065a3342c7a244c2fccfe85d2a7b1b53fab644f4203daa37badeba",
@@ -47,8 +55,8 @@
         "Empty/reset"
       ],
       "end_marker_legend": [
-        "Product return: 324 s",
-        "All occupancy ends: 342 s"
+        "Batch makespan: 324 s",
+        "Equipment occupancy ends: 342 s"
       ],
       "symbol_keys": [
         "P1[1:2]: Pjob1 products 1-2; D1, D2: auxiliaries"
@@ -100,8 +108,8 @@
         "Empty/reset"
       ],
       "end_marker_legend": [
-        "Product return: 920 s",
-        "All occupancy ends: 938 s"
+        "Batch makespan: 920 s",
+        "Equipment occupancy ends: 938 s"
       ],
       "symbol_keys": [
         "P1[i:j]: Pjob1 products i-j"
@@ -206,25 +214,25 @@
     }
   },
   "optimization_calls": 0,
-  "renderer_sha256": "b4d20a1ca0ea7da7ed8c9d88e02f33446442394b42c19c9c13b1c587f2734400",
+  "renderer_sha256": "466f4c288d43f2b66ee6d54f7e0d2eb3cdd68f67f81315ed6a56012743ff6de9",
   "artifacts": {
-    "Figure1.pdf": "b7aa6cdf3dddfd4ae6ba47eae39f0690f594d2126f101ecc28d0fe11e54dae92",
+    "Figure1.pdf": "2d11fcabd0c0f352f9f6ba6e4b3c08855bcd904a619dc110f23db9e24b8ca03d",
     "Figure1.png": "9180cef8011dd0cfc8e316be11b9b2c788e23fd41b9f3ec894dd2b22553d9c50",
     "Figure1.svg": "3da794cf89639afc086aff8e25ef7951de97cf7c1a522b072cc01aa26646ac68",
-    "Figure2.pdf": "c7ecc72f84a1a1db0b16d16c64b9ce89bc3e1b1717ad9ee4383663acd6106201",
+    "Figure2.pdf": "092b16714be612a2925c0dfff22ada2f8f940c6b8a4ce8005caee75b270be336",
     "Figure2.png": "c395af7099972f79200143ab0aa251ff1ece4c6b6eacb097ac1368157e7b9da7",
     "Figure2.svg": "7efe9f510724301c149ded8cb45349a471746f632188bcfb52ff61d5c6d6d357",
-    "Figure3.pdf": "9452987ec5dcbe76a599615551f1fd3b42e15c3b1655810ee50b600d5c4762a8",
+    "Figure3.pdf": "020e7db44f41bea53f8fd3746289f6d537239a6c5da7580969ad52928c4a3e6a",
     "Figure3.png": "4c840d5c33dccb8c5716f7f6a3e60e26d38b14619c1abd9123ae464afbf57f64",
     "Figure3.svg": "55d29b0919ab619eed618b82fe7867a257c3e9230f18a4c717cb149a400fb371",
-    "Figure4.pdf": "0ce72fb65330170ed87eba1657d5c8a235f25f2710dfbece82e642c37fa2c5a0",
-    "Figure4.png": "4e84b944e6659ceca575c05aaed5afd25a66245ac537eff8ca339f5a7eb59df3",
-    "Figure4.svg": "cf53e40ddd3907d35f0d8fd7af6dc497433108b109d47ef49cea0f65e1402401",
-    "Figure5.pdf": "6707233ca3b92d1d96801febd99773c1e8deb5cf07a4247c04eb455e234b95d2",
-    "Figure5.png": "f0923cfc661414626893c64adf2da2bea4af3d2c990e74fe620fec3b511951fe",
-    "Figure5.svg": "85e5d68a25623823e956ecf82df19209ed145f1be24f34e2c5fde876aec141e0",
-    "Figure6.pdf": "9ff0346043ee69c9a5d7bbc3643a8bd65fd4099303ac90ccf41ffd89fbcf9cb9",
-    "Figure6.png": "3e0e1d1d87f0efa060df15153a7cdbac65835d0968b9166cf179d1351fbbaa40",
-    "Figure6.svg": "637d5e9a3b7d131f06820103ec56fcf467351a18c670e3f709123ca7f17d8919"
+    "Figure4.pdf": "604e243d6d61039507da3c6ca71f6535a80f060c04c8c6c2b5f1099a278673fb",
+    "Figure4.png": "0b607a90958bbce25b228481722fd25b2108656ca8d0bfb295c4f706a8b4b2a3",
+    "Figure4.svg": "985d923c8ae9e8e5e2886382223fafdf06a4876559368e9226d6b1967abffc69",
+    "Figure5.pdf": "e16ff742843d900b75046689ce3e771a86504a83b49acb2ac199326e06e5de11",
+    "Figure5.png": "7f8efd8b73292bc916696595914f528a494d1c09a8c2e6bdb1cf37fd19dfbcdf",
+    "Figure5.svg": "7f8f8a88d8513607ee6f257abd1606b3d663d865a91e7cf2f4dd7d46264fad53",
+    "Figure6.pdf": "f0163e6fcabcc05d973ae1e94c9daf5366701fbd0052d4bbaf1a2a017c351263",
+    "Figure6.png": "35f430bba6d7dfc7c48819826a2a4f4b21ad6f57a26b7044e158264189346c64",
+    "Figure6.svg": "d898373de49bc338de31e5fd560a36f2e79afdc19d8843095992fd6f740d5478"
   }
 }

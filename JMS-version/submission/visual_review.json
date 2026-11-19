@@ -1,22 +1,22 @@
 {
   "date": "2026-11-17",
-  "chinese_source_sha256": "7078c4ce14e5c33f6848686c962aebbffc6d81070f62704763a119e25574927b",
-  "chinese_pdf_sha256": "1a31f1c0e86b4c2e609af5a1bffecc5edf8a1329f495ea5489ea546af80b1c31",
-  "english_source_sha256": "c5b94e9ff674425f730d9e335067077d05c30979b365e424ee18b73627ea4ecf",
-  "english_pdf_sha256": "c81491fa282f580b33dde0a96b00a7d43eb83e284972d02858385b226fe9ceb7",
+  "chinese_source_sha256": "0e8559a035db87437561bf901ada7c788020f9938d21115b6dc76fc95d8861c6",
+  "chinese_pdf_sha256": "7890058f9827c8244f409e82279e2345d643133aef0a7f1347c3d70a7114c779",
+  "english_source_sha256": "13544b2371fd43e9b637f80dbded24e5443a648792a2546d1a67b3e14364f3a9",
+  "english_pdf_sha256": "36f8a0fd0d876488737c8c47ff7286523fd481d31aea6d3ac0bcef1f32dd7479",
   "chinese_pages": 15,
   "pages": 17,
   "previous_chinese_pages": 15,
   "previous_english_pages": 17,
-  "visual_review": "Inspected all changed-page overviews (CN 9-15, EN 11-17) and detailed Table 8/Table 9 pages. CN pages 1-8 and EN pages 1-10 are pixel-identical to the prior reviewed version. No table clipping or overlap observed.",
-  "word_review": "Five Word documents and submission metadata are byte-identical to the pre-revision snapshot; their previously completed native Microsoft Word rendering review remains applicable.",
+  "visual_review": "Inspected all 17 English pages and changed Chinese pages 1-2 at full-page resolution. Tables, equations, figure legends, and references fit without clipping or overlap. CRediT author names use nonbreaking spaces. Chinese pages 3-15 are pixel-identical to the previously reviewed version.",
+  "word_review": "All five Word documents, submission metadata, and six figure assets are byte-identical to the prior reviewed version; prior native Word renders remain applicable.",
   "cross_language_checks_pass": true,
   "numbered_equations": 34,
   "unnumbered_objective_expressions": 1,
   "tables": 11,
   "figures": 6,
   "references": 32,
-  "abstract_word_count": 199,
+  "abstract_word_count": 213,
   "author_order": [
     "Lincong Wei",
     "Lizhen Shao",
@@ -24,37 +24,183 @@
   ],
   "corresponding_author": "Lizhen Shao",
   "editorial_changes": [
-    "Removed four root-separation rows and the separation-setting column from Table 8",
-    "Retained 24 default-setting values unchanged; corrected run count to 72",
-    "Removed dependent comparisons, ablations and interpretations in both languages"
+    "Use CTs throughout manuscript prose with grammatical restructuring",
+    "Define LP, LL and AL at first use; AL denotes aligner",
+    "Align MILP and HEM definitions and remove repeated ATR/VTR definitions",
+    "Use MILP scheduling instances for the training cases",
+    "Preserve context-dependent singular/plural LP, LL and Pjob forms",
+    "Fix an schedule to a schedule and keep CRediT names together",
+    "Preserve the concurrent Chinese abstract semicolon edit"
   ],
   "joint_objective_table": "Single column; three instance groups; no pair-count column; horizontal and vertical centering retained.",
-  "in_figure_legends": [
-    3,
-    5,
-    6
-  ],
+  "in_figure_legends": "Action categories, batch makespan, equipment occupancy end, and wafer identities remain inside the Gantt figures; Figure 4 uses full occupancy and Process all four wafers.",
   "schedule_intervals_unchanged": true,
   "figure_crop_checks": {
-    "EN": {
-      "figures": 6,
-      "schedules_unchanged": true,
-      "time_label_inline": true,
-      "vertical_margins_trimmed": true,
-      "visible_crop_pixels_unchanged": true
-    },
     "CN": {
-      "figures": 6,
-      "schedules_unchanged": true,
-      "time_label_inline": true,
-      "vertical_margins_trimmed": true,
-      "visible_crop_pixels_unchanged": true
+      "fig_chain_cn_nature": {
+        "original_size_points": [
+          198.89999389648438,
+          235.9396514892578
+        ],
+        "cropped_size_points": [
+          198.89999389648438,
+          217.75
+        ],
+        "padding_points": 2,
+        "horizontal_scale_preserved": true,
+        "visible_pixels_unchanged": true
+      },
+      "fig_parallel_cn_nature": {
+        "original_size_points": [
+          198.89999389648438,
+          149.65562438964844
+        ],
+        "cropped_size_points": [
+          198.89999389648438,
+          147.25
+        ],
+        "padding_points": 2,
+        "horizontal_scale_preserved": true,
+        "visible_pixels_unchanged": true
+      },
+      "fig_schedule_n16_cn": {
+        "original_size_points": [
+          255.60000610351562,
+          304.55999755859375
+        ],
+        "cropped_size_points": [
+          255.60000610351562,
+          294.5
+        ],
+        "padding_points": 2,
+        "horizontal_scale_preserved": true,
+        "visible_pixels_unchanged": true
+      },
+      "fig_schedule_n2_cn": {
+        "original_size_points": [
+          255.60000610351562,
+          274.32000732421875
+        ],
+        "cropped_size_points": [
+          255.60000610351562,
+          264.25
+        ],
+        "padding_points": 2,
+        "horizontal_scale_preserved": true,
+        "visible_pixels_unchanged": true
+      },
+      "fig_single_source_pjob_cn": {
+        "original_size_points": [
+          198.89999389648438,
+          175.4304656982422
+        ],
+        "cropped_size_points": [
+          198.89999389648438,
+          170.0
+        ],
+        "padding_points": 2,
+        "horizontal_scale_preserved": true,
+        "visible_pixels_unchanged": true
+      },
+      "fig_system_pjob_cn": {
+        "original_size_points": [
+          198.89999389648438,
+          167.38377380371094
+        ],
+        "cropped_size_points": [
+          198.89999389648438,
+          162.0
+        ],
+        "padding_points": 2,
+        "horizontal_scale_preserved": true,
+        "visible_pixels_unchanged": true
+      }
+    },
+    "EN": {
+      "Figure1": {
+        "original_size_points": [
+          198.89999389648438,
+          167.38377380371094
+        ],
+        "cropped_size_points": [
+          198.89999389648438,
+          162.5
+        ],
+        "padding_points": 2,
+        "horizontal_scale_preserved": true,
+        "visible_pixels_unchanged": true
+      },
+      "Figure2": {
+        "original_size_points": [
+          198.89999389648438,
+          175.4304656982422
+        ],
+        "cropped_size_points": [
+          198.89999389648438,
+          170.0
+        ],
+        "padding_points": 2,
+        "horizontal_scale_preserved": true,
+        "visible_pixels_unchanged": true
+      },
+      "Figure3": {
+        "original_size_points": [
+          198.89999389648438,
+          242.67413330078125
+        ],
+        "cropped_size_points": [
+          198.89999389648438,
+          226.25
+        ],
+        "padding_points": 2,
+        "horizontal_scale_preserved": true,
+        "visible_pixels_unchanged": true
+      },
+      "Figure4": {
+        "original_size_points": [
+          198.89999389648438,
+          149.44090270996094
+        ],
+        "cropped_size_points": [
+          198.89999389648438,
+          146.0
+        ],
+        "padding_points": 2,
+        "horizontal_scale_preserved": true,
+        "visible_pixels_unchanged": true
+      },
+      "Figure5": {
+        "original_size_points": [
+          255.60000610351562,
+          274.32000732421875
+        ],
+        "cropped_size_points": [
+          255.60000610351562,
+          264.25
+        ],
+        "padding_points": 2,
+        "horizontal_scale_preserved": true,
+        "visible_pixels_unchanged": true
+      },
+      "Figure6": {
+        "original_size_points": [
+          255.60000610351562,
+          304.55999755859375
+        ],
+        "cropped_size_points": [
+          255.60000610351562,
+          294.5
+        ],
+        "padding_points": 2,
+        "horizontal_scale_preserved": true,
+        "visible_pixels_unchanged": true
+      }
     }
   },
   "independent_flat_source_rebuild_pass": true,
   "independent_rebuild_all_pages_pixel_identical": true,
   "delivery_archive_bytes_verified": true,
-  "submission_archive_sha256": "a22cbae20d9e807d7127d08bbee26f84d533649259a5fd651b40fd0811da4cf5",
+  "submission_archive_sha256": "fe0cac2e419edd2e05eff23bc665076cff620db64abf613f1af00d215581086a",
   "latex_warnings": [],
   "chinese_latex_warnings": [
     "Package fixltx2e Warning: fixltx2e is not required with releases after 2015",
@@ -64,10 +210,22 @@
     "Package hyperref Warning: Token not allowed in a PDF string (Unicode):",
     "Package caption Warning: Unused \\captionsetup[subfigure] on input line 19."
   ],
-  "revision_audit": "revisions/20261117_remove_root_separation/audit.json",
+  "revision_audit": "revisions/20261117_abbreviation_consistency/audit.json",
   "optimization_calls": 0,
   "submitted_externally": false,
   "journal_specific_guide": "No new journal-policy review in this editorial revision; previous review status is recorded in UPLOAD_README.txt.",
   "additional_ai_figure_disclosure": "Preserved the author-confirmed choice from 2026-11-15.",
-  "table8": "Four default-separation instance rows and six method columns. No separation-setting column; 24 retained result values unchanged; 72 runs."
+  "table8": "Four default-separation instance rows and six method columns. No separation-setting column; 24 retained result values unchanged; 72 runs.",
+  "abbreviation_checks": [
+    "CTs",
+    "LPs",
+    "AL",
+    "LLs",
+    "VTR",
+    "ATR",
+    "MILP",
+    "HEM",
+    "SPBS",
+    "RL-DMCT"
+  ]
 }

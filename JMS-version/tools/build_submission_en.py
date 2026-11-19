@@ -11,14 +11,19 @@ def sha(path):return hashlib.sha256(path.read_bytes()).hexdigest()
 
 def compile_tex(source,out):
     out.mkdir(parents=True,exist_ok=True)
+    # Keep submission-build auxiliaries distinct from editor-generated ones.
+    job=source.stem+'_isolated'
     for i in range(3):
-        r=subprocess.run(['pdflatex','-interaction=nonstopmode','-halt-on-error','-file-line-error','-output-directory='+str(out),source.name],cwd=source.parent,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        r=subprocess.run(['pdflatex','-interaction=nonstopmode','-halt-on-error','-file-line-error','-jobname='+job,'-output-directory='+str(out),source.name],cwd=source.parent,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         (out/f'pass{i+1}.txt').write_bytes(r.stdout)
         if r.returncode:raise RuntimeError(r.stdout[-3000:].decode('utf-8',errors='replace'))
-    log=(out/(source.stem+'.log')).read_text('utf-8',errors='replace')
+    log=(out/(job+'.log')).read_text('utf-8',errors='replace')
     bad=[x for x in log.splitlines() if any(k in x for k in ('Overfull','undefined references','undefined on input','Float too large','Missing character','multiply defined','balance Warning'))]
     if bad:raise RuntimeError('\n'.join(bad))
-    return out/(source.stem+'.pdf'),[x for x in log.splitlines() if 'Warning' in x]
+    # Retain the established PDF path while keeping only auxiliaries isolated.
+    stable=out/(source.stem+'.pdf')
+    shutil.copyfile(out/(job+'.pdf'),stable)
+    return stable,[x for x in log.splitlines() if 'Warning' in x]
 
 def verify_sources():
     from assemble_submission_en import environments

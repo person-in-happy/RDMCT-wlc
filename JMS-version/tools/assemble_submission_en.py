@@ -8,8 +8,8 @@ PAPER = Path(__file__).resolve().parents[1]
 CN = PAPER / 'JMS_Review_CN.tex'
 BODY = PAPER / 'submission/manuscript_body_en.tex'
 
-INPUT_ROWS = ['Batch jobs $\\mathcal J=\\{1,\\ldots,J\\}$ and products $\\mathrm{Pjob}_j$ in job $j$.', 'Ascending physical-identifier list for job $j$, and source LP of its $k$th product.', 'Product counts by job and LP, by job, by recipe, and for the entire batch.', 'Job mode $m_j\\in\\mathcal M=\\{\\zeta,\\psi,\\mathrm{cl}\\}$ ($4\\times1$, $2\\times2$, cleaning); nonempty eligible set $\\mathcal C_j\\subseteq\\mathcal C=\\{\\mathrm{CH2},\\mathrm{CH3}\\}$.', 'PW pairs $\\mathcal P=\\{1,\\ldots,P_{\\max}\\}$, chamber cycles $\\mathcal Q_c=\\{1,\\ldots,Q_{\\max}\\}$, and wafer-route tasks $\\mathcal I=\\mathcal P\\times\\{0,1\\}$.', 'Upper bounds on production cycles, cleaning operations, PW pairs, and cycles per chamber.', 'Source regions $\\mathcal S=\\{A,V\\}$ (atmosphere, vacuum); $\\sigma=0$ for single-source and $1$ for dual-source supply.', 'Candidate physical operations and resource-occupancy intervals generated from route and cycle templates.', 'Resources, resource capacities, and auxiliary wafers $\\mathcal D=\\{1,\\ldots,D\\}$.', 'Processing duration of type $m$.', 'ATR handling, VTR handling, and chamber-$c$ half-turn durations.', 'ATR exchange, VTR exchange, and empty ATR travel from LL to LP.', 'Product alignment, upper-LL pumping, and lower-LL venting durations.', 'Upper/lower LL-slot reset durations, measured from completion of opposite-side pickup.', 'Operation duration, required predecessor--successor interval, and resource repositioning/reset interval.', 'Cleaning threshold in production cycles, $H\\ge2$.', 'Residency limit for route $i$ on resource $\\rho$; measurement conventions in Section~\\ref{sec:model-resource-cn}.', 'Scheduling horizon and relaxation constant $M=B+\\max\\{\\delta_{oo\\prime},\\delta^\\rho_{oo\\prime},r_c\\}$.', 'Nonnegative weights for total waiting, maximum individual waiting, and rhythm variation.', 'Tolerance on the product-completion upper bound.']
-VARIABLE_ROWS = [('Binary decision', 'Assigns a job-$j$ product from LP $\\ell$ to position $(p,r)$; defined for $N_{j\\ell}>0$.'), ('Binary decision', 'Pair activation, processing-type selection, and chamber assignment.'), ('Binary decision', 'Pair--cycle occupancy, cycle type, and placement on the accessible side.'), ('Binary decision', 'Assigns auxiliary $\\tau\\in\\mathcal D$ to position $(p,r)$.'), ('Binary decision', 'Resource-unit assignment, resource service order, and paired handling synchronization.'), ('Real decision', 'Start times of operation $o$ and chamber cycle $(c,q)$.'), ('Auxiliary', 'Operation end time $e_o$ (real) and activation $b_o$ (binary).'), ('Real auxiliary', 'Pickup-time boundary between consecutive nonempty LPs of job $j$.'), ('Integer auxiliary', 'Production-cycle count since cleaning after cycle $(c,q)$, in $\\{0,\\ldots,H\\}$.'), ('Binary auxiliary', 'Product presence, $2\\times2$ product presence, and product-containing pair occupancy of cycle $(c,q)$.'), ('Binary auxiliary', 'Product assignment and auxiliary demand at position $(p,r)$.'), ('Binary auxiliary', 'Atmospheric and vacuum supply of route $i$.'), ('Real decision', 'Upper bound on product return times to the original LPs.'), ('Real auxiliary', 'Upper bounds on individual waiting and absolute variation of cycle-start intervals.')]
+INPUT_ROWS = ['Batch jobs $\\mathcal J=\\{1,\\ldots,J\\}$ and products $\\mathrm{Pjob}_j$ in job $j$.', 'Ascending physical-identifier list for job $j$, and source LP of its $k$th product.', 'Product counts by job and LP, by job, by recipe, and for the entire batch.', 'Job mode $m_j\\in\\mathcal M=\\{\\zeta,\\psi,\\mathrm{cl}\\}$ ($4\\times1$, $2\\times2$, cleaning); nonempty eligible set $\\mathcal C_j\\subseteq\\mathcal C=\\{\\mathrm{CH2},\\mathrm{CH3}\\}$.', 'PW pairs $\\mathcal P=\\{1,\\ldots,P_{\\max}\\}$, chamber cycles $\\mathcal Q_c=\\{1,\\ldots,Q_{\\max}\\}$, and wafer-route tasks $\\mathcal I=\\mathcal P\\times\\{0,1\\}$.', 'Upper bounds on production cycles, cleaning operations, PW pairs, and cycles per chamber.', 'Source regions $\\mathcal S=\\{A,V\\}$ (atmosphere, vacuum); $\\sigma=0$ for single-source and $1$ for dual-source supply.', 'Candidate physical operations and resource-occupancy intervals generated from route and cycle templates.', 'Resources, resource capacities, and auxiliary wafers $\\mathcal D=\\{1,\\ldots,D\\}$.', 'Processing duration of type $m$.', 'ATR handling, VTR handling, and chamber-$c$ half-turn durations.', 'ATR exchange, VTR exchange, and empty ATR travel from LL to LP.', 'Product alignment, upper-LL pumping, and lower-LL venting durations.', 'Upper/lower LL-slot reset durations, measured from completion of opposite-side pickup.', 'Operation duration, required predecessor--successor interval, and resource repositioning/reset interval.', 'Cleaning threshold in production cycles, $H\\ge2$.', 'Residency limit for route $i$ on resource $\\rho$; measurement conventions in Section~\\ref{sec:model-resource-cn}.', 'Scheduling horizon and relaxation constant $M=B+\\max\\{\\delta_{oo\\prime},\\delta^\\rho_{oo\\prime},r_c\\}$.', 'Nonnegative weights for total waiting time, maximum individual waiting time, and rhythm deviation.', 'Tolerance on the batch-makespan upper bound.']
+VARIABLE_ROWS = [('Binary decision', 'Assigns a job-$j$ product from LP $\\ell$ to position $(p,r)$; defined for $N_{j\\ell}>0$.'), ('Binary decision', 'Pair activation, processing-type selection, and chamber assignment.'), ('Binary decision', 'Pair--cycle occupancy, cycle type, and placement on the accessible side.'), ('Binary decision', 'Assigns auxiliary $\\tau\\in\\mathcal D$ to position $(p,r)$.'), ('Binary decision', 'Resource-unit assignment, resource service order, and paired handling synchronization.'), ('Real decision', 'Start times of operation $o$ and chamber cycle $(c,q)$.'), ('Auxiliary', 'Operation end time $e_o$ (real) and activation $b_o$ (binary).'), ('Real auxiliary', 'Pickup-time boundary between consecutive nonempty LPs of job $j$.'), ('Integer auxiliary', 'Production-cycle count since cleaning after cycle $(c,q)$, in $\\{0,\\ldots,H\\}$.'), ('Binary auxiliary', 'Product presence, $2\\times2$ product presence, and product-containing pair occupancy of cycle $(c,q)$.'), ('Binary auxiliary', 'Product assignment and auxiliary demand at position $(p,r)$.'), ('Binary auxiliary', 'Atmospheric and vacuum supply of route $i$.'), ('Real decision', 'Upper bound on all product return times to the original LPs.'), ('Real auxiliary', 'Upper bounds on individual waiting time and the absolute difference between successive cycle-start intervals.')]
 CAPTIONS = {
  'tab:joint-two-stage-cn': 'Two-stage and normalized joint objectives (paired means, times in s)',
  'tab:symbol-cn-a': 'Input parameters and sets',
@@ -17,24 +17,24 @@ CAPTIONS = {
  'tab:structure-ablation-cn': 'Search strategies for four mixed-recipe instances (three-seed means, s)',
  'tab:refinement-ablation-cn': 'Timing refinement of the same schedule (three-seed means, s)',
  'tab:rhythm-weight-cn': 'Rhythm-weight ablation (three-seed means, times in s)',
- 'tab:journal-structure-cn': 'Search strategies for four small dual-source instances (three-seed mean product completion, s)',
- 'tab:journal-algorithm-cn': 'SPBS and cut selection: training seed 1 and three solver seeds (mean product completion, s)',
- 'tab:journal-training-cn': 'Initialization across training seeds (mean product completion, s)',
- 'tab:journal-transfer-cn': 'Algorithms across recipes and supply scenarios (mean product completion, s)',
- 'tab:journal-transfer-components-cn': 'Components with shared SPBS inputs (mean product completion, s)',
+ 'tab:journal-structure-cn': 'Search strategies for four small dual-source instances (three-seed mean batch makespan, s)',
+ 'tab:journal-algorithm-cn': 'SPBS and cut selection: training seed 1 and three solver seeds (mean batch makespan, s)',
+ 'tab:journal-training-cn': 'Initialization across training seeds (mean batch makespan, s)',
+ 'tab:journal-transfer-cn': 'Algorithms across recipes and supply scenarios (mean batch makespan, s)',
+ 'tab:journal-transfer-components-cn': 'Components with shared SPBS inputs (mean batch makespan, s)',
 }
 WORDS = {
  '两阶段': 'Two-stage', '联合目标': 'Joint objective',
  '先固定后联合': 'Fixed then joint', '联合搜索': 'Joint', '固定结构': 'Fixed',
- '供片来源与腔室限制': 'Supply / eligibility', '精修前等待': 'Waiting before', '精修后等待': 'Waiting after',
+ '供片来源与腔室限制': 'Supply / eligibility', '精修前总等待时间': 'Total waiting before', '精修后总等待时间': 'Total waiting after',
  '单源、限制腔室': 'Single, restricted', '双源、限制腔室': 'Dual, restricted',
  '单源': 'Single', '双源': 'Dual', '16片纯': '16 products, pure ',
- '总等待': 'Total waiting', '节拍偏差': 'Rhythm deviation', '实例': 'Instance',
+ '总等待时间': 'Total waiting time', '节拍偏差': 'Rhythm deviation', '实例': 'Instance',
  '等待：前': 'Waiting: before', '后': 'after', '下界/上界': 'Lower/upper bound',
  'LP分布': 'LP distribution', '跨LP': 'Across LPs', '同LP': 'Same LP', '配方': 'Recipe',
  '固定结构精修后': 'After refinement', '第一阶段': 'Stage one', '指标': 'Metric',
- '产品完工时间': 'Product completion', '最大单项等待': 'Maximum individual waiting',
- '全部占用结束': 'End of all occupancy', '加工周期/清洁次数': 'Production/cleaning cycles',
+ '批次完工时间': 'Batch makespan', '最大单项等待时间': 'Maximum individual waiting time',
+ '全部占用结束': 'End of equipment occupancy', '加工周期/清洁次数': 'Production/cleaning cycles',
  '借用次数/实际辅助片数': 'Loans/physical auxiliaries', '再次借用次数/同时借用峰值': 'Repeat loans/peak simultaneous loans',
  '有效节拍中心数': 'Valid rhythm centers', '辅助片数': 'Auxiliaries',
  '纯': 'Pure ', '混合': 'Mixed', '2片': '2 products', '4片': '4 products',
@@ -48,7 +48,7 @@ FIGURES = {
  'fig:single-source-cn': ('Figure2', 'Topology and wafer routes of the single-source rotating-chamber cluster tool.'),
  'fig:chain-zh': ('Figure3', r'Event sequence of $2\times2$ chained production.'),
  'fig:parallel-zh': ('Figure4', r'Event sequence of $4\times1$ parallel production.'),
- 'fig:small-optimal-gantt-cn': ('Figure5', r'Optimal product-completion schedule for two pure $4\times1$ products from the same LP.'),
+ 'fig:small-optimal-gantt-cn': ('Figure5', r'Schedule minimizing batch makespan for two pure $4\times1$ products from the same LP.'),
  'fig:current-defaults-gantt-cn': ('Figure6', r'Complete feasible resource schedule for 16 pure $4\times1$ products.'),
 }
 
@@ -106,7 +106,7 @@ def translated_table(label, table):
     return table.replace(r'o\prime', "o'")
 
 def main():
-    expected='7078c4ce14e5c33f6848686c962aebbffc6d81070f62704763a119e25574927b'
+    expected='0e8559a035db87437561bf901ada7c788020f9938d21115b6dc76fc95d8861c6'
     if hashlib.sha256(CN.read_bytes()).hexdigest()!=expected:
         raise RuntimeError('The Chinese manuscript changed. Review the English translation before updating its source hash.')
     source = CN.read_text('utf-8')

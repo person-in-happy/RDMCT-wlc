@@ -63,8 +63,8 @@ def legended_figures():
         '"产品晶圆"':'"Product"', '"时间 / s"':'"Time / s"',
         '"生产加工及补位借用"':'"Production / filling"',
         '"清洁借用"':'"Cleaning loans"',
-        '产品完工：':'Product return: ', '产品回片：':'Product return: ',
-        '全部占用结束：':'All occupancy ends: ',
+        '批次完工：':'Batch makespan: ',
+        '设备占用结束：':'Equipment occupancy ends: ',
         'D1–D7：辅助晶圆':'D1-D7: auxiliary wafers',
         'P1[i:j]：Pjob1中第i至j片产品':'P1[i:j]: Pjob1 products i-j',
         'P1[1:2]：Pjob1的两片产品    D1、D2：辅助片':'P1[1:2]: Pjob1 products 1-2; D1, D2: auxiliaries',
@@ -122,14 +122,36 @@ def chain_legend():
     assert original[0].get_pixmap(clip=clip).samples==page.get_pixmap(clip=clip).samples
     return {'source':str(source),'source_sha256':sha(source),'legend':label,'original_drawing_unchanged':True}
 
+def parallel_labels():
+    source=PAPER/'figures/fig_parallel_en_nature.pdf'
+    doc=pymupdf.open(source);page=doc[0]
+    replacements={'four slots full':'full occupancy','four spaces':'all four wafers'}
+    spans=[s for b in page.get_text('dict')['blocks'] if 'lines' in b for line in b['lines'] for s in line['spans']]
+    targets=[s for s in spans if s['text'] in replacements]
+    assert len(targets)==2
+    for span in targets:
+        rect=pymupdf.Rect(span['bbox']);middle=(rect.y0+rect.y1)/2
+        # A narrow center strip avoids touching the adjacent line's glyph box.
+        page.add_redact_annot(pymupdf.Rect(rect.x0,middle-.3,rect.x1,middle+.3),fill=None)
+    page.apply_redactions(images=0,graphics=0,text=0)
+    font=pymupdf.Font(fontfile='C:/Windows/Fonts/arial.ttf')
+    page.insert_font(fontname='TermEN',fontbuffer=font.buffer)
+    for span in targets:
+        rect=pymupdf.Rect(span['bbox']);label=replacements[span['text']];size=span['size']
+        x=(rect.x0+rect.x1-font.text_length(label,fontsize=size))/2
+        page.insert_text((x,span['origin'][1]),label,fontname='TermEN',fontsize=size)
+    for label in replacements.values():assert label in page.get_text().replace('\xa0',' '),label
+    assert 'Process' in page.get_text() and 'Load P2' in page.get_text()
+    doc.subset_fonts();doc.save(OUT/'Figure4.pdf',garbage=4,deflate=True)
+    page.get_pixmap(matrix=pymupdf.Matrix(4,4),alpha=False).save(OUT/'Figure4.png')
+    (OUT/'Figure4.svg').write_text(page.get_svg_image(),'utf-8')
+    return {'source':str(source),'source_sha256':sha(source),'label_replacements':replacements}
+
+
 def main():
     OUT.mkdir(parents=True,exist_ok=True)
     report={'topology':[topology('fig_system_pjob_cn',1),topology('fig_single_source_pjob_cn',2)]}
-    # These unchanged English diagrams have the same events and pair identities as the Chinese figures.
-    for n,folder,stem in [(4,'','fig_parallel_en_nature')]:
-        for ext in ('pdf','png','svg'):
-            p=PAPER/'figures'/folder/(stem+'.'+ext)
-            shutil.copyfile(p,OUT/f'Figure{n}.{ext}')
+    report['parallel']=parallel_labels()
     report['chain']=chain_legend()
     report['schedules']=legended_figures()
     report['cropping']={f'Figure{i}':crop_vector_figure(OUT/f'Figure{i}.pdf') for i in range(1,7)}

@@ -113,7 +113,7 @@ def draw_coupled():
     ax.set_axisbelow(True)
     ax.spines[["top", "right", "left"]].set_visible(False)
     color_labels = ["生产加工及补位借用", "清洁借用"]
-    end_labels = [f"产品完工：{cmax:g} s", f"全部占用结束：{end:g} s"]
+    end_labels = [f"批次完工：{cmax:g} s", f"设备占用结束：{end:g} s"]
     legends = [
         legend(fig, [Patch(facecolor=production), Patch(facecolor=cleaning)],
                color_labels, .43, height, 2),
@@ -187,7 +187,7 @@ def draw_schedule(entry, compact_layout=False):
         loc="lower center", bbox_to_anchor=(.51, .51 / height),
         ncol=4, frameon=False, fontsize=7.2, columnspacing=.85,
         handlelength=1.2, handletextpad=.5, labelspacing=.4, borderpad=.2, borderaxespad=0)
-    end_labels = [f"产品回片：{cmax:g} s", f"全部占用结束：{horizon:g} s"]
+    end_labels = [f"批次完工：{cmax:g} s", f"设备占用结束：{horizon:g} s"]
     end_legend = legend(fig, [Line2D([], [], color="#222222", ls="--", lw=1),
                               Line2D([], [], color="#777777", ls=":", lw=1)],
                         end_labels, .30, height, 2)
