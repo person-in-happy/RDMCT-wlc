@@ -1,0 +1,465 @@
+{
+  "spec": {
+    "id": "algorithm_M4_domain_s1_repair0.32",
+    "case": "M4",
+    "method": "domain",
+    "seed": 1,
+    "budget": 45,
+    "suite": "algorithm",
+    "repair": 0.32
+  },
+  "initial": [
+    487.0,
+    604.0000000099999
+  ],
+  "config": {
+    "load_ports": {
+      "LP1": {
+        "4x1": 1,
+        "2x2": 0
+      },
+      "LP2": {
+        "4x1": 1,
+        "2x2": 0
+      },
+      "LP3": {
+        "4x1": 0,
+        "2x2": 1
+      },
+      "LP4": {
+        "4x1": 0,
+        "2x2": 1
+      }
+    },
+    "pjobs": [
+      {
+        "id": "Pjob1",
+        "mode": "4x1",
+        "chambers": [
+          2,
+          3
+        ],
+        "wafers": [
+          "LP1_W1",
+          "LP2_W1"
+        ]
+      },
+      {
+        "id": "Pjob2",
+        "mode": "2x2",
+        "chambers": [
+          2,
+          3
+        ],
+        "wafers": [
+          "LP3_W1",
+          "LP4_W1"
+        ]
+      }
+    ],
+    "source": "dual",
+    "dummy_alignment": "bypass_or_accompany",
+    "vtr_hand_policy": "clean_dirty",
+    "dummy_count": 8,
+    "cleaning_interval": 10,
+    "full_time": 180,
+    "mix_time": 90,
+    "cleaning_time": 500,
+    "handling": 1,
+    "atr_handling": 4,
+    "atr_empty_ll_to_lp": 6,
+    "rotation": 2,
+    "atr_travel": 3,
+    "vtr_travel": 2,
+    "alignment": 20,
+    "pump": 30,
+    "vent": 25,
+    "upper_reset": 30,
+    "lower_reset": 25,
+    "module_residency": 100,
+    "robot_residency": 100,
+    "horizon": 10000,
+    "chamber_residency_basis": "nonprocessing",
+    "max_pairs": 0,
+    "max_cycles": 0,
+    "chambers": [
+      2,
+      3
+    ]
+  },
+  "front": [
+    {
+      "a": 410.000000099998,
+      "b": 384.0,
+      "t": 29.79700000002049,
+      "metrics": {
+        "cmax": 410.000000099998,
+        "wait_sum": 104.0,
+        "wait_max": 28.0,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 384.0
+      },
+      "schedule": "point_000.json.gz"
+    },
+    {
+      "a": 413.00000010000144,
+      "b": 232.0,
+      "t": 18.78200000000652,
+      "metrics": {
+        "cmax": 413.00000010000144,
+        "wait_sum": 92.0,
+        "wait_max": 14.0,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 232.0
+      },
+      "schedule": "point_001.json.gz"
+    },
+    {
+      "a": 443.0,
+      "b": 144.33333334333344,
+      "t": 6.577999999979511,
+      "metrics": {
+        "cmax": 443.0,
+        "wait_sum": 51.00000001000001,
+        "wait_max": 9.333333333333343,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 144.33333334333344
+      },
+      "schedule": "point_002.json.gz"
+    },
+    {
+      "a": 517.0,
+      "b": 54.000000009999894,
+      "t": 4.98499999998603,
+      "metrics": {
+        "cmax": 517.0,
+        "wait_sum": 24.000000009999894,
+        "wait_max": 3.0,
+        "rhythm": 0.0,
+        "rhythm_centers": 1,
+        "secondary": 54.000000009999894
+      },
+      "schedule": "point_003.json.gz"
+    }
+  ],
+  "history": [
+    [
+      2.6410000000032596,
+      487.0,
+      604.0000000099999
+    ],
+    [
+      2.6410000000032596,
+      480.0,
+      1170.0
+    ],
+    [
+      2.672000000020489,
+      885.0,
+      54.000000009999894
+    ],
+    [
+      2.73499999998603,
+      487.0,
+      599.0000000099999
+    ],
+    [
+      2.797000000020489,
+      573.0,
+      549.0000000099999
+    ],
+    [
+      2.827999999979511,
+      781.00000001,
+      103.99999976000004
+    ],
+    [
+      2.85999999998603,
+      783.0,
+      54.000000009999894
+    ],
+    [
+      2.9070000000065193,
+      695.0,
+      54.00000001000001
+    ],
+    [
+      2.952999999979511,
+      553.0,
+      333.00000001
+    ],
+    [
+      3.047000000020489,
+      481.0,
+      583.0000000099999
+    ],
+    [
+      3.0630000000237487,
+      478.0,
+      523.0000000099999
+    ],
+    [
+      3.202999999979511,
+      692.0,
+      54.00000001000001
+    ],
+    [
+      3.23499999998603,
+      478.0,
+      518.0000000099999
+    ],
+    [
+      3.327999999979511,
+      477.0,
+      516.0000000099999
+    ],
+    [
+      3.3910000000032596,
+      572.0,
+      56.0
+    ],
+    [
+      3.5939999999827705,
+      461.0,
+      367.00000001
+    ],
+    [
+      3.7189999999827705,
+      434.0,
+      367.00000001
+    ],
+    [
+      3.75,
+      515.0,
+      333.0000000099999
+    ],
+    [
+      3.952999999979511,
+      427.0,
+      360.00000001
+    ],
+    [
+      4.10999999998603,
+      480.0,
+      342.0
+    ],
+    [
+      4.297000000020489,
+      553.0,
+      146.33333334333344
+    ],
+    [
+      4.98499999998603,
+      517.0,
+      54.000000009999894
+    ],
+    [
+      5.89100000000326,
+      473.0,
+      146.33333333333343
+    ],
+    [
+      6.23499999998603,
+      474.99999999,
+      144.33333334333344
+    ],
+    [
+      6.577999999979511,
+      443.0,
+      144.33333334333344
+    ],
+    [
+      18.76600000000326,
+      413.00000000000006,
+      342.00000000000006
+    ],
+    [
+      18.78200000000652,
+      413.00000010000144,
+      232.0
+    ],
+    [
+      29.79700000002049,
+      409.99999999999795,
+      459.9999999999777
+    ],
+    [
+      29.79700000002049,
+      410.000000099998,
+      384.0
+    ]
+  ],
+  "stats": {
+    "validated": 674,
+    "insertions": 29,
+    "attempts": 2113,
+    "timing_lp_calls": 1856,
+    "no_lp_candidate": 1198,
+    "screened": 257
+  },
+  "subproblems": [
+    {
+      "goal": "B",
+      "cap": null,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 1,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": 42.0,
+      "released_orders": 273,
+      "eligible_orders": 910,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": null,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 19,
+      "warm": 1,
+      "status": "optimal",
+      "dual_bound": 413.00000000000006,
+      "released_orders": 219,
+      "eligible_orders": 729,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": 54,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 22,
+      "warm": 1,
+      "status": "optimal",
+      "dual_bound": 517.0,
+      "released_orders": 273,
+      "eligible_orders": 910,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": 200,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 1,
+      "warm": 0,
+      "status": "infeasible",
+      "dual_bound": 1e+20,
+      "released_orders": 219,
+      "eligible_orders": 729,
+      "target_pair": 1
+    },
+    {
+      "goal": "A",
+      "cap": 76.0000000004,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 1,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": 497.0,
+      "released_orders": 273,
+      "eligible_orders": 910,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": 120.00000000119998,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 1,
+      "warm": 0,
+      "status": "timelimit",
+      "dual_bound": 427.6717708333333,
+      "released_orders": 216,
+      "eligible_orders": 721,
+      "target_pair": 2
+    },
+    {
+      "goal": "A",
+      "cap": 191.50000000249997,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 1,
+      "warm": 0,
+      "status": "infeasible",
+      "dual_bound": 1e+20,
+      "released_orders": 219,
+      "eligible_orders": 729,
+      "target_pair": 1
+    },
+    {
+      "goal": "A",
+      "cap": 329.00000000499995,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 1,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": 407.95671638813263,
+      "released_orders": 219,
+      "eligible_orders": 729,
+      "target_pair": 1
+    },
+    {
+      "goal": "A",
+      "cap": 466.5000000074999,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 38,
+      "warm": 1,
+      "status": "optimal",
+      "dual_bound": 409.99999999999795,
+      "released_orders": 219,
+      "eligible_orders": 729,
+      "target_pair": 1
+    },
+    {
+      "goal": "B",
+      "cap": null,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20,
+      "released_orders": 273,
+      "eligible_orders": 910,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": null,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    },
+    {
+      "goal": "A",
+      "cap": 54,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    },
+    {
+      "goal": "A",
+      "cap": 200,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    },
+    {
+      "goal": "A",
+      "cap": 76.0000000004,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    }
+  ],
+  "policy": null,
+  "search_wall_s": 44.92200000002049,
+  "shared_spbs_seconds": 1.9380000000237487,
+  "last_eligible_s": 29.79700000002049
+}

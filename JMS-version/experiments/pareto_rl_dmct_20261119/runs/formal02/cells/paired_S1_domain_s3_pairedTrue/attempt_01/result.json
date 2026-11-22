@@ -1,0 +1,232 @@
+{
+  "spec": {
+    "id": "paired_S1_domain_s3_pairedTrue",
+    "case": "S1",
+    "method": "domain",
+    "seed": 3,
+    "budget": 18,
+    "suite": "paired",
+    "paired": true
+  },
+  "initial": [
+    374.0,
+    542.0000000099999
+  ],
+  "config": {
+    "load_ports": {
+      "LP1": {
+        "4x1": 0,
+        "2x2": 2
+      },
+      "LP2": {
+        "4x1": 0,
+        "2x2": 0
+      },
+      "LP3": {
+        "4x1": 0,
+        "2x2": 0
+      },
+      "LP4": {
+        "4x1": 0,
+        "2x2": 0
+      }
+    },
+    "pjobs": [
+      {
+        "id": "Pjob1",
+        "mode": "2x2",
+        "chambers": [
+          2,
+          3
+        ],
+        "wafers": [
+          "LP1_W1",
+          "LP1_W2"
+        ]
+      }
+    ],
+    "source": "dual",
+    "dummy_alignment": "bypass_or_accompany",
+    "vtr_hand_policy": "clean_dirty",
+    "dummy_count": 4,
+    "cleaning_interval": 2,
+    "full_time": 180,
+    "mix_time": 90,
+    "cleaning_time": 500,
+    "handling": 1,
+    "atr_handling": 4,
+    "atr_empty_ll_to_lp": 6,
+    "rotation": 2,
+    "atr_travel": 3,
+    "vtr_travel": 2,
+    "alignment": 20,
+    "pump": 30,
+    "vent": 25,
+    "upper_reset": 30,
+    "lower_reset": 25,
+    "module_residency": 100,
+    "robot_residency": 100,
+    "horizon": 10000,
+    "chamber_residency_basis": "nonprocessing",
+    "max_pairs": 0,
+    "max_cycles": 0,
+    "chambers": [
+      2,
+      3
+    ]
+  },
+  "front": [
+    {
+      "a": 374.0,
+      "b": 542.0000000099999,
+      "t": 2.25,
+      "metrics": {
+        "cmax": 374.0,
+        "wait_sum": 62.000000009999894,
+        "wait_max": 48.0,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 542.0000000099999
+      },
+      "schedule": "point_000.json.gz"
+    }
+  ],
+  "history": [
+    [
+      2.25,
+      374.0,
+      542.0000000099999
+    ]
+  ],
+  "stats": {
+    "validated": 8,
+    "insertions": 1,
+    "rejected_original_rows": 5
+  },
+  "subproblems": [
+    {
+      "goal": "A",
+      "cap": null,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 80,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": 337.0,
+      "released_orders": 154,
+      "eligible_orders": 515,
+      "target_pair": 0,
+      "parent_ab": [
+        374.0,
+        542.0000000099999
+      ],
+      "other_ab": [
+        374.0,
+        542.0000000099999
+      ]
+    },
+    {
+      "goal": "B",
+      "cap": null,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 82,
+      "warm": 1,
+      "status": "optimal",
+      "dual_bound": 125.33333333333331,
+      "released_orders": 154,
+      "eligible_orders": 515,
+      "target_pair": 0,
+      "parent_ab": [
+        374.0,
+        542.0000000099999
+      ],
+      "other_ab": [
+        374.0,
+        542.0000000099999
+      ]
+    },
+    {
+      "goal": "A",
+      "cap": 433.60000000799994,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 1,
+      "warm": 0,
+      "status": "timelimit",
+      "dual_bound": 340.0,
+      "released_orders": 154,
+      "eligible_orders": 515,
+      "target_pair": 0,
+      "parent_ab": [
+        374.0,
+        542.0000000099999
+      ],
+      "other_ab": [
+        374.0,
+        542.0000000099999
+      ]
+    },
+    {
+      "goal": "A",
+      "cap": null,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 137,
+      "warm": 1,
+      "status": "optimal",
+      "dual_bound": 337.0,
+      "released_orders": 154,
+      "eligible_orders": 515,
+      "target_pair": 0,
+      "parent_ab": [
+        374.0,
+        542.0000000099999
+      ],
+      "other_ab": [
+        374.0,
+        542.0000000099999
+      ]
+    },
+    {
+      "goal": "B",
+      "cap": null,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 1,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": 121.3333333333303,
+      "released_orders": 154,
+      "eligible_orders": 515,
+      "target_pair": 0,
+      "parent_ab": [
+        374.0,
+        542.0000000099999
+      ],
+      "other_ab": [
+        374.0,
+        542.0000000099999
+      ]
+    },
+    {
+      "goal": "A",
+      "cap": 433.60000000799994,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 161,
+      "warm": 0,
+      "status": "timelimit",
+      "dual_bound": 337.0000000000003,
+      "released_orders": 154,
+      "eligible_orders": 515,
+      "target_pair": 0,
+      "parent_ab": [
+        374.0,
+        542.0000000099999
+      ],
+      "other_ab": [
+        374.0,
+        542.0000000099999
+      ]
+    }
+  ],
+  "policy": null,
+  "search_wall_s": 18.35999999998603,
+  "shared_spbs_seconds": 2.0,
+  "last_eligible_s": 2.25
+}

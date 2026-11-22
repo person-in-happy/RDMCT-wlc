@@ -1,0 +1,149 @@
+{
+  "base_cells": 98,
+  "ablation_cells": 72,
+  "base_unique": 467,
+  "distinct": 300,
+  "reused": 69,
+  "new": 231,
+  "combined_unique": 698,
+  "submitted": 375,
+  "entries": 454,
+  "methods": [
+    {
+      "case": "mix37",
+      "method": "full",
+      "HV": 0.44392069300338655,
+      "HV_founders": 0.4325453676187739,
+      "HV_all": 0.44392069300338655,
+      "min_A": 7567.5,
+      "min_B": 1855.0,
+      "seconds": 37.062500000029104,
+      "lp": 160.0
+    },
+    {
+      "case": "mix37",
+      "method": "no_blocks",
+      "HV": 0.432601315074252,
+      "HV_founders": 0.4325453676187739,
+      "HV_all": 0.432601315074252,
+      "min_A": 7662.0,
+      "min_B": 1951.0,
+      "seconds": 36.71099999998114,
+      "lp": 160.0
+    },
+    {
+      "case": "mix37",
+      "method": "random_init",
+      "HV": 0.4427416804769043,
+      "HV_founders": 0.4168442773479787,
+      "HV_all": 0.4427514381704112,
+      "min_A": 7571.5,
+      "min_B": 1867.5,
+      "seconds": 36.413999999989755,
+      "lp": 160.0
+    },
+    {
+      "case": "mix50",
+      "method": "full",
+      "HV": 0.4412557971035358,
+      "HV_founders": 0.41474235237747853,
+      "HV_all": 0.4412557971035358,
+      "min_A": 7543.5,
+      "min_B": 2037.5,
+      "seconds": 33.03900000001886,
+      "lp": 160.0
+    },
+    {
+      "case": "mix50",
+      "method": "no_blocks",
+      "HV": 0.41474235237747853,
+      "HV_founders": 0.41474235237747853,
+      "HV_all": 0.41474235237747853,
+      "min_A": 7737.0,
+      "min_B": 2266.0,
+      "seconds": 34.9375,
+      "lp": 160.0
+    },
+    {
+      "case": "mix50",
+      "method": "random_init",
+      "HV": 0.44462036541804834,
+      "HV_founders": 0.41163423007154265,
+      "HV_all": 0.44462036541804834,
+      "min_A": 7470.0,
+      "min_B": 2038.5,
+      "seconds": 33.360000000015134,
+      "lp": 160.0
+    }
+  ],
+  "effects": [
+    {
+      "case": "mix37",
+      "opponent": "no_blocks",
+      "wins": 12,
+      "ties": 0,
+      "losses": 0,
+      "median_delta": 0.011319377929134539,
+      "ci_lo": 0.0052333466610045565,
+      "ci_hi": 0.014821661539921427,
+      "ci_coverage": 0.96142578125,
+      "p_sign": 0.00048828125,
+      "full_HV_median_delta": 0.011319377929134539,
+      "full_HV_wins": 12,
+      "p_holm": 0.001953125,
+      "reject_holm_05": true
+    },
+    {
+      "case": "mix37",
+      "opponent": "random_init",
+      "wins": 7,
+      "ties": 0,
+      "losses": 5,
+      "median_delta": 0.0012951816373472647,
+      "ci_lo": -0.003909389113836925,
+      "ci_hi": 0.004505444374875434,
+      "ci_coverage": 0.96142578125,
+      "p_sign": 0.7744140625,
+      "full_HV_median_delta": 0.001295206195429499,
+      "full_HV_wins": 7,
+      "p_holm": 1,
+      "reject_holm_05": false
+    },
+    {
+      "case": "mix50",
+      "opponent": "no_blocks",
+      "wins": 12,
+      "ties": 0,
+      "losses": 0,
+      "median_delta": 0.026513444726057295,
+      "ci_lo": 0.020274730540938146,
+      "ci_hi": 0.03355324219780903,
+      "ci_coverage": 0.96142578125,
+      "p_sign": 0.00048828125,
+      "full_HV_median_delta": 0.026513444726057295,
+      "full_HV_wins": 12,
+      "p_holm": 0.001953125,
+      "reject_holm_05": true
+    },
+    {
+      "case": "mix50",
+      "opponent": "random_init",
+      "wins": 5,
+      "ties": 0,
+      "losses": 7,
+      "median_delta": -0.0026969412282238092,
+      "ci_lo": -0.01142934223766745,
+      "ci_hi": 0.006171853632674196,
+      "ci_coverage": 0.96142578125,
+      "p_sign": 0.7744140625,
+      "full_HV_median_delta": -0.0026314080836747633,
+      "full_HV_wins": 5,
+      "p_holm": 1,
+      "reject_holm_05": false
+    }
+  ],
+  "combined_points": {
+    "mix37": 35,
+    "mix50": 10
+  }
+}

@@ -1,0 +1,825 @@
+{
+  "input_schedules": 56,
+  "structures": 35,
+  "vertices": 36,
+  "segments": 1,
+  "envelope_segments": [
+    {
+      "A_left": 420.5,
+      "B_left": 232.0,
+      "A_right": 423.0,
+      "B_right": 222.00000000000023,
+      "integer_sha256": "249bfad7fd07f5b74ba863259363b77722c05eeb1c220c16f651bf51a0ea48f3",
+      "left_included": false,
+      "right_included": false
+    }
+  ],
+  "envelope_vertices": [
+    [
+      413.0,
+      232.0
+    ],
+    [
+      423.0,
+      171.3333333
+    ],
+    [
+      440.0,
+      156.3333333
+    ],
+    [
+      443.0,
+      144.3333333
+    ],
+    [
+      497.0,
+      72.0
+    ],
+    [
+      517.0,
+      54.0
+    ]
+  ],
+  "original_rows": 71940,
+  "historical_fixed_structure_segments": [
+    [
+      [
+        429.0,
+        903.0
+      ],
+      [
+        459.0,
+        873.0
+      ]
+    ],
+    [
+      [
+        476.0,
+        165.0
+      ],
+      [
+        494.0,
+        57.0
+      ],
+      [
+        497.0,
+        54.00000000000071
+      ]
+    ]
+  ],
+  "historical_endpoints": [
+    {
+      "A": 429.0,
+      "B": 903.0,
+      "dominated_by_current_slice": true
+    },
+    {
+      "A": 459.0,
+      "B": 873.0,
+      "dominated_by_current_slice": true
+    },
+    {
+      "A": 476.0,
+      "B": 165.0,
+      "dominated_by_current_slice": true
+    },
+    {
+      "A": 494.0,
+      "B": 57.0,
+      "dominated_by_current_slice": false
+    },
+    {
+      "A": 497.0,
+      "B": 54.00000000000071,
+      "dominated_by_current_slice": false
+    }
+  ],
+  "tested_endpoint_and_midpoint": true,
+  "lp_solves": 141,
+  "elapsed_s": 7.875,
+  "slices": [
+    {
+      "integer_sha256": "cd17ed2d10ab17954a1cd448537221ee2c5612c1f39d16f027760de2990658d7",
+      "sources": [
+        [
+          "main_M4_domain_s1",
+          "point_000.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          413.0,
+          232.0
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_001.npz",
+      "vector_file_sha256": "af87ac29f82630d8d074f1e006079fed727c28aa7ec36b2e5f990fa8652c05d3"
+    },
+    {
+      "integer_sha256": "9dc9ec8ce300ab8299d9514f752c8e3118d377b157d3f64f8fa6b1ef25dbd4f3",
+      "sources": [
+        [
+          "main_M4_domain_s1",
+          "point_001.json.gz"
+        ],
+        [
+          "main_M4_rl_domain_s1",
+          "point_001.json.gz"
+        ],
+        [
+          "main_M4_nsga2_s3",
+          "point_001.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          443.0,
+          144.33333333333343
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_002.npz",
+      "vector_file_sha256": "ec1330c109788c78a2f491b8b91f9e3fec34984f9a18bcae4c737e3cb918d190"
+    },
+    {
+      "integer_sha256": "25252d4e1ce005e9d5508e8142487c26493c7447bc4f2bc4a3d470ab5e342fd3",
+      "sources": [
+        [
+          "main_M4_domain_s1",
+          "point_002.json.gz"
+        ],
+        [
+          "main_M4_rl_domain_s2",
+          "point_003.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          497.0,
+          72.0
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_003.npz",
+      "vector_file_sha256": "fd9e8c49f2eb0c0abf7c8ce3ce1a98eb21482e782a7058543545802ec0cd917f"
+    },
+    {
+      "integer_sha256": "ca84a66fcd2bda516735be9f961b1ac02adb5398922ecbf8c38960490b13289f",
+      "sources": [
+        [
+          "main_M4_domain_s1",
+          "point_003.json.gz"
+        ],
+        [
+          "main_M4_rl_domain_s1",
+          "point_003.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          517.0,
+          54.0
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_004.npz",
+      "vector_file_sha256": "790997654d9c3ddbd77d7b82f5a8f2f4d08f6e3ef2703d2968350873e1f529db"
+    },
+    {
+      "integer_sha256": "d74c642d880b1fb2b36336cc12336873ca2cf56034463c29bce7b6ac4fc0f692",
+      "sources": [
+        [
+          "main_M4_epsilon_s1",
+          "point_000.json.gz"
+        ],
+        [
+          "main_M4_epsilon_s2",
+          "point_000.json.gz"
+        ],
+        [
+          "main_M4_epsilon_s3",
+          "point_000.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          480.0,
+          365.0
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_005.npz",
+      "vector_file_sha256": "eae39e86c04d73834458dd75232aca01b33246b1ffbd2267fa28b890a1c90636"
+    },
+    {
+      "integer_sha256": "ee89b23c2f54b1f9298e2725570e2d4a4fd829cc40e6ae8f0b7ed5145a0b9371",
+      "sources": [
+        [
+          "main_M4_epsilon_s1",
+          "point_001.json.gz"
+        ],
+        [
+          "main_M4_epsilon_s2",
+          "point_001.json.gz"
+        ],
+        [
+          "main_M4_epsilon_s3",
+          "point_001.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          487.0,
+          604.0
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_006.npz",
+      "vector_file_sha256": "9e3b56ad7d976feea1927b2671e60cfb6237f11f366901db1deb0f090d20faab"
+    },
+    {
+      "integer_sha256": "0085ee4d71879c76e07d6c88c285fef6c58ad759fb256d077927a3ece3327201",
+      "sources": [
+        [
+          "main_M4_moead_s1",
+          "point_000.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          423.0,
+          173.33333333333343
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_007.npz",
+      "vector_file_sha256": "ab2c1bf43dee690d0ae5bba9ed87facf0ea814272c6f7bb42f8f3d98f68bde7a"
+    },
+    {
+      "integer_sha256": "b88a3fddf9fbf3e7aae3a06442e413c4fd94fcba9c07ab5b3583b3628da76f47",
+      "sources": [
+        [
+          "main_M4_moead_s1",
+          "point_001.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          443.0,
+          144.33333333333343
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_008.npz",
+      "vector_file_sha256": "6443aa6267a21ace9f5a63c7942552ddb6f571a219c25ecf01d5eaaa4ca877bc"
+    },
+    {
+      "integer_sha256": "ae8b1469d6e1160294dc461d97ddacaefb0e5f09f3f6552963dc703495051c18",
+      "sources": [
+        [
+          "main_M4_moead_s1",
+          "point_002.json.gz"
+        ],
+        [
+          "main_M4_nsga2_s1",
+          "point_002.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          517.0,
+          54.0
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_009.npz",
+      "vector_file_sha256": "4a1003cc4fe09ce26ad7ae6df6b3302953a9a4acfed9d3e23b2ac8ef126240b4"
+    },
+    {
+      "integer_sha256": "fa6d41a7632d78e824fd084428b058ae7bebb958500753991d0031283bd10f3e",
+      "sources": [
+        [
+          "main_M4_nsga2_s1",
+          "point_000.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          423.0,
+          171.33333333333343
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_010.npz",
+      "vector_file_sha256": "3283496cdf894fbb5e591de44e75076f066974cfa05a9a5d3db7723a8790335a"
+    },
+    {
+      "integer_sha256": "273b26a4b325a44136825fc558c56462a22ff5b7b0c8bf3bdfc5df781654e2c7",
+      "sources": [
+        [
+          "main_M4_nsga2_s1",
+          "point_001.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          443.0,
+          144.33333333333343
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_011.npz",
+      "vector_file_sha256": "219d1d189ad8ff253659d57e4b5096ba3cc742c659cc8d3135422b457ec8dd9f"
+    },
+    {
+      "integer_sha256": "7854f2574c1a03fa0f19ef9131cc353b2b0079fd2b3b05e5c1c161beec138755",
+      "sources": [
+        [
+          "main_M4_rl_domain_s1",
+          "point_000.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          423.0,
+          171.33333333333343
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_012.npz",
+      "vector_file_sha256": "4a9fb8fd658910bef1dbdddb32ebfffb44cdb093276bf7302475a2190cf111c9"
+    },
+    {
+      "integer_sha256": "27aa3e6fb374a0d6648d61e88f4fce248aa9faf14e297dc34a92dbab37e7550a",
+      "sources": [
+        [
+          "main_M4_rl_domain_s1",
+          "point_002.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          497.0,
+          72.0
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_013.npz",
+      "vector_file_sha256": "21bb2d1d4e2019de52204b8619edc6bbe35e171f9369ab81f331d779b1dc92ff"
+    },
+    {
+      "integer_sha256": "f26980fa51bf5276541c3a0f2d3ff7ce5f882a1e2db22f740e1ba030897f4104",
+      "sources": [
+        [
+          "main_M4_legacy_s1",
+          "point_000.json.gz"
+        ],
+        [
+          "main_M4_legacy_s2",
+          "point_000.json.gz"
+        ],
+        [
+          "main_M4_legacy_s3",
+          "point_000.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          480.0,
+          364.0
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_014.npz",
+      "vector_file_sha256": "bee3b98a9d27b4c5af330e728ef64c95b9a07ce4e64485e0cf057422c4087482"
+    },
+    {
+      "integer_sha256": "7a2cbacd9b47dea56623066e839f3e5532ba8de54d3ded0f7a3f70829c4f43eb",
+      "sources": [
+        [
+          "main_M4_domain_s2",
+          "point_000.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          421.0,
+          384.0
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_015.npz",
+      "vector_file_sha256": "efcd0f038a0eade254b950a30cf578b1ab7e168a586488c4219148f0eb45f0ad"
+    },
+    {
+      "integer_sha256": "6d1a67fc04ce90df92ac3a1c2177dcbd9dffbc31594d66eadb1baac409c45595",
+      "sources": [
+        [
+          "main_M4_domain_s2",
+          "point_001.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          424.0,
+          362.0
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_016.npz",
+      "vector_file_sha256": "16a5149cf743e9bed538583b93e229a2a3d75d75f646d78d5a9e412227ee82e1"
+    },
+    {
+      "integer_sha256": "69c8842d903fa7cd85c93d17668d8f8f9a94e5dc786899393a6feccb67e2f489",
+      "sources": [
+        [
+          "main_M4_domain_s2",
+          "point_002.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          426.0,
+          360.0
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_017.npz",
+      "vector_file_sha256": "183430224fbbe73db33f1a20eed7daaaafa7e49f2c585bc3307ac45ea5e9e0bd"
+    },
+    {
+      "integer_sha256": "6ac25c3ea42e584cce40841fbca566918a1dd9fdb8821d8901bb89065cf0e049",
+      "sources": [
+        [
+          "main_M4_domain_s2",
+          "point_003.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          440.0,
+          156.33333333333343
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_018.npz",
+      "vector_file_sha256": "52eb4e1fbd9f61ec37808bd5c013c2b59bd7e7edc2610f1424d69b0dc2d3baf2"
+    },
+    {
+      "integer_sha256": "eff1d685bc5696e129272f9e0479d9bdc03ea088ff4ee4237b06cf29ac6a8ff2",
+      "sources": [
+        [
+          "main_M4_domain_s2",
+          "point_004.json.gz"
+        ],
+        [
+          "main_M4_rl_domain_s2",
+          "point_002.json.gz"
+        ],
+        [
+          "main_M4_domain_s3",
+          "point_002.json.gz"
+        ],
+        [
+          "main_M4_rl_domain_s3",
+          "point_002.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          443.0,
+          144.33333333333343
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_019.npz",
+      "vector_file_sha256": "4adf323fe82b576cb9c4bb34011e5d286c7560ccb3357f20fa1128d6d8abf783"
+    },
+    {
+      "integer_sha256": "8fd41685b367a472a128be7b7bad2ff01e3ccfd8e6ad20ccb61234dcf78389bc",
+      "sources": [
+        [
+          "main_M4_domain_s2",
+          "point_005.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          497.0,
+          72.0
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_020.npz",
+      "vector_file_sha256": "caeb4d82038f20c806f93988d8df5bea10224c52df831c83b6f6a4f2144ad2f3"
+    },
+    {
+      "integer_sha256": "1a4000a08dc9ba9475e1434db6b6a9d2e56eff60b0810454aa642308be42628a",
+      "sources": [
+        [
+          "main_M4_domain_s2",
+          "point_006.json.gz"
+        ],
+        [
+          "main_M4_rl_domain_s2",
+          "point_004.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          517.0,
+          54.0
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_021.npz",
+      "vector_file_sha256": "1c6fc0fa9162490f87db7226238f6d8b61081546d362443aedf51a02953dacee"
+    },
+    {
+      "integer_sha256": "8b68e859191ff6d5aca0fe9267350b5816d46776a00abf29e4f27ee8e87be092",
+      "sources": [
+        [
+          "main_M4_moead_s2",
+          "point_000.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          423.0,
+          173.33333333333343
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_022.npz",
+      "vector_file_sha256": "9e7425aecd1b210bbe250be3ba90c571e28f926f84a7816b697aae30f6132bc6"
+    },
+    {
+      "integer_sha256": "1090cf4216f09457b132921adea065b7a28356a4aa9a8e895040e10836b72c26",
+      "sources": [
+        [
+          "main_M4_moead_s2",
+          "point_001.json.gz"
+        ],
+        [
+          "main_M4_nsga2_s2",
+          "point_001.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          443.0,
+          144.33333333333343
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_023.npz",
+      "vector_file_sha256": "eaa5da00ec396af5fea952b9e56df393cb0d93cd220c45616a79c66216ba8c54"
+    },
+    {
+      "integer_sha256": "d404d40331f5b3a97a5eb61213d2326de00439e2a4ecbb50ba467c0f59910f56",
+      "sources": [
+        [
+          "main_M4_moead_s2",
+          "point_002.json.gz"
+        ],
+        [
+          "main_M4_nsga2_s2",
+          "point_002.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          517.0,
+          54.0
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_024.npz",
+      "vector_file_sha256": "c8608bf88d7db712c4d81f53699d13f0a7add5d77cef17164c0402d75917a3d9"
+    },
+    {
+      "integer_sha256": "a0b0e9d5d68e81f145f374fa7aa29015450e4c8be9e1a4c0610a9ff13a5f4816",
+      "sources": [
+        [
+          "main_M4_nsga2_s2",
+          "point_000.json.gz"
+        ],
+        [
+          "main_M4_domain_s3",
+          "point_001.json.gz"
+        ],
+        [
+          "main_M4_nsga2_s3",
+          "point_000.json.gz"
+        ],
+        [
+          "main_M4_rl_domain_s3",
+          "point_001.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          423.0,
+          171.33333333333343
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_025.npz",
+      "vector_file_sha256": "3a53e34a3e41205f0af4717846b1f47ae086e4ac485705a36bf6bcb365a28cb5"
+    },
+    {
+      "integer_sha256": "c00c3944477a0499c1e4ce6f722955028cb15026d7ea510ccfaac57a255605b9",
+      "sources": [
+        [
+          "main_M4_rl_domain_s2",
+          "point_000.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          424.0,
+          360.0
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_026.npz",
+      "vector_file_sha256": "0429d11298f474d2f7ecd84e0fdbc6436a8c1f22993210277864a138b1efab3a"
+    },
+    {
+      "integer_sha256": "f23d8f6e0ca32eac8bffc8ef01cc68b98629abdeeee32f8e71c365f3f51ea5ec",
+      "sources": [
+        [
+          "main_M4_rl_domain_s2",
+          "point_001.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          440.0,
+          156.33333333333343
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_027.npz",
+      "vector_file_sha256": "1018a8be752ea25826a90b49dc57af400d47ac630d8402ba67033ebb449150b8"
+    },
+    {
+      "integer_sha256": "249bfad7fd07f5b74ba863259363b77722c05eeb1c220c16f651bf51a0ea48f3",
+      "sources": [
+        [
+          "main_M4_domain_s3",
+          "point_000.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          420.0,
+          234.0
+        ],
+        [
+          423.66666666666663,
+          219.3333333333337
+        ]
+      ],
+      "midpoints": [
+        [
+          421.8333333333333,
+          226.66666666666703
+        ]
+      ],
+      "vector_file": "fixed_028.npz",
+      "vector_file_sha256": "a848bac5e762b14db113c08dd2337a12f296c6ecd0f9804e2b3afd33a0b9094e"
+    },
+    {
+      "integer_sha256": "da6ef9146970554412dbe95a527c0722b73e6c651ec7c78b72abec9135a77ad4",
+      "sources": [
+        [
+          "main_M4_domain_s3",
+          "point_003.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          497.0,
+          72.0
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_029.npz",
+      "vector_file_sha256": "ada039a12837d5161ae235dda1d49b8acf987497e8d049b1581d85538960d2dd"
+    },
+    {
+      "integer_sha256": "f4cfb5ebe9e1d117168114000a8ce1dc980ca814788310b4f0082f0c5532b77f",
+      "sources": [
+        [
+          "main_M4_domain_s3",
+          "point_004.json.gz"
+        ],
+        [
+          "main_M4_rl_domain_s3",
+          "point_004.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          517.0,
+          54.0
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_030.npz",
+      "vector_file_sha256": "44e913929c5ae30ea0b434ca128bbeeca5ff148b8d9b806052ccd8221b16cf08"
+    },
+    {
+      "integer_sha256": "3c5173c99ed130eff782fccd29fd73f93a947737553d9c92616249929077f709",
+      "sources": [
+        [
+          "main_M4_moead_s3",
+          "point_000.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          443.0,
+          144.33333333333343
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_031.npz",
+      "vector_file_sha256": "9aae97920579354323f3a30c1cbad5b4a2e18e6383ab19e0ecab73a6b8ce8b35"
+    },
+    {
+      "integer_sha256": "28a1021b3264d956137104aec9c60620f4225aeb7eb4f71a907ed5d427bad308",
+      "sources": [
+        [
+          "main_M4_moead_s3",
+          "point_001.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          517.0,
+          54.0
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_032.npz",
+      "vector_file_sha256": "304007a053122eb2bc7daf065866974eee1483b5641610c3bd492b3014b624e8"
+    },
+    {
+      "integer_sha256": "0773976eac8d8273f58e33dbd50bb9f37032a60cd38b7c0d99a548aa548ee948",
+      "sources": [
+        [
+          "main_M4_nsga2_s3",
+          "point_002.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          517.0,
+          54.0
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_033.npz",
+      "vector_file_sha256": "8daaf7bd434a56c45295455bc93030fbd1948d4511015223d58ddd76b4bf0878"
+    },
+    {
+      "integer_sha256": "627870bb73c658c32be3ebe4f1958785b2aaca01ec7e345b4664a94297f5fa5c",
+      "sources": [
+        [
+          "main_M4_rl_domain_s3",
+          "point_000.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          413.0,
+          232.0
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_034.npz",
+      "vector_file_sha256": "f4d2b5a02fd6e008c00a5004de196a97d81a1545eb76eb02eab5ceffdd095300"
+    },
+    {
+      "integer_sha256": "ca29e2886fdb4b1b15987e063fdad198e70dd7071a6e6d0f5db2631b79180f4e",
+      "sources": [
+        [
+          "main_M4_rl_domain_s3",
+          "point_003.json.gz"
+        ]
+      ],
+      "vertices": [
+        [
+          497.0,
+          72.0
+        ]
+      ],
+      "midpoints": [],
+      "vector_file": "fixed_035.npz",
+      "vector_file_sha256": "99d8be4c581217f7a4a7bbf30948d99b5365758ed477f1ece6e5e281f76a45a4"
+    }
+  ]
+}

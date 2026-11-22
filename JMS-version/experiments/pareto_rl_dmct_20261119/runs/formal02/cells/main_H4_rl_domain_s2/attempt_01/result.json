@@ -1,0 +1,330 @@
+{
+  "spec": {
+    "id": "main_H4_rl_domain_s2",
+    "case": "H4",
+    "method": "rl_domain",
+    "seed": 2,
+    "budget": 45,
+    "suite": "main"
+  },
+  "initial": [
+    846.0,
+    554.0000000099999
+  ],
+  "config": {
+    "load_ports": {
+      "LP1": {
+        "4x1": 2,
+        "2x2": 0
+      },
+      "LP2": {
+        "4x1": 1,
+        "2x2": 0
+      },
+      "LP3": {
+        "4x1": 0,
+        "2x2": 1
+      },
+      "LP4": {
+        "4x1": 0,
+        "2x2": 0
+      }
+    },
+    "pjobs": [
+      {
+        "id": "Pjob1",
+        "mode": "4x1",
+        "chambers": [
+          2,
+          3
+        ],
+        "wafers": [
+          "LP1_W1",
+          "LP1_W2",
+          "LP2_W1"
+        ]
+      },
+      {
+        "id": "Pjob2",
+        "mode": "2x2",
+        "chambers": [
+          2,
+          3
+        ],
+        "wafers": [
+          "LP3_W1"
+        ]
+      }
+    ],
+    "source": "dual",
+    "dummy_alignment": "bypass_or_accompany",
+    "vtr_hand_policy": "clean_dirty",
+    "dummy_count": 6,
+    "cleaning_interval": 4,
+    "full_time": 180,
+    "mix_time": 90,
+    "cleaning_time": 500,
+    "handling": 1,
+    "atr_handling": 4,
+    "atr_empty_ll_to_lp": 6,
+    "rotation": 2,
+    "atr_travel": 3,
+    "vtr_travel": 2,
+    "alignment": 20,
+    "pump": 30,
+    "vent": 25,
+    "upper_reset": 30,
+    "lower_reset": 25,
+    "module_residency": 100,
+    "robot_residency": 100,
+    "horizon": 10000,
+    "chamber_residency_basis": "nonprocessing",
+    "max_pairs": 0,
+    "max_cycles": 0,
+    "chambers": [
+      2,
+      3
+    ]
+  },
+  "front": [
+    {
+      "a": 527.0,
+      "b": 1331.0628121571913,
+      "t": 24.67200000002049,
+      "metrics": {
+        "cmax": 527.0,
+        "wait_sum": 511.84380202619855,
+        "wait_max": 81.92190101309927,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 1331.0628121571913
+      },
+      "schedule": "point_000.json.gz"
+    },
+    {
+      "a": 537.0,
+      "b": 179.33333334333355,
+      "t": 6.157000000006519,
+      "metrics": {
+        "cmax": 537.0,
+        "wait_sum": 76.00000001000011,
+        "wait_max": 10.333333333333343,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 179.33333334333355
+      },
+      "schedule": "point_001.json.gz"
+    },
+    {
+      "a": 592.0,
+      "b": 54.000000009999894,
+      "t": 17.92200000002049,
+      "metrics": {
+        "cmax": 592.0,
+        "wait_sum": 24.000000009999894,
+        "wait_max": 3.0,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 54.000000009999894
+      },
+      "schedule": "point_002.json.gz"
+    }
+  ],
+  "history": [
+    [
+      3.7189999999827705,
+      846.0,
+      554.0000000099999
+    ],
+    [
+      3.7660000000032596,
+      694.0,
+      54.00000001000001
+    ],
+    [
+      3.8130000000237487,
+      691.0,
+      54.00000001000001
+    ],
+    [
+      3.922000000020489,
+      688.0,
+      54.00000001000001
+    ],
+    [
+      4.157000000006519,
+      542.0,
+      365.0000000099999
+    ],
+    [
+      4.172000000020489,
+      541.0,
+      369.0000000099999
+    ],
+    [
+      4.64100000000326,
+      540.0,
+      232.0000000099999
+    ],
+    [
+      5.202999999979511,
+      669.0,
+      219.0000000099999
+    ],
+    [
+      5.313000000023749,
+      540.0,
+      202.5000000099999
+    ],
+    [
+      5.48499999998603,
+      537.0,
+      186.33333334333355
+    ],
+    [
+      6.157000000006519,
+      537.0,
+      179.33333334333355
+    ],
+    [
+      15.53200000000652,
+      601.0,
+      54.000000009999894
+    ],
+    [
+      15.60999999998603,
+      598.0,
+      54.000000009999894
+    ],
+    [
+      17.92200000002049,
+      592.0,
+      54.000000009999894
+    ],
+    [
+      24.67200000002049,
+      527.0,
+      1331.0628121571913
+    ]
+  ],
+  "stats": {
+    "validated": 835,
+    "insertions": 15,
+    "attempts": 1938,
+    "timing_lp_calls": 1750,
+    "no_lp_candidate": 925,
+    "screened": 188,
+    "late_excluded": 1
+  },
+  "subproblems": [
+    {
+      "goal": "B",
+      "cap": null,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20,
+      "released_orders": 343,
+      "eligible_orders": 1143,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": null,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 1,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": 444.8098986900691,
+      "released_orders": 216,
+      "eligible_orders": 721,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": 54,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 1,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": 524.9451748346847,
+      "released_orders": 343,
+      "eligible_orders": 1143,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": 200,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 1,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": 446.4555170774012,
+      "released_orders": 216,
+      "eligible_orders": 721,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": 74.0000000004,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 1,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": 516.5836543881728,
+      "released_orders": 343,
+      "eligible_orders": 1143,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": null,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    },
+    {
+      "goal": "A",
+      "cap": 54,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    },
+    {
+      "goal": "A",
+      "cap": 200,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    },
+    {
+      "goal": "A",
+      "cap": 74.0000000004,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    }
+  ],
+  "policy": {
+    "method": "proposed",
+    "training_seed": 1,
+    "checkpoint": "D:\\git\\git\\RDMCT-A3C\\cie\\models\\proposed\\cie_proposed_all_cie_proposed\\cie_proposed_all_cie_proposed_2026_08_02_14_55_21_0000--s-1\\itr_60.pkl",
+    "sha256": "23961d2d9f09473982a79271642fca1d6e76cd0bf3837240d5e38a2361d824ce",
+    "config": "D:\\git\\git\\RDMCT-A3C\\cie\\configs\\cie_proposed_inference.json",
+    "config_sha256": "9c1ef2f4c90c92158c13ea8538413daf8f6609c1f4a701d2e98534d593236293",
+    "transfer": "frozen_policy_evaluation_on_new_model",
+    "callback_calls": 0
+  },
+  "search_wall_s": 45.76600000000326,
+  "shared_spbs_seconds": 2.98499999998603,
+  "last_eligible_s": 24.67200000002049
+}

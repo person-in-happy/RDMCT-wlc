@@ -1,0 +1,155 @@
+{
+  "small": {
+    "runs": 164,
+    "artifacts": 699,
+    "distinct_checks_by_case": 499,
+    "initials": 21,
+    "source_files": 39,
+    "checkpoint": "23961d2d9f09473982a79271642fca1d6e76cd0bf3837240d5e38a2361d824ce",
+    "main_HV": {
+      "S1": {
+        "domain": 0.27468299289708015,
+        "rl_domain": 0.27468299289708015,
+        "epsilon": 0.0,
+        "nsga2": 0.27468299289708015,
+        "moead": 0.27468299289708015,
+        "legacy": 0.0
+      },
+      "M4": {
+        "domain": 0.5447888742204394,
+        "rl_domain": 0.5411566889314358,
+        "epsilon": 0.26125968333416705,
+        "nsga2": 0.5395173026994925,
+        "moead": 0.5394719740440772,
+        "legacy": 0.3537460043211237
+      },
+      "H4": {
+        "domain": 0.7558217050234856,
+        "rl_domain": 0.7544766623081779,
+        "epsilon": 0.2600000000000001,
+        "nsga2": 0.7073620862977552,
+        "moead": 0.706896201096266,
+        "legacy": 0.35386281524318924
+      },
+      "H8": {
+        "domain": 0.5885559302810471,
+        "rl_domain": 0.5885559302810471,
+        "epsilon": 0.2600000000000001,
+        "nsga2": 0.579609287460968,
+        "moead": 0.6118836538706001,
+        "legacy": 0.2805032233006705
+      },
+      "H16": {
+        "domain": 0.3734379864119372,
+        "rl_domain": 0.38830293577038794,
+        "epsilon": 0.2600000000000001,
+        "nsga2": 0.47203454843671155,
+        "moead": 0.5019062150894598,
+        "legacy": 0.2600000000000001
+      }
+    },
+    "S1": {
+      "points": 7,
+      "certified_hits": 7,
+      "unsupported_hits": 3,
+      "HV": 0.3783385690454633,
+      "certified_HV": 0.3783385691846355,
+      "IGD_plus": 2.4546275728958374e-10,
+      "A_at_B100": 513.9999999999995,
+      "elapsed_two_stages": 82.03199999994831,
+      "max_coordinate_error": 5.333330648227275e-07,
+      "physical_and_full_original": true,
+      "profile": "separate S1 topology-specific experiment, active-phase time plus event disjunction time"
+    },
+    "checked_original_again": true,
+    "elapsed_s": 52.53100000001723
+  },
+  "numeric_adapter": {
+    "rows": 26331,
+    "variables": 8219,
+    "B": 330.0,
+    "passed_fractional": true,
+    "both_rejected_zero_cmax": true
+  },
+  "large_runs": 12,
+  "returned": 78,
+  "distinct_original_checks": 63,
+  "full_observed": 20,
+  "original_rows": 24271470,
+  "variables": 6764011,
+  "medians": [
+    {
+      "method": "domain",
+      "HV_median": 0.4449379418797131,
+      "HV_min": 0.4439131783645286,
+      "HV_max": 0.44546289068716277,
+      "A_median": 7623.0,
+      "B_median": 1786.0,
+      "B2949_hits": 3,
+      "LP_median": 333
+    },
+    {
+      "method": "nsga2",
+      "HV_median": 0.43286677417519726,
+      "HV_min": 0.4143651927068415,
+      "HV_max": 0.43561303892465864,
+      "A_median": 7586.875,
+      "B_median": 1951.0,
+      "B2949_hits": 3,
+      "LP_median": 321
+    },
+    {
+      "method": "moead",
+      "HV_median": 0.43898070746530354,
+      "HV_min": 0.4378933271564847,
+      "HV_max": 0.44693470929321066,
+      "A_median": 7662.0,
+      "B_median": 1851.5,
+      "B2949_hits": 3,
+      "LP_median": 312
+    },
+    {
+      "method": "fixed",
+      "HV_median": 0.271372232390087,
+      "HV_min": 0.271372232390087,
+      "HV_max": 0.271372232390087,
+      "A_median": 8630.0,
+      "B_median": 3722.0,
+      "B2949_hits": 0,
+      "LP_median": 145
+    }
+  ],
+  "first": {
+    "A": 7567.0,
+    "B": 2599.0,
+    "L_sum": 1884.0,
+    "L_max": 49.0,
+    "R": 9.0,
+    "rhythm_centers": 9,
+    "cycles": 52,
+    "method": "domain",
+    "seed": 3,
+    "file": "domain_3/2737565ac2b622547a64063cdc77ed513f4b817baf36609e8867a6b4337433fc.json.gz",
+    "schedule_sha256": "2737565ac2b622547a64063cdc77ed513f4b817baf36609e8867a6b4337433fc"
+  },
+  "last": {
+    "A": 8045.0,
+    "B": 1782.0,
+    "L_sum": 1612.0,
+    "L_max": 17.0,
+    "R": 0.0,
+    "rhythm_centers": 9,
+    "cycles": 54,
+    "method": "domain",
+    "seed": 1,
+    "file": "domain_1/a8dfabc330a6b3ab283e407a60b52451aa6f9ea243f1e80e22a7f275fbc010ff.json.gz",
+    "schedule_sha256": "a8dfabc330a6b3ab283e407a60b52451aa6f9ea243f1e80e22a7f275fbc010ff"
+  },
+  "warm": [
+    8630,
+    3932
+  ],
+  "sources_match": true,
+  "pooled_equals_all_internal": true,
+  "global_75_certified": false
+}

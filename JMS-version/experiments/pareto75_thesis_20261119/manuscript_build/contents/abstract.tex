@@ -1,0 +1,18 @@
+\begin{ChineseAbstract}
+面向旋转腔组合设备的满片加工和有限计算时间要求，研究产品晶圆与可复用辅助晶圆共同参与的双源混流调度。以两片晶圆组成的PW对连接成对搬运与腔室周期，建立联合确定配对、分腔、清洁、辅助片借还及资源次序的两阶段混合整数线性规划模型。第一阶段最小化最后一片产品返回原LP的完工时间，第二阶段在保持该上界和主要离散结构的条件下优化等待与节拍。
+
+求解方法RL-DMCT包含结构化初始解策略和学习选割。前者按工艺安排配对与加工周期，通过五层结构保持二元骨架逐步调整资源次序；后者在HEM框架中提取变量角色特征，并结合角色覆盖与候选相似度重排割。晶圆身份解码、完整模型检查及独立物理重放用于验证排程。
+
+正常分离下的四实例168次对照表明，结构化初始化在三个训练种子下均改善两个混合实例。预设27例初始解搜索取得6个2片实例的有效输入，其414次算法比较中，混合场景S2的平均产品完工时间经初始化由521降至492~s；共享SPBS起点后，完整方法相对HEM加SPBS的实例平均配对改善为0.0776\%，胜、平、负为2、4、0。扩展驻留配置的30组阶段内对照均保持产品完工并减少路线等待。默认配置的单产品连续加工场景中，辅助库存由4片增至8片使已证最优完工由309降至303~s。另给出324~s的2片最优排程和920~s的16片可行排程。基于配对等待下界的双目标搜索进一步刻画了交付与等待的取舍。两片专用子模型重现全部七个认证点。75片混合批次获得20个经原模型复验的经验非支配点，两个端点的工期相差478~s，等待与节拍指标相差817加权秒。
+\par\vskip1em
+\end{ChineseAbstract}
+\clearpage\phantomsection\addcontentsline{toc}{chapter}{ABSTRACT}
+\begin{center}\zihao{-3}\bfseries Scheduling Methods for Dual-Source Mixed-Flow Rotary-Chamber Cluster Tools
+\vskip17pt ABSTRACT\end{center}\vskip16.5pt
+This thesis studies finite-batch scheduling of dual-source mixed-flow rotary-chamber cluster tools under full-loading requirements and limited computation time. A two-stage mixed-integer linear program uses two-wafer pairs to link paired transfers with chamber cycles and jointly determines pairing, chamber allocation, cleaning, auxiliary-wafer reuse, and resource order. The first stage minimizes product-return makespan; the second refines waiting and cycle regularity while retaining the makespan bound and the main discrete structure.
+
+RL-DMCT combines structured initialization with learning-based cut selection. Five-level structure-preserving binary-skeleton improvement progressively releases resource-order decisions. The cut-selection component extends HEM with variable-role features and reranks candidates using role coverage and similarity. Identity decoding, full-model assignment checks, and independent physical replay validate the resulting schedules.
+
+On four instances, 168 comparisons under standard separation show initialization gains on both mixed-recipe cases across three training seeds. A qualification search on 27 predefined instances yields feasible inputs for six two-product cases. Across their 414 algorithm runs, initialization reduces the mean makespan from 521 to 492 s in mixed scenario S2. With shared SPBS inputs, the full method achieves a mean paired improvement of 0.0776\% over HEM plus SPBS, with two wins, four ties, and no losses. Thirty refinements preserve makespan and reduce waiting. With default residence limits, increasing auxiliary inventory from four to eight reduces the certified single-product makespan from 309 to 303 s for sequential processing. A two-product optimum of 324 s and a feasible 16-product schedule of 920 s illustrate complete execution. A pair-based waiting bound guides a bi-objective search. A two-wafer submodel recovers all seven certified Pareto points. For 75 product wafers, 20 empirically nondominated schedules pass full-model checks. The two extremes differ by 478 s in makespan and 817 weighted seconds in waiting and cycle regularity.
+\vfill
+\noindent\textbf{Key Words: }rotary-chamber cluster tool; mixed-integer linear programming; auxiliary wafer; structured initialization; learning cut selection\clearpage

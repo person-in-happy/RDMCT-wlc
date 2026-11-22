@@ -1,0 +1,321 @@
+{
+  "spec": {
+    "id": "main_H4_domain_s2",
+    "case": "H4",
+    "method": "domain",
+    "seed": 2,
+    "budget": 45,
+    "suite": "main"
+  },
+  "initial": [
+    846.0,
+    554.0000000099999
+  ],
+  "config": {
+    "load_ports": {
+      "LP1": {
+        "4x1": 2,
+        "2x2": 0
+      },
+      "LP2": {
+        "4x1": 1,
+        "2x2": 0
+      },
+      "LP3": {
+        "4x1": 0,
+        "2x2": 1
+      },
+      "LP4": {
+        "4x1": 0,
+        "2x2": 0
+      }
+    },
+    "pjobs": [
+      {
+        "id": "Pjob1",
+        "mode": "4x1",
+        "chambers": [
+          2,
+          3
+        ],
+        "wafers": [
+          "LP1_W1",
+          "LP1_W2",
+          "LP2_W1"
+        ]
+      },
+      {
+        "id": "Pjob2",
+        "mode": "2x2",
+        "chambers": [
+          2,
+          3
+        ],
+        "wafers": [
+          "LP3_W1"
+        ]
+      }
+    ],
+    "source": "dual",
+    "dummy_alignment": "bypass_or_accompany",
+    "vtr_hand_policy": "clean_dirty",
+    "dummy_count": 6,
+    "cleaning_interval": 4,
+    "full_time": 180,
+    "mix_time": 90,
+    "cleaning_time": 500,
+    "handling": 1,
+    "atr_handling": 4,
+    "atr_empty_ll_to_lp": 6,
+    "rotation": 2,
+    "atr_travel": 3,
+    "vtr_travel": 2,
+    "alignment": 20,
+    "pump": 30,
+    "vent": 25,
+    "upper_reset": 30,
+    "lower_reset": 25,
+    "module_residency": 100,
+    "robot_residency": 100,
+    "horizon": 10000,
+    "chamber_residency_basis": "nonprocessing",
+    "max_pairs": 0,
+    "max_cycles": 0,
+    "chambers": [
+      2,
+      3
+    ]
+  },
+  "front": [
+    {
+      "a": 527.0,
+      "b": 1262.323335214293,
+      "t": 24.78200000000652,
+      "metrics": {
+        "cmax": 527.0,
+        "wait_sum": 442.93848501948116,
+        "wait_max": 81.93848501948116,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 1262.323335214293
+      },
+      "schedule": "point_000.json.gz"
+    },
+    {
+      "a": 537.0,
+      "b": 179.33333334333355,
+      "t": 6.173000000009779,
+      "metrics": {
+        "cmax": 537.0,
+        "wait_sum": 76.00000001000011,
+        "wait_max": 10.333333333333343,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 179.33333334333355
+      },
+      "schedule": "point_001.json.gz"
+    },
+    {
+      "a": 592.0,
+      "b": 54.000000009999894,
+      "t": 18.25099999998929,
+      "metrics": {
+        "cmax": 592.0,
+        "wait_sum": 24.000000009999894,
+        "wait_max": 3.0,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 54.000000009999894
+      },
+      "schedule": "point_002.json.gz"
+    }
+  ],
+  "history": [
+    [
+      3.7199999999720603,
+      846.0,
+      554.0000000099999
+    ],
+    [
+      3.75099999998929,
+      694.0,
+      54.00000001000001
+    ],
+    [
+      3.798000000009779,
+      691.0,
+      54.00000001000001
+    ],
+    [
+      3.8919999999925494,
+      688.0,
+      54.00000001000001
+    ],
+    [
+      4.062999999965541,
+      542.0,
+      365.0000000099999
+    ],
+    [
+      4.078999999968801,
+      541.0,
+      369.0000000099999
+    ],
+    [
+      4.562999999965541,
+      540.0,
+      232.0000000099999
+    ],
+    [
+      5.187999999965541,
+      669.0,
+      219.0000000099999
+    ],
+    [
+      5.328999999968801,
+      540.0,
+      202.5000000099999
+    ],
+    [
+      5.516999999992549,
+      537.0,
+      186.33333334333355
+    ],
+    [
+      6.173000000009779,
+      537.0,
+      179.33333334333355
+    ],
+    [
+      15.84499999997206,
+      601.0,
+      54.000000009999894
+    ],
+    [
+      15.923000000009779,
+      598.0,
+      54.000000009999894
+    ],
+    [
+      18.25099999998929,
+      592.0,
+      54.000000009999894
+    ],
+    [
+      24.78200000000652,
+      527.0,
+      1262.323335214293
+    ]
+  ],
+  "stats": {
+    "validated": 825,
+    "insertions": 15,
+    "attempts": 1908,
+    "timing_lp_calls": 1722,
+    "no_lp_candidate": 907,
+    "screened": 186,
+    "late_excluded": 1
+  },
+  "subproblems": [
+    {
+      "goal": "B",
+      "cap": null,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20,
+      "released_orders": 343,
+      "eligible_orders": 1143,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": null,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 1,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": 443.1514980518829,
+      "released_orders": 216,
+      "eligible_orders": 721,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": 54,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 1,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": 524.8474211038177,
+      "released_orders": 343,
+      "eligible_orders": 1143,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": 200,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 1,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": 443.9397972874739,
+      "released_orders": 216,
+      "eligible_orders": 721,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": 74.0000000004,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 1,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": 517.0940806199469,
+      "released_orders": 343,
+      "eligible_orders": 1143,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": null,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    },
+    {
+      "goal": "A",
+      "cap": 54,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    },
+    {
+      "goal": "A",
+      "cap": 200,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    },
+    {
+      "goal": "A",
+      "cap": 74.0000000004,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    }
+  ],
+  "policy": null,
+  "search_wall_s": 45.89199999999255,
+  "shared_spbs_seconds": 2.98499999998603,
+  "last_eligible_s": 24.78200000000652
+}

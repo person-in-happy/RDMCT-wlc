@@ -1,0 +1,448 @@
+{
+  "spec": {
+    "id": "main_H4_domain_s3",
+    "case": "H4",
+    "method": "domain",
+    "seed": 3,
+    "budget": 45,
+    "suite": "main"
+  },
+  "initial": [
+    846.0,
+    554.0000000099999
+  ],
+  "config": {
+    "load_ports": {
+      "LP1": {
+        "4x1": 2,
+        "2x2": 0
+      },
+      "LP2": {
+        "4x1": 1,
+        "2x2": 0
+      },
+      "LP3": {
+        "4x1": 0,
+        "2x2": 1
+      },
+      "LP4": {
+        "4x1": 0,
+        "2x2": 0
+      }
+    },
+    "pjobs": [
+      {
+        "id": "Pjob1",
+        "mode": "4x1",
+        "chambers": [
+          2,
+          3
+        ],
+        "wafers": [
+          "LP1_W1",
+          "LP1_W2",
+          "LP2_W1"
+        ]
+      },
+      {
+        "id": "Pjob2",
+        "mode": "2x2",
+        "chambers": [
+          2,
+          3
+        ],
+        "wafers": [
+          "LP3_W1"
+        ]
+      }
+    ],
+    "source": "dual",
+    "dummy_alignment": "bypass_or_accompany",
+    "vtr_hand_policy": "clean_dirty",
+    "dummy_count": 6,
+    "cleaning_interval": 4,
+    "full_time": 180,
+    "mix_time": 90,
+    "cleaning_time": 500,
+    "handling": 1,
+    "atr_handling": 4,
+    "atr_empty_ll_to_lp": 6,
+    "rotation": 2,
+    "atr_travel": 3,
+    "vtr_travel": 2,
+    "alignment": 20,
+    "pump": 30,
+    "vent": 25,
+    "upper_reset": 30,
+    "lower_reset": 25,
+    "module_residency": 100,
+    "robot_residency": 100,
+    "horizon": 10000,
+    "chamber_residency_basis": "nonprocessing",
+    "max_pairs": 0,
+    "max_cycles": 0,
+    "chambers": [
+      2,
+      3
+    ]
+  },
+  "front": [
+    {
+      "a": 446.0,
+      "b": 868.0,
+      "t": 24.15700000000652,
+      "metrics": {
+        "cmax": 446.0,
+        "wait_sum": 308.0,
+        "wait_max": 56.0,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 868.0
+      },
+      "schedule": "point_000.json.gz"
+    },
+    {
+      "a": 483.0,
+      "b": 362.0000000099999,
+      "t": 18.4539999999688,
+      "metrics": {
+        "cmax": 483.0,
+        "wait_sum": 82.0000000099999,
+        "wait_max": 28.0,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 362.0000000099999
+      },
+      "schedule": "point_001.json.gz"
+    },
+    {
+      "a": 485.00000000875,
+      "b": 225.99999992999983,
+      "t": 7.73499999998603,
+      "metrics": {
+        "cmax": 485.00000000875,
+        "wait_sum": 56.00000001750004,
+        "wait_max": 16.99999999124998,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 225.99999992999983
+      },
+      "schedule": "point_002.json.gz"
+    },
+    {
+      "a": 488.25000000750003,
+      "b": 199.99999993999973,
+      "t": 8.37599999998929,
+      "metrics": {
+        "cmax": 488.25000000750003,
+        "wait_sum": 62.50000001500007,
+        "wait_max": 13.749999992499966,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 199.99999993999973
+      },
+      "schedule": "point_003.json.gz"
+    },
+    {
+      "a": 490.49999999875,
+      "b": 182.0000000099999,
+      "t": 7.953999999968801,
+      "metrics": {
+        "cmax": 490.49999999875,
+        "wait_sum": 66.99999999750003,
+        "wait_max": 11.500000001249987,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 182.0000000099999
+      },
+      "schedule": "point_004.json.gz"
+    },
+    {
+      "a": 491.8000000055,
+      "b": 178.99999997250012,
+      "t": 9.23499999998603,
+      "metrics": {
+        "cmax": 491.8000000055,
+        "wait_sum": 58.000000000000014,
+        "wait_max": 12.09999999725001,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 178.99999997250012
+      },
+      "schedule": "point_005.json.gz"
+    },
+    {
+      "a": 492.999999998,
+      "b": 173.00000001000006,
+      "t": 8.87599999998929,
+      "metrics": {
+        "cmax": 492.999999998,
+        "wait_sum": 58.000000000000014,
+        "wait_max": 11.500000001000004,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 173.00000001000006
+      },
+      "schedule": "point_006.json.gz"
+    },
+    {
+      "a": 592.0,
+      "b": 54.00000001000001,
+      "t": 19.73499999998603,
+      "metrics": {
+        "cmax": 592.0,
+        "wait_sum": 24.000000010000008,
+        "wait_max": 3.0,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 54.00000001000001
+      },
+      "schedule": "point_007.json.gz"
+    }
+  ],
+  "history": [
+    [
+      4.71999999997206,
+      846.0,
+      554.0000000099999
+    ],
+    [
+      4.782000000006519,
+      694.0,
+      54.000000009999894
+    ],
+    [
+      4.85999999998603,
+      691.0,
+      54.000000009999894
+    ],
+    [
+      5.62599999998929,
+      689.0,
+      54.000000009999894
+    ],
+    [
+      6.312999999965541,
+      675.0,
+      219.0000000099999
+    ],
+    [
+      6.48499999998603,
+      675.0,
+      197.0000000099999
+    ],
+    [
+      6.71999999997206,
+      672.0,
+      197.0000000099999
+    ],
+    [
+      6.891999999992549,
+      688.0,
+      54.000000009999894
+    ],
+    [
+      7.73499999998603,
+      485.00000000875,
+      225.99999992999983
+    ],
+    [
+      7.953999999968801,
+      490.49999999875,
+      182.0000000099999
+    ],
+    [
+      8.37599999998929,
+      488.25000000750003,
+      199.99999993999973
+    ],
+    [
+      8.87599999998929,
+      492.999999998,
+      173.00000001000006
+    ],
+    [
+      9.23499999998603,
+      491.8000000055,
+      178.99999997250012
+    ],
+    [
+      13.85999999998603,
+      665.49999999875,
+      170.0000000099999
+    ],
+    [
+      15.00099999998929,
+      623.0,
+      137.3333333433335
+    ],
+    [
+      16.09499999997206,
+      605.0,
+      98.0000000099999
+    ],
+    [
+      16.26699999999255,
+      601.0,
+      54.000000009999894
+    ],
+    [
+      16.42300000000978,
+      598.0,
+      54.000000009999894
+    ],
+    [
+      17.34499999997206,
+      595.0,
+      54.00000001000001
+    ],
+    [
+      17.53200000000652,
+      483.0,
+      393.0000000099999
+    ],
+    [
+      18.3289999999688,
+      483.0,
+      386.0000000099999
+    ],
+    [
+      18.4539999999688,
+      483.0,
+      362.0000000099999
+    ],
+    [
+      19.73499999998603,
+      592.0,
+      54.00000001000001
+    ],
+    [
+      24.15700000000652,
+      446.0,
+      868.0
+    ]
+  ],
+  "stats": {
+    "validated": 619,
+    "insertions": 24,
+    "attempts": 2003,
+    "timing_lp_calls": 1752,
+    "no_lp_candidate": 1143,
+    "screened": 251,
+    "late_excluded": 1
+  },
+  "subproblems": [
+    {
+      "goal": "B",
+      "cap": null,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20,
+      "released_orders": 343,
+      "eligible_orders": 1143,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": null,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 1,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": 403.5,
+      "released_orders": 216,
+      "eligible_orders": 721,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": 54,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 1,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": 518.8304474285708,
+      "released_orders": 343,
+      "eligible_orders": 1143,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": 200,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 1,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": 399.2515790806324,
+      "released_orders": 216,
+      "eligible_orders": 721,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": 74.0000000004,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 1,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": 515.9311522963878,
+      "released_orders": 343,
+      "eligible_orders": 1143,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": 114.0000000012,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 0,
+      "warm": 0,
+      "status": "timelimit",
+      "dual_bound": -1e+20,
+      "released_orders": 216,
+      "eligible_orders": 721,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": null,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    },
+    {
+      "goal": "A",
+      "cap": 54,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    },
+    {
+      "goal": "A",
+      "cap": 200,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    },
+    {
+      "goal": "A",
+      "cap": 74.0000000004,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    }
+  ],
+  "policy": null,
+  "search_wall_s": 45.23499999998603,
+  "shared_spbs_seconds": 3.98499999998603,
+  "last_eligible_s": 24.15700000000652
+}

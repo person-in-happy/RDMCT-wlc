@@ -1,0 +1,41 @@
+{
+  "primary": "Separate follow-up cohort and hypothesis family: compare full vs no_blocks and full vs random_init within each workload. HV7 using exactly the previous scaling. Six structured founders or six random admissible genotypes (feasibility screened by decoder), two endpoints each and 148 subsequent evaluations. Disable block edits by projecting any local proposal onto the same global family with three zero block handles. Keep long-visit sampling, caps, family changes, archive and LP identical. Shared RNG for subsequent search, separately seeded RNG for random initialization.",
+  "analysis": "Four exact two-sided paired sign tests Holm-adjusted over both workloads and both ablations. Seedwise median HV differences and exact median intervals; full-archive HV sensitivity. Fixed sample. Conclusions here apply to mechanisms, independently of the six algorithm comparisons.",
+  "cases": [
+    "mix37",
+    "mix50"
+  ],
+  "seeds": [
+    301,
+    302,
+    303,
+    304,
+    305,
+    306,
+    307,
+    308,
+    309,
+    310,
+    311,
+    312
+  ],
+  "methods": [
+    "full",
+    "no_blocks",
+    "random_init"
+  ],
+  "evaluations": 160,
+  "workers": 4,
+  "threads": 1,
+  "parent_protocol_sha256": "520c9767f6487a5c45a5dcbb7e727adffe147cc619767214c08391a65fc588fb",
+  "source_sha256": "cbbb3556b7bc50e93dc142b090be4f885c211c8b7b225cffd6d3f3e2c15a5b17",
+  "original_code": {
+    "JMS-version\\experiments\\pareto75_front_comparison_20261119\\trial.py": "4ec9cd30d3d337aeff451a0ba7a6aa83470a919d69441c4cba7f5386e0ba3365",
+    "JMS-version\\experiments\\pareto75_front_comparison_20261119\\case_setup.py": "f594067ba17739e1b12779911311cb2e2504762406af17bdeef75df6509cdcf2",
+    "JMS-version\\experiments\\pareto75_front_comparison_20261119\\paired.py": "ca0ab955a90ed33755c4c3f411b58217b1ee5cc50323a76a8e4c118a71bf3152",
+    "JMS-version\\experiments\\pareto75_front_comparison_20261119\\results\\paired01\\shared\\0795fc23330f4be322b6ded38bd75e65d6c24f6477a9fb432b6f152491aa956d.json.gz": "2b12fc2c6c488add0726390c9418faf521c071842eb6deacfd6db2244b30f801",
+    "JMS-version\\experiments\\pareto75_front_comparison_20261119\\results\\paired01\\shared\\47c189369bc34da10e1434ad076d0df1e393604c4df53ceac3057ba478779a71.json.gz": "b525b43cf1816e1473e4d58ede373d30c6f11483db21ba79686147b906abb8da",
+    "JMS-version\\experiments\\pareto75_front_comparison_20261119\\results\\paired01\\shared\\mix37.json": "76a81a9961deb5643f6872432767c69001f0de21b31a68a04899d9d463e299df",
+    "JMS-version\\experiments\\pareto75_front_comparison_20261119\\results\\paired01\\shared\\mix50.json": "55bceea7997b82e889f3c843766d4aed50bcac5d3f1088515ed98b6f4a4a773c"
+  }
+}

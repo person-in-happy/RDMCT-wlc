@@ -1,0 +1,65 @@
+{
+  "runs": 164,
+  "artifacts": 699,
+  "distinct_checks_by_case": 499,
+  "initials": 21,
+  "source_files": 39,
+  "checkpoint": "23961d2d9f09473982a79271642fca1d6e76cd0bf3837240d5e38a2361d824ce",
+  "main_HV": {
+    "S1": {
+      "domain": 0.27468299289708015,
+      "rl_domain": 0.27468299289708015,
+      "epsilon": 0.0,
+      "nsga2": 0.27468299289708015,
+      "moead": 0.27468299289708015,
+      "legacy": 0.0
+    },
+    "M4": {
+      "domain": 0.5447888742204394,
+      "rl_domain": 0.5411566889314358,
+      "epsilon": 0.26125968333416705,
+      "nsga2": 0.5395173026994925,
+      "moead": 0.5394719740440772,
+      "legacy": 0.3537460043211237
+    },
+    "H4": {
+      "domain": 0.7558217050234856,
+      "rl_domain": 0.7544766623081779,
+      "epsilon": 0.2600000000000001,
+      "nsga2": 0.7073620862977552,
+      "moead": 0.706896201096266,
+      "legacy": 0.35386281524318924
+    },
+    "H8": {
+      "domain": 0.5885559302810471,
+      "rl_domain": 0.5885559302810471,
+      "epsilon": 0.2600000000000001,
+      "nsga2": 0.579609287460968,
+      "moead": 0.6118836538706001,
+      "legacy": 0.2805032233006705
+    },
+    "H16": {
+      "domain": 0.3734379864119372,
+      "rl_domain": 0.38830293577038794,
+      "epsilon": 0.2600000000000001,
+      "nsga2": 0.47203454843671155,
+      "moead": 0.5019062150894598,
+      "legacy": 0.2600000000000001
+    }
+  },
+  "S1": {
+    "points": 7,
+    "certified_hits": 7,
+    "unsupported_hits": 3,
+    "HV": 0.3783385690454633,
+    "certified_HV": 0.3783385691846355,
+    "IGD_plus": 2.4546275728958374e-10,
+    "A_at_B100": 513.9999999999995,
+    "elapsed_two_stages": 82.03199999994831,
+    "max_coordinate_error": 5.333330648227275e-07,
+    "physical_and_full_original": true,
+    "profile": "separate S1 topology-specific experiment, active-phase time plus event disjunction time"
+  },
+  "checked_original_again": true,
+  "elapsed_s": 52.53100000001723
+}

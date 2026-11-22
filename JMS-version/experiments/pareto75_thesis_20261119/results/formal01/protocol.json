@@ -1,0 +1,88 @@
+{
+  "methods": [
+    "domain",
+    "nsga2",
+    "moead",
+    "fixed"
+  ],
+  "seeds": [
+    1,
+    2,
+    3
+  ],
+  "budget_s": 90,
+  "workers": 3,
+  "threads": 1,
+  "python": "3.12.12 | packaged by conda-forge | (main, Oct 22 2025, 23:13:34) [MSC v.1944 64 bit (AMD64)]",
+  "platform": "Windows-11-10.0.28000-SP0",
+  "scipy": "1.18.0",
+  "numpy": "2.4.4",
+  "pyscipopt": "6.1.0",
+  "time_grid": 0.0625,
+  "rhythm_weight": 25,
+  "bounds": [
+    [
+      0,
+      12945
+    ],
+    [
+      0,
+      7864
+    ]
+  ],
+  "ref": [
+    1.1,
+    1.1
+  ],
+  "selection": "At most 7 returned per run: both extrema, then maximum normalized minimum Euclidean distance. Ties use increasing A.",
+  "timing": "Same precomputed starting plan and base decoder initialized before clock; search, LP and physical validation charged. Full row audit separately timed.",
+  "thresholds": [
+    3750,
+    2949
+  ],
+  "sha256": {
+    "JMS-version\\experiments\\finite_budget_20261116\\finite_budget.py": "a23611cf0f4e2b86165bd314da2e55ad5538a5b9c303976d0f1f72944182b112",
+    "JMS-version\\experiments\\pareto75_thesis_20261119\\campaign75.py": "da37388dc58f14ad9f6f11b3ffec4270d02cf9fc9c9ed4ea57d6946df1bf8927",
+    "JMS-version\\experiments\\pareto75_thesis_20261119\\large75.py": "282990bf5d5a0d251e1fac4d52cf552a53feec036c947ed02af6c825bc480dc6",
+    "JMS-version\\experiments\\pareto_rl_dmct_20261119\\common.py": "6e3dceb008544fb00c779df75bcd2ca0b5fc1e393a882985b7b10fc586bf5a64",
+    "JMS-version\\experiments\\pareto_rl_dmct_20261119\\decoder.py": "c32a1df77bbbfbeb0362db6b8e098540b9f81b45c9fa667b7707a99833e975e5",
+    "JMS-version\\experiments\\pareto_rl_dmct_20261119\\evolution.py": "2e058c9211b87ba6b809a9f9fb12b9ac452732858b7115602ee11d69ce0c151d",
+    "JMS-version\\experiments\\pareto_rl_dmct_20261119\\witness.py": "5d3224ca5e7bc512dadfadf82b6e90a3e46298f7e5f7a287468869d3392d7e11",
+    "JMS-version\\experiments\\scale75_20261118\\audit\\check_model.py": "8bc3c549bf5514debae099c87785b67799e7c08a06b679d660185d0c5304560c",
+    "JMS-version\\experiments\\scale75_20261118\\packing.py": "0a2ba4316e67d35114f06f88f0874bc55a9a36b907ad5967403bcbdcc5a06022",
+    "JMS-version\\experiments\\scale75_20261118\\patterns.py": "32bf6d8bf417a135f71f14b43009c0fb518c844d8370122e186378040bf1b510",
+    "JMS-version\\experiments\\scale75_20261118\\plot.py": "5c7f81643004fa1d4f73df72777e0d4115a2a4fb4c93df53683fa0d1c8e151aa",
+    "JMS-version\\experiments\\scale75_20261118\\resources.py": "ed90e4055b3dfba0892c2b5ab4835de62cb59899ba604928a58f79c5384e7053",
+    "JMS-version\\experiments\\scale75_20261118\\run.py": "15b1aff74e6d0de8496af51e765f7a15bfe8d25012bb3d8c8f2e1c54db13bb1c",
+    "JMS-version\\experiments\\scale75_20261118\\test_scale75.py": "68033f0e005ed5a905511fa36e2c83890002bef5d63ae32e13edc256e8c50f9a",
+    "JMS-version\\experiments\\scale75_20261118\\timing.py": "e7e50410ceae783ae0b1ee9d8908839cf9d171a2576392ed092408efe4d3712f",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\evidence_supplement.py": "7f97bcfee08dab975fcdf639d0ac01c8cca2700eaac41e7f10e99535db3b71fa",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\experiment_console.py": "8f85f01c5dcc906e8347bb5b5f2e587eee26cfebb11c5429a480fddc3018a729",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\grippers.py": "5ed898b8c17850b88da8eb8700df33dc5fd1fe3df3bf60df6b5c22281900e0fc",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\joint_algorithms.py": "a41510be8956369ea84dbfb25289b3f115afab741786ea9ac0284cf365dea1f1",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\joint_chamber_cycle_model.py": "d52b0f35f8ce90c7d18c15c0eed55069dd569c92f3b24de90cc8c8b6f993cb30",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\joint_pairing_model.py": "58b09bd4da318cb67ca978284475e2369d1328206b9213f715f4d99815092ced",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\memory_policy.py": "5b8914df0f7b9e70834aa6fef6de5e68223f0ed5c50e9e883a17b2b8c510f382",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\model.py": "1c098c7073ec09d8d762467d6faab04e7534ea558f60877c3ba1a50d7fb3a2be",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\paper_defaults.py": "b8aa66712dea1ae14565c84578d51585ecd4cb5c06cdab28f59d40def1ea77bc",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\physical_seed.py": "da232cdf3ddf9e5d35a27b36d4084fa12f97720aceb8d6b4e5eea4587f8011b1",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\physical_validate.py": "8b65d627369c496db031ea1638684bb995faca88a74bdc444dcd82bd05328cea",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\pjob_order.py": "cb0ec95bc2d72e39807a941b18e9466f7f8838388d3859b4d4c7e5a1eccd944f",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\pjobs.py": "3705d31ac6201600a4a7447e82660b6b306fcf7c87a75b229c638fe77040b6a5",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\projection.py": "df4bf2a94acea9a29d2e10de1c70fc622f003d7a46c175de231964f5d3ff6ec0",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\reference_completion.py": "9a2e47d1c8ea110237da7b53e98d21e4ad0af5ee2134e2fed2565ca8d4f72af9",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\revalidate.py": "bbdf4db71d35832c834f53740b5fed28a543c138f0b530179871b49c03f6a4f9",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\run_experiments.py": "bc0335edaffd70844c55c3bcb5e76eda36cd9f48443de90f4af94628d5edc686",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\run_matched_supplement.py": "4be03ccbdae101bd0354bab57077f58292effdea296e43b72945ad95e84da149",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\seed.py": "7be37826a5fb5652ac78eee3ab301a767da6f955861cd42453c711ec4ecc51c3",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\supplement_protocol.py": "f799581d890ef8028dd72e97536ea2179583e76efcdbcf518c0bd5261d893a0a",
+    "JMS-version\\model4_pjob_nonprocessing_20261103\\validate.py": "7c5853bb37a0819cde1bf9d970effce230e6c8eb07d65ca12f6233b318259f16",
+    "JMS-version\\results\\scale75_mixed_D_20261118_r1\\campaign.json": "793f8f3b1e3b2b228d5e63a01c6a276f860999cf4d6015bb5fb1ebeb370aade7",
+    "JMS-version\\results\\scale75_mixed_D_20261118_r1\\original_row_audit\\certificate.json": "f77f87d6996c09eb832fee95a8fa1e679fff41ca1b196c7a9383276ae5aab22f",
+    "JMS-version\\results\\scale75_mixed_D_20261118_r1\\result.json": "66616848c604a89c887719872053fddbbc4c2776d81b9535f8caedb91de666e1",
+    "JMS-version\\results\\scale75_mixed_D_20261118_r1\\search.json": "26a811e436025c3a5800ede55fd4c1cb24647ecdafdabd2b3d25cbbf3b22fee0",
+    "JMS-version\\results\\scale75_mixed_D_20261118_r1\\timing_B.json": "05720915b9e82a0a911a71dbde95de9266f058eabe20d8cb5a6ab158a646c62c",
+    "joint_chamber_cycle_model.py": "d01902149c2d26109e4f7c292b34ffbf30e54b0d1e0a9e58cd95378b61d4c48e",
+    "joint_pairing_model.py": "9f5551f2f361e452664c594968c0a7d8c2ab67b7bb8245acd73eb531afa2685e"
+  }
+}

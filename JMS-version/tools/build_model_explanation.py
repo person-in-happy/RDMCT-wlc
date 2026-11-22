@@ -67,7 +67,8 @@ def main():
                        'joint_chamber_cycle_model.py','run_experiments.py','validate.py','physical_validate.py')]
     paths += [PAPER/'experiments'/n for n in ('nondecreasing_strengthening_20261102/strengthen_models.py',
               'nondecreasing_followup_20261102/followup_models.py',
-              'nondecreasing_review_20261102/review_experiments.py')]
+              'nondecreasing_review_20261102/review_experiments.py',
+              'product_wait_20261122/objective.py')]
     report = dict(pages=len(doc), formulas=len(tags), overfull_boxes=0,
                   source_hashes={str(p.relative_to(PAPER)):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths},
                   pdf_sha256=hashlib.sha256(OUTPUT.read_bytes()).hexdigest(),

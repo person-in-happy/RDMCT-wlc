@@ -1,0 +1,441 @@
+{
+  "spec": {
+    "id": "ablation_M4_domain_no_bound_s2",
+    "case": "M4",
+    "method": "domain_no_bound",
+    "seed": 2,
+    "budget": 45,
+    "suite": "ablation"
+  },
+  "initial": [
+    487.0,
+    604.0000000099999
+  ],
+  "config": {
+    "load_ports": {
+      "LP1": {
+        "4x1": 1,
+        "2x2": 0
+      },
+      "LP2": {
+        "4x1": 1,
+        "2x2": 0
+      },
+      "LP3": {
+        "4x1": 0,
+        "2x2": 1
+      },
+      "LP4": {
+        "4x1": 0,
+        "2x2": 1
+      }
+    },
+    "pjobs": [
+      {
+        "id": "Pjob1",
+        "mode": "4x1",
+        "chambers": [
+          2,
+          3
+        ],
+        "wafers": [
+          "LP1_W1",
+          "LP2_W1"
+        ]
+      },
+      {
+        "id": "Pjob2",
+        "mode": "2x2",
+        "chambers": [
+          2,
+          3
+        ],
+        "wafers": [
+          "LP3_W1",
+          "LP4_W1"
+        ]
+      }
+    ],
+    "source": "dual",
+    "dummy_alignment": "bypass_or_accompany",
+    "vtr_hand_policy": "clean_dirty",
+    "dummy_count": 8,
+    "cleaning_interval": 10,
+    "full_time": 180,
+    "mix_time": 90,
+    "cleaning_time": 500,
+    "handling": 1,
+    "atr_handling": 4,
+    "atr_empty_ll_to_lp": 6,
+    "rotation": 2,
+    "atr_travel": 3,
+    "vtr_travel": 2,
+    "alignment": 20,
+    "pump": 30,
+    "vent": 25,
+    "upper_reset": 30,
+    "lower_reset": 25,
+    "module_residency": 100,
+    "robot_residency": 100,
+    "horizon": 10000,
+    "chamber_residency_basis": "nonprocessing",
+    "max_pairs": 0,
+    "max_cycles": 0,
+    "chambers": [
+      2,
+      3
+    ]
+  },
+  "front": [
+    {
+      "a": 421.0000001000015,
+      "b": 381.0,
+      "t": 23.96899999998277,
+      "metrics": {
+        "cmax": 421.0000001000015,
+        "wait_sum": 101.0,
+        "wait_max": 28.0,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 381.0
+      },
+      "schedule": "point_000.json.gz"
+    },
+    {
+      "a": 424.0,
+      "b": 362.0000000099999,
+      "t": 3.6570000000065193,
+      "metrics": {
+        "cmax": 424.0,
+        "wait_sum": 82.0000000099999,
+        "wait_max": 28.0,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 362.0000000099999
+      },
+      "schedule": "point_001.json.gz"
+    },
+    {
+      "a": 440.0000001000015,
+      "b": 156.33333333333343,
+      "t": 27.93800000002375,
+      "metrics": {
+        "cmax": 440.0000001000015,
+        "wait_sum": 63.0,
+        "wait_max": 9.333333333333343,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 156.33333333333343
+      },
+      "schedule": "point_002.json.gz"
+    },
+    {
+      "a": 443.0,
+      "b": 144.33333334333344,
+      "t": 7.063000000023749,
+      "metrics": {
+        "cmax": 443.0,
+        "wait_sum": 51.00000001000001,
+        "wait_max": 9.333333333333343,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 144.33333334333344
+      },
+      "schedule": "point_003.json.gz"
+    },
+    {
+      "a": 497.00000010000076,
+      "b": 72.0,
+      "t": 29.54700000002049,
+      "metrics": {
+        "cmax": 497.00000010000076,
+        "wait_sum": 32.0,
+        "wait_max": 4.0,
+        "rhythm": 0.0,
+        "rhythm_centers": 1,
+        "secondary": 72.0
+      },
+      "schedule": "point_004.json.gz"
+    },
+    {
+      "a": 517.0,
+      "b": 54.000000009999894,
+      "t": 9.10999999998603,
+      "metrics": {
+        "cmax": 517.0,
+        "wait_sum": 24.000000009999894,
+        "wait_max": 3.0,
+        "rhythm": 0.0,
+        "rhythm_centers": 1,
+        "secondary": 54.000000009999894
+      },
+      "schedule": "point_005.json.gz"
+    }
+  ],
+  "history": [
+    [
+      2.922000000020489,
+      487.0,
+      604.0000000099999
+    ],
+    [
+      2.922000000020489,
+      480.0,
+      1170.0
+    ],
+    [
+      3.0160000000032596,
+      468.0,
+      590.0000000099999
+    ],
+    [
+      3.0630000000237487,
+      461.0,
+      374.00000001
+    ],
+    [
+      3.077999999979511,
+      461.0,
+      367.00000001
+    ],
+    [
+      3.327999999979511,
+      727.0,
+      333.0000000099999
+    ],
+    [
+      3.48499999998603,
+      557.0,
+      333.0000000099999
+    ],
+    [
+      3.5160000000032596,
+      431.0,
+      369.0000000099999
+    ],
+    [
+      3.5630000000237487,
+      454.0,
+      360.00000001
+    ],
+    [
+      3.6570000000065193,
+      424.0,
+      362.0000000099999
+    ],
+    [
+      3.73499999998603,
+      519.0,
+      333.0000000099999
+    ],
+    [
+      3.7820000000065193,
+      776.0,
+      54.000000009999894
+    ],
+    [
+      3.922000000020489,
+      701.0,
+      54.000000009999894
+    ],
+    [
+      4.077999999979511,
+      521.0,
+      54.000000009999894
+    ],
+    [
+      4.35999999998603,
+      453.0,
+      360.0000000099999
+    ],
+    [
+      5.313000000023749,
+      444.0,
+      333.0000000099999
+    ],
+    [
+      6.51600000000326,
+      519.00000001,
+      103.99999975999981
+    ],
+    [
+      6.8439999999827705,
+      520.120000009584,
+      75.9999997703992
+    ],
+    [
+      7.063000000023749,
+      443.0,
+      144.33333334333344
+    ],
+    [
+      9.10999999998603,
+      517.0,
+      54.000000009999894
+    ],
+    [
+      23.95299999997951,
+      421.0,
+      633.0
+    ],
+    [
+      23.96899999998277,
+      421.0000001000015,
+      381.0
+    ],
+    [
+      27.92200000002049,
+      440.0,
+      200.00000009999985
+    ],
+    [
+      27.93800000002375,
+      440.0000001000015,
+      156.33333333333343
+    ],
+    [
+      29.54700000002049,
+      497.0,
+      76.0000001004
+    ],
+    [
+      29.54700000002049,
+      497.00000010000076,
+      72.0
+    ]
+  ],
+  "stats": {
+    "validated": 897,
+    "insertions": 26,
+    "attempts": 1815,
+    "timing_lp_calls": 1815,
+    "no_lp_candidate": 934,
+    "late_excluded": 1
+  },
+  "subproblems": [
+    {
+      "goal": "B",
+      "cap": null,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20,
+      "released_orders": 273,
+      "eligible_orders": 910,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": null,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 89,
+      "warm": 1,
+      "status": "optimal",
+      "dual_bound": 421.0,
+      "released_orders": 219,
+      "eligible_orders": 729,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": 54,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 2,
+      "warm": 1,
+      "status": "optimal",
+      "dual_bound": 517.0,
+      "released_orders": 273,
+      "eligible_orders": 910,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": 200,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 40,
+      "warm": 1,
+      "status": "optimal",
+      "dual_bound": 440.0,
+      "released_orders": 216,
+      "eligible_orders": 721,
+      "target_pair": 2
+    },
+    {
+      "goal": "A",
+      "cap": 76.0000000004,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 2,
+      "warm": 1,
+      "status": "optimal",
+      "dual_bound": 497.0,
+      "released_orders": 273,
+      "eligible_orders": 910,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": 120.00000000119998,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 0,
+      "warm": 0,
+      "status": "timelimit",
+      "dual_bound": -1e+20,
+      "released_orders": 216,
+      "eligible_orders": 721,
+      "target_pair": 2
+    },
+    {
+      "goal": "A",
+      "cap": 191.50000000249997,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 2,
+      "warm": 1,
+      "status": "optimal",
+      "dual_bound": 439.99999999999926,
+      "released_orders": 216,
+      "eligible_orders": 721,
+      "target_pair": 2
+    },
+    {
+      "goal": "A",
+      "cap": null,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    },
+    {
+      "goal": "A",
+      "cap": 54,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    },
+    {
+      "goal": "A",
+      "cap": 200,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    },
+    {
+      "goal": "A",
+      "cap": 76.0000000004,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    }
+  ],
+  "policy": null,
+  "search_wall_s": 45.10999999998603,
+  "shared_spbs_seconds": 1.9849999999860302,
+  "last_eligible_s": 29.54700000002049
+}

@@ -36,7 +36,7 @@ lang: zh-CN
 | $\mathcal R,K_\rho,\Gamma_o$ | 资源类、容量与允许单元 | ATR承2片、VTR承4片，AL容量1，上/下LL各2槽，腔室4工位；机器人及腔室执行机构各为独占资源；$\Gamma_o$为占用允许单元集合。 |
 | $\mathcal A^{\rm int},\mathcal A_{is}(\gamma),\mathcal A$ | 路线模板与启用弧集 | 腔内公共先后弧及按来源、成对搬运/随行选择启用的供回弧；完整弧集由模板和选择确定，并非预先固定的完整动作次序。 |
 | $\mathcal V_c,e,\nu$ | 解后派生区段索引 | 生产任务集$\mathcal V_c$、清洁区段$e$及清洁阶段$\nu\in\{FL,BL,P,BU,FU\}$由周期结构及物理事件恢复，不是独立输入分段。 |
-| $\mathcal W,\mathcal I_h,\mathcal D_{\rm fix}$ | 评价与阶段二派生集合 | 等待项集由路线间隔生成；节拍中心集$\mathcal I_h$由连续保留链确定；固定分量集$\mathcal D_{\rm fix}$包含除原子同步外的非连续变量。 |
+| $\mathcal W_{\rm P},\mathcal I_h,\mathcal D_{\rm fix}$ | 评价与阶段二派生集合 | 等待项集由产品晶圆的供回片路线间隔生成；节拍中心集$\mathcal I_h$由连续保留链确定；固定分量集$\mathcal D_{\rm fix}$包含除原子同步外的非连续变量。 |
 | $d_\zeta,d_\psi,d_{\mathrm{cl}}$ | 正实数时长 | 两种生产及清洁曝光默认180、90、500 s；$2\times2$产品需相邻两次90 s曝光。 |
 | $d_o^{\rm ATR},d_o^{\rm VTR},r_c$ | 正实数时长 | ATR取放4 s、VTR取放1 s、腔室半周旋转2 s；共同装卸对只执行一次原子动作，LP取片时长为正。 |
 | $t_{\rm ATR},t_{\rm VTR},t_{\rm empty}$ | 移动时间配置 | 通常换位分别3、2 s；ATR从LL空返LP或AS再取片为6 s；同地点及U/L间移动取0，按地点与方向生成换位参数。 |
@@ -56,7 +56,7 @@ Table: 模型所需的参数与集合配置
 
 每腔4片是基准库存总量配置规则，不是按腔专属分配；两腔共享8片，可用片数还取决于归还时刻。实例允许覆盖默认数值，不能把默认值写成全部实验的共同输入。
 
-代码 `self.H` 表示时域 `horizon`，公式中的$H$才表示清洁阈值；两者不可混淆。资源移动参数在本文式(22)简记为$\rho_{ii'}$，文稿写作$\delta^\rho_{oo'}$。等待集合在文稿记为$\mathcal W$。
+代码 `self.H` 表示时域 `horizon`，公式中的$H$才表示清洁阈值；两者不可混淆。资源移动参数在本文式(22)简记为$\rho_{ii'}$，文稿写作$\delta^\rho_{oo'}$。等待集合在文稿记为$\mathcal W_{\rm P}$。
 
 **配置字段覆盖。** 当前 `Config` 的全部27个字段及其表1含义如下；`pjobs`嵌套记录必须含任务ID、模式、允许腔室和产品ID列表。未显式提供Pjob时按代码默认组建，不能误用为已经给定专属腔室资格。
 
@@ -188,7 +188,7 @@ $$
 x_{j\ell pr}=\sum_{w\in\mathcal W_{j\ell}}y_{wpr},
 $$
 
-其中$\mathcal W_{j\ell}$是输入给定的任务$j$在LP $\ell$中的实际产品集合，与等待项集合$\mathcal W$不同。两种表示共用各对内位置对应晶圆的路线、完整候选容量和物理资源约束。逐片对照另设每片取片时刻并与被选对内位置联结，同Pjob相邻时刻只要求大于等于，不再加ATR取片时长。
+其中$\mathcal W_{j\ell}$是输入给定的任务$j$在LP $\ell$中的实际产品集合，与等待项集合$\mathcal W_{\rm P}$不同。两种表示共用各对内位置对应晶圆的路线、完整候选容量和物理资源约束。逐片对照另设每片取片时刻并与被选对内位置联结，同Pjob相邻时刻只要求大于等于，不再加ATR取片时长。
 
 同任务、同LP的两片产品同时取片时，逐片选择可以给出与库存规范解码不同的同刻身份排列。新验解允许仅在这些同属性、同刻产品间置换，并保存显式选择供复核；跨任务、跨LP或取片时刻不同的身份交换不接受。两种表示的等价性是物理排程与目标值的等价，不要求每个同时取片的对内位置上的身份命名都相同。
 
@@ -491,10 +491,10 @@ $$
 
 $$
 \omega_\alpha=s_{\rm next}-e_{\rm previous}-\delta_\alpha b_i\ge0,\qquad
-L_{\max}\ge\omega_\alpha.\tag{27}
+L_{\max}\ge\omega_\alpha\quad(\alpha\in\mathcal W_{\rm P}).\tag{27}
 $$
 
-当前对产品和辅助候选路线均计入相应等待。未启用路线贡献0。具体区间包括VTR源端取片结束到腔室装载开始、腔室卸载结束到VTR目的端放片开始；大气路线另计源端至AL/LL、AL对准、上锁抽气、下锁放气及回源间隔。`model.py`中的`legs`列表定义精确统计集合。必要搬运、对准及压力转换时间已扣除；不同晶圆同时等待仍分别求和，不能把总等待当作设备时间轴空闲时长。等待为差分表达式，$L_{\rm sum}=\sum\omega$仅为统计简称。
+工艺目标仅对产品晶圆的供回片路线计算等待。辅助晶圆的动作参与机械手互斥、满片加工与库存占用，可能间接延长产品等待。未启用的产品路线贡献0。具体区间包括VTR源端取片结束到腔室装载开始、腔室卸载结束到VTR目的端放片开始；大气侧计入LP至AL、AL内、AL至上LL、上LL内、下LL内及下LL至原LP六段。第9.4节所列产品目标函数定义这八个区间。必要搬运、对准及压力转换时间已扣除；不同产品晶圆同时等待时分别求和，不能把总等待当作设备时间轴空闲时长。等待为差分表达式，$L_{\rm sum}=\sum_{\alpha\in\mathcal W_{\rm P}}\omega_\alpha$仅为统计简称。
 
 ## 9.4 节拍项与默认目标
 
@@ -504,7 +504,7 @@ $$
 \begin{aligned}
 \Delta_{cq}&=S_{c,q+1}-2S_{cq}+S_{c,q-1},\\
 v_{cq}&\ge\Delta_{cq},\quad v_{cq}\ge-\Delta_{cq},\quad v_{cq}\ge0,\\
-\min\quad &\sum_\alpha\omega_\alpha+10L_{\max}
+\min\quad &\sum_{\alpha\in\mathcal W_{\rm P}}\omega_\alpha+10L_{\max}
 +25\sum_{(c,q)\in\mathcal I_h}v_{cq}.
 \end{aligned}\tag{28}
 $$
@@ -513,7 +513,7 @@ $\Delta$是相邻两个周期开始间隔之差，不是晶圆驻留差。代码
 
 正文还给出软等待上限扩展：$\eta_\alpha\ge\omega_\alpha-\bar\omega_\alpha$、$\eta_\alpha\ge0$，再将$\lambda_4\sum\eta$加到目标。**当前默认代码没有生成这组软上限变量或开放该配置；它是文稿可选扩展，不是已启用的正式求解项。** `waiting_only`关闭节拍项，`quadratic`使用节拍平方，是实验对照选项；后者不再是纯线性目标的MILP基线。
 
-对应：`model.py`的`waits`、`rhythm`、`secondary_objective`；`run_experiments.py::solve`第二阶段分支。
+产品等待目标及其事件复算见 `experiments/product_wait_20261122/objective.py` 中的 `objective_terms` 与 `product_metrics`。
 
 ## 9.5 执行输出的收尾与身份解码
 
@@ -584,8 +584,8 @@ $$
 | 式(11)--(17) | `operation-time`至`cycle-unload` | `event`、`route`、`accompaniment`、`chambers` |
 | 式(18)--(19) | `clean-counter`、`clean-time` | 周期模块计数循环、`chambers` |
 | 式(20)--(24) | `dummy-assign`至`residence`、紧凑互斥段 | `capacity`、`colored_nonoverlap`、`resources` |
-| 式(25)--(28) | `primary-objective`至`secondary-objective` | `model.py`、`run_experiments.py::solve` |
+| 式(25)--(28) | `primary-objective`至`secondary-objective` | 工期见 `model.py`，工艺项见 `product_wait_20261122/objective.py` |
 | 式(29) | `model4-equivalence` | `encoding`、`decode_members`、`validate` |
 | 式(30)--(31) | `model4-family-count`及历史串行构造下界说明 | `gif/kexingyu/pjob_fifo_20261029/manifest.json` |
 
-文稿公式标签完整形式为 `eq:上述标签-cn`。除明确列出的对照构造器及历史构造记录外，上述代码均属于 `model4_pjob_nondecreasing_20261102/`。全文依据当前代码和中文主稿核对；本次仅更新说明、构建索引与文档入口，不修改求解实现、活动实验或既有排程证据。
+文稿公式标签完整形式为 `eq:上述标签-cn`。产品等待与节拍目标采用第9.4节所列实验实现。设备与工期模型的代码索引沿用相应批次的后端。

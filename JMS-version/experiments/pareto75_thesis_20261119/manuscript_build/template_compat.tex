@@ -1,0 +1,54 @@
+\makeatletter
+\RenewDocumentCommand{\SecondPage}{}{
+\cleardoublepage
+\pagestyle{empty}
+%\TitleBanner %中文标题信息
+\phantom{}\vskip6pt
+\noindent \begin{center}
+    %\linespread{1}
+    \zihao{-2}\bfseries\ustb@Title
+
+    \ifdefempty{\ustb@Subtitle}{}{\bfseries ---\ustb@Subtitle}
+\end{center}
+
+\vfill
+\noindent\begin{center}
+    \linespread{1.4}
+    \zihao{-2}\bfseries\ustb@EnglishTitle
+
+    \zihao{-2}\bfseries \ifdefempty{\ustb@EnglishSubtitle}{}{---\ustb@EnglishSubtitle}
+\end{center}
+
+\vfill
+
+\begin{center}
+\linespread{1.5}
+研究生： \ustb@Author
+
+指导教师： \ustb@Supervisor
+
+北京科技大学 \ustb@College
+
+\ustb@City\ \ustb@Postcode ， \ustb@Country
+\end{center}
+
+\vfill
+
+\begin{center}
+Master's Degree Candidate： \ustb@EnglishAuthor
+
+Supervisor: \ustb@EnglishSupervisor
+
+\ustb@EnglishCollege
+
+University of Science and Technology Beijing
+
+\ustb@EnglishAddress
+
+\ustb@EnglishCity \ \ustb@Postcode ， \ustb@EnglishCountry
+\end{center}
+\vfill
+
+\cleardoublepage
+}
+\makeatother

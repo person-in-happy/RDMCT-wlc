@@ -1,0 +1,86 @@
+% !TeX program = xelatex
+% !TeX encoding = UTF-8
+\documentclass{ustbthesis}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{tabularx,amssymb,mathtools,adjustbox,placeins,xurl}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcommand{\method}{RL-DMCT}
+\newcommand{\cmax}{C_{\max}}
+\newcommand{\pdi}{\mathrm{PDI}}
+\newcommand{\algorithmtitle}[1]{\refstepcounter{algorithm}\noindent\textbf{算法~\thealgorithm：#1}\par\smallskip}
+\graphicspath{{figures/}}
+\hypersetup{colorlinks=true,linkcolor=black,citecolor=black,urlcolor=black,pdftitle={双源混流旋转腔组合设备调度方法研究}}
+\setlength{\emergencystretch}{3em}
+\setlength{\tabcolsep}{4pt}
+\setlength{\headheight}{16pt}
+\setCJKsansfont{SimHei}[AutoFakeBold=2.5]
+\setCJKfamilyfont{zhhei}[AutoFakeBold=2.5]{SimHei}
+\raggedbottom
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\textfraction}{0.1}
+\renewcommand{\floatpagefraction}{0.8}
+% 修正模板中误留的博士英文称谓及示例导师；个人资料均空置。
+\patchcmd{\SecondPage}{Doctor Degree Candidate}{Master's Degree Candidate}{}{}
+\makeatletter
+\renewcommand{\ThirdPageGroupInfo}{\begin{center}\zihao{4}\linespread{2}
+\begin{tabularx}{\textwidth}{@{}lXlXlX@{}}
+指导教师：&\ustb@Supervisor&单位：&&职称：&\\\cline{2-2}\cline{4-4}\cline{6-6}
+指导小组成员：&&单位：&&职称：&\\\cline{2-2}\cline{4-4}\cline{6-6}
+\end{tabularx}\end{center}}
+% tabu与当前LaTeX表格钩子不兼容：等宽重排封面表格，保留原模板字体和内容。
+\renewcommand{\TitlePageFooter}{\begin{minipage}{0.7\textwidth}\zihao{-3}\linespread{1.5}
+\begin{tabularx}{\linewidth}{@{}p{6em}c>{\centering\arraybackslash}X@{}}
+学号&：&\ustb@StudentCode\\\cline{3-3}
+研究生&：&\ustb@Author\\\cline{3-3}
+专业名称&：&\ustb@Major\\\cline{3-3}
+\end{tabularx}\end{minipage}\vfill\centerline{\zihao{-3}\ustb@Date}}
+\renewcommand{\ThirdPageTopInfo}{{\zihao{5}\songti
+\noindent\begin{tabularx}{\textwidth}{@{}lXlX@{}}
+中图分类号：&\ustb@CLCNumber&学校代码：&\ustb@UniversityCode\\
+UDC：&\ustb@UDCNumber&密级：&\ustb@SecurityLevel
+\end{tabularx}}}
+
+\renewcommand{\ThirdPageTitleInfo}{\noindent\zihao{4}\textbf{论文题目：}\par\vspace{0.5em}\noindent\underline{\makebox[\textwidth][c]{\zihao{4}\ustb@Title}}}
+\makeatother
+\Author{}\EnglishAuthor{}\StudentCode{}
+\Title{双源混流旋转腔组合设备调度方法研究}
+\EnglishTitle{Scheduling Methods for Dual-Source Mixed-Flow Rotary-Chamber Cluster Tools}
+\Subtitle{}\EnglishSubtitle{}\Date{}\EnglishDate{}
+\College{}\EnglishCollege{}\Major{}\EnglishMajor{}\Direction{}\EnglishDirection{}
+\Supervisor{}\EnglishSupervisor{}\DegreeType{}\EnglishDegreeType{}
+\Address{海淀区学院路30号}\EnglishAddress{30 Xueyuan Road, Haidian District}
+\Affiliation{北京科技大学}\EnglishAffiliation{University of Science and Technology Beijing}
+\Postcode{100083}\City{北京}\EnglishCity{Beijing}\Country{中国}\EnglishCountry{P.R. China}
+\CLCNumber{}\UDCNumber{}\UniversityCode{10008}\UniversityLogoFile{images/ustb.png}
+\SecurityLevel{}\SubmissionDate{}\EnglishSubmissionDate{}
+\ChineseKeywords{旋转腔组合设备；混合整数线性规划；辅助晶圆；结构化初始化；学习选割}
+\EnglishKeywords{rotary-chamber cluster tool; mixed-integer linear programming; auxiliary wafer; structured initialization; learning cut selection}
+% 58页规划稿连续起页；改为\thesisdraftfalse恢复模板奇数页起章。
+\newif\ifthesisdraft
+\thesisdrafttrue
+\ifthesisdraft\let\cleardoublepage\clearpage\fi
+\setcounter{tocdepth}{1}
+\input{template_compat}
+\begin{document}
+\TitlePage\SecondPage\ThirdPage
+\pagestyle{fancy}\setstretch{1.3}\selectfont
+\include{contents/abstract}
+\tableofcontents
+\mainmatter\setstretch{1.3}\selectfont
+\include{contents/chap1}
+\include{contents/chap2}
+\include{contents/chap3}
+\include{contents/chap4}
+\include{contents/chap5}
+\include{contents/chap6}
+\begingroup
+\renewcommand{\bibfont}{\zihao{5}}
+\setlength{\bibsep}{0pt}
+\setstretch{1.3}
+\input{contents/bibliography}
+\clearpage\endgroup
+\include{contents/thanks}
+\include{contents/mresume}
+\postDeclarations
+\include{contents/dataset}
+\end{document}

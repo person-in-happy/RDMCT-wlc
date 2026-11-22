@@ -1,0 +1,85 @@
+{
+  "case": "S1",
+  "input_sha256": "696e89d4e4830445e9b86cbcfb27a1c973a6772dc4dc770b9fae3a709c16eead",
+  "input_seconds": 78.35999999998603,
+  "refinement_seconds": 3.6719999999622814,
+  "combined_seconds": 82.03199999994831,
+  "budget_seconds": 150,
+  "first_verified_pair_rectangle": [
+    524.0000001,
+    125.33333334333332
+  ],
+  "derived_A_ceiling": 518.999999995,
+  "analytic_floor": 42,
+  "domain": "nominal two PD pairs in distinct chambers, equipment checks on original model",
+  "B_resolution": 0.01,
+  "full_original_accepted": true,
+  "front": [
+    {
+      "ab": [
+        331.0,
+        141.33333280000028
+      ],
+      "origin": "charged active-phase run",
+      "schedule": "candidate_001.json.gz",
+      "sha256": "a04e8e9883d99b6d15959b8834cf2c2960e9205b813c3b034875b6b32e54559f"
+    },
+    {
+      "ab": [
+        334.0,
+        129.33333333333343
+      ],
+      "origin": "charged active-phase run",
+      "schedule": "candidate_002.json.gz",
+      "sha256": "84aa02138bc13e872c723f179788a78c11a130d46686ed9cf018bb215eee7b1f"
+    },
+    {
+      "ab": [
+        340.0,
+        125.33333334333332
+      ],
+      "origin": "charged active-phase run",
+      "schedule": "candidate_003.json.gz",
+      "sha256": "4e51b11cb0480a7fdda18cd3ecb5f9cbc1842745c07ba5b647db5d4aadbe2b05"
+    },
+    {
+      "ab": [
+        513.9999999999995,
+        90.00000000000455
+      ],
+      "origin": "AABB B",
+      "schedule": "candidate_008.json.gz",
+      "sha256": "28db6724cef33260562817ad4e012662d78dbd83471bbd18888f6e510526749f"
+    },
+    {
+      "ab": [
+        516.0,
+        85.00000000000001
+      ],
+      "origin": "AABB B",
+      "schedule": "candidate_010.json.gz",
+      "sha256": "aa56c3267a33ed35dd63cdff5d65b3288d9534b46f351a3c05c58082cc2e252d"
+    },
+    {
+      "ab": [
+        517.0000001999999,
+        76.99999999999875
+      ],
+      "origin": "AABB B",
+      "schedule": "candidate_012.json.gz",
+      "sha256": "c8940ad6909efb61bd7dfca78f36f291181bbff13c6e7cf0b3695f714d22e555"
+    },
+    {
+      "ab": [
+        518.999999995,
+        42.0000000550001
+      ],
+      "origin": "AABB A",
+      "schedule": "candidate_006.json.gz",
+      "sha256": "a779bacea7b0f9f9514228065af4bb733e550badbcb37b63de67b1b045158274"
+    }
+  ],
+  "calls": 27,
+  "event_oracle_sha256": "2951aff712d60260106b13ef425e70587ff90b10b1c82d3f11d95b6371e0910d",
+  "event_completion_sha256": "a629d4099bef70abce2597f9caab4cdf5a75ef2f07075b8549b4bb0f9f204714"
+}

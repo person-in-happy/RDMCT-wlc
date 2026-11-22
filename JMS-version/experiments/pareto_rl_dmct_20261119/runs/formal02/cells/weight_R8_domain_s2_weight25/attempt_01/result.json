@@ -1,0 +1,523 @@
+{
+  "spec": {
+    "id": "weight_R8_domain_s2_weight25",
+    "case": "R8",
+    "method": "domain",
+    "seed": 2,
+    "budget": 46,
+    "suite": "weight",
+    "weight": 25
+  },
+  "initial": [
+    866.0,
+    728.0000000099999
+  ],
+  "config": {
+    "load_ports": {
+      "LP1": {
+        "4x1": 0,
+        "2x2": 3
+      },
+      "LP2": {
+        "4x1": 0,
+        "2x2": 5
+      },
+      "LP3": {
+        "4x1": 0,
+        "2x2": 0
+      },
+      "LP4": {
+        "4x1": 0,
+        "2x2": 0
+      }
+    },
+    "pjobs": [
+      {
+        "id": "Pjob1",
+        "mode": "2x2",
+        "chambers": [
+          2,
+          3
+        ],
+        "wafers": [
+          "LP1_W1",
+          "LP1_W2",
+          "LP1_W3",
+          "LP2_W1",
+          "LP2_W2",
+          "LP2_W3",
+          "LP2_W4",
+          "LP2_W5"
+        ]
+      }
+    ],
+    "source": "dual",
+    "dummy_alignment": "bypass_or_accompany",
+    "vtr_hand_policy": "clean_dirty",
+    "dummy_count": 8,
+    "cleaning_interval": 6,
+    "full_time": 180,
+    "mix_time": 90,
+    "cleaning_time": 500,
+    "handling": 1,
+    "atr_handling": 4,
+    "atr_empty_ll_to_lp": 6,
+    "rotation": 2,
+    "atr_travel": 3,
+    "vtr_travel": 2,
+    "alignment": 20,
+    "pump": 30,
+    "vent": 25,
+    "upper_reset": 30,
+    "lower_reset": 25,
+    "module_residency": 100,
+    "robot_residency": 100,
+    "horizon": 10000,
+    "chamber_residency_basis": "nonprocessing",
+    "max_pairs": 0,
+    "max_cycles": 0,
+    "chambers": [
+      2,
+      3
+    ]
+  },
+  "front": [
+    {
+      "a": 856.0,
+      "b": 684.0,
+      "t": 15.60899999999674,
+      "metrics": {
+        "cmax": 856.0,
+        "wait_sum": 204.0,
+        "wait_max": 48.0,
+        "rhythm": 0.0,
+        "rhythm_centers": 2,
+        "secondary": 684.0
+      },
+      "schedule": "point_000.json.gz"
+    },
+    {
+      "a": 902.9999999900001,
+      "b": 628.0000000099999,
+      "t": 12.46899999998277,
+      "metrics": {
+        "cmax": 902.9999999900001,
+        "wait_sum": 148.0000000099999,
+        "wait_max": 48.0,
+        "rhythm": 0.0,
+        "rhythm_centers": 2,
+        "secondary": 628.0000000099999
+      },
+      "schedule": "point_001.json.gz"
+    },
+    {
+      "a": 951.9999999800002,
+      "b": 492.0000000099999,
+      "t": 19.35899999999674,
+      "metrics": {
+        "cmax": 951.9999999800002,
+        "wait_sum": 112.0000000099999,
+        "wait_max": 38.0,
+        "rhythm": 0.0,
+        "rhythm_centers": 3,
+        "secondary": 492.0000000099999
+      },
+      "schedule": "point_002.json.gz"
+    },
+    {
+      "a": 1000.0,
+      "b": 375.0000000099999,
+      "t": 20.875,
+      "metrics": {
+        "cmax": 1000.0,
+        "wait_sum": 95.0000000099999,
+        "wait_max": 28.0,
+        "rhythm": 0.0,
+        "rhythm_centers": 2,
+        "secondary": 375.0000000099999
+      },
+      "schedule": "point_003.json.gz"
+    },
+    {
+      "a": 1491.0,
+      "b": 198.3333333433336,
+      "t": 17.20299999997951,
+      "metrics": {
+        "cmax": 1491.0,
+        "wait_sum": 105.0000000099999,
+        "wait_max": 9.333333333333371,
+        "rhythm": 0.0,
+        "rhythm_centers": 2,
+        "secondary": 198.3333333433336
+      },
+      "schedule": "point_004.json.gz"
+    },
+    {
+      "a": 1511.0000000096,
+      "b": 133.99999976000134,
+      "t": 16.514999999955762,
+      "metrics": {
+        "cmax": 1511.0000000096,
+        "wait_sum": 53.99999999999994,
+        "wait_max": 3.0,
+        "rhythm": 1.999999990400056,
+        "rhythm_centers": 3,
+        "secondary": 133.99999976000134
+      },
+      "schedule": "point_005.json.gz"
+    },
+    {
+      "a": 1512.080000009184,
+      "b": 103.9999997704034,
+      "t": 20.280999999959022,
+      "metrics": {
+        "cmax": 1512.080000009184,
+        "wait_sum": 51.000000000000114,
+        "wait_max": 3.000000000000057,
+        "rhythm": 0.919999990816109,
+        "rhythm_centers": 3,
+        "secondary": 103.9999997704034
+      },
+      "schedule": "point_006.json.gz"
+    },
+    {
+      "a": 1513.0,
+      "b": 81.00000000499972,
+      "t": 18.20299999997951,
+      "metrics": {
+        "cmax": 1513.0,
+        "wait_sum": 51.00000000045452,
+        "wait_max": 3.00000000045452,
+        "rhythm": 0.0,
+        "rhythm_centers": 3,
+        "secondary": 81.00000000499972
+      },
+      "schedule": "point_007.json.gz"
+    },
+    {
+      "a": 1517.0,
+      "b": 78.0000000099999,
+      "t": 18.34399999998277,
+      "metrics": {
+        "cmax": 1517.0,
+        "wait_sum": 48.000000009999894,
+        "wait_max": 3.0,
+        "rhythm": 0.0,
+        "rhythm_centers": 3,
+        "secondary": 78.0000000099999
+      },
+      "schedule": "point_008.json.gz"
+    }
+  ],
+  "history": [
+    [
+      9.671999999962281,
+      866.0,
+      728.0000000099999
+    ],
+    [
+      9.796999999962281,
+      924.00000001,
+      702.9999997599996
+    ],
+    [
+      9.96899999998277,
+      999.0,
+      650.0000000099999
+    ],
+    [
+      10.10899999999674,
+      950.00000001,
+      698.9999997599999
+    ],
+    [
+      10.34399999998277,
+      925.0,
+      678.0000000099999
+    ],
+    [
+      10.71899999998277,
+      1045.0,
+      600.0000000099999
+    ],
+    [
+      10.889999999955762,
+      1616.0000000096,
+      399.9999997600029
+    ],
+    [
+      10.98399999999674,
+      861.0,
+      714.0000000099999
+    ],
+    [
+      11.10899999999674,
+      1613.0000000096,
+      399.9999997600029
+    ],
+    [
+      11.280999999959022,
+      1056.0,
+      375.0000000099999
+    ],
+    [
+      11.452999999979511,
+      1053.0,
+      389.0000000099999
+    ],
+    [
+      11.796999999962281,
+      1499.0,
+      206.5
+    ],
+    [
+      12.139999999955762,
+      1053.0,
+      375.0000000099999
+    ],
+    [
+      12.46899999998277,
+      902.9999999900001,
+      628.0000000099999
+    ],
+    [
+      12.811999999976251,
+      1516.0000000096,
+      133.99999976000134
+    ],
+    [
+      13.061999999976251,
+      1003.0,
+      375.0000000099999
+    ],
+    [
+      13.21899999998277,
+      1679.00000000796,
+      103.99999992040102
+    ],
+    [
+      13.35899999999674,
+      1527.9999999800002,
+      78.0000000099999
+    ],
+    [
+      13.59399999998277,
+      1514.0000000096,
+      133.99999976000134
+    ],
+    [
+      14.10899999999674,
+      1501.0,
+      203.4999999999991
+    ],
+    [
+      14.21899999998277,
+      989.0,
+      516.0000000099999
+    ],
+    [
+      14.85899999999674,
+      984.0200000093,
+      565.4999997774994
+    ],
+    [
+      15.09399999998277,
+      870.0000000096154,
+      700.9999997499995
+    ],
+    [
+      15.25,
+      1515.2000000091841,
+      103.99999977039539
+    ],
+    [
+      15.60899999999674,
+      856.0,
+      684.0
+    ],
+    [
+      16.0,
+      1513.00000001,
+      180.9999997600023
+    ],
+    [
+      16.405999999959022,
+      1499.0,
+      203.5
+    ],
+    [
+      16.514999999955762,
+      1511.0000000096,
+      133.99999976000134
+    ],
+    [
+      16.75,
+      1497.0,
+      206.5
+    ],
+    [
+      17.0,
+      1513.0,
+      84.00000000500057
+    ],
+    [
+      17.20299999997951,
+      1491.0,
+      198.3333333433336
+    ],
+    [
+      17.639999999955762,
+      981.0000000096,
+      564.99999976
+    ],
+    [
+      18.06199999997625,
+      1524.9999999800002,
+      78.0000000099999
+    ],
+    [
+      18.20299999997951,
+      1513.0,
+      81.00000000499972
+    ],
+    [
+      18.34399999998277,
+      1517.0,
+      78.0000000099999
+    ],
+    [
+      19.35899999999674,
+      951.9999999800002,
+      492.0000000099999
+    ],
+    [
+      20.10899999999674,
+      1001.0,
+      376.0000000099999
+    ],
+    [
+      20.280999999959022,
+      1512.080000009184,
+      103.9999997704034
+    ],
+    [
+      20.875,
+      1000.0,
+      375.0000000099999
+    ]
+  ],
+  "stats": {
+    "validated": 148,
+    "insertions": 39,
+    "attempts": 519,
+    "timing_lp_calls": 429,
+    "no_lp_candidate": 291,
+    "screened": 90,
+    "late_excluded": 1
+  },
+  "subproblems": [
+    {
+      "goal": "B",
+      "cap": null,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20,
+      "released_orders": 2941,
+      "eligible_orders": 9802,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": null,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20,
+      "released_orders": 1393,
+      "eligible_orders": 4642,
+      "target_pair": 1
+    },
+    {
+      "goal": "A",
+      "cap": 78,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20,
+      "released_orders": 2941,
+      "eligible_orders": 9802,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": 400,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20,
+      "released_orders": 2711,
+      "eligible_orders": 9037,
+      "target_pair": 4
+    },
+    {
+      "goal": "A",
+      "cap": 104.0000000004,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20,
+      "released_orders": 2941,
+      "eligible_orders": 9802,
+      "target_pair": 1
+    },
+    {
+      "goal": "A",
+      "cap": 156.00000000119996,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20,
+      "released_orders": 2941,
+      "eligible_orders": 9802,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": null,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    },
+    {
+      "goal": "A",
+      "cap": 78,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    },
+    {
+      "goal": "A",
+      "cap": 400,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    }
+  ],
+  "policy": null,
+  "search_wall_s": 47.53099999995902,
+  "shared_spbs_seconds": 3.9839999999967404,
+  "last_eligible_s": 20.875
+}

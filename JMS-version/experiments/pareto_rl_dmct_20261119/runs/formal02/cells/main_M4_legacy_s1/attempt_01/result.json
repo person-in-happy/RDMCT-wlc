@@ -1,0 +1,159 @@
+{
+  "spec": {
+    "id": "main_M4_legacy_s1",
+    "case": "M4",
+    "method": "legacy",
+    "seed": 1,
+    "budget": 45,
+    "suite": "main"
+  },
+  "initial": [
+    487.0,
+    604.0000000099999
+  ],
+  "config": {
+    "load_ports": {
+      "LP1": {
+        "4x1": 1,
+        "2x2": 0
+      },
+      "LP2": {
+        "4x1": 1,
+        "2x2": 0
+      },
+      "LP3": {
+        "4x1": 0,
+        "2x2": 1
+      },
+      "LP4": {
+        "4x1": 0,
+        "2x2": 1
+      }
+    },
+    "pjobs": [
+      {
+        "id": "Pjob1",
+        "mode": "4x1",
+        "chambers": [
+          2,
+          3
+        ],
+        "wafers": [
+          "LP1_W1",
+          "LP2_W1"
+        ]
+      },
+      {
+        "id": "Pjob2",
+        "mode": "2x2",
+        "chambers": [
+          2,
+          3
+        ],
+        "wafers": [
+          "LP3_W1",
+          "LP4_W1"
+        ]
+      }
+    ],
+    "source": "dual",
+    "dummy_alignment": "bypass_or_accompany",
+    "vtr_hand_policy": "clean_dirty",
+    "dummy_count": 8,
+    "cleaning_interval": 10,
+    "full_time": 180,
+    "mix_time": 90,
+    "cleaning_time": 500,
+    "handling": 1,
+    "atr_handling": 4,
+    "atr_empty_ll_to_lp": 6,
+    "rotation": 2,
+    "atr_travel": 3,
+    "vtr_travel": 2,
+    "alignment": 20,
+    "pump": 30,
+    "vent": 25,
+    "upper_reset": 30,
+    "lower_reset": 25,
+    "module_residency": 100,
+    "robot_residency": 100,
+    "horizon": 10000,
+    "chamber_residency_basis": "nonprocessing",
+    "max_pairs": 0,
+    "max_cycles": 0,
+    "chambers": [
+      2,
+      3
+    ]
+  },
+  "front": [
+    {
+      "a": 480.00000100000034,
+      "b": 364.0,
+      "t": 34.00099999998929,
+      "metrics": {
+        "cmax": 480.00000100000034,
+        "wait_sum": 124.0,
+        "wait_max": 24.0,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 364.0
+      },
+      "schedule": "point_000.json.gz"
+    }
+  ],
+  "history": [
+    [
+      2.5790000000270084,
+      487.0,
+      604.0000000099999
+    ],
+    [
+      2.5939999999827705,
+      480.0,
+      1170.0
+    ],
+    [
+      34.00099999998929,
+      480.00000100000034,
+      364.0
+    ]
+  ],
+  "stats": {
+    "validated": 5,
+    "insertions": 3
+  },
+  "subproblems": [
+    {
+      "goal": "A",
+      "cap": null,
+      "scope": "unrestricted",
+      "nodes": 1,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": 116.0
+    },
+    {
+      "goal": "B",
+      "cap": null,
+      "scope": "fixed first-stage structure and makespan",
+      "nodes": 2,
+      "warm": 1,
+      "status": "optimal",
+      "dual_bound": 364.0
+    }
+  ],
+  "policy": {
+    "method": "proposed",
+    "training_seed": 1,
+    "checkpoint": "D:\\git\\git\\RDMCT-A3C\\cie\\models\\proposed\\cie_proposed_all_cie_proposed\\cie_proposed_all_cie_proposed_2026_08_02_14_55_21_0000--s-1\\itr_60.pkl",
+    "sha256": "23961d2d9f09473982a79271642fca1d6e76cd0bf3837240d5e38a2361d824ce",
+    "config": "D:\\git\\git\\RDMCT-A3C\\cie\\configs\\cie_proposed_inference.json",
+    "config_sha256": "9c1ef2f4c90c92158c13ea8538413daf8f6609c1f4a701d2e98534d593236293",
+    "transfer": "frozen_policy_evaluation_on_new_model",
+    "callback_calls": 4
+  },
+  "search_wall_s": 34.03200000000652,
+  "shared_spbs_seconds": 1.9380000000237487,
+  "last_eligible_s": 34.00099999998929
+}

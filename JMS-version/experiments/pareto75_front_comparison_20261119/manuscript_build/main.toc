@@ -1,0 +1,75 @@
+\contentsline {chapter}{摘要}{I}{chapter*.1}%
+\contentsline {chapter}{ABSTRACT}{II}{section*.2}%
+\contentsline {chapter}{\numberline {\bfseries 1\hspace {.3em}}绪论}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}研究背景与问题来源}{1}{section.1.1}%
+\contentsline {section}{\numberline {1.2}研究内容与评价目标}{1}{section.1.2}%
+\contentsline {section}{\numberline {1.3}论文结构}{2}{section.1.3}%
+\contentsline {chapter}{\numberline {\bfseries 2\hspace {.3em}}国内外研究现状}{3}{chapter.2}%
+\contentsline {section}{\numberline {2.1}稳态吞吐率与驻留约束下的可调度性}{3}{section.2.1}%
+\contentsline {section}{\numberline {2.2}多品种投放、有限批次与多工位腔室}{4}{section.2.2}%
+\contentsline {section}{\numberline {2.3}腔室清洁与辅助晶圆的复用}{5}{section.2.3}%
+\contentsline {section}{\numberline {2.4}驻留时间、路线等待与批内节拍}{6}{section.2.4}%
+\contentsline {section}{\numberline {2.5}设备动作学习与混合整数规划选割}{6}{section.2.5}%
+\contentsline {section}{\numberline {2.6}可行排程构造与原始解的邻域改进}{7}{section.2.6}%
+\contentsline {section}{\numberline {2.7}研究评述}{8}{section.2.7}%
+\contentsline {chapter}{\numberline {\bfseries 3\hspace {.3em}}基于PW对的两阶段调度模型}{9}{chapter.3}%
+\contentsline {section}{\numberline {3.1}批次任务与产品晶圆编码}{9}{section.3.1}%
+\contentsline {section}{\numberline {3.2}单源与双源混流物理加工路径}{12}{section.3.2}%
+\contentsline {section}{\numberline {3.3}晶圆、PW对与腔室周期的匹配关系}{12}{section.3.3}%
+\contentsline {section}{\numberline {3.4}动作时间与先后逻辑}{15}{section.3.4}%
+\contentsline {section}{\numberline {3.5}两种工艺模式与清洁处理}{16}{section.3.5}%
+\contentsline {section}{\numberline {3.6}辅助晶圆复用与机械手、模块资源}{20}{section.3.6}%
+\contentsline {section}{\numberline {3.7}完工时间优先的两阶段优化}{22}{section.3.7}%
+\contentsline {section}{\numberline {3.8}模型完整线性化与表示等价性}{24}{section.3.8}%
+\contentsline {subsection}{\numberline {3.8.1}固定候选索引、激活条件与大常数有效性}{24}{subsection.3.8.1}%
+\contentsline {subsection}{\numberline {3.8.2}库存解码与显式晶圆表示的对应证明}{24}{subsection.3.8.2}%
+\contentsline {chapter}{\numberline {\bfseries 4\hspace {.3em}}结构化初始化与调度算法改进}{25}{chapter.4}%
+\contentsline {section}{\numberline {4.1}基于模型结构的初始解策略}{25}{section.4.1}%
+\contentsline {section}{\numberline {4.2}结构特征感知重排与强化学习选割}{26}{section.4.2}%
+\contentsline {paragraph}{变量角色特征提取}{26}{section.4.2}%
+\contentsline {paragraph}{学习排序与候选池构建}{27}{equation.4.3}%
+\contentsline {paragraph}{基于边际增益的结构感知重排}{27}{equation.4.3}%
+\contentsline {section}{\numberline {4.3}RL-DMCT的两阶段调度优化}{28}{section.4.3}%
+\contentsline {paragraph}{第一阶段：联合调整配对、分腔、周期与资源次序}{28}{section.4.3}%
+\contentsline {paragraph}{第二阶段：保留主要结构并精修时序}{28}{section.4.3}%
+\contentsline {section}{\numberline {4.4}批次任务解码与晶圆排程输出}{29}{section.4.4}%
+\contentsline {section}{\numberline {4.5}基于配对等待下界的双目标邻域搜索}{30}{section.4.5}%
+\contentsline {subsection}{\numberline {4.5.1}从固定工期精修到交付与等待的权衡}{30}{subsection.4.5.1}%
+\contentsline {subsection}{\numberline {4.5.2}以配对方式筛选邻域}{30}{subsection.4.5.2}%
+\contentsline {subsection}{\numberline {4.5.3}结构调整、重定时与验证}{31}{subsection.4.5.3}%
+\contentsline {chapter}{\numberline {\bfseries 5\hspace {.3em}}实验结果与分析}{32}{chapter.5}%
+\contentsline {section}{\numberline {5.1}实验设置、模型归属与评价指标}{32}{section.5.1}%
+\contentsline {section}{\numberline {5.2}模型编码与小规模最优性验证}{32}{section.5.2}%
+\contentsline {section}{\numberline {5.3}结构化初始化与HEM组件消融}{33}{section.5.3}%
+\contentsline {subsection}{\numberline {5.3.1}跨训练种子的初始化对照}{33}{subsection.5.3.1}%
+\contentsline {subsection}{\numberline {5.3.2}选割组件与分离协议}{34}{subsection.5.3.2}%
+\contentsline {subsection}{\numberline {5.3.3}固定结构与后续联合搜索的互补作用}{34}{subsection.5.3.3}%
+\contentsline {subsection}{\numberline {5.3.4}扩展驻留配置下的结构搜索对照}{34}{subsection.5.3.4}%
+\contentsline {section}{\numberline {5.4}清洁、加工模式与有限辅助库存}{35}{section.5.4}%
+\contentsline {subsection}{\numberline {5.4.1}连续加工、满片清洁与重复借用见证}{36}{subsection.5.4.1}%
+\contentsline {section}{\numberline {5.5}两阶段时序精修与节拍消融（配置E）}{36}{section.5.5}%
+\contentsline {section}{\numberline {5.6}供片与库存变化下的初始化和选割收益}{38}{section.5.6}%
+\contentsline {paragraph}{供片、清洁阈值与库存变化下的共同起点}{38}{table.caption.22}%
+\contentsline {paragraph}{初始化收益随输入结构和预算分配变化}{38}{table.caption.22}%
+\contentsline {paragraph}{共享初始解后选割组件带来的额外改善}{39}{table.caption.22}%
+\contentsline {section}{\numberline {5.7}满片加工与共享资源约束的排程验证}{39}{section.5.7}%
+\contentsline {subsection}{\numberline {5.7.1}2片最优排程中的辅助片补位}{39}{subsection.5.7.1}%
+\contentsline {subsection}{\numberline {5.7.2}16片可行排程中的双腔加工与搬运安排}{41}{subsection.5.7.2}%
+\contentsline {section}{\numberline {5.8}100片完整排程与模型适用边界}{42}{section.5.8}%
+\contentsline {section}{\numberline {5.9}双目标前沿、组件消融与75片排程}{45}{section.5.9}%
+\contentsline {subsection}{\numberline {5.9.1}两目标的冲突与可认证前沿}{45}{subsection.5.9.1}%
+\contentsline {subsection}{\numberline {5.9.2}等预算对照与扰动}{45}{subsection.5.9.2}%
+\contentsline {subsection}{\numberline {5.9.3}75片混合批次的可行前沿}{46}{subsection.5.9.3}%
+\contentsline {subsection}{\numberline {5.9.4}共享初始结构后的同预算比较}{48}{subsection.5.9.4}%
+\contentsline {subsection}{\numberline {5.9.5}局部生产块调整的作用与可选排程}{49}{subsection.5.9.5}%
+\contentsline {chapter}{\numberline {\bfseries 6\hspace {.3em}}总结与未来展望}{51}{chapter.6}%
+\contentsline {section}{\numberline {6.1}研究总结}{51}{section.6.1}%
+\contentsline {section}{\numberline {6.2}交付与路线等待的双目标权衡}{51}{section.6.2}%
+\contentsline {section}{\numberline {6.3}未来展望}{51}{section.6.3}%
+\contentsline {chapter}{参考文献}{52}{section*.37}%
+\contentsline {chapter}{致谢}{56}{chapter*.39}%
+\contentsline {chapter}{作者简历及在学研究成果}{57}{chapter*.40}%
+\contentsline {chapter}{独创性说明}{58}{chapter*.41}%
+\contentsline {chapter}{关于论文使用授权的说明}{59}{chapter*.42}%
+\contentsline {chapter}{学位论文数据集}{60}{chapter*.43}%
+\contentsfinish 

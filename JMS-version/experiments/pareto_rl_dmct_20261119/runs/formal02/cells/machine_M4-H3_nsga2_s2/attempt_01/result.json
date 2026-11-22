@@ -1,0 +1,173 @@
+{
+  "spec": {
+    "id": "machine_M4-H3_nsga2_s2",
+    "case": "M4-H3",
+    "method": "nsga2",
+    "seed": 2,
+    "budget": 45,
+    "suite": "machine"
+  },
+  "initial": [
+    487.0,
+    604.0000000099999
+  ],
+  "config": {
+    "load_ports": {
+      "LP1": {
+        "4x1": 1,
+        "2x2": 0
+      },
+      "LP2": {
+        "4x1": 1,
+        "2x2": 0
+      },
+      "LP3": {
+        "4x1": 0,
+        "2x2": 1
+      },
+      "LP4": {
+        "4x1": 0,
+        "2x2": 1
+      }
+    },
+    "pjobs": [
+      {
+        "id": "Pjob1",
+        "mode": "4x1",
+        "chambers": [
+          2,
+          3
+        ],
+        "wafers": [
+          "LP1_W1",
+          "LP2_W1"
+        ]
+      },
+      {
+        "id": "Pjob2",
+        "mode": "2x2",
+        "chambers": [
+          2,
+          3
+        ],
+        "wafers": [
+          "LP3_W1",
+          "LP4_W1"
+        ]
+      }
+    ],
+    "source": "dual",
+    "dummy_alignment": "bypass_or_accompany",
+    "vtr_hand_policy": "clean_dirty",
+    "dummy_count": 8,
+    "cleaning_interval": 3,
+    "full_time": 180,
+    "mix_time": 90,
+    "cleaning_time": 500,
+    "handling": 1,
+    "atr_handling": 4,
+    "atr_empty_ll_to_lp": 6,
+    "rotation": 2,
+    "atr_travel": 3,
+    "vtr_travel": 2,
+    "alignment": 20,
+    "pump": 30,
+    "vent": 25,
+    "upper_reset": 30,
+    "lower_reset": 25,
+    "module_residency": 100,
+    "robot_residency": 100,
+    "horizon": 10000,
+    "chamber_residency_basis": "nonprocessing",
+    "max_pairs": 0,
+    "max_cycles": 0,
+    "chambers": [
+      2,
+      3
+    ]
+  },
+  "front": [
+    {
+      "a": 443.0,
+      "b": 144.33333334333344,
+      "t": 4.515999999945052,
+      "metrics": {
+        "cmax": 443.0,
+        "wait_sum": 51.00000001000001,
+        "wait_max": 9.333333333333343,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 144.33333334333344
+      },
+      "schedule": "point_000.json.gz"
+    },
+    {
+      "a": 517.0,
+      "b": 54.000000009999894,
+      "t": 3.4539999999688007,
+      "metrics": {
+        "cmax": 517.0,
+        "wait_sum": 24.000000009999894,
+        "wait_max": 3.0,
+        "rhythm": 0.0,
+        "rhythm_centers": 1,
+        "secondary": 54.000000009999894
+      },
+      "schedule": "point_001.json.gz"
+    }
+  ],
+  "history": [
+    [
+      2.9229999999515712,
+      487.0,
+      604.0000000099999
+    ],
+    [
+      2.937999999965541,
+      480.0,
+      1170.0
+    ],
+    [
+      2.98499999998603,
+      711.0,
+      144.33333334333327
+    ],
+    [
+      3.140999999945052,
+      480.0,
+      597.0000000099999
+    ],
+    [
+      3.1729999999515712,
+      450.0,
+      198.0000000099999
+    ],
+    [
+      3.3449999999720603,
+      747.0,
+      54.000000009999894
+    ],
+    [
+      3.4539999999688007,
+      517.0,
+      54.000000009999894
+    ],
+    [
+      4.515999999945052,
+      443.0,
+      144.33333334333344
+    ]
+  ],
+  "stats": {
+    "validated": 2312,
+    "insertions": 8,
+    "attempts": 3005,
+    "timing_lp_calls": 3005,
+    "no_lp_candidate": 695
+  },
+  "subproblems": [],
+  "policy": null,
+  "search_wall_s": 44.98499999998603,
+  "shared_spbs_seconds": 1.9849999999860302,
+  "last_eligible_s": 4.515999999945052
+}

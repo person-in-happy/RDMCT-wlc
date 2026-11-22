@@ -1,0 +1,409 @@
+{
+  "spec": {
+    "id": "main_H16_rl_domain_s1",
+    "case": "H16",
+    "method": "rl_domain",
+    "seed": 1,
+    "budget": 80,
+    "suite": "main"
+  },
+  "initial": [
+    1717.0,
+    976.0000000100008
+  ],
+  "config": {
+    "load_ports": {
+      "LP1": {
+        "4x1": 5,
+        "2x2": 0
+      },
+      "LP2": {
+        "4x1": 3,
+        "2x2": 0
+      },
+      "LP3": {
+        "4x1": 0,
+        "2x2": 3
+      },
+      "LP4": {
+        "4x1": 0,
+        "2x2": 5
+      }
+    },
+    "pjobs": [
+      {
+        "id": "Pjob1",
+        "mode": "4x1",
+        "chambers": [
+          2,
+          3
+        ],
+        "wafers": [
+          "LP1_W1",
+          "LP1_W2",
+          "LP1_W3",
+          "LP1_W4",
+          "LP1_W5",
+          "LP2_W1",
+          "LP2_W2",
+          "LP2_W3"
+        ]
+      },
+      {
+        "id": "Pjob2",
+        "mode": "2x2",
+        "chambers": [
+          2,
+          3
+        ],
+        "wafers": [
+          "LP3_W1",
+          "LP3_W2",
+          "LP3_W3",
+          "LP4_W1",
+          "LP4_W2",
+          "LP4_W3",
+          "LP4_W4",
+          "LP4_W5"
+        ]
+      }
+    ],
+    "source": "dual",
+    "dummy_alignment": "bypass_or_accompany",
+    "vtr_hand_policy": "clean_dirty",
+    "dummy_count": 8,
+    "cleaning_interval": 6,
+    "full_time": 180,
+    "mix_time": 90,
+    "cleaning_time": 500,
+    "handling": 1,
+    "atr_handling": 4,
+    "atr_empty_ll_to_lp": 6,
+    "rotation": 2,
+    "atr_travel": 3,
+    "vtr_travel": 2,
+    "alignment": 20,
+    "pump": 30,
+    "vent": 25,
+    "upper_reset": 30,
+    "lower_reset": 25,
+    "module_residency": 100,
+    "robot_residency": 100,
+    "horizon": 10000,
+    "chamber_residency_basis": "nonprocessing",
+    "max_pairs": 0,
+    "max_cycles": 0,
+    "chambers": [
+      2,
+      3
+    ]
+  },
+  "front": [
+    {
+      "a": 1481.0,
+      "b": 894.0000000099999,
+      "t": 30.75,
+      "metrics": {
+        "cmax": 1481.0,
+        "wait_sum": 414.0000000099999,
+        "wait_max": 48.0,
+        "rhythm": 0,
+        "rhythm_centers": 0,
+        "secondary": 894.0000000099999
+      },
+      "schedule": "point_000.json.gz"
+    },
+    {
+      "a": 1944.99999999,
+      "b": 810.0000000099999,
+      "t": 31.53200000000652,
+      "metrics": {
+        "cmax": 1944.99999999,
+        "wait_sum": 330.0000000099999,
+        "wait_max": 48.0,
+        "rhythm": 0.0,
+        "rhythm_centers": 2,
+        "secondary": 810.0000000099999
+      },
+      "schedule": "point_001.json.gz"
+    },
+    {
+      "a": 2081.0,
+      "b": 701.0,
+      "t": 36.95299999997951,
+      "metrics": {
+        "cmax": 2081.0,
+        "wait_sum": 221.0,
+        "wait_max": 48.0,
+        "rhythm": 0.0,
+        "rhythm_centers": 1,
+        "secondary": 701.0
+      },
+      "schedule": "point_002.json.gz"
+    },
+    {
+      "a": 2266.0,
+      "b": 696.0,
+      "t": 28.84399999998277,
+      "metrics": {
+        "cmax": 2266.0,
+        "wait_sum": 216.0,
+        "wait_max": 48.0,
+        "rhythm": 0.0,
+        "rhythm_centers": 2,
+        "secondary": 696.0
+      },
+      "schedule": "point_003.json.gz"
+    },
+    {
+      "a": 2401.00000001,
+      "b": 396.99999969500186,
+      "t": 35.01600000000326,
+      "metrics": {
+        "cmax": 2401.00000001,
+        "wait_sum": 176.9999999949987,
+        "wait_max": 16.999999995000053,
+        "rhythm": 1.9999999900001058,
+        "rhythm_centers": 2,
+        "secondary": 396.99999969500186
+      },
+      "schedule": "point_004.json.gz"
+    },
+    {
+      "a": 2416.0,
+      "b": 290.0,
+      "t": 35.35999999998603,
+      "metrics": {
+        "cmax": 2416.0,
+        "wait_sum": 150.0,
+        "wait_max": 14.0,
+        "rhythm": 0.0,
+        "rhythm_centers": 3,
+        "secondary": 290.0
+      },
+      "schedule": "point_005.json.gz"
+    },
+    {
+      "a": 2515.99999999,
+      "b": 126.0000000099999,
+      "t": 34.56300000002375,
+      "metrics": {
+        "cmax": 2515.99999999,
+        "wait_sum": 96.0000000099999,
+        "wait_max": 3.0,
+        "rhythm": 0.0,
+        "rhythm_centers": 3,
+        "secondary": 126.0000000099999
+      },
+      "schedule": "point_006.json.gz"
+    }
+  ],
+  "history": [
+    [
+      22.03200000000652,
+      1717.0,
+      976.0000000100008
+    ],
+    [
+      22.45299999997951,
+      1802.0,
+      966.0000000100008
+    ],
+    [
+      22.85999999998603,
+      2031.00000001,
+      822.9999997600007
+    ],
+    [
+      23.40700000000652,
+      1661.99999999,
+      970.0000000099999
+    ],
+    [
+      23.85999999998603,
+      2158.18181819,
+      799.9999999100035
+    ],
+    [
+      25.93800000002375,
+      2119.0,
+      760.0000000100008
+    ],
+    [
+      26.34399999998277,
+      2322.00000001,
+      747.999999990001
+    ],
+    [
+      26.85999999998603,
+      2107.99999999,
+      815.0000000099999
+    ],
+    [
+      27.10999999998603,
+      1548.0,
+      931.9999999999991
+    ],
+    [
+      27.76600000000326,
+      1963.0,
+      814.0000000099999
+    ],
+    [
+      28.01600000000326,
+      1514.0,
+      930.0000000099999
+    ],
+    [
+      28.84399999998277,
+      2266.0,
+      696.0
+    ],
+    [
+      29.39100000000326,
+      2097.00000001,
+      764.9999997600007
+    ],
+    [
+      30.5,
+      2612.99999999,
+      670.0000000099999
+    ],
+    [
+      30.75,
+      1481.0,
+      894.0000000099999
+    ],
+    [
+      31.53200000000652,
+      1944.99999999,
+      810.0000000099999
+    ],
+    [
+      31.92200000002049,
+      2654.00000001,
+      536.9999996500028
+    ],
+    [
+      32.85999999998603,
+      2097.0600000093,
+      763.4999997775012
+    ],
+    [
+      33.14100000000326,
+      2416.9999999996,
+      661.0000000099988
+    ],
+    [
+      33.875,
+      2141.0,
+      710.0000000100008
+    ],
+    [
+      34.56300000002375,
+      2515.99999999,
+      126.0000000099999
+    ],
+    [
+      35.01600000000326,
+      2401.00000001,
+      396.99999969500186
+    ],
+    [
+      35.35999999998603,
+      2416.0,
+      290.0
+    ],
+    [
+      36.95299999997951,
+      2081.0,
+      701.0
+    ]
+  ],
+  "stats": {
+    "validated": 52,
+    "insertions": 24,
+    "attempts": 423,
+    "timing_lp_calls": 303,
+    "no_lp_candidate": 254,
+    "screened": 120,
+    "late_excluded": 1
+  },
+  "subproblems": [
+    {
+      "goal": "B",
+      "cap": null,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 0,
+      "warm": 0,
+      "status": "deadline_before_solve",
+      "released_orders": 6878,
+      "eligible_orders": 22928,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": null,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 0,
+      "warm": 0,
+      "status": "deadline_before_solve",
+      "released_orders": 4478,
+      "eligible_orders": 14928,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": 126,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 0,
+      "warm": 0,
+      "status": "deadline_before_solve",
+      "released_orders": 6878,
+      "eligible_orders": 22928,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": 800,
+      "scope": "fixed topology, local robot orders",
+      "nodes": 0,
+      "warm": 0,
+      "status": "deadline_before_solve",
+      "released_orders": 5013,
+      "eligible_orders": 16710,
+      "target_pair": 0
+    },
+    {
+      "goal": "A",
+      "cap": null,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "memlimit",
+      "dual_bound": -1e+20
+    },
+    {
+      "goal": "A",
+      "cap": 126,
+      "scope": "unrestricted",
+      "nodes": 0,
+      "warm": 1,
+      "status": "timelimit",
+      "dual_bound": -1e+20
+    }
+  ],
+  "policy": {
+    "method": "proposed",
+    "training_seed": 1,
+    "checkpoint": "D:\\git\\git\\RDMCT-A3C\\cie\\models\\proposed\\cie_proposed_all_cie_proposed\\cie_proposed_all_cie_proposed_2026_08_02_14_55_21_0000--s-1\\itr_60.pkl",
+    "sha256": "23961d2d9f09473982a79271642fca1d6e76cd0bf3837240d5e38a2361d824ce",
+    "config": "D:\\git\\git\\RDMCT-A3C\\cie\\configs\\cie_proposed_inference.json",
+    "config_sha256": "9c1ef2f4c90c92158c13ea8538413daf8f6609c1f4a701d2e98534d593236293",
+    "transfer": "frozen_policy_evaluation_on_new_model",
+    "callback_calls": 0
+  },
+  "search_wall_s": 83.18800000002375,
+  "shared_spbs_seconds": 8.03200000000652,
+  "last_eligible_s": 36.95299999997951
+}
