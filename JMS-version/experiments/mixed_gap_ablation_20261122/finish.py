@@ -100,7 +100,7 @@ def finish():
     spec=spec_from_file_location("paper_build",JMS/"tools/build_model4_cn.py")
     builder=module_from_spec(spec)
     spec.loader.exec_module(builder)
-    with TemporaryDirectory(prefix="jms-gap-review-") as folder:
+    with TemporaryDirectory(prefix="jms-gap-review-", dir=BASE) as folder:
         d=Path(folder)
         paper=d/"paper"
         scratch=d/"build"
@@ -136,6 +136,19 @@ if __name__=="__main__":
             result=read(review)
             if result["verified"]==result["expected"]:
                 finish()
+                break
+        progress=BASE/"progress.json"
+        if progress.exists():
+            status=read(progress)
+            if not status["queued"] and not status["active"] and status["failed"]:
+                failures={}
+                for key,exit_info in status["failed"].items():
+                    folder=BASE/"runs"/key
+                    logs=sorted(folder.glob("console-*.log"))
+                    failure=logs[-1].read_text(encoding="utf8",errors="replace").splitlines()[-8:] if logs else []
+                    live=read(folder/"live.json") if (folder/"live.json").is_file() else {}
+                    failures[key]=dict(reason=failure, last_observation=live, **exit_info)
+                save(BASE/"unreached.json",dict(completed=status["completed"],expected=status["total"],failures=failures))
                 break
         if "--watch" not in sys.argv:
             print("Waiting for independently verified two-stage results.",flush=True)

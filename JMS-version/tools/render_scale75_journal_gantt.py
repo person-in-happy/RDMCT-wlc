@@ -30,7 +30,10 @@ def render():
             or len(data["events"]) != archived["explicit_events"]
             or (finish, end) != (archived["product_return"], archived["resource_end"])):
         raise ValueError("Display coverage differs from the audited schedule")
+    draw(data, lanes, bars, finish, end, report["idle_after"]["chambers"], DESTINATION)
 
+
+def draw(data, lanes, bars, finish, end, chamber_idle, destination):
     by_lane = defaultdict(list)
     for cycle in data["cycles"]:
         by_lane[f"旋转腔 CH{cycle['chamber']}"].append(cycle)
@@ -42,7 +45,7 @@ def render():
             cycle, = [c for c in by_lane[lane] if c["start"] <= start and stop <= c["end"]]
             action = {"4x1": "4×1加工", "2x2": "2×2加工"}[cycle["mode"]]
         spans[lane, action].append((start, stop - start))
-    for chamber, measured in report["idle_after"]["chambers"].items():
+    for chamber, measured in chamber_idle.items():
         lane = f"旋转腔 CH{chamber}"
         occupied = sum(max(0, min(finish, start + width) - start)
                        for (resource, _), intervals in spans.items() if resource == lane
@@ -101,7 +104,7 @@ def render():
     if (not fig.bbox.contains(box.x0, box.y0) or not fig.bbox.contains(box.x1, box.y1)
             or box.overlaps(ax.xaxis.label.get_window_extent(renderer))):
         raise ValueError("Clipped legend or overlapping time-axis label")
-    fig.savefig(DESTINATION, facecolor="white", metadata={"CreationDate": None, "ModDate": None})
+    fig.savefig(destination, facecolor="white", metadata={"CreationDate": None, "ModDate": None})
     plt.close(fig)
     print(f"{len(lanes)} lanes, {len(bars)} intervals, {len(data['events'])} events, "
           f"return {finish:g} s, resource end {end:g} s")

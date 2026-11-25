@@ -38,18 +38,21 @@ def source_row(p,metrics,**extra):
 
 def grid():
     rows=[]; normalized={}
-    for size,section in ((2,"grid2"),(4,"grid4")):
+    for size,section in ((2,"grid2"),(4,"grid4"),(None,"grid_2x2")):
         for path in (OUT/section).glob("*/result.json"):
             d=read(path);a=d["a"];r=d["primary"]
             assert r["gap"]<=LEVELS[a]+1e-9
             for b,entry in d["results"].items():
                 e=verified(path.parent/b/"runs/endpoint/result.json")
                 assert e["eligible"] and e["record"]["gap"]<=LEVELS[b]+1e-9
-                assert abs(r["upper"]-e["measured"]["cmax"])<EPS
-                rows.append(source_row(path,e["measured"],size=size,case=d["case"],gA=a,gB=b,
-                                       lower_A=r["lower"],actual_gap_A=r["gap"],actual_gap_B=e["record"]["gap"]))
-    assert len(rows)==36
+                assert r["lower"]-EPS <= e["measured"]["cmax"] <= r["upper"]+EPS
+                rows.append(source_row(path,e["measured"],size=size or d["size"],case=d["case"],gA=a,gB=b,
+                                       handoff_A=r["upper"],lower_A=r["lower"],actual_gap_A=r["gap"],
+                                       actual_gap_B=e["record"]["gap"]))
     cases={r["case"] for r in rows}
+    assert len(cases)==6 and len(rows)==54
+    assert {(r["case"],r["gA"],r["gB"]) for r in rows} == {
+        (c,a,b) for c in cases for a in LEVELS for b in LEVELS}
     for a in LEVELS:
         for b in LEVELS:
             scores=[]
