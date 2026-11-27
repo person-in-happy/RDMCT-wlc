@@ -1,432 +1,912 @@
-\title{Time-limited scheduling of dual-source mixed-flow rotating-chamber cluster tools under full-occupancy processing}
-\author[ustb]{Lincong Wei}
-\author[ustb]{Lizhen Shao\corref{cor1}}
-\ead{lshao@ustb.edu.cn}
-\author[ustb]{Wei Wang}
-\cortext[cor1]{Corresponding author.}
-\address[ustb]{Department of Control Science and Engineering, University of Science and Technology Beijing, No. 30 Xueyuan Road, Haidian District, Beijing 100083, China}
-
-\begin{abstract}
-High throughput and complex process requirements in advanced fabrication require rotating-chamber cluster tools to obtain high-quality full-occupancy schedules within limited computation time. A finite reusable auxiliary-wafer inventory further requires coordinated pairing, processing, and transport. This study develops a scheduling method with three components. A two-stage mixed-integer linear programming model uses two-wafer PW pairs as the minimum modeling unit, first minimizing batch makespan and then minimizing a weighted objective for waiting time and rhythm deviation while preserving the makespan bound and principal schedule structure. Structured initialization first determines pairing and processing cycles, then progressively adjusts resource service orders to provide a better starting point for the main search. Variable-role features of candidate cuts are combined with reinforcement-learning ordering and structure-aware reranking to select high-quality cuts with complementary variable types. Under an equal 300~s solve budget, the two-stage method matches the batch makespans of a normalized joint objective on two 16-product instances and reduces the weighted objective for waiting time and rhythm deviation by 31.45\% and 5.47\%, respectively. Structured initialization lowers time-limited feasible upper bounds for mixed-recipe instances, and the complete cut-selection combination further reduces batch makespan on some instances with shared initial solutions. Full-model checks and event replay of two- and 16-product schedules also validate the model's coordination of full-occupancy processing and wafer transport.
-
-\end{abstract}
-\begin{keyword}
-semiconductor manufacturing systems \sep cluster tools \sep dual-source material flow \sep mixed-integer linear programming \sep learning-based cut selection
-\end{keyword}
-\end{frontmatter}
-
 \section{Introduction}
-Plasma-enhanced chemical vapor deposition (PECVD) is an important process in semiconductor thin-film fabrication. Three-dimensional device structures and multilayer integration in advanced fabrication increase deposition-uniformity requirements, while equipment must also meet high-throughput production demands~\citep{appliedprecisioncvd}. Multi-space process modules and multi-finger robots increase parallel processing capacity within a tool. Cluster tools (CTs) connect process modules, robots, and load locks into continuous wafer-processing routes. Their feasible operating schedules depend jointly on processing and transport durations, load-lock switching, chamber cleaning, and residency constraints~\citep{pan2018survey}.
 
-To meet throughput requirements, equipment manufacturers increase handling capacity by adding wafer-carrying positions to multi-finger robots~\citep{gu2024applied,gu2024multifinger}. Each of the four-position rotating-chamber CTs considered here uses a four-finger vacuum transfer robot (VTR) and a two-finger atmospheric transfer robot (ATR). The four wafer-carrying positions of VTR comprise two clean positions for products that have completed processing and two dirty positions for products that have not. ATR can carry two wafers simultaneously, and the rotating chamber provides robot access to two wafer positions at a time. Accordingly, the model uses two-wafer PW pairs as its minimum unit for chamber and cycle assignment and for loading, unloading, and transport timing. Individual timing variables for supply, alignment, and return describe single-wafer operations within each pair alongside paired transport.
+Plasma-enhanced chemical vapor deposition (PECVD) is widely used to deposit thin films in semiconductor manufacturing. Three-dimensional devices and multilayer film stacks in advanced processes require uniform deposition at high throughput~\citep{xia2016pecvd,kim2023onstack}. Multi-position process modules and multi-finger robots increase the number of wafers a tool can process or transport in parallel. A cluster tool connects these modules, robots and load locks along the wafer route. Processing and transfer times, load-lock pressure changes, chamber cleaning and wafer residence limits jointly determine which schedules are feasible~\citep{pan2018survey}.
 
-Increased parallel processing capacity also requires suitable transport sequences to reduce chamber waiting for supply or unloading and meet the complex requirements of full occupancy and stable production rhythm. Full occupancy protects wafer-support bases during processes such as carbon-containing film deposition, whose residues are difficult to remove. When insufficient products are available, auxiliaries fill vacant positions and receive deposited material, ensuring that all positions are occupied. Auxiliaries do not count toward product output and can be reused after return, but their handling, rotation, transport, and repeated loans consume equipment resources. Products enter through atmospheric load ports (LPs) and reach the chambers via an aligner (AL) and load locks (LLs). In a single-source arrangement, auxiliaries are stored and supplied on the atmospheric side; in a dual-source arrangement, vacuum storage supplies auxiliaries, forming mixed flows with products, as shown in Fig.~\ref{fig:system-zh-new}.
+Multi-finger robots increase handling capacity by holding more wafers per transfer~\citep{gu2024applied,gu2024multifinger}. The four-position rotating chambers studied here share a four-finger vacuum transfer robot (VTR) and a two-finger atmospheric transfer robot (ATR). The VTR has two clean positions for product wafers that have completed processing and two dirty positions for those that have yet to complete it. The ATR can hold two wafers. The VTR can access two positions at a time in each chamber. We therefore assign chambers and processing cycles to two-wafer pairs, denoted PW pairs, and schedule their loading, unloading and transfer. Each member of a pair retains its own supply, alignment and return times so that the model can represent both individual and paired operations.
 
-{{FIG:fig:system-zh-new}}
+The robot service order determines when all four chamber positions can be filled and how long the first pair waits for the second. For processes that deposit films that are difficult to remove, such as carbon-containing films, every position must hold a wafer during processing to protect the wafer supports. When fewer products are available, auxiliary wafers occupy the vacant positions and receive the deposit. These wafers can be reused after return. They contribute no products to the batch but require handling, chamber rotation, transport and access to a finite inventory. Product wafers leave the cassette at an atmospheric load port (LP) and travel through an aligner (AL) and an upper load lock (LL) to a chamber. After processing, the VTR picks up the products from the chamber and places them in the lower LL. After venting, the ATR picks them up and places them in the cassette at their original port. In the single-source configuration, auxiliary wafers also arrive from atmospheric storage. In the dual-source configuration, they arrive from vacuum storage and join the product flow in the chambers (Fig.~\ref{fig:system-zh-new}).
 
-Under full-occupancy requirements, multi-space modules and multi-finger handling allow four-position rotating chambers to support several processing modes. Two representative modes are $4\times1$ parallel processing and $2\times2$ chained processing. The former completes one exposure for four wafers simultaneously. The latter uses paired loading, unloading, and rotation to give each product two consecutive exposures; auxiliary wafers at the beginning and end of a chain undergo one exposure. Total processing time per product is identical in both modes, but the intervening chamber rotation in chained processing changes loading and unloading sequences and resource-occupancy times.
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{Figure1}
+\caption{Dual-source rotating-chamber cluster tool and wafer routes}
+\label{fig:system-zh-new}
+\end{figure}
 
-Previous studies on CTs established analytical relationships among processing, transport, and throughput~\citep{perkinson1994throughput} and developed linear programming, heuristics, and timed Petri nets for residency-constrained scheduling~\citep{rostami2002optimal,wu2010closedform,qiao2012sojourn}. Subsequent work addressed wafer revisiting, multiple wafer types, and alternative process modules~\citep{qiao2014revisiting,wang2020multiple,wang2025virtualcell}. Clean- and dirty-hand allocation and steady-state cycle analysis for four-finger robots and four-space modules, together with joint optimization of the release and transport of two wafer types, provide a modeling basis for more complex tool structures~\citep{gu2024multifinger,yang2025miptwowafers}.
+Two representative modes satisfy full occupancy in the four-position chambers. In $4\times1$ parallel processing, all four wafers undergo one treatment simultaneously. In $2\times2$ chain processing, paired exchanges and chamber rotations allow each product to undergo two consecutive treatments. Auxiliary wafers fill positions for one treatment at each end of a chain. The total required treatment time per product is the same in both modes. The rotation between successive chain treatments changes the loading order and the time for which each resource is occupied.
 
-Periodic-cleaning scheduling coordinates production and cleaning through task-sequence enumeration, partial loading and timing control, dummy-wafer occupancy, and chamber-state triggers~\citep{kim2013cleaning,yu2020delay,qiao2022binary,li2022conditioncleaning}. Shared-buffer synchronization and dynamic action filtering address deadlock during module failures and noncyclic operation~\citep{zhu2025failuredeadlock,kim2025noncyclicdeadlock}. Waiting constraints also affect equipment output and upstream control~\citep{lee2018waiting}. Under full occupancy, cleaning changes production-chain boundaries, auxiliary-wafer occupancy, and vacuum-robot service sequences simultaneously. Scheduling product processing or cleaning times separately therefore does not capture all these dependencies.
+Earlier work established analytical relationships among processing, transfer and throughput in cluster tools~\citep{perkinson1994throughput}. Linear programming, heuristics and timed Petri nets have been used to schedule tools with wafer residence constraints~\citep{rostami2002optimal,wu2010closedform,qiao2012sojourn}. Later models address reentrant processing, multiple wafer classes and alternative process modules~\citep{qiao2014revisiting,wang2020multiple,wang2025virtualcell}. Analyses of clean and dirty positions and steady-state cycles in four-finger, four-position tools, together with joint optimization of release and transport for two wafer types, provide a basis for modeling these equipment configurations~\citep{gu2024multifinger,yang2025miptwowafers}.
 
-Batch makespan and waiting between operations are distinct scheduling metrics. Lee et al. examine the relationship between allowable waiting and effective output~\citep{lee2018waiting}, whereas Weng et al. study just-in-time (JIT) scheduling to match job completion with downstream availability~\citep{weng2022jit}. In PECVD tools, reducing unnecessary waiting and coordinating the start intervals of repeated production cycles support predictable wafer supply and removal.
+Scheduling methods coordinate periodic cleaning with production through task-sequence enumeration, partial loading and timing control, virtual wafers and chamber-state triggers~\citep{kim2013cleaning,yu2020delay,qiao2022binary,li2022conditioncleaning}. Shared-buffer synchronization and dynamic action filtering address deadlocks during failures and noncyclic operation~\citep{zhu2025failuredeadlock,kim2025noncyclicdeadlock}. Waiting-time constraints also affect tool output and upstream control~\citep{lee2018waiting}. Under full occupancy, cleaning partitions production chains, ties up auxiliary wafers and changes the sequence of vacuum transfers. Scheduling cleaning and product processing independently omits these dependencies.
 
-Equipment-data analysis, recipe-cycle anomaly detection, and predictive maintenance use operating data and process states to inform equipment-parameter updates~\citep{sun2024manufacturing,chen2020anomaly,biebl2020maintenance}. However, variations in operation durations and performance differences among chambers and robots can change resource availability, requiring schedules to be recomputed after parameter updates and placing greater demands on timely solution~\citep{rahmani2014robust}.
+Gu et al.\ derived four steady-state robot sequences for a four-position rotary chamber with a four-finger robot and residence limits and minimized their cycle times by linear programming~\citep{gu2024applied}. Qiao et al.\ inserted virtual wafers into steady-state sequences to reserve cleaning time and optimized throughput under residence constraints by binary integer programming~\citep{qiao2022binary}. A finite batch also requires decisions about filling vacant positions at the start and end of a chain. At the end, unloading auxiliaries first can save a rotation, whereas unloading products first can shorten their chamber residence. Periodic cleaning changes which auxiliary wafers and robot time slots are available to the next pair. These choices determine which wafers share a cycle and when the last product returns.
 
-Reinforcement learning can select operating actions in CTs or assist mixed-integer linear programming (MILP) search~\citep{kim2025adaptivecluster,tang2020cut,huang2022cutranking,paulus2022looking}. Wang et al. developed a hierarchical sequence model (HEM) trained through reinforcement learning to coordinate the number of cuts and an ordered subset, providing a basis for jointly selecting cut counts, subsets, and orders within a MILP solver~\citep{wang2023hem}.
+Zhu et al.\ learned robot dispatching policies for dual-arm cluster tools with multifunctional process modules and evaluated makespan and postprocessing residence under different module configurations~\citep{zhu2026multifunction}. Here, the physical model governs robot actions, and a learned policy selects cuts within the mixed-integer linear programming (MILP) solver~\citep{tang2020cut,huang2022cutranking,paulus2022looking}. The hierarchical sequence model (HEM) of Wang et al.\ uses reinforcement learning to choose how many cuts to add and to generate their ordered subset~\citep{wang2023hem,wang2024hem}. We extend HEM with features that describe the roles of variables in each cut and rerank candidates using policy preference, coverage of variable roles and similarity to other candidates. The resulting selector works together with wafer-pair encoding, structured initialization and a two-stage handoff between objectives.
 
-Existing studies address multiple aspects of scheduling for CTs. For dual-source mixed-flow rotating-chamber tools, full occupancy requires auxiliaries when products are insufficient, continuous processing restricts wafer exchange, and cleaning consumes auxiliaries and handling resources. Supply, processing, and cleaning must therefore be determined jointly. This study considers PECVD CTs with four-position rotating chambers and optimizes batch makespan, waiting time, and rhythm deviation within limited time. Its principal contributions are:
+This study jointly schedules product processing, auxiliary-wafer borrowing and return, and chamber cleaning for a finite batch. Its contributions are as follows.
 \begin{enumerate}[leftmargin=*]
-\item A two-stage MILP model uses PW pairs as the minimum modeling unit. Products are counted by job and source LP, and the model jointly determines wafer pairing, chamber assignment, processing cycles, cleaning, and auxiliary loans and returns. Stage one minimizes batch makespan; stage two preserves its bound and the principal discrete decisions while minimizing a weighted objective for waiting time and rhythm deviation.
-\item Structured initialization first determines pairing, chamber assignment, and processing cycles, then progressively releases resource service orders for optimization, providing a better initial feasible solution for the main problem.
-\item Variable-role feature extraction and structure-aware cut reranking use coefficient shares of different variable types for learned ordering, then select a subset according to variable-type coverage and candidate similarity, reducing repeated selection of similar cuts when the cut count is limited.
+\item A biobjective model links the two production modes and the consecutive chamber occupancy of chain products through wafer pairs. It jointly selects pairings, chamber assignments, auxiliary-wafer reuse, cleaning and transport. A product-return makespan measures batch completion, and a process objective accounts for nonprocessing chamber residence, within-recipe residence consistency and chamber contamination.
+\item A batch-job and wafer-pair encoding links product counts at each source port to physical wafer identities. A construction procedure determines pairings, chambers and cycles. A sequence of structure-preserving refinements yields an initial feasible upper bound. After optimization, decoding by pick order recovers wafer identifiers while preserving their source ports, resource assignments and operation times.
+\item RL-DMCT is a two-stage scheduling algorithm with reinforcement-learning-based cut selection for dual-source mixed-flow cluster tools. It extends HEM with variable-role features and reranks candidates using role coverage and representativeness. Stage~1 starts the makespan search from the structured solution. Stage~2 retains the makespan cap and principal discrete decisions and adjusts synchronized transfers and continuous event times to improve the process objective. Single-objective comparisons and ablations of initialization and cut selection evaluate these mechanisms.
 \end{enumerate}
-Section~2 formulates the scheduling model for rotating-chamber CTs. Section~3 presents the proposed algorithm and wafer-schedule decoding. Section~4 reports the experiments, and Section~5 concludes the study.
 
-\section{Scheduling model for rotating-chamber cluster tools}
+
+\section{Biobjective scheduling model for a rotating-chamber cluster tool}
 \setcounter{equation}{0}
-A processing cycle corresponds to one production exposure or one cleaning operation. A production cycle executes a product recipe. Cleaning uses only auxiliary wafers, and its threshold is at least two production cycles.
 
-The model inputs are operation durations, resource capacities, residency limits, the cleaning threshold, and auxiliary inventory. Its outputs are resource assignments and operation start and end times for individual wafers. Tables~\ref{tab:symbol-cn-a} and~\ref{tab:symbol-cn-b} define the input constants and sets and the principal decision and auxiliary variables, respectively. Other notation is defined at first use. All times and durations are in seconds; quantities count wafers, pairs, or cycles.
-{{TABLE:tab:symbol-cn-a}}
-{{TABLE:tab:symbol-cn-b}}
+The inputs are operation durations, resource capacities, residence limits, the contamination threshold and auxiliary-wafer inventory. The outputs assign resources and operation start and end times to individual wafers. Tables~\ref{tab:symbol-cn-a} and~\ref{tab:symbol-cn-b} define the inputs and principal decision and auxiliary variables. Times are in seconds. Counts refer to wafers, pairs or cycles as indicated. All real and integer model variables are nonnegative.
 
-\subsection{Batch-job and product-wafer encoding}
+\begin{table*}[!t]
+\centering\small
+\caption{Input parameters and sets}
+\label{tab:symbol-cn-a}
+\renewcommand{\arraystretch}{1.03}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}C{0.20\textwidth}C{\dimexpr0.80\textwidth-8pt\relax}@{}}
+\toprule
+Symbol & Definition\\\midrule
+$\mathcal J,\mathrm{Pjob}_j$ & Batch jobs $\mathcal J=\{1,\ldots,J\}$ and set of products belonging to job $j$.\\
+$\mathcal L_j,\ell_{jk}$ & Ordered list of physical wafer identifiers in job $j$ and source LP of its $k$th product.\\
+$N_{j\ell},N_j,N_\zeta,N_\psi,N$ & Product counts per job and LP, per job, per production mode and in the whole batch, respectively.\\
+$m_j,\mathcal M,\mathcal C_j$ & Job type $m_j\in\mathcal M=\{\zeta,\psi,\mathrm{cl}\}$ for $4\times1$, $2\times2$ or cleaning, and nonempty set of eligible chambers $\mathcal C_j\subseteq\mathcal C=\{\mathrm{CH2},\mathrm{CH3}\}$.\\
+$\mathcal P,\mathcal Q_c,\mathcal I$ & Wafer pairs $\mathcal P=\{1,\ldots,P_{\max}\}$, candidate chamber cycles $\mathcal Q_c=\{1,\ldots,Q_{\max}\}$ and individual wafer routes $\mathcal I=\mathcal P\times\{0,1\}$.\\
+$T,J_{\max},P_{\max},Q_{\max}$ & Upper bounds on production cycles, cleaning cycles, candidate pairs and candidate cycles per chamber.\\
+$\mathcal S,\sigma$ & Atmospheric and vacuum source regions $\mathcal S=\{A,V\}$. Single source has $\sigma=0$, dual source $\sigma=1$.\\
+$\mathcal O,\mathcal O^{\rm occ}$ & Candidate physical operations and resource-occupancy intervals generated from route and cycle templates.\\
+$\mathcal R,K_\rho,\mathcal D$ & Resources, capacity of resource $\rho$ and physical auxiliary wafers $\mathcal D=\{1,\ldots,D\}$.\\
+$d_m\ (d_\zeta,d_\psi,d_{\mathrm{cl}})$ & Duration of one cycle of type $m$.\\
+$d_o^{\rm ATR},d_o^{\rm VTR},r_c$ & ATR and VTR pickup and placement durations, and duration of a half-turn in chamber $c$.\\
+$t_{\rm ATR},t_{\rm VTR},t_{\rm empty}$ & ATR and VTR travel times between different locations, and empty ATR travel time from a load lock to a supply location.\\
+$t_{\rm AL},t_{\rm pump},t_{\rm vent}$ & Durations of product alignment, upper LL pump-down and lower LL venting.\\
+$t_{\rm U}^{\rm reset},t_{\rm L}^{\rm reset}$ & Upper and lower LL slot reset durations, measured from the end of pickup on the opposite side.\\
+$d_o,\delta_{oo'},\delta^\rho_{oo'}$ & Duration of operation $o$, required separation between successive operations and separation for resource travel or reset.\\
+$H$ & Chamber contamination threshold in production cycles, $H\ge2$.\\
+$\overline R_{i\rho}$ & Residence limit for route $i$ on resource $\rho$.\\
+$B,M$ & Scheduling horizon and relaxation constant $M=B+\max\{\delta_{oo'},\delta^\rho_{oo'},r_c\}$.\\
+$\delta,\gamma$ & Time scale of the squared residence range (s) and weight on unused cycles at cleaning (s/cycle).\\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\begin{table*}[t]
+\centering\small
+\caption{Principal decision and auxiliary variables}
+\label{tab:symbol-cn-b}
+\renewcommand{\arraystretch}{1.05}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}C{0.20\textwidth}C{0.16\textwidth}C{\dimexpr0.64\textwidth-16pt\relax}@{}}
+\toprule
+Symbol & Type & Definition\\\midrule
+$x_{j\ell pr}$ & Binary decision & Assign a product from job $j$ and LP $\ell$ to position $(p,r)$. Defined only for $N_{j\ell}>0$.\\
+$v_p,\mu_{pm},z_{pc}$ & Binary decisions & Activate pair $p$, select its processing type and assign its chamber.\\
+$X_{pcq},K_{cqm},f_{pcq}$ & Binary decisions & Pair occupancy in a chamber cycle, cycle type and occupancy on the accessible side.\\
+$g_{pr\tau}$ & Binary decision & Assign auxiliary wafer $\tau\in\mathcal D$ to position $(p,r)$.\\
+$h_{ou},y^\rho_{oo'},\gamma_{pa}$ & Binary decisions & Assign a resource unit, order operations sharing a resource, and synchronize a paired pickup or placement.\\
+$s_o,S_{cq}$ & Continuous decisions & Start times of operation $o$ and chamber cycle $(c,q)$.\\
+$e_o,b_o$ & Auxiliary & Continuous end time $e_o$ and binary activation indicator $b_o$.\\
+$\theta_{j\ell}$ & Continuous auxiliary & Boundary between pickups at consecutive nonempty LPs for job $j$.\\
+$n_{cq}$ & Integer auxiliary & Contamination after active cycle $(c,q)$, measured in production cycles since the last cleaning, $0,\ldots,H$.\\
+$F_p,F_p^\psi,X^P_{pcq}$ & Binary auxiliary & Pair contains a product, pair contains a $2\times2$ product, and a product-containing pair occupies cycle $(c,q)$.\\
+$\beta_{pr},d_{pr}$ & Binary auxiliary & Product assignment and auxiliary-wafer requirement at position $(p,r)$.\\
+$\chi_{iA},\chi_{iV}$ & Binary auxiliary & Atmospheric and vacuum supply indicators for route $i$.\\
+$C_{\max}$ & Continuous decision & Batch makespan, bounded below by the return time of every product.\\
+$r_i,D_{\rm res},u_{cq}$ & Auxiliary & Product nonprocessing chamber residence, maximum within-recipe residence range (s), and unused cycles at an actual cleaning.\\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\subsection{Batch jobs and product-wafer encoding}
 \label{sec:model-encoding-cn}
-Products are grouped into batch jobs (Pjobs) by processing mode, eligible chambers, and other scheduling conditions; each product belongs to exactly one job. Products of the same job at the same LP are represented by a count when these conditions are identical. Different release times, processing requirements, or slot accessibility require further job subdivision or corresponding constraints. The eligible chamber set can be $\{\mathrm{CH2}\}$, $\{\mathrm{CH3}\}$, or $\{\mathrm{CH2},\mathrm{CH3}\}$.
 
-Slot $s$ of LP $\ell$ has physical wafer identifier $w=25(\ell-1)+s$. The identifiers of job $j$ are stored in ascending order in $\mathcal L_j$. Its $k$th product is denoted by $\mathrm{Pjob}_j[k]$, with source LP $\ell_{jk}$; these data determine inventory $N_{j\ell}$. Physical identities are recovered after optimization according to pickup order, as described in Section~\ref{sec:pjob-decoding-cn}.
+Each product wafer belongs to exactly one batch job (Pjob). Wafers in the same job share the same processing mode, eligible chambers and other scheduling requirements. They can be processed together in any of their eligible chambers. The eligible chamber set is $\{\mathrm{CH2}\}$, $\{\mathrm{CH3}\}$ or $\{\mathrm{CH2},\mathrm{CH3}\}$.
 
-Each pair position retains its wafer source and individual alignment, supply, and return times. The assignment and timing constraints in Section~\ref{sec:model-assignment-cn} enforce the within-job release order.
+Slot $s$ at LP $\ell$ has physical wafer identifier $w=25(\ell-1)+s$. List $\mathcal L_j$ contains the physical identifiers of job $j$ in ascending order. Its $k$th product is denoted $\mathrm{Pjob}_j[k]$, with source LP $\ell_{jk}$. Counting these products by source LP gives the inventory $N_{j\ell}$.
 
-\subsection{Physical routes for single-source and dual-source mixed flows}
+Each position in a pair retains its source port and its individual alignment, supply and return times. The port determines the cassette. Cassette slot numbers are supplied as data.
+
+\subsection{Wafer routes in single- and dual-source configurations}
 \label{sec:model-path-cn}
-The source-region indicators are linked to wafer type and source arrangement $\sigma$ by
-{{EQ:eq:source-membership-cn}}
-Equation~\eqref{eq:source-membership-cn} determines the source region of each wafer-route task. In the single-source arrangement, products are stored at LP1--LP4 and auxiliaries in atmospheric storage beside LP4. Both use ATR and load-lock interfaces, while only products require alignment at AL. In the dual-source arrangement, products still originate from LP1--LP4, whereas auxiliaries are supplied from vacuum storage.
 
-Auxiliaries bypass AL. Single-source auxiliaries travel from atmospheric storage through ATR, the upper LL, and VTR to a process chamber, then return through VTR, the lower LL, and ATR. When supplied separately, they enter the LL directly without alignment. When accompanying a product, an auxiliary remains on ATR during product alignment, and the two enter the LL together after product pickup, as shown in Fig.~\ref{fig:single-source-cn}. Dual-source auxiliaries travel from vacuum storage to a chamber and back through VTR. These routes define the required physical operations; paired-transport choices and their timing conditions are given in Section~\ref{sec:model-time-cn}.
-{{FIG:fig:single-source-cn}}
+Wafer type and configuration $\sigma$ determine each route's source region through
 
-\subsection{Matching wafers, PW pairs, and chamber cycles}
+\begin{equation}
+\begin{aligned}
+\chi_{iA}&=\beta_{pr}+(1-\sigma)d_{pr},\\
+\chi_{iV}&=\sigma d_{pr},\qquad i=(p,r)\in\mathcal I.
+\end{aligned}
+\label{eq:source-membership-cn}
+\end{equation}
+
+Equation~\eqref{eq:source-membership-cn} assigns a source region to every wafer route. In the single-source configuration, products originate at LP1--LP4 and auxiliary wafers in atmospheric storage beside LP4. Both use the ATR and the load locks, but only products require alignment. In the dual-source configuration, products still originate at LP1--LP4 and auxiliaries arrive from vacuum storage.
+
+In the single-source configuration an auxiliary wafer bypasses alignment. If supplied independently, it travels from storage to the upper LL on the ATR. If paired with a product for joint entry, the ATR holds the auxiliary while the product is aligned and places both in the upper LL together (Fig.~\ref{fig:single-source-cn}). The VTR transfers the auxiliary between the load locks and the chamber. After processing, the ATR returns it from the lower LL to storage. In the dual-source configuration the VTR transfers auxiliary wafers directly between vacuum storage and a chamber.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\linewidth]{Figure2}
+\caption{Single-source rotating-chamber cluster tool and wafer routes}
+\label{fig:single-source-cn}
+\end{figure}
+
+\subsection{Assignment of wafers to pairs and chamber cycles}
 \label{sec:model-assignment-cn}
-The $4\times1$ mode replaces all four wafers between successive cycles. The $2\times2$ mode replaces two wafers and retains two for further processing. Wafers are therefore organized into PW pairs and assigned to compatible chambers and cycles. Each PW pair contains two wafers; position $r\in\{0,1\}$ is a pairing index, while physical carrying positions and chamber occupancy are determined by subsequent resource and cycle variables. Production and cleaning share candidate cycles. Exposure requirements and cleaning rules are specified in Section~\ref{sec:model-process-cn}.
+
+We assign wafers to PW pairs and each pair to an eligible chamber and its cycles. Index $r\in\{0,1\}$ identifies the wafer within a pair independently of its robot holding position or chamber side. Production and cleaning use the same set of candidate cycles.
 
 \noindent\textbf{Wafer pairing and chamber selection.}
-A PW pair can contain two products, one product and one auxiliary, or two auxiliaries. Every product must be processed, and each active pair position contains exactly one wafer:
-{{EQ:eq:joint-membership-cn}}
-Equation~\eqref{eq:joint-membership-cn} enforces job inventories at each LP and exclusive occupancy of pair positions. Each position retains a complete processing route; physical product identities are recovered after optimization. An operation index $o$ can be written as $(i,a)$, $(p,a)$, or $(c,q,a)$, identifying an operation in a wafer route, PW pair, or chamber cycle, respectively. Here, $a$ is an operation label, and start and end times are denoted by $s_o,e_o$.
+A pair may contain two products, one product and one auxiliary, or two auxiliaries. Every product must be processed, and each position of an active pair holds exactly one wafer. Thus
+\begin{equation}
+\begin{aligned}
+\sum_{p,r}x_{j\ell pr}&=N_{j\ell},\\
+\beta_{pr}=\sum_{j,\ell}x_{j\ell pr},\qquad
+\beta_{pr}+d_{pr}&=v_p.
+\end{aligned}
+\label{eq:joint-membership-cn}
+\end{equation}
+Equation~\eqref{eq:joint-membership-cn} enforces job-by-port inventory and unique occupancy at each position. Each position retains a complete route, and the specific product is identified after optimization. An operation $o$ can have index $(i,a)$, $(p,a)$ or $(c,q,a)$ to denote operation $a$ on a wafer route, a pair or a chamber cycle, respectively. Its start and end times are $s_o$ and $e_o$.
 
-\noindent\textbf{Nondecreasing release order within each job.}
-Under the specified release rule, products of a job at a lower-numbered LP must be picked up no later than products at its next nonempty LP. Let $h_j(\ell)=\min\{\ell'>\ell:N_{j\ell'}>0\}$ identify that next LP; no corresponding variable is created if the set is empty. For each position $(p,r)$, $o=((p,r),\mathrm{pick})$ denotes its LP pickup operation. Consecutive nonempty LPs satisfy
-{{EQ:eq:pjob-release-boundary-cn}}
-Equation~\eqref{eq:pjob-release-boundary-cn} orders pickups across LPs. Products of the same job at the same LP recover their physical identities by pickup time, ensuring nondecreasing release within each job. Products in the same PW pair and at the same LP may be picked up synchronously, subject to Eq.~\eqref{eq:stage-link-cn} and robot capacities. Other pickups obey ATR exclusion and repositioning constraints. Different Pjobs may interleave and may form pairs when their processing requirements are compatible.
+\noindent\textbf{Nondecreasing release order within a job.}
+Within each job, products at a lower-numbered port must be picked no later than those at the next nonempty port. Let $h_j(\ell)=\min\{\ell'>\ell:N_{j\ell'}>0\}$ identify that port. The corresponding boundary variable is omitted when the set is empty. With $o=((p,r),\mathrm{pick})$ denoting pickup at the LP, consecutive nonempty ports satisfy
+\begin{equation}
+\begin{aligned}
+0\le\theta_{j\ell}&\le B,\\
+s_o&\le\theta_{j\ell}+M(1-x_{j\ell pr}),\\
+s_o&\ge\theta_{j\ell}-M(1-x_{j,h_j(\ell),pr}).
+\end{aligned}
+\label{eq:pjob-release-boundary-cn}
+\end{equation}
+Equation~\eqref{eq:pjob-release-boundary-cn} orders pickups across LPs. The ATR can pick up two products together if they form one pair at the same LP and both holding positions are available. Other pickups follow ATR exclusivity and travel constraints. Different jobs may interleave pickups and contribute to the same pair if their recipes are compatible.
 
-Both wafers in a pair must have compatible processing modes and a jointly eligible chamber. Let $\mathcal C(m)\subseteq\mathcal C$ denote the chambers capable of processing type $m$. Mode and chamber selection satisfy
-{{EQ:eq:joint-chamber-cn}}
-Products from different jobs with the same mode may be paired, provided that the selected chamber belongs to the intersection of their eligible sets. A job eligible for both chambers may assign different PW pairs to different chambers.
+The two wafers in each pair must have compatible processing requirements and share an eligible chamber. With $\mathcal C(m)\subseteq\mathcal C$ denoting the chambers that support processing type $m$, the model imposes
+\begin{equation}
+\begin{aligned}
+\sum_m\mu_{pm}&=v_p,\qquad \sum_c z_{pc}=v_p,\\
+x_{j\ell pr}&\le\mu_{p,m_j},\qquad
+x_{j\ell pr}\le\sum_{c\in\mathcal C_j}z_{pc},\\
+z_{pc}+\mu_{pm}&\le1\qquad(c\notin\mathcal C(m)).
+\end{aligned}
+\label{eq:joint-chamber-cn}
+\end{equation}
+Different jobs of the same mode may contribute to a pair if the chosen chamber is eligible for both products. A job eligible for both chambers can send different pairs to different chambers.
 
-Product presence, chained-processing status, and cleaning type satisfy
-{{EQ:eq:pair-type-cn}}
-The source and return LP of a product at $(p,r)$ are determined directly by $\sum_jx_{j\ell pr}$. Atmospheric and vacuum auxiliary sources are selected by $(1-\sigma)d_{pr}$ and $\sigma d_{pr}$, respectively.
+Product presence, chain-mode membership and cleaning are linked by
+\begin{equation}
+\begin{aligned}
+F_p&\le\sum_r\beta_{pr}\le2F_p,\qquad F_p+\mu_{p,\mathrm{cl}}\le1,\\
+F_p^\psi&\le F_p,\quad F_p^\psi\le\mu_{p\psi},\quad
+F_p^\psi\ge F_p+\mu_{p\psi}-1.
+\end{aligned}
+\label{eq:pair-type-cn}
+\end{equation}
+If pair $p$ contains a product wafer, $F_p=1$ and the pair cannot be used for cleaning. $F_p^\psi=1$ exactly when the pair contains a product wafer and uses the $2\times2$ mode. The source and return port for a product at $(p,r)$ are identified by $\sum_jx_{j\ell pr}$. The atmospheric and vacuum sources for an auxiliary are identified by $(1-\sigma)d_{pr}$ and $\sigma d_{pr}$, respectively.
 
-\noindent\textbf{Candidate-capacity bounds.}
-The following conservative bounds reserve sufficient candidates for joint pairing and cycle decisions:
-{{EQ:eq:candidate-bounds-cn}}
-Every production cycle contains at least one product, so the number of production cycles is at most the total required exposures $T$. Each cleaning operation follows at least one production cycle, so at most $T$ cleaning operations are needed. Product-containing, production-filling, and cleaning pairs number at most $N$, $T$, and $2J_{\max}$, respectively. These bounds retain all admissible early-cleaning choices. PW-pair identifiers refer to occupancy tasks from loading to unloading and are counted separately from the inventory of reusable physical auxiliaries.
+\noindent\textbf{Candidate-set sizes.}
+Conservative upper bounds reserve sufficient pair and cycle indices for joint assignment:
+\begin{equation}
+\begin{gathered}
+T=N_{\zeta}+2N_{\psi},\qquad J_{\max}=T,\\
+P_{\max}=N+T+2J_{\max},\qquad Q_{\max}=T+J_{\max}.
+\end{gathered}
+\label{eq:candidate-bounds-cn}
+\end{equation}
+Each production cycle contains at least one product, so the number of cycles is bounded by the total number of required product treatments $T$. At least one production cycle precedes each cleaning. The numbers of product-containing pairs, auxiliary-only production pairs and cleaning pairs are therefore at most $N$, $T$ and $2J_{\max}$, respectively. These capacity bounds allow cleaning before the threshold is reached. Pair indices count occupancy tasks from one loading to the corresponding unloading. Physical auxiliary inventory is counted separately because the wafers are reusable.
 
-\noindent\textbf{Pair-to-cycle assignment.}
-Both production and cleaning require four occupied chamber positions, so each active cycle contains exactly two PW pairs. Binary auxiliary variable $U_{cq}$ indicates whether cycle $q$ of chamber $c$ is active. Selected pairs must match the chamber and processing type of the cycle:
-{{EQ:eq:cycle-capacity-cn}}
-Participation of a product-containing PW pair in a processing cycle is determined by the following linear constraints:
-{{EQ:eq:cycle-products-cn}}
-Equation~\eqref{eq:cycle-capacity-cn} enforces full occupancy, pair--cycle compatibility, and candidate limits. Equation~\eqref{eq:cycle-products-cn} counts only product-containing pairs toward the production requirement. Each production cycle therefore contains at least one product pair, whereas cleaning contains only auxiliary pairs. Cycles are activated consecutively by index, while the sequence of processing modes remains a model decision.
+\noindent\textbf{Pair assignment to processing cycles.}
+Production and cleaning each require all four positions to be occupied, or exactly two pairs per cycle. The binary variable $U_{cq}$ activates cycle $q$ in chamber $c$. Pair and cycle assignments must agree on chamber and processing type:
+\begin{equation}
+\begin{aligned}
+\sum_mK_{cqm}&=U_{cq}, &\sum_pX_{pcq}&=2U_{cq},\\
+X_{pcq}&\le z_{pc}, &X_{pcq}+\mu_{pm}&\le1+K_{cqm},\\
+\sum_pX^P_{pcq}&\ge K_{cq\zeta}+K_{cq\psi}, &U_{c,q+1}&\le U_{cq},\\
+\sum_{c,q}U_{cq}&\le Q_{\max}, &\sum_{c,q}K_{cq,\mathrm{cl}}&\le J_{\max}.
+\end{aligned}
+\label{eq:cycle-capacity-cn}
+\end{equation}
+The following inequalities identify active product-containing pairs in each cycle:
+\begin{equation}
+X^P_{pcq}\le X_{pcq},\quad X^P_{pcq}\le F_p,\quad
+X^P_{pcq}\ge X_{pcq}+F_p-1.
+\label{eq:cycle-products-cn}
+\end{equation}
+Equation~\eqref{eq:cycle-capacity-cn} enforces full occupancy, compatibility and the candidate limits. Equation~\eqref{eq:cycle-products-cn} identifies occupancy by a product-containing pair. Every production cycle therefore contains a product, and every cleaning cycle contains only auxiliaries. Cycles are activated consecutively by index, and the model determines the order of their types.
+
 
 \subsection{Operation timing and precedence}
 \label{sec:model-time-cn}
-Wafer operations obey route precedence, and paired transport additionally requires synchronized pickup and placement. Shared-resource service sequences are governed by Section~\ref{sec:model-resource-cn}.
 
-\noindent\textbf{Operation activation and duration.}
-Activation depends jointly on selected wafer routes, chamber cycles, and transport choices. Active operations have given durations; inactive operations have zero start and end times. LP pickup durations satisfy $d_o>0$. Thus,
-{{EQ:eq:operation-time-cn}}
-Equation~\eqref{eq:operation-time-cn} fixes the durations of handling, alignment, pressure switching, rotation, and processing; waiting occurs only between operations. Product alignment is activated by $\beta_{pr}$, source-side, ATR, and LL operations by $\beta_{pr}+(1-\sigma)d_{pr}$, and VTR supply and return operations by $v_p$.
+An individual product passes through the AL, upper LL and chamber, then returns via the lower LL to its original LP. Between placement and the next pickup, the AL aligns the wafer, the upper LL pumps down, or the lower LL vents. Travel time separates operations at different locations. A paired pickup or placement requires both wafer operations to occur together.
 
-\noindent\textbf{Route-dependent precedence.}
-Let $\mathcal A$ denote the active precedence arcs in common chamber-operation chains and wafer supply and return routes. Supply and return routes are activated according to source $\chi_{i\varsigma}$ and paired-transport or single-source accompanying choices, where $\varsigma\in\mathcal S$. For $(o,o')\in\mathcal A$, a successor starts after its predecessor ends and the required interval elapses; an active successor also requires an active predecessor:
-{{EQ:eq:precedence-cn}}
-Equation~\eqref{eq:precedence-cn} connects loading, processing, and unloading on selected routes. Times lie in $[0,B]$, and $M$ covers the horizon and required intervals, relaxing conditional timing constraints when inactive.
+\noindent\textbf{Activation and duration.}
+Wafer routes, chamber cycles and transfer choices activate operations. Each active operation has a specified duration, with $d_o>0$ for a pickup at an LP. Inactive operations have zero start and end times:
+\begin{equation}
+0\le s_o\le B b_o,\qquad
+0\le e_o\le B b_o,\qquad
+e_o=s_o+d_ob_o.
+\label{eq:operation-time-cn}
+\end{equation}
+Equation~\eqref{eq:operation-time-cn} fixes durations of handling, alignment, pressure change, rotation and processing. Waiting can occur between these operations. Product alignment is activated by $\beta_{pr}$, source-side, ATR and load-lock operations by $\beta_{pr}+(1-\sigma)d_{pr}$, and VTR supply and return by $v_p$.
 
-\noindent\textbf{Synchronization of single-wafer, batch, and paired-transport operations.}
-For operations $o,o'$ requiring synchronization, $x$ denotes the relevant existing binary variable for LP membership, cycle occupancy, or transport selection:
-{{EQ:eq:stage-link-cn}}
-Equation~\eqref{eq:stage-link-cn} makes an individual-wafer operation start and end simultaneously with its corresponding batch operation. For paired transport, set $x=\gamma_{pa}$, $o=((p,0),a)$, and $o'=((p,1),a)$. The robot executes one common operation when synchronized, maintaining exclusion with other operations while the two wafers occupy separate carrying positions. Otherwise, the operations are ordered separately by Eq.~\eqref{eq:resource-order-cn}.
+\noindent\textbf{Precedence along a route.}
+Let $\mathcal A$ contain the active precedence arcs for chamber operations and for wafer supply and return. The source $\chi_{i\varsigma}$, $\varsigma\in\mathcal S$, paired transfers and the single-source inbound choice select the applicable route arcs. For $(o,o')\in\mathcal A$, an active successor requires its predecessor and must start after that operation finishes plus the required separation:
+\begin{equation}
+b_{o'}\le b_o,\qquad
+s_{o'}\ge e_o+\delta_{oo'}-M(2-b_o-b_{o'}).
+\label{eq:precedence-cn}
+\end{equation}
+Equation~\eqref{eq:precedence-cn} links loading, processing and unloading along the chosen route. An arc activated by a binary condition $z$ is written $s_{o'}\ge e_o+\delta_{oo'}-M(1-z)$. All times lie in $[0,B]$. The definition of $M$ covers the horizon and required separation when a condition is inactive.
 
-\noindent\textbf{Loading a single-source product--auxiliary pair.}
-Route indices $i_{\rm P},i_{\rm D}$ identify the product and auxiliary routes, where $\mathrm P,\mathrm D$ are type labels. Binary variables $\gamma^{\rm early}_p,\gamma^{\rm late}_p,\gamma_{p,\mathrm{in}}$ select early auxiliary entry into the LL, auxiliary pickup after product placement on AL, or auxiliary entry together with the product. Operation labels $\mathrm{ALput,ALpick,LLput}$ denote placement on AL, retrieval from AL, and placement in the upper LL. Exactly one route is selected:
-{{EQ:eq:single-source-accompany-cn}}
-For accompanying entry, ATR carries the auxiliary before placing the product on AL, then places both wafers into the upper LL after alignment. The auxiliary occupies an ATR carrying position continuously from source pickup to completion of LL placement. The product releases its ATR position while on AL and occupies a position again after retrieval. For separate auxiliary supply, source pickup is connected directly to LL entry.
+\noindent\textbf{Synchronization of individual, batch and paired operations.}
+For operations $o,o'$ that must be synchronized, let $x$ represent the relevant LP assignment, cycle occupancy or transfer-selection variable. We impose
+\begin{equation}
+\begin{aligned}
+-M(1-x)&\le s_o-s_{o'}\le M(1-x),\\
+-M(1-x)&\le e_o-e_{o'}\le M(1-x).
+\end{aligned}
+\label{eq:stage-link-cn}
+\end{equation}
+Equation~\eqref{eq:stage-link-cn} aligns the start and end of the individual operation with those of its batch operation. For paired transport, take $x=\gamma_{pa}$, $o=((p,0),a)$ and $o'=((p,1),a)$. A synchronized transfer occupies the robot as one operation, exclusive of other operations, while each wafer occupies its own holding position. The aligner handles one wafer at a time.
 
-\subsection{Processing modes and chamber cleaning}
+\noindent\textbf{Single-source inbound routes for a product--auxiliary pair.}
+Let $i_{\rm P}$ and $i_{\rm D}$ denote the product and auxiliary routes of a single-source pair. The indicators $\gamma^{\rm early}_p$, $\gamma^{\rm late}_p$ and $\gamma_{p,\mathrm{in}}$ select, respectively, an auxiliary entering the LL first, an auxiliary picked after the product has been placed on the AL, or joint entry into the LL. The labels $\mathrm{ALput,ALpick,LLput}$ denote placement on the AL, pickup from the AL and placement in the upper LL. Exactly one option is chosen:
+\begin{equation}
+\begin{gathered}
+\gamma^{\rm early}_p+\gamma^{\rm late}_p+\gamma_{p,\mathrm{in}}=1,\\
+\gamma^{\rm early}_p=1\Rightarrow e_{(i_{\rm D},\mathrm{LLput})}\le s_{(i_{\rm P},\mathrm{ALput})},\\
+\gamma^{\rm late}_p=1\Rightarrow s_{(i_{\rm D},\mathrm{pick})}\ge e_{(i_{\rm P},\mathrm{ALput})},\\
+\gamma_{p,\mathrm{in}}=1\ \Longrightarrow
+\begin{cases}
+e_{(i_{\rm D},\mathrm{pick})}\le s_{(i_{\rm P},\mathrm{ALput})},\\
+s_{(i_{\rm D},\mathrm{LLput})}=s_{(i_{\rm P},\mathrm{LLput})},\\
+e_{(i_{\rm D},\mathrm{LLput})}=e_{(i_{\rm P},\mathrm{LLput})},\\
+s_{(i_{\rm P},\mathrm{LLput})}\ge e_{(i_{\rm P},\mathrm{ALpick})}.
+\end{cases}\end{gathered}
+\label{eq:single-source-accompany-cn}
+\end{equation}
+For joint entry, the ATR already holds the auxiliary when the product is placed on the AL and places both wafers in the upper LL together after alignment. The auxiliary occupies an ATR position from the start of its pickup to the end of placement in the LL. The product releases its ATR position while on the AL and occupies one again when the ATR picks it up. An independently supplied auxiliary proceeds directly from pickup to the LL.
+
+\subsection{Production modes and chamber cleaning}
 \label{sec:model-process-cn}
-Building on the pair--cycle assignments in Section~\ref{sec:model-assignment-cn}, this subsection specifies exposure counts, occupancy continuity, rotation and handling sequences, and cleaning boundaries. Time variables follow Section~\ref{sec:model-time-cn}.
 
-\noindent\textbf{Production modes and continuous occupancy.}
-Figures~\ref{fig:chain-zh} and~\ref{fig:parallel-zh} show the event sequences of the two modes. Cycle-occupancy constraints determine exposure counts and continuity.
-{{FIG:fig:chain-zh}}
-{{FIG:fig:parallel-zh}}
-Binary auxiliary variables $A_{pcq},Z_{pcq}$ indicate whether pair $p$ first and last participates in cycle $q$ of chamber $c$. Binary auxiliary variables $A^\psi_{pcq},Z^\psi_{pcq}$ identify these first and last participations for product-containing $2\times2$ pairs. With $X_{pc0}=X_{pc,Q_{\max}+1}=A_{pc,Q_{\max}+1}=0$ and direct substitution of $A_{pc1}=X_{pc1}$,
-{{EQ:eq:cycle-exposures-cn}}
-Equation~\eqref{eq:cycle-exposures-cn} makes every active pair enter a chamber once and participate in one or two consecutive cycles. The first three inequalities give $A_{pcq}=X_{pcq}(1-X_{pc,q-1})$, and the last-participation markers imply $\sum_{c,q}Z_{pcq}=\sum_{c,q}A_{pcq}=v_p$. A product-containing $4\times1$ pair receives one exposure; a product-containing $2\times2$ pair receives two consecutive exposures in the same chamber. Auxiliary-only filling and cleaning pairs participate in one cycle.
 
-\noindent\textbf{Processing duration and cycle sequencing.}
-A cycle starts only after its predecessor ends. Its duration depends on the selected type, giving end time $S_{cq}+\sum_m d_mK_{cqm}$:
-{{EQ:eq:cycle-time-cn}}
-Processing durations are fixed, with waiting confined to intervals between operations. Handling and rotation durations are accounted for by separate events.
+\noindent\textbf{Production modes and consecutive occupancy.}
+Figure~\ref{fig:chain-zh} shows the regular chain operations and both unloading orders at the end of a chain. A front pair containing a product must be unloaded first. If the front pair contains only auxiliaries and the rear pair contains a product, a half-turn can bring the rear pair forward for unloading. A second half-turn brings the auxiliaries back for unloading. Figure~\ref{fig:parallel-zh} shows the regular parallel-processing sequence.
 
-\noindent\textbf{Front/rear occupancy and rotating exchange.}
-The robot accesses only the front side. A newly loaded pair occupies that side, while a pair retained from the previous cycle rotates to the rear. Binary auxiliary variables $\kappa_{cq},\upsilon_{cq}$ indicate whether cycle $q$ retains a pair from $q-1$ and whether both pairs leave after cycle $q$, respectively. Adjacent occupancies satisfy
-{{EQ:eq:cycle-side-cn}}
-Operations $(p,\mathrm{load})$ and $(p,\mathrm{unload})$ load and unload pair $p$. Operations $(c,q,\mathrm{rot-})$ and $(c,q,\mathrm{rot+})$ are half-turns before and after the cycle, activated by $U_{cq}$ and $\upsilon_{cq}$, each lasting $r_c$. Loading and rotation obey the timing constraints
-{{EQ:eq:cycle-load-cn}}
-If both pairs leave, the post-cycle rotation starts after processing ends. Unloading after the final exposure obeys
-{{EQ:eq:cycle-unload-cn}}
-New pairs for the next cycle must wait until all departing pairs from the preceding cycle have been unloaded. For $p,p'\in\mathcal P$ and $q>1$,
-{{EQ:eq:cycle-exchange-cn}}
-When one pair is retained, Eq.~\eqref{eq:cycle-exchange-cn} waits only for the replaced pair. When both depart, it waits for both unloads. Together with VTR exclusion, these constraints govern wafer exchange.
+\begin{figure}[t]
+\centering
+\includegraphics[width=.87\linewidth]{Figure3}\\[-1mm]
+{\small (a) Loading, unloading and rotation during chain processing}\\[1mm]
+\includegraphics[width=\linewidth]{Figure4}\\[-1mm]
+{\small (b) Unloading options when only auxiliaries occupy the front after the last treatment}
+\caption{$2\times2$ chain processing and earliest product unloading at the chain end}
+\label{fig:chain-zh}
+\end{figure}
 
-\noindent\textbf{Cleaning triggers and operation chains.}
-A counter accumulates production cycles since the last cleaning and resets after cleaning. Cleaning is mandatory at the threshold and may occur earlier at admissible processing boundaries. Initial or consecutive cleaning operations are prohibited. With $U_{c,Q_{\max}+1}=0$,
-{{EQ:eq:clean-counter-cn}}
-Equation~\eqref{eq:clean-counter-cn} requires cleaning at the threshold, including after the final production segment. A zero initial count, a pre-cleaning count of at least one, and a reset after cleaning exclude initial and consecutive cleaning. Equations~\eqref{eq:cycle-capacity-cn} and~\eqref{eq:cycle-exposures-cn} require each chained product pair to participate in two consecutive production cycles, preventing intervening cleaning.
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{Figure5}
+\caption{Event sequence for $4\times1$ parallel processing}
+\label{fig:parallel-zh}
+\end{figure}
 
-Cleaning is a full-occupancy cycle of type $m=\mathrm{cl}$ containing two auxiliary-only PW pairs. It uses the loading, unloading, and rotation rules of Eqs.~\eqref{eq:cycle-load-cn}--\eqref{eq:cycle-exchange-cn}: four auxiliaries are loaded on the two sides, cleaned, and unloaded in sequence. Adjacent-cycle exchange constraints require all preceding wafers to be unloaded before cleaning, and all cleaning auxiliaries to be unloaded before wafers for the next cycle enter. VTR exclusion and auxiliary loan--return constraints jointly determine transport and reuse times.
+Binary variables $A_{pcq}$ and $Z_{pcq}$ mark the first and last cycles that pair $p$ occupies in chamber $c$, respectively. Variables $A^\psi_{pcq}$ and $Z^\psi_{pcq}$ mark those cycles for product-containing $2\times2$ pairs. Using the boundary conditions $X_{pc0}=X_{pc,Q_{\max}+1}=A_{pc,Q_{\max}+1}=0$ and substituting $A_{pc1}=X_{pc1}$ gives
+\begin{equation}
+\begin{aligned}
+A_{pcq}&\ge X_{pcq}-X_{pc,q-1}, &A_{pcq}&\le X_{pcq},\\
+A_{pcq}&\le1-X_{pc,q-1},\\
+Z_{pcq}&=X_{pcq}-X_{pc,q+1}+A_{pc,q+1},\\
+\sum_{c,q}X_{pcq}&=v_p+F_p^{\psi}, &\sum_{c,q}A_{pcq}&=v_p,\\
+A^{\psi}_{pcq}&=X_{pcq}-Z_{pcq}, &Z^{\psi}_{pcq}&=X_{pcq}-A_{pcq},\\
+\sum_pA^{\psi}_{pcq}&\le1, &\sum_pZ^{\psi}_{pcq}&\le1.
+\end{aligned}
+\label{eq:cycle-exposures-cn}
+\end{equation}
+Equation~\eqref{eq:cycle-exposures-cn} makes each active pair enter a chamber once and occupy one or two consecutive cycles. The first three inequalities give $A_{pcq}=X_{pcq}(1-X_{pc,q-1})$. Together with the last-cycle indicator they imply $\sum_{c,q}Z_{pcq}=\sum_{c,q}A_{pcq}=v_p$. A product-containing $4\times1$ pair receives one treatment. A product-containing $2\times2$ pair receives two consecutive treatments in the same chamber. Auxiliary-only filler pairs and cleaning pairs each participate in one cycle.
 
-\subsection{Auxiliary reuse and robot and module resources}
+\noindent\textbf{Cycle duration and precedence.}
+An active cycle follows its predecessor, and its type sets the duration. Cycle $(c,q)$ ends at $S_{cq}+\sum_m d_mK_{cqm}$, with
+\begin{equation}
+\begin{aligned}
+S_{cq}&\ge0,\\
+S_{cq}+\sum_m d_mK_{cqm}&\le B U_{cq},\\
+S_{cq}&\ge S_{c,q-1}+\sum_m d_mK_{c,q-1,m}\\
+&\quad-M(1-U_{cq})\qquad(q>1).
+\end{aligned}
+\label{eq:cycle-time-cn}
+\end{equation}
+These constraints fix treatment durations. Waiting is possible between operations, and the separate loading, unloading and rotation events carry their own durations.
+
+\noindent\textbf{Chamber sides, rotation and exchange.}
+Only the front side is accessible. A newly loaded pair occupies the front, and a retained pair rotates to the rear. Binary variables $\kappa_{cq}$ and $\upsilon_{cq}$ indicate, respectively, that cycle $q$ retains a pair from $q-1$ and that both pairs leave after cycle $q$. Consecutive occupancies give
+\begin{equation}
+\begin{aligned}
+\kappa_{cq}&=\sum_p(X_{pcq}-A_{pcq}),\\
+\upsilon_{cq}&=U_{cq}-\sum_p(X_{pcq}-Z_{pcq}),\\
+f_{pcq}&\le A_{pcq},\qquad\sum_pf_{pcq}=U_{cq},\\
+f_{pc,q-1}&\ge X_{pcq}-A_{pcq}\quad(q>1),\\
+f_{pcq}&\ge F_p+K_{cq\psi}+X_{pcq}-2-\kappa_{cq}.
+\end{aligned}
+\label{eq:cycle-side-cn}
+\end{equation}
+Operations $(p,\mathrm{load})$ and $(p,\mathrm{unload})$ load and unload pair $p$. The half-turns $(c,q,\mathrm{rot-})$ and $(c,q,\mathrm{rot+})$ before and after the cycle are activated by $U_{cq}$ and $\upsilon_{cq}$, respectively, and each takes $r_c$. Loading and rotation obey
+\begin{equation}
+\begin{aligned}
+X_{pcq}=1\ \Rightarrow\quad
+&S_{cq}\ge e_{(p,\mathrm{load})},\\
+&s_{(p,\mathrm{unload})}\ge S_{cq}+\sum_m d_mK_{cqm};\\
+A_{pcq}=1,\ f_{pcq}=0\ \Rightarrow\quad
+&e_{(p,\mathrm{load})}\le s_{(c,q,\mathrm{rot-})};\\
+A_{pcq}=1,\ f_{pcq}=1\ \Rightarrow\quad
+&s_{(p,\mathrm{load})}\ge e_{(c,q,\mathrm{rot-})},\\
+&S_{cq}=e_{(p,\mathrm{load})};\\
+\kappa_{cq}=1\ \Rightarrow\quad
+&s_{(c,q,\mathrm{rot-})}\ge S_{c,q-1}\\
+&\qquad+\sum_m d_mK_{c,q-1,m}.
+\end{aligned}
+\label{eq:cycle-load-cn}
+\end{equation}
+When both pairs leave, let $F$ and $B'$ be the front and rear pairs at the end of processing, $u_F,u_{B'}$ their unloads and $R$ the half-turn between unloads. Binary $b_{cq}$ selects a rotation before the first unload. Its eligibility conditions are $b_{cq}\le\upsilon_{cq}$ and, for every $p$, $b_{cq}\le2-f_{pcq}-F_p$ and $b_{cq}\le1-X_{pcq}+f_{pcq}+F_p$. Thus $b_{cq}=1$ is allowed only with auxiliaries alone in front and a product at the rear. It activates an additional half-turn $R_0$ of duration $r_c$ with the chamber full. Let $P$ denote processing in this cycle and $a\prec b$ mean $e_a\le s_b$. The two terminal sequences and the within-chain exchange satisfy
+\begin{equation}
+\begin{aligned}
+\upsilon_{cq}=1,\ b_{cq}=0:\quad
+   &P\prec u_F\prec R\prec u_{B'},\\
+\upsilon_{cq}=1,\ b_{cq}=1:\quad
+   &P\prec R_0\prec u_{B'}\prec R\prec u_F,\\
+Z_{pcq}=1,\ f_{pcq}=0,\ \upsilon_{cq}=0:\quad
+   & (c,q+1,\mathrm{rot-})\prec(p,\mathrm{unload}).
+\end{aligned}
+\label{eq:cycle-unload-cn}
+\end{equation}
+Each half-turn exchanges the front and rear sides and occupies the chamber throughout. When the second sequence shortens the wait of a rear product, the auxiliary pair must still rotate back to the accessible side and be unloaded before new wafers enter.
+
+For $q>1$, a boundary time $0\le V_{cq}\le B$ places all newly loaded pairs after all pairs leaving the preceding cycle:
+\begin{equation}
+\begin{aligned}
+V_{cq}&\ge e_{(p,\mathrm{unload})}-M(1-Z_{pc,q-1}),\\
+s_{(p,\mathrm{load})}&\ge V_{cq}-M(1-A_{pcq})\qquad(\forall p).
+\end{aligned}
+\label{eq:cycle-exchange-cn}
+\end{equation}
+Choosing the last unload completion time in the preceding cycle as $V_{cq}$ satisfies these constraints. Eliminating $V_{cq}$ gives pairwise precedence between every departing and arriving pair. The number of constraints per cycle boundary grows linearly with the number of candidate pairs.
+
+\noindent\textbf{Contamination counter and cleaning sequence.}
+Chamber contamination is represented by the number of production cycles completed since the last cleaning. For active cycle $q$, $n_{cq}$ gives the counter in chamber $c$ after that cycle. The counter starts at zero, increases by one on production and resets to zero after cleaning. Cleaning becomes mandatory at $H$ and may be scheduled earlier at a legal process boundary. Initial and consecutive cleanings are excluded. Taking $U_{c,Q_{\max}+1}=0$ gives
+\begin{equation}
+\begin{aligned}
+0\le n_{cq}&\le H U_{cq},\qquad n_{c0}=0,\\
+K_{cq,\mathrm{cl}}=1&\Rightarrow n_{cq}=0,\\
+U_{cq}=1,\ K_{cq,\mathrm{cl}}=0
+&\Rightarrow n_{cq}=n_{c,q-1}+1,\quad n_{c,q-1}\le H-1,\\
+K_{cq,\mathrm{cl}}=1&\Rightarrow 1\le n_{c,q-1}\le H,\\
+n_{cq}&\le H-1+H U_{c,q+1}.
+\end{aligned}
+\label{eq:clean-counter-cn}
+\end{equation}
+Equation~\eqref{eq:clean-counter-cn} requires cleaning whenever the threshold is reached, including after the last production segment. The zero initial value, positive count before cleaning and reset prevent initial or consecutive cleanings. A chamber can clean only between production runs, after both processing steps of any active chained product.
+
+In a cleaning cycle ($m=\mathrm{cl}$), the VTR removes the preceding wafers and places two auxiliary-only pairs in the chamber. After cleaning, the VTR removes both pairs before placing the next wafers. Each auxiliary becomes available for reuse only after return to storage.
+
+\subsection{Auxiliary-wafer reuse and resource capacity}
 \label{sec:model-resource-cn}
-Physical resource availability is enforced through auxiliary identity assignment, robot carrying-position and module-slot allocation, occupancy exclusion, and residency limits.
 
-\noindent\textbf{Auxiliary assignment and reuse.}
-The two chambers share an auxiliary inventory. A wafer cannot be borrowed again until it has been returned. Each active loan request selects one physical wafer, and the two positions of a pair use different auxiliaries:
-{{EQ:eq:dummy-assign-cn}}
-Equation~\eqref{eq:dummy-assign-cn} assigns exactly one wafer to each auxiliary demand. Shared-resource constraints order loan intervals so that reuse follows return. They also apply across chambers, allowing parallel production with different auxiliary wafers.
+Physical feasibility requires individual auxiliary-wafer assignment, assignment to robot holding positions and module slots, nonoverlapping occupancy and residence limits.
 
-\noindent\textbf{Robot and module capacities.}
-Resource ordering distinguishes actuator exclusion from carrying-position capacity. ATR, VTR, AL, and each rotating chamber have exclusive actuator resources. Robot carrying positions, LL slots, and auxiliary identities are allocated as physical units with capacities specified in Section~\ref{sec:experiment-settings-cn}. Chamber occupancy is already constrained by Eq.~\eqref{eq:cycle-capacity-cn}.
+\noindent\textbf{Auxiliary-wafer inventory and reuse.}
+The two chambers share a finite inventory. Each auxiliary must return before it can be borrowed again. Each active requirement selects one physical wafer, and the two positions of a pair use distinct wafers:
+\begin{equation}
+\sum_{\tau\in\mathcal D}g_{pr\tau}=d_{pr},\qquad
+\sum_{r=0}^{1}g_{pr\tau}\le1.
+\label{eq:dummy-assign-cn}
+\end{equation}
+For a loan interval $o$ at $(p,r)$, set $b_o=d_{pr}$, $\Gamma_o=\mathcal D$ and $h_{o\tau}=g_{pr\tau}$. The chosen auxiliary wafer is unavailable for another loan from the start of pickup in storage until the end of placement back in storage.
 
-Each occupancy interval, whether a wafer-carrying assignment, auxiliary loan, or exclusive actuator use, selects an eligible unit. For an interval in $\mathcal O^{\rm occ}$, $\Gamma_o$ is its eligible-unit set, determined by wafer type and permitted operations. The selected wafer type activates its corresponding resource-selection constraints. Allocation satisfies
-{{EQ:eq:slot-select-cn}}
-Equation~\eqref{eq:slot-select-cn} assigns exactly one eligible unit to an active interval. The end time, including any reset tail, must remain within the common horizon. Paired wafers retain individual carrying-position occupancies, while Eq.~\eqref{eq:stage-link-cn} synchronizes operations. Equation~\eqref{eq:resource-order-cn} prevents overlapping occupancy of the same unit. If $\Gamma_o$ contains one unit, $h_{ou}=b_o$ can be substituted directly.
+\noindent\textbf{Robot and module capacity.}
+The ATR, VTR, AL and each chamber actuator perform at most one operation at a time. Robot holding capacity is modeled separately. Each wafer is assigned a holding position and, where needed, an LL slot and an auxiliary-wafer identity.
 
-LL-slot occupancy starts with placement and ends after pickup and the subsequent reset. Reset restricts reuse of that slot and can overlap the robot's onward transport.
+Each occupancy interval selects one eligible unit, whether it represents a wafer held on a robot, a loan of an auxiliary or exclusive use of an actuator. For $o\in\mathcal O^{\rm occ}$, $\Gamma_o$ is the set of physical units eligible for that operation and wafer type. If the type is a decision, its selection activates the corresponding assignment constraints:
+\begin{equation}
+\sum_{u\in\Gamma_o}h_{ou}=b_o,\qquad 0\le s_o,e_o\le B.
+\label{eq:slot-select-cn}
+\end{equation}
+Equation~\eqref{eq:slot-select-cn} assigns one eligible unit to each active interval, which must end within the horizon even if a reset is needed. Two wafers picked up or placed together occupy distinct holding positions. If $\Gamma_o$ contains only unit $u$, then $h_{ou}=b_o$.
 
-Identifiers $D_1,D_2,C_1,C_2$ denote VTR's two dirty and two clean wafer-carrying positions, respectively. Unprocessed products use $\Gamma_o=\{D_1,D_2\}$; products that have completed all exposures use $\Gamma_o=\{C_1,C_2\}$. Both auxiliary supply and return permit $\Gamma_o=\{D_1,D_2,C_1,C_2\}$. A carrying task lasts from pickup start to placement completion, with the selected carrying position fixed throughout. Occupancies at the same carrying position are mutually exclusive under Eq.~\eqref{eq:resource-order-cn}, with zero repositioning interval for these carrying occupancies. The dirty and clean groups can each hold at most two wafers. Auxiliaries compete for free positions in both groups, and every carrying task must select a specific available carrying position.
+The upper and lower LL each have two independent pressure slots. Pump-down, venting and reset proceed independently for each slot. Occupancy starts when placement begins and ends after retrieval and the slot's reset. While one slot resets, the other slot and the robot that has left can continue working.
 
-\noindent\textbf{Resource exclusion and location-dependent repositioning.}
-Resource precedence comprises given technical orders and service sequences to be decided. Route arcs follow processing requirements; resource-order variables coordinate other conflicting operations. When two occupancies select the same unit, one must start after the other ends and the repositioning or reset interval elapses:
-{{EQ:eq:resource-order-cn}}
-Equation~\eqref{eq:resource-order-cn} prevents overlapping use of the same unit; selecting different units permits parallel occupancy. It applies to robot operations, carrying positions, module slots, chamber actuators, and individual auxiliaries.
+The VTR holds unprocessed products in $D_1,D_2$ ($\Gamma_o=\{D_1,D_2\}$) and processed products in $C_1,C_2$ ($\Gamma_o=\{C_1,C_2\}$). An auxiliary wafer may occupy any of the four positions. Each position holds one wafer from the start of pickup to the end of placement, with zero required separation between successive holding intervals.
 
-Travel times are specified by location pairs. For operations whose chamber is selected through $z_{pc}$, the corresponding travel interval is activated for each candidate chamber combination. Let $p',c'$ denote another pair and its chamber, and let nonnegative constant $\delta^{\rm VTR}_{cc'}$ denote VTR travel time from $c$ to $c'$. For example, when both operations serve pairs $p,p'$ and are active,
-{{EQ:eq:location-travel-cn}}
-Fixed-location operations use Eq.~\eqref{eq:resource-order-cn} directly. Both the source and return LPs of a product are determined by $\sum_jx_{j\ell pr}$; travel intervals depend on the selected locations, and each product returns to its original LP.
+\noindent\textbf{Resource exclusivity and location-dependent travel.}
+Some resource use orders follow directly from process precedence. For the remaining conflicts, the model chooses the service order.
 
-\noindent\textbf{Residency limits and deadlock prevention.}
-For an active route, $\operatorname{in}(i,\rho)$ and $\operatorname{out}(i,\rho)$ index placement into and pickup from module $\rho$. AL and LL limits apply directly between these endpoints. For a process chamber, required processing time is subtracted before limiting nonprocessing residency time. Required processing time includes production and cleaning, but excludes waiting, rotation, and handling; the number of cycles in which a wafer participates is given by Eq.~\eqref{eq:cycle-exposures-cn}. For active route $i=(p,r)$,
-{{EQ:eq:residence-cn}}
-The second group applies to the chamber actually visited. Occupancy ends, including reset tails, remain within $B$.
+For two individual operations $o=((p,0),a)$ and $o'=((p,1),a)$ in the same pair, let $\eta_{oo'}=\gamma_{pa}$ when $a$ permits synchronization, both wafers are active, and the actuator and location coincide. Set $\eta_{oo'}=0$ for all other operation pairs and all holding intervals. When these operations are synchronized, they have the same start and end times, and the following ordering constraints are relaxed for that pair.
+\begin{equation}
+\begin{aligned}
+s_{o'}&\ge e_o+\delta^\rho_{oo'}-M(1-y^\rho_{oo'})-M B_{oo'u},\\
+s_o&\ge e_{o'}+\delta^\rho_{o'o}-My^\rho_{oo'}-M B_{oo'u},\\
+B_{oo'u}&=(1-h_{ou})+(1-h_{o'u})+\eta_{oo'}.
+\end{aligned}
+\label{eq:resource-order-cn}
+\end{equation}
+Equation~\eqref{eq:resource-order-cn} prevents overlapping occupancies on the same unit while allowing simultaneous use of separate units. It applies to robot operations, holding positions, module slots, chamber actuators and physical auxiliary wafers.
 
-Precedence constraints~\eqref{eq:precedence-cn} and resource-order constraints~\eqref{eq:resource-order-cn} provide deadlock avoidance. For a candidate schedule, active operations form nodes, with directed arcs for operation precedence and solver-selected shared-resource orders. Circular waiting among robots, LLs, chambers, or auxiliaries would create a directed cycle. Summing the timing constraints around such a cycle of physical occupancy operations yields a positive duration or switching increment, requiring an operation to start strictly after itself. This contradicts temporal feasibility. Thus, for the given equipment parameters, schedules satisfying these constraints exclude circular waiting among the modeled operations and resources.
+Travel times depend on the pair of locations. When $z_{pc}$ determines the chamber for an operation, the selected chambers activate the corresponding travel interval. Let $p',c'$ denote another pair and its chamber, and let $\delta^{\rm VTR}_{cc'}$ be the nonnegative VTR travel time from $c$ to $c'$. Two active operations serving $p,p'$ then satisfy
+\begin{equation}
+\begin{aligned}
+z_{pc}=z_{p'c'}=1,\ y^{\rm VTR}_{oo'}=1
+\ \Rightarrow\ s_{o'}\ge e_o+\delta^{\rm VTR}_{cc'}.
+\end{aligned}
+\label{eq:location-travel-cn}
+\end{equation}
+For a fixed location, the travel interval is known. For a product, $\sum_j x_{j\ell pr}$ selects the same port for pickup and return, so the selected port and chamber determine the travel interval.
 
-\subsection{Two-stage optimization with priority to batch makespan}
+\noindent\textbf{Residence limits and deadlock prevention.}
+For an active route, $\operatorname{in}(i,\rho)$ and $\operatorname{out}(i,\rho)$ denote placement of wafer $i$ in module $\rho$ and pickup from it. For the AL and LLs, residence runs from the end of placement to the start of pickup. For a chamber, subtract the required duration of processing or cleaning from that interval. Rotation, handling and waiting remain in the nonprocessing residence time. For active route $i=(p,r)$,
+\begin{equation}
+\begin{aligned}
+0\le\;&s_{\operatorname{out}(i,\rho)}-e_{\operatorname{in}(i,\rho)}
+\le\overline R_{i\rho},\quad \rho\notin\mathcal C;\\
+0\le\;&s_{(p,\mathrm{unload})}-e_{(p,\mathrm{load})}
+-d_\zeta\mu_{p\zeta}\\
+&-d_\psi(\mu_{p\psi}+F_p^\psi)
+-d_{\mathrm{cl}}\mu_{p,\mathrm{cl}}\le\overline R_{i\rho},
+\quad\rho\in\mathcal C.
+\end{aligned}
+\label{eq:residence-cn}
+\end{equation}
+The second bound applies to the chamber on the selected route. Every occupancy, including any reset, must end by $B$.
+
+Route precedence and resource ordering exclude circular waits among the modeled operations. Consider the directed graph whose vertices are active operations and whose arcs are route precedences and selected resource orders. A circular wait involving robots, load locks, chambers or auxiliaries would form a directed cycle. Summing its time constraints would give a positive duration or travel increment and require an operation to start strictly later than itself. Such a cycle is incompatible with a feasible schedule under the stated equipment parameters.
+
+\subsection{Batch makespan, product residence and chamber contamination}
 \label{sec:model-objective-cn}
-Let $\mathcal F$ be the joint feasible region and $\xi$ the complete model assignment. The two objectives prioritize batch makespan before waiting time and rhythm deviation.
 
-\noindent\textbf{Stage one: minimizing batch makespan.}
-For position $(p,r)$, operation $o=((p,r),\mathrm{return})$ returns the wafer to its original LP. Only products impose lower bounds on the primary objective:
-{{EQ:eq:primary-objective-cn}}
-The batch makespan is the time when the last product completes its end-to-end route and returns to its LP. Cleaning between production segments affects $C_{\max}$ through subsequent product returns. Terminal cleaning remains in the equipment sequence but does not directly bound $C_{\max}$ when no product processing follows it. It may still compete for shared VTR capacity with products returning from another chamber, so its indirect effect depends on the complete schedule. The equivalent finite-batch output rate is $\mathrm{WPH}=3600N/C_{\max}$, measured in wafers per hour from batch start until the last product returns.
+Each schedule $\xi$ determines when the last product returns, how long products spend in the chambers outside required processing, and how the contamination counter changes with production and cleaning. Let $\mathcal F$ contain the schedules satisfying the physical constraints and metric definitions. The first objective $f_A$ is batch makespan. The second, $f_B$, combines mean residence, a penalty on differences within a recipe, and a chamber contamination term:
+\begin{equation}
+\min_{\xi\in\mathcal F}\ \bigl(f_A(\xi),\,f_B(\xi)\bigr).
+\label{eq:biobjective-cn}
+\end{equation}
+A pair loaded early to allow an earlier cycle start may wait in the chamber while the second pair is loaded and the chamber rotates. One schedule dominates another if both of its objectives are no larger and at least one is smaller. The nondominated feasible objective vectors form the Pareto front. Continuous event times can yield multiple nondominated vectors for a single discrete schedule. For linear objectives, a front can include line segments~\citep{soylu2016biobjective}.
 
-\noindent\textbf{Stage two: restricted timing refinement.}
-Let $\widehat\xi$ be the best feasible stage-one assignment and $\widehat C$ its batch makespan. Index set $\mathcal D_{\rm fix}$ includes components for pairing, chamber assignment, cycle occupancy, auxiliary identities, carrying-position assignments, accompanying entry, and resource orders, excluding pickup/placement synchronization choices that remain adjustable. Stage two adds
-{{EQ:eq:secondary-domain-cn}}
-Equation~\eqref{eq:secondary-domain-cn} fixes components $\xi_d=\widehat\xi_d$, while synchronization of same-location pickup and placement operations and continuous times remain adjustable.
+\paragraph{Batch makespan}
+A product finishes when the ATR has placed it back in the cassette at its original LP. With the batch start as time zero, the last of the $N$ product returns determines the makespan. Let $o=((p,r),\mathrm{return})$ be the final placement at position $(p,r)$, where $\beta_{pr}=1$ identifies a product. The objective and its linear constraints are
+\begin{equation}
+\begin{aligned}
+f_A(\xi)&=C_{\max},\\
+C_{\max}&\ge e_o-M(1-\beta_{pr})\qquad (p,r).
+\end{aligned}
+\label{eq:primary-objective-cn}
+\end{equation}
+Tool release occurs when all operations, auxiliary returns and load-lock resets have finished. Cleaning between production segments can delay subsequent product returns. Terminal cleaning can also affect makespan if its VTR transfers conflict with products leaving the other chamber. Throughput measured up to the last product return is $\mathrm{WPH}=3600N/C_{\max}$ wafers per hour.
 
-Let $\mathcal W$ index waiting terms on supply and return routes. For term $\alpha$, $\omega_\alpha$ is the successor's start time minus the predecessor's end time and any required operation or travel duration. For every wafer, waiting includes the interval from VTR source-pickup completion to pair-loading start and from pair-unloading completion to VTR destination-placement start, after subtracting travel. Atmospheric routes additionally include interoperation intervals after deducting movement, alignment, pumping, or venting. For auxiliaries bypassing AL, the source-pickup-to-upper-LL-placement interval replaces the first three terms. All intervals run from a preceding end to a subsequent start. Chamber residency time after processing and before unloading is governed by cycle, residency, and resource constraints; route waiting and in-chamber residency time are recorded separately.
+\paragraph{Nonprocessing residence, timing consistency and chamber contamination}
+For a product at $i=(p,r)$, $r_i$ is the interval from the end of pair loading to the start of unloading, less the required processing time of the pair. It includes rotation, handling of other wafers and waits for resources. Set $r_i=0$ for auxiliary positions. Group products by recipe and process step in sets $\mathcal I_g$. The two groups here receive either one $4\times1$ treatment or two consecutive $2\times2$ treatments. Each group includes all eligible chambers and source ports.
+\begin{equation}
+\bar r=\frac{1}{N}\sum_i r_i,\qquad
+D_{\rm res}=\max_{g:\,|\mathcal I_g|>0}
+\left(\max_{i\in\mathcal I_g}r_i-\min_{i\in\mathcal I_g}r_i\right).
+\label{eq:secondary-residence-cn}
+\end{equation}
+For each recipe represented in the batch, the model introduces nonnegative lower and upper residence variables $\ell_g,h_g$. If position $i$ holds a product of recipe $g$, then $\ell_g\le r_i\le h_g$ and $D_{\rm res}\ge h_g-\ell_g$. Minimizing the squared penalty gives the largest actual within-recipe range. Required product processing is $d_\zeta$ or $2d_\psi$, according to the assigned recipe. The wafer-weighted mean $\bar r$ measures how long products remain in the chamber's thermal environment beyond scheduled processing. Shortening it limits extra thermal exposure. Differences in loading, unloading and transport timing produce different residence times for nominally identical products. We measure timing consistency by $D_{\rm res}$, the largest within-recipe range. Taking the maximum prevents a batch average from masking the most variable recipe. A singleton group has zero range. Thus $\bar r$ measures average nonprocessing residence, and the squared range penalizes unequal waiting within a recipe.
 
-Total waiting time on the routes is $\sum_{\alpha\in\mathcal W}\omega_\alpha$, denoted by $L_{\rm sum}$ in the experiments. Both products and auxiliaries are included, and simultaneous waits of different wafers are counted separately. Maximum individual waiting time satisfies
-{{EQ:eq:secondary-wait-cn}}
-Set $\mathcal I_{\rm rhythm}$ contains the centers $(c,q)$ of three consecutive production cycles in the same $2\times2$ chain and chamber. A pair is retained at both adjacent boundaries, so $\kappa_{cq}=\kappa_{c,q+1}=1$; evaluation does not cross cleaning or chain boundaries. The set is determined once the cycle structure is fixed. The difference between successive start intervals is $S_{c,q+1}-2S_{cq}+S_{c,q-1}$, whose absolute value is bounded by
-{{EQ:eq:secondary-rhythm-cn}}
-The weighted stage-two objective is
-{{EQ:eq:secondary-objective-cn}}
-Equation~\eqref{eq:secondary-objective-cn} combines total waiting time, maximum individual waiting time, and rhythm deviation. With strictly positive corresponding weights and an optimal stage-two solution, $L_{\max}=\max_\alpha\omega_\alpha$ and $v_{cq}=|S_{c,q+1}-2S_{cq}+S_{c,q-1}|$. Experimental metrics are calculated from actual event times. Equally spaced starts of three consecutive production cycles have zero rhythm deviation. Residency limits remain hard constraints.
+At each actual cleaning, $u_{cq}$ gives the difference between the threshold $H$ and the contamination counter just before cleaning. Otherwise $u_{cq}=0$. With $n_{c0}=0$, we have
+\begin{equation}
+\begin{aligned}
+K_{cq,\mathrm{cl}}=1 &\ \Rightarrow\ u_{cq}=H-n_{c,q-1},\\
+K_{cq,\mathrm{cl}}=0 &\ \Rightarrow\ u_{cq}=0,\qquad
+E=\sum_{c,q}u_{cq}.
+\end{aligned}
+\label{eq:secondary-clean-cn}
+\end{equation}
+Each shortfall counts production cycles left unused at an actual cleaning. $E$ sums these shortfalls over cleaning events. Cleaning exactly at the threshold contributes zero. A final production segment that ends without cleaning contributes zero as well. With time scale $\delta>0$ and weight $\gamma$ on $E$, the process objective is
+\begin{equation}
+f_B(\xi)=\bar r(\xi)+\frac{D_{\rm res}(\xi)^2}{2\delta}+\gamma E(\xi).
+\label{eq:secondary-objective-cn}
+\end{equation}
+All three terms in $f_B$ are in equivalent seconds. For $\delta=d_o^{\rm VTR}=1$~s, reducing the range from 10 to 9~s saves 9.5 equivalent seconds in the squared penalty, whereas reducing it from 1 to 0~s saves 0.5. The penalty gives greater weight to large differences and can favor lengthening some short residence times to equalize waiting. Repeated PECVD deposition leaves residual films on chamber walls, creating a risk of particle contamination~\citep{lee2025wall}. The production-cycle counter represents this accumulation, and $H$ caps it. Early cleaning reduces the counter but occupies the chamber and auxiliary wafers. Among schedules satisfying the threshold, $\gamma=1$~s/cycle adds one equivalent second per unused cycle when cleaning occurs. The actual cleaning duration $d_{\rm cl}$ enters the physical timeline separately.
 
-\section{Reinforcement learning for dual-source mixed-flow cluster tool scheduling}
+The physical constraints and makespan objective give a MILP. Direct minimization of the squared-range objective gives a convex mixed-integer quadratic program. The implementation uses its convex mixed-integer quadratically constrained form with $q\ge0$ and $D_{\rm res}^2\le2\delta q$. Binary synchronization choices remain in the second stage.
+
+
+\section{Two-stage scheduling with reinforcement-learning-based cut selection}
 \label{sec:algorithm-cn}
-Reinforcement learning for dual-source mixed-flow cluster tool scheduling (RL-DMCT) combines structured initialization and learned cut selection, followed by timing refinement and wafer-level decoding. It takes Pjobs, LP inventories, physical-identity mappings, and equipment parameters as inputs and returns wafer operations and scheduling metrics.
 
-\subsection{Model-based structured initialization}
+RL-DMCT (reinforcement learning for dual-source mixed-flow cluster tool scheduling) optimizes batch makespan and the process objective in two stages. Wafer-pair encoding links jobs to model variables. A construction heuristic and a sequence of refinements produce an initial feasible schedule. In Stage~1, SCIP searches the full feasible region for a shorter makespan using the variable-role-aware cut selector RL-DMCT-S. This selector extends HEM's hierarchical count and ordered-subset policies with variable-role features and reranks cuts by role coverage and representativeness~\citep{achterberg2009scip,bestuzheva2023scip,wang2023hem}. When the global makespan gap reaches its threshold, Stage~2 retains the makespan cap and principal discrete decisions and adjusts synchronized handling and continuous event times to reduce the process objective.
+
+\subsection{Wafer-pair encoding and structured initialization}
 \label{sec:pjob-encoding-cn}
-Finding a feasible schedule in the complete model requires simultaneous decisions on pairing, full occupancy, continuous processing, cleaning, and auxiliary reuse, which may consume much of the solve budget. Structured initialization first determines pairing, chamber assignments, and cycles, then adjusts resource orders, reducing the discrete decisions initially searched together and supplying a feasible upper bound for joint search.
 
-An initial solution is constructed in the order of task assignments, PW-pair composition, and processing cycles. Products are divided into consecutive segments and assigned to eligible chambers, paired according to mode, and supplemented with auxiliaries. Production cycles, continuous $2\times2$ chains, and cleaning boundaries are then arranged. Event times are assigned along supply, processing, and return routes using operation durations, robot travel, and resource-release times. The schedule is denoted by $\mathcal S^0$ after checking release order, resource occupancy, and residency conditions. Product pairs, auxiliary identities, chamber assignments, cycle occupancy, and event times are mapped to model variables; resource orders and logical auxiliary values complete the assignment $\xi^0=\mathsf{Enc}(\mathcal S^0)$. Here, $\mathsf{Enc}$ maps a physical schedule to a model assignment.
 
-A structure-preserving binary skeleton (SPBS) progressively releases selected discrete variables to improve the initial schedule by reducing $C_{\max}$. The first layer fixes the principal discrete choices and adjusts continuous times and pickup/placement synchronization. Subsequent layers release VTR orders, LL orders, and the remaining resource orders in turn. The final layer also releases cycle occupancy, front/rear positions, and carrying-position assignments, while retaining pair composition, auxiliary identities, chamber assignments, inventory assignments, and cycle types. Let $t\in\{1,\ldots,5\}$ index layers and $\mathcal F_t$ the discrete components fixed in layer $t$. Relative to its starting assignment $\widehat\xi$, the temporary constraints are
-{{EQ:eq:spbs-fix-cn}}
-Each layer uses at most one-fifth of the initialization-improvement budget and passes its best feasible assignment to the next layer. After full validation, the improved assignment initializes stage one and supplies a feasible upper bound; all temporary fixing constraints are removed. An existing feasible assignment can directly initialize SPBS. Construction and improvement costs are recorded separately from the main solve.
+The procedure partitions products into consecutive groups and assigns them to eligible chambers. It forms pairs by processing mode and fills empty positions with auxiliaries. It then constructs production cycles, consecutive $2\times2$ chains and cleaning boundaries. Along each supply, processing and return route, operation durations, travel times and resource availability determine event start times. The schedule $\mathcal S^0$ is checked for release order, resource use and residence limits. Its product pairings, auxiliary identities, chamber assignments, cycle occupancies and event times determine the corresponding model variables. Completing the resource-order and auxiliary logic variables yields the initial assignment $\xi^0=\mathsf{Enc}(\mathcal S^0)$, where $\mathsf{Enc}$ maps physical schedules to model assignments.
 
-\subsection{Structure-aware reranking and reinforcement-learning-based cut selection}
+A structure-preserving binary skeleton (SPBS) refines the initial schedule by progressively releasing discrete decisions to shorten $C_{\max}$. The first level fixes the principal discrete choices and adjusts event times and pick-and-place synchronization. Subsequent levels release VTR service orders, load-lock orders and then other resource orders. The last level also releases cycle occupancies, chamber sides and holding-position assignments. Pair membership, auxiliary identities, chamber assignments, source inventories and cycle types remain fixed. At level $t\in\{1,\ldots,5\}$, let $\mathcal F_t$ index the discrete components fixed to their values in that level's starting assignment $\widehat\xi$. The temporary constraints are
+\begin{equation}
+\xi_d=\widehat\xi_d\quad(d\in\mathcal F_t),\qquad
+\mathcal F_1\supseteq\cdots\supseteq\mathcal F_5.
+\label{eq:spbs-fix-cn}
+\end{equation}
+Each level receives at most one fifth of the initialization refinement budget and passes its best feasible assignment to the next. The verified result supplies the initial feasible upper bound for Stage~1, where all temporary fixings are removed. An existing feasible assignment can also initialize SPBS. Construction and refinement costs are recorded separately from the main solve.
+
+\subsection{Variable-role features, reinforcement learning and cut reranking}
 \label{sec:hem-extension-cn}
-With a limited number of cuts per round, ranking individual quality alone may select similar candidates. RL-DMCT uses generic quality and variable-role features in HEM's hierarchical count-control and ordered-subset policy~\citep{wang2023hem}, then reranks candidates by variable-role coverage and similarity. Variable-role features enter both the learned policy and reranking scores.
+
+When a solver can add only a limited number of cuts per round, independent quality scores may select several similar candidates. RL-DMCT-S extends HEM~\citep{wang2023hem} with features describing the roles of variables in each cut. After hierarchical selection of the cut count and ordered subset, it reranks candidates using role coverage and similarity. Both the learned policy and the reranking score use the role features.
 
 \paragraph{Variable-role features}
-Each cut has 13 generic features: objective parallelism, efficacy, nonzero-coefficient ratio, integer support ratio, normalized violation, and the mean, maximum, minimum, and standard deviation of both cut and objective coefficients. Ten structural features are added using variable types and objective roles. Let $\mathcal V_a$ be the variables with nonzero coefficients in cut $a$, with coefficient $\alpha_{av}$ for variable $v$. Sets $\mathcal V_g$, $g\in\{1,\ldots,5\}$, denote binary, general integer, continuous objective, continuous auxiliary, and other variables, respectively. Continuous objective variables have nonzero objective coefficients. Role coefficient shares are
-{{EQ:eq:role-profile-cn}}
-These statistics divide the sum of absolute coefficients for each variable type by the total absolute coefficient sum. They remove positive row-scaling effects and are independent of variable-index order within a type. In this model, binary roles include pairing, chamber assignment, and resource ordering; continuous roles include objective quantities and event times. Roles are read directly from MILP variable attributes.
+The policy retains at most 128 candidate cuts ranked by efficacy. Each has 13 generic features: objective parallelism, efficacy, nonzero coefficient fraction, integer support fraction, normalized violation and the mean, maximum, minimum and standard deviation of the cut coefficients and of the objective coefficients. We add 10 structural features based on variable type and objective participation. Let $\mathcal V_a$ contain the variables with nonzero coefficient $\alpha_{av}$ in cut $a$. Sets $\mathcal V_g$, $g=1,\ldots,5$, identify binary, general integer, continuous objective, continuous auxiliary and other variables, respectively. A continuous objective variable has a nonzero objective coefficient. Each role's share of total absolute coefficient mass is
+\begin{equation}
+p_{ag}=\frac{\sum_{v\in\mathcal V_a\cap\mathcal V_g}|\alpha_{av}|}
+{\sum_{v\in\mathcal V_a}|\alpha_{av}|}.
+\label{eq:role-profile-cn}
+\end{equation}
+This share is invariant to positive rescaling of the cut and to the ordering of variables within a role. In the makespan MILP, binary variables include pairing, chamber assignment and resource-order choices, while continuous variables include objective quantities and operation times. Role assignments use the model's variable attributes directly.
 
-The remaining features are the coefficient shares of variables with finite lower and upper bounds, the positive-coefficient share, discrete--continuous coupling $\chi_a$, the largest identified-role share, and normalized role entropy $\mathcal H_a$, giving 23 inputs in total. In particular,
-{{EQ:eq:role-information-cn}}
-The measure $\chi_a$ describes the coefficient shares of discrete and continuous variables in a cut: it equals one when each group accounts for half the total absolute coefficient sum and zero when only one group participates. Entropy $\mathcal H_a$ measures dispersion across five variable types, ranging from zero when all coefficients belong to one type to one when the five shares are equal. These features distinguish candidates with similar generic quality but different variable types and coefficient distributions.
+Besides the five role shares, we compute the coefficient share of variables with finite lower and upper bounds, the positive-coefficient share, a discrete--continuous coupling measure $\chi_a$, the largest recognized-role share and a normalized role entropy $\mathcal H_a$. These complete the 23 inputs, with
+\begin{equation}
+\begin{aligned}
+\chi_a&=4(p_{a1}+p_{a2})(p_{a3}+p_{a4}),\\
+\mathcal H_a&=-\frac{\sum_{g=1}^{5}p_{ag}\log p_{ag}}{\log5}.
+\end{aligned}
+\label{eq:role-information-cn}
+\end{equation}
+The coupling measure $\chi_a$ is one when discrete and continuous variables each account for half the total absolute coefficient mass and zero when only one group participates. The entropy $\mathcal H_a$ measures how widely that mass is distributed across the five roles. It is zero for a single role and one for equal shares. These inputs distinguish candidates with similar generic quality but different variable types and coefficient distributions.
 
-\paragraph{Learned ordering and candidate-pool construction}
-The policy encodes the 23-dimensional features. Its upper level determines the number of cuts, and its lower level generates an ordered subset, with beam search retaining multiple candidate sequences. Let $k$ be the target count after applying solver limits. The policy sequence and a quality ranking are merged, deduplicated, and truncated to at most $2k$ candidates to form pool $\mathcal E$. Raw quality combines efficacy, violation, integer support ratio, non-other-role share, largest identified-role share, and role entropy with weights 0.36, 0.24, 0.15, 0.15, 0.10, and $-0.05$, respectively. The first three terms are min--max normalized over candidates; the combined score is then normalized to $q_a\in[0,1]$, with zero assigned when the range is zero. Policy candidates enter first, followed by additional quality-ranked cuts.
+\paragraph{Learned ordering and candidate pool}
+The upper-level policy caps the selected fraction at 0.2, multiplies by the total number of optional cuts in the round and rounds down. Subject to the number available and the solver limit, it chooses at least two and at most 16 cuts, giving target count $k$. The lower level generates an ordered subset with beam width three. To form the extended pool $\mathcal E$, the procedure merges the policy sequence with a quality ranking, removes duplicates and retains up to $2k$ distinct candidates, giving policy candidates priority. The raw quality score weights efficacy, violation, integer support, the total share of recognized roles, the largest recognized-role share and role entropy by 0.36, 0.24, 0.15, 0.15, 0.10 and $-0.05$, respectively. The first three features are min--max normalized across candidates, as is the final score $q_a\in[0,1]$. A zero range yields zero.
 
-\paragraph{Structural reranking by marginal gain}
-Role shares define coverage, role concentration contributes to quality, and generic features together with role composition define candidate similarity. Let $\pi_a$ be a linearly decreasing prior score along the complete merged order, and let $d_g=\sum_{a\in\mathcal E}p_{ag}/\sum_{a\in\mathcal E,g}p_{ag}$ be the coefficient share of each variable type in the candidate pool. Similarity $s_{ab}$ is the cosine similarity between vectors concatenating the first five generic features and the first four role shares, clipped to $[0,1]$, with diagonal entries equal to one. For selected set $A\subseteq\mathcal E$,
-{{EQ:eq:cut-rerank-cn}}
-The first term combines quality and policy preference. The second accumulates role coverage through a nondecreasing concave function, reducing the marginal benefit of further cuts once a role is well covered. The third is a facility-location representativeness term that covers different feature directions in the pool. Each term is monotone submodular, and their nonnegative weighted sum remains so~\citep{krause2014submodular}. A greedy marginal-gain rule therefore constructs the subset. With $G(\varnothing)=0$, the first $\lceil0.25k\rceil$ policy candidates are first added to the selected set, capped by the actual policy output count. Candidates maximizing $G(A\cup\{a\})-G(A)$ are then added until the target count is reached.
+\paragraph{Reranking by marginal gain}
+Role shares measure coverage, concentration contributes to cut quality, and generic and role features jointly determine similarity. Let $\pi_a$ decrease linearly with position in the full merged ranking. Let $d_g=\sum_{a\in\mathcal E}p_{ag}/\sum_{a\in\mathcal E,g}p_{ag}$ denote role $g$'s share in the pool. The similarity $s_{ab}$ is the cosine between the vectors formed by concatenating the first five generic features and the first four role shares, clipped to $[0,1]$, with diagonal entries one. For a subset $A\subseteq\mathcal E$, the score is
+\begin{equation}
+\begin{aligned}
+G(A)={}&\sum_{a\in A}(0.35q_a+0.20\pi_a)\\
+&+0.25\sum_gd_g\sqrt{\sum_{a\in A}p_{ag}}\\
+&+\frac{0.20}{|\mathcal E|}\sum_{b\in\mathcal E}\max_{a\in A}s_{ba}.
+\end{aligned}
+\label{eq:cut-rerank-cn}
+\end{equation}
+The first term combines cut quality and policy preference. The second accumulates role coverage with a nondecreasing concave function so that further coverage of a well-represented role yields less benefit. The third is a facility-location term that rewards representing distinct candidates in the pool. Each term is monotone and submodular, as is their nonnegative weighted sum~\citep{krause2014submodular}. Set $G(\varnothing)=0$. The selector takes the first $\lceil0.25k\rceil$ policy candidates, limited by the actual policy output, and greedily adds the candidate maximizing $G(A\cup\{a\})-G(A)$ until the target count is reached. Variables of the same type can refer to different wafers or chambers and still yield identical summary features. The submodularity property concerns the selection score $G(A)$.
 
-The policy is trained offline using HEM's hierarchical policy-gradient framework~\citep{wang2023hem}. The upper level samples the cut ratio and the lower level samples an ordered subset. Both use REINFORCE with an exponential-moving-average baseline and the negative primal--dual integral as reward. Parameters remain fixed during inference, which respects the solver's forced-cut and selectable-count limits. The learned component is denoted by RL-DMCT-S; combined with SPBS, it forms RL-DMCT. Training and implementation settings are given in Section~\ref{sec:experiment-settings-cn}.
+The policies are trained offline with HEM's hierarchical policy-gradient framework~\citep{wang2023hem}. The upper policy samples a selection fraction and the lower policy samples an ordered subset. Both use the negative primal--dual integral as reward and are updated by REINFORCE with an exponential moving-average baseline. Inference fixes the network weights and respects the solver's mandatory cuts and optional cut limit.
 
-\subsection{Two-stage scheduling with RL-DMCT}
-\paragraph{Stage one: joint adjustment of pairs, chambers, cycles, and resource orders}
-SCIP minimizes $C_{\max}$ over the complete feasible region using the validated initial assignment~\citep{achterberg2009scip,bestuzheva2023scip}. At cut-selection calls, RL-DMCT extracts features, invokes the trained policy, and reranks candidates. Improving feasible schedules update the incumbent. On termination, the validated assignment $\widehat\xi$, batch makespan $\widehat C$, lower bound, gap, and stopping status are recorded. Refinement proceeds if enabled and an incumbent exists; otherwise, the incumbent or no-incumbent status is returned.
+\subsection{Two-stage search and stopping criteria}
+\label{sec:two-stage-stop-cn}
 
-\paragraph{Stage two: timing refinement with the principal structure retained}
-Starting from $\widehat\xi$, stage two applies the restricted feasible region in Eq.~\eqref{eq:secondary-domain-cn} and the objective for waiting time and rhythm deviation in Eq.~\eqref{eq:secondary-objective-cn}. A fully validated improvement replaces the stage-one schedule before decoding and output.
+\paragraph{Stage~1 makespan optimization}
+SCIP starts from the verified initial assignment and minimizes $f_A=C_{\max}$ over the full feasible set $\mathcal F$. Pairing, chamber assignment, cycle allocation and resource orders can all change. For each cut-selection call, RL-DMCT-S computes candidate features, evaluates the frozen policy and reranks the candidates. Feasible schedules update the upper bound $U_A$, while branch-and-bound yields a global lower bound $L_A$. All $N$ products must use the single aligner in sequence. With the equipment parameters used here, the first product requires at least 7~s to reach the aligner. Placement, alignment and retrieval occupy it for at least 28~s per product. At least 261~s elapse between the last product leaving the aligner and its return after processing. We therefore include $C_{\max}\ge L_{\rm AL}=268+28N$~s. Once a feasible schedule exists and the global makespan gap satisfies $g_A\le\bar g_A$, the algorithm switches objectives. Let $\widehat\xi$ be the shortest-makespan assignment found, and let $\widehat C$ be its last product return time. If the initial schedule already attains $L_{\rm AL}$, the switch can occur before any cut selection.
 
-\subsection{Batch-job decoding and wafer-schedule output}
+\paragraph{Stage~2 process optimization}
+Starting from $\widehat\xi$, the second stage retains its makespan cap and principal discrete choices and solves
+\begin{equation}
+\begin{aligned}
+\min_{\xi\in\mathcal F}\quad & f_B(\xi)\\
+\text{}\quad & C_{\max}\le\widehat C+\varepsilon_C,\\
+&\xi_d=\widehat\xi_d\qquad(d\in\mathcal D_{\rm fix}).
+\end{aligned}
+\label{eq:secondary-domain-cn}
+\end{equation}
+Here $\varepsilon_C=10^{-6}$~s is the tolerance for makespan comparisons. The index set $\mathcal D_{\rm fix}$ includes the principal discrete decisions other than pick-and-place synchronization: pair composition, chamber assignment, cycle occupancy, auxiliary identities, holding positions and resource orders. The cleaning positions and their contamination shortfalls are consequently fixed at the handoff. Individual event times and the choice to synchronize colocated transfers within a pair remain adjustable. The handoff schedule gives the initial upper bound $f_B(\widehat\xi)$. Both $U_B$ and $L_B$ apply to this fixed structure. The term $\gamma E$ is constant there. Its weight can change the choice between different cleaning schedules.
+
+\paragraph{Handoff and termination}
+Let $\bar g_A,\bar g_B$ be the prescribed relative optimality-gap thresholds. Each stage $k\in\{A,B\}$ measures the gap between its feasible upper bound $U_k$ and dual lower bound $L_k$. For finite bounds with $L_k\le U_k$,
+\begin{equation}
+g_k=
+\begin{cases}
+0, & U_k=L_k=0,\\[2pt]
+\dfrac{|U_k-L_k|}{\min\{|U_k|,|L_k|\}}, & U_kL_k>0,\\[5pt]
++\infty, & \text{otherwise}.
+\end{cases}
+\label{eq:stage-relative-gap-cn}
+\end{equation}
+Neither stage has a fixed time limit in gap-controlled runs. Stage~1 switches at $\bar g_A$. For example, with $L_A>0$ and $\bar g_A=0.01\%$, the condition is $U_A\le1.0001L_A$. Equality of $U_A$ and $L_A$ certifies global makespan optimality. Stage~2 stops at $g_B\le\bar g_B$. Equality of $U_B$ and $L_B$ certifies the optimal process objective under the retained makespan cap and discrete structure.
+
+The algorithm decodes the best feasible assignment $\xi^\star$ that respects the makespan cap and has $f_B\le f_B(\widehat\xi)$. In fixed-budget comparisons, each stage instead has a preassigned time limit. At the Stage~1 limit, the best available makespan schedule enters Stage~2, and either stage may stop early on proving optimality. The output is a feasible schedule with priority given to makespan. The second-stage gap bounds the remaining improvement within the retained structure. Comparing different structures requires a separate evaluation at the same makespan.
+
+\subsection{Decoding a wafer-level schedule}
 \label{sec:pjob-decoding-cn}
-Let $\xi^\star$ be the final feasible assignment retained after construction, search, and refinement, and $\mathcal S^\star$ its wafer schedule. The decoding map $\mathsf{Dec}$ recovers physical identities and all event times through $\mathcal S^\star=\mathsf{Dec}(\xi^\star)$. For job $j$, positions satisfying $\sum_\ell x_{j\ell pr}=1$ are sorted by nondecreasing first LP pickup time, breaking ties by source LP, pair index, and within-pair position. Let $i_j^{(k)}$ be the $k$th sorted position. Identity recovery follows
-{{EQ:eq:pjob-decoding-cn}}
-Inventory and release-order constraints preserve source LPs, and tie-breaking makes the mapping deterministic. Recovered identifiers are attached to every event at their positions. Under the encoding conditions in Section~\ref{sec:model-encoding-cn}, decoding changes identities only: chamber assignments, resources, and event times are preserved, as are batch-makespan, waiting-time, and rhythm-deviation metrics.
 
-The decoded table lists each wafer's source, pair, chamber, cycles, and handling events. Independent event replay checks routes, exposure counts, auxiliary reuse, resource capacities, release order, and residency. Outputs include wafer operations, batch makespan and the end of equipment occupancy, waiting time and rhythm deviation metrics, and stage-one bounds, gap, and stopping status.
+The final assignment $\xi^\star$ from construction, search and timing refinement is decoded as $\mathcal S^\star=\mathsf{Dec}(\xi^\star)$, recovering physical wafer identities and all event times. For job $j$, sort the positions satisfying $\sum_\ell x_{j\ell pr}=1$ by nondecreasing start time of the first LP pickup. Break ties by source LP, pair index and within-pair position, in ascending order. Let $i_j^{(k)}$ be the position of the $k$th product in this order. The identity mapping is
+\begin{equation}
+i_j^{(k)}\longmapsto\mathrm{Pjob}_j[k]
+\longmapsto\mathcal L_j[k],\qquad k=1,\ldots,N_j.
+\label{eq:pjob-decoding-cn}
+\end{equation}
+Inventory and release order preserve each product's source port. The tie-breaking rule assigns a unique identifier to the operations at each position. Decoding therefore preserves chamber assignments, resource orders, event times, and the two objective values.
+
+Each decoded schedule is checked against the route, processing, cleaning, auxiliary-reuse, resource-capacity, release-order and residence constraints. Product return times and chamber operations determine its objective values.
 
 \section{Computational experiments and results}
 \label{sec:experiments-cn}
+
+
 \subsection{Experimental settings and evaluation}
 \label{sec:experiment-settings-cn}
-The experiments evaluate two-stage objective optimization, structured initialization, and the incremental contribution of learned cut selection under limited solve budgets. Paired comparisons share the instance, initial schedule, and nominal budget. Two complete schedules additionally illustrate model feasibility.
 
-\paragraph{Equipment parameters}
-Unless stated otherwise, auxiliary inventory is $D=8$ with storage capacity 10, and the cleaning threshold is $H=3$. ATR and VTR hold two and four wafers, respectively; AL holds one, each upper/lower LL has two slots, and each chamber has four positions. Processing durations are $(d_\zeta,d_\psi,d_{\mathrm{cl}})=(180,90,500)$~s. ATR handling, VTR handling, and chamber half-turns take $(d_o^{\rm ATR},d_o^{\rm VTR},r_c)=(4,1,2)$~s; ATR exchange, VTR exchange, and empty ATR travel from LL to LP take $(t_{\rm ATR},t_{\rm VTR},t_{\rm empty})=(3,2,6)$~s. Alignment, pumping, and venting take $(t_{\rm AL},t_{\rm pump},t_{\rm vent})=(20,30,25)$~s, and LL-slot reset durations are $(t_{\rm U}^{\rm reset},t_{\rm L}^{\rm reset})=(30,25)$~s. The horizon is $B=10000$~s, including LL reset completion; refinement uses $(\lambda_1,\lambda_2,\lambda_3)=(1,10,25)$ and $\varepsilon_C=10^{-6}$~s.
+The small-batch lower bounds and attainable schedules allow both terminal unloading orders supported by the tool. The RL-DMCT comparisons then use conventional front-first unloading ($b_{cq}=0$). In these comparisons, each first-stage gap refers to the stated makespan search domain. Each second-stage gap refers to the structure inherited at handoff.
 
-\paragraph{Learning and solver settings}
-The platform runs Windows~11 with 20 logical processors and approximately 32~GB RAM, using Python~3.12.12 and PySCIPOpt~6.1.0. Each solve uses one thread. Training uses five existing MILP scheduling instances with 4--12 products, eight sampled solve attempts per epoch, and a 30~s main-solve limit per attempt. Both policies use a baseline coefficient of 0.9; the upper level is updated every two epochs. Training lasts 60 epochs, with the epoch-60 parameters fixed for evaluation. Inference uses hidden dimension 128, beam width three, at most 128 candidates, and at most 16 selected cuts.
+\paragraph{Equipment and computing environment}
+The experiments ran on Windows~11 with 20 logical processors and approximately 32~GB of RAM. SCIP was called through PySCIPOpt~6.1.0. Learned cut selection used Python~3.12.12, and the projected makespan search used Python~3.13.5 and OR-Tools~9.15.6755. Unless an instance specifies otherwise, the auxiliary inventory contains $D=8$ wafers, the storage capacity is 10 wafers, and the chamber contamination threshold is $H=3$ production cycles. The ATR, VTR, and aligner hold two, four, and one wafer, respectively. Each load lock has two slots, and each process chamber has four positions. Processing durations are $(d_\zeta,d_\psi,d_{\mathrm{cl}})=(180,90,500)$~s. An ATR or VTR pickup or placement takes $d_o^{\rm ATR}=4$~s or $d_o^{\rm VTR}=1$~s, respectively. A chamber half-turn takes $r_c=2$~s. Standard travel times between different locations are $t_{\rm ATR}=3$~s and $t_{\rm VTR}=2$~s. Travel within a location or between the upper and lower load locks takes zero time. An empty ATR moving from a load lock to a load port or the atmospheric auxiliary store for a pickup takes $t_{\rm empty}=6$~s. Alignment, pumping, and venting take $(t_{\rm AL},t_{\rm pump},t_{\rm vent})=(20,30,25)$~s. The upper and lower load-lock slots have reset times $(t_{\rm U}^{\rm reset},t_{\rm L}^{\rm reset})=(30,25)$~s. The scheduling horizon includes these resets. Its upper bound is $B=10000$~s for the two- and four-wafer threshold experiments and $B=100000$~s for their eight- and 16-wafer counterparts and the mixed instances in Table~\ref{tab:matched-objectives-cn}. The squared residence range has time scale $\delta=1$~s, the contamination term has weight $\gamma=1$~s per cycle, and the makespan comparison tolerance is $\varepsilon_C=10^{-6}$~s. Unless indicated otherwise, fixed-budget comparisons report arithmetic means over solver seeds 1, 2, and 3.
 
-Comparisons include SCIP, HEM, RL-DMCT-S, and their SPBS combinations, plus feature extension only, no structural reranking, and greedy decoding in place of beam search. Feature extension only uses an independently trained 23-input network with greedy sequence generation. The other ablations share the RL-DMCT-S parameters and change only the corresponding selection step. These algorithm comparisons retain SCIP's default separation settings.
+\paragraph{Cut-selection training and transfer}
+HEM was trained on 13 general features. The hierarchical policy in RL-DMCT-S was trained separately with 23 inputs. Both used a hidden dimension of 128, the Adam optimizer, and batches of eight. Each of the 60 training epochs comprised four updates. The lower- and upper-level learning rates were $10^{-4}$ and $5\times10^{-4}$, respectively. The reward was the negative primal--dual integral over a 30~s solve, without reward normalization. Table~\ref{tab:mixed-ablation-cn} uses the epoch-60 checkpoints for training seed 1. Training took 469.41~s for RL-DMCT-S and 470.30~s for HEM. Training instances came from an earlier Petri net scheduling model. The available collection includes five instances with product counts $(4,0)$, $(0,4)$, $(4,4)$, $(4,8)$, and $(8,4)$ for the two recipes. We evaluated the trained networks on the joint scheduling model without further training, using the original candidate count, beam width and reranking weights. The supplementary material identifies both trained models.
 
-\paragraph{Comparison protocol}
-Solver seeds are 1, 2, and 3, with means calculated within each instance. Multiple-training-seed comparisons also use training seeds 1, 2, and 3, giving nine runs per learned-method result and three for SCIP. Every reported schedule passes full-model checks and independent event replay; metrics are calculated from event times, and optimality follows the complete stage-one bounds.
+\paragraph{Instances and metrics}
+Batch makespan $f_A$ is the time of the last product return. Individual loading, processing, and unloading events determine mean nonprocessing chamber residence $\bar r$ and the maximum within-recipe residence range $D_{\rm res}$. The sum $E$ of the shortfalls from the contamination threshold at actual cleanings gives the third term $\gamma E$ in $f_B$. Both the module nonprocessing residence limit and the robot holding-time limit are 100~s.
 
-Initialization and cut-selection comparisons in Sections~\ref{sec:algorithm-contribution-cn} and~\ref{sec:journal-transfer-cn} disable stage-two refinement and use a nominal 300~s budget. Without SPBS, all 300~s go to the main solve; with SPBS, 60~s improve initialization and 240~s remain for the main solve, without transferring unused initialization time. SPBS uses matched nonlearning solver settings; learned policies enter only the subsequent main problem. Total elapsed time includes SPBS, the main solve, and validation, while offline preparation of the original schedule is recorded separately. Other stage budgets and actual overruns are stated in the relevant comparisons.
+The threshold experiments use 2, 4, 8, and 16 product wafers. At each size we consider pure $4\times1$, pure $2\times2$, and equal-mix batches. Two-wafer pure batches use LP1 and $(H,D)=(2,4)$. The two-wafer mixed batch uses one port per recipe and $(H,D)=(5,8)$. All remaining threshold instances have $(H,D)=(10,8)$, with equal supply from four ports. For the four-wafer mixed batch, the first two ports supply $4\times1$ products and the other two supply $2\times2$ products. Each port supplies equal numbers of both recipes in the eight- and 16-wafer mixed batches.
 
-\subsection{Using existing structure to reduce time-limited feasible upper bounds}
-\label{sec:structure-comparison-cn}
-This experiment evaluates whether existing schedule structure helps reduce batch makespan within a limited budget. Four dual-source mixed-recipe instances combine $N\in\{4,8\}$ and $H\in\{3,10\}$. Joint search, fixed initial structure, and fixed-then-joint search are compared in 36 runs. For each instance and seed, all strategies use the same initial schedule and a 300~s primary-solve budget; fixed-then-joint search allocates 60 and 240~s to its two parts. Offline initialization and model-construction times are recorded separately. Table~\ref{tab:structure-ablation-cn} compares batch makespans.
-{{TABLE:tab:structure-ablation-cn}}
-As shown in Table~\ref{tab:structure-ablation-cn}, fixing structure produces lower mean feasible upper bounds than direct joint search in all four instances. For eight products and $H=10$, the mean decreases from 1720.00 to 1249.33~s. Fixed-then-joint search matches fixed-structure search only for four products and $H=10$ and has higher mean bounds in the other three cases. Within this 300~s budget, timing optimization around an existing structure is more effective than expanding discrete search. The joint model also provides valid lower bounds for the complete problem.
+\subsection{Terminal unloading order and singleton Pareto fronts}
+\label{sec:structural-front-cn}
 
-\subsection{Two-stage objective comparison, timing refinement, and rhythm-weight ablation}
+\noindent\textbf{Proposition 1 (residence lower bound for chained processing).}\quad
+Let $N_\psi$ of the $N$ products use the $2\times2$ recipe. Under the processing rules and equipment parameters studied here, every such product incurs at least $2r_c+2d_o^{\rm VTR}=6$~s of nonprocessing chamber residence. For $\delta>0$ and $\gamma\ge0$, every feasible schedule satisfies $f_B\ge(6\,\mathrm{s})N_\psi/N$.
+
+\noindent\textit{Proof.}
+A chained product undergoes its first processing step at the front of the chamber. Before the second step, the chamber makes a half-turn, the previously rear pair is unloaded, and the next pair is loaded. This takes at least $r_c+2d_o^{\rm VTR}=4$~s. The product completes the second step at the rear and requires another half-turn before unloading. For an interior product this half-turn occurs at the next exchange. A terminal product can rotate immediately if the front pair consists entirely of auxiliaries. Both incur at least $r_c=2$~s more. Averaging over products and using the nonnegativity of parallel-product residence, the range penalty, and the contamination term gives the bound. If all chained products incur 6~s and all parallel products incur zero, both within-recipe ranges vanish. The bound is then attained whenever $\gamma E=0$.
+
+\paragraph{Small-batch makespan bounds}
+The aligner capacity bound $C_{\max}\ge268+28N$ gives 324~s for two products. For four and eight products, an event projection retains product pairing, chamber and cycle assignments, choice of chamber side, product routes, and resource capacities. It relaxes occupancy by auxiliaries and cleaning operations. Rear products must still rotate for at least 2~s after final processing. Every feasible solution of the original model projects to a feasible assignment, so the optimum of the projection bounds the original makespan from below.
+
+Let $C$ be a candidate makespan limit and $q_c$ the number of production cycles in chamber $c$. The earliest a product can finish loading into a chamber is 76~s, and return takes at least 40~s after a production cycle. Each cycle lasts at least 90~s, with no overlap in a chamber, so $90q_c\le C-116$. Four candidate cycles per chamber suffice for $C\le552$~s. With the discrete choices fixed, the integer difference constraints $t_j\ge t_i+d$ give $\lfloor t_j\rfloor\ge\lfloor t_i\rfloor+d$. Rounding all times down therefore preserves feasibility. The four-wafer projection is infeasible at 396~s, and the eight-wafer projection has optimum 552~s. The corresponding lower bounds for the original continuous-time model are 397 and 552~s.
+
+\noindent\textbf{Corollary (complete Pareto fronts for small equal-mix batches).}\quad
+Consider dual-source supply with eight auxiliary wafers and both chambers eligible for both recipes. In the two- and four-product instances each active port supplies one recipe. In the eight-product instance each of four ports supplies one product of each recipe. With objectives expressed in seconds for makespan and equivalent seconds for the process objective, the nondominated set is $\{(324,3)\}$ for two products at $H=3$. For four and eight products it is $\{(397,3)\}$ and $\{(552,3)\}$, respectively, at both $H=3$ and $H=10$. Each instance has $N_\psi=N/2$, so Proposition~1 gives a process-objective lower bound of 3. The following schedules attain both lower bounds and hence dominate every distinct feasible objective vector for the same instance.
+
+Starting from a conventional schedule for two or four products, we kept the original makespan cap, pairings, chamber assignments, and cycle occupancies, and allowed the transport order and terminal unloading order to change. In the four-product solution, CH2 finishes processing at 290~s, turns, and unloads the products at 292--293~s. It turns back and unloads the auxiliaries at 343--344~s. This schedule is feasible at both contamination thresholds.
+
+For eight products we first changed only the terminal unloading order in CH2. Processing ends at 448~s. After a half-turn, the products are unloaded at 450--451~s. The chamber turns back and the auxiliaries are unloaded at 457--458~s. Residence times of the four chained products change from $(6,6,7,7)$ to $(6,6,6,6)$~s. The four parallel products retain zero residence. At both thresholds the makespan remains 553~s and the process objective falls from 3.75 to 3.
+
+At $H=10$, retaining the original product supply and processing start times, prescribing the individual residence times, and rescheduling terminal handling produces $(552,3)$. In the 553~s schedule, load-lock reset finishes at 564~s. In the 552~s schedule, the last auxiliary pair returns to vacuum storage at 658~s, delaying tool release by 94~s. At $H=3$, advancing the lower-load-lock placement and pickup and the cassette placement of the last two product pairs by 1~s gives $(552,3)$ from the 553~s schedule. CH2 still cleans from 598 to 1098~s and tool release remains at 1108~s.
+
+\subsection{Handoff thresholds and the fixed-structure process objective}
+\label{sec:gap-switch-results-cn}
+
+The makespan threshold $\bar g_A$ determines when to hand off the pairing and resource order. The process-objective threshold $\bar g_B$ sets the timing optimization accuracy within that structure. Each threshold takes values of $10\%$, $1\%$, and $0.01\%$, giving nine combinations per instance. For solver seed 1 the handoff is the first schedule meeting the makespan threshold, either during search or when a feasible schedule and a projected lower bound already meet it. For a given handoff, stage two returns an existing schedule if a valid bound certifies the requested $\bar g_B$. Otherwise it reoptimizes the timing to that gap.
+
+Handoffs came from search after hierarchical initialization or from previously identified feasible schedules. For eight and 16 wafers, relaxations retaining product handling or processing patterns provide makespan lower bounds. Complete schedules for the original model supply the feasible upper bounds. For the eight-wafer mixed batch, a feasible schedule from seed 2 initialized the seed-1 search on the same configuration. Residence constraints and linear supporting bounds on the squared range yield process-objective lower bounds.
+
+\begin{table}[!t]
+\centering\footnotesize
+\caption{Stage gap thresholds and objective values under front-first unloading}
+\label{tab:certified-grid-cn}
+\setlength{\tabcolsep}{2.4pt}
+\renewcommand{\arraystretch}{1.0}
+\begin{tabular}{@{}ccccccc@{}}\toprule
+\multirow{2}{*}{Wafers} & \multirow{2}{*}{Recipe} & \multirow{2}{*}{$\bar g_A$ (\%)} & \multirow{2}{*}{$f_A$ (s)} & \multicolumn{3}{c}{$f_B$ (equiv.\ s)}\\
+\cmidrule(l){5-7}
+ & & & & $\bar g_B{=}10\%$ & $\bar g_B{=}1\%$ & $\bar g_B{=}0.01\%$\\\midrule
+\multirow{9}{*}{2} & \multirow{3}{*}{$4\times1$} & 10 & 324.00 & 0.00 & 0.00 & 0.00\\
+ &  & 1 & 324.00 & 0.00 & 0.00 & 0.00\\
+ &  & 0.01 & 324.00 & 0.00 & 0.00 & 0.00\\
+\cmidrule(l){2-7}
+ & \multirow{3}{*}{$2\times2$} & 10 & 337.00 & 13.00 & 13.00 & 13.00\\
+ &  & 1 & 331.00 & 7.00 & 7.00 & 7.00\\
+ &  & 0.01 & 331.00 & 7.00 & 7.00 & 7.00\\
+\cmidrule(l){2-7}
+ & \multirow{3}{*}{Mixed} & 10 & 327.00 & 6.50 & 6.50 & 6.50\\
+ &  & 1 & 327.00 & 6.50 & 6.50 & 6.50\\
+ &  & 0.01 & 324.00 & 5.00 & 5.00 & 5.00\\
+\midrule
+\multirow{9}{*}{4} & \multirow{3}{*}{$4\times1$} & 10 & 404.00 & 45.00 & 45.00 & 45.00\\
+ &  & 1 & 397.00 & 45.00 & 45.00 & 45.00\\
+ &  & 0.01 & 397.00 & 45.00 & 45.00 & 45.00\\
+\cmidrule(l){2-7}
+ & \multirow{3}{*}{$2\times2$} & 10 & 427.00 & 25.00 & 25.00 & 25.00\\
+ &  & 1 & 404.00 & 43.00 & 43.00 & 43.00\\
+ &  & 0.01 & 404.00 & 43.00 & 43.00 & 43.00\\
+\cmidrule(l){2-7}
+ & \multirow{3}{*}{Mixed} & 10 & 406.00 & 11.00 & 11.00 & 11.00\\
+ &  & 1 & 397.00 & 3.50 & 3.50 & 3.50\\
+ &  & 0.01 & 397.00 & 3.50 & 3.50 & 3.50\\
+\midrule
+\multirow{9}{*}{8} & \multirow{3}{*}{$4\times1$} & 10 & 575.00 & 1310.87 & 1310.87 & 1310.87\\
+ &  & 1 & 571.00 & 1261.37 & 1211.62 & 1211.62\\
+ &  & 0.01 & 566.00 & 1523.62 & 1469.12 & 1469.12\\
+\cmidrule(l){2-7}
+ & \multirow{3}{*}{$2\times2$} & 10 & 565.00 & 236.50 & 236.50 & 236.50\\
+ &  & 1 & 549.00 & 39.87 & 39.87 & 39.87\\
+ &  & 0.01 & 544.00 & 86.87 & 86.87 & 86.87\\
+\cmidrule(l){2-7}
+ & \multirow{3}{*}{Mixed} & 10 & 570.00 & 13.62 & 13.62 & 13.62\\
+ &  & 1 & 556.00 & 11.75 & 11.75 & 11.75\\
+ &  & 0.01 & 553.00 & 11.75 & 11.75 & 11.75\\
+\midrule
+\multirow{9}{*}{16} & \multirow{3}{*}{$4\times1$} & 10 & 882.00 & 1311.12 & 1294.47 & 1294.47\\
+ &  & 1 & 830.00 & 1641.00 & 1584.25 & 1584.25\\
+ &  & 0.01 & 828.00 & 732.00 & 694.06 & 694.06\\
+\cmidrule(l){2-7}
+ & \multirow{3}{*}{$2\times2$} & 10 & 885.00 & 455.35 & 455.35 & 455.35\\
+ &  & 1 & 805.00 & 1881.81 & 1821.00 & 1821.00\\
+ &  & 0.01 & 805.00 & 1881.81 & 1821.00 & 1821.00\\
+\cmidrule(l){2-7}
+ & \multirow{3}{*}{Mixed} & 10 & 870.00 & 1471.75 & 1471.75 & 1471.75\\
+ &  & 1 & 817.00 & 1026.50 & 981.62 & 981.62\\
+ &  & 0.01 & 810.00 & 978.37 & 934.50 & 934.50\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Each row of Table~\ref{tab:certified-grid-cn} gives makespan $f_A$ at one first-stage threshold $\bar g_A$ and the corresponding process objective $f_B$ at each of three second-stage thresholds $\bar g_B$. Across the 108 threshold combinations, the achieved relative gaps ranged from 0 to 9.94\% in stage one and from 0 to 8.66\% in stage two. In 45 combinations the handoff schedule and an existing lower bound already met the second threshold. In 33 the solver stopped at the requested gap, and in 30 it proved optimality within the handoff structure. Additional second-stage solver time was 0--5~s, excluding initialization, external lower bounds and shared first-stage search. The supplementary data give the objective bounds and timing definitions for each combination.
+
+Holding $\bar g_B$ fixed and tightening $\bar g_A$ at some point reduced makespan while increasing the process objective in five of the twelve instances: the four-wafer pure $2\times2$ batch and both pure recipes at eight and 16 wafers. In the four-wafer pure $2\times2$ batch with $\bar g_B=1\%$, shortening makespan from 427 to 404~s changed the residence times from $(10,10,15,15)$ to $(7,7,15,15)$~s. Products from LP3 and LP4 each saved 3~s, while those from LP1 and LP2 remained at 15~s. The increase in the range penalty outweighed the reduction in the mean, raising the process objective from 25 to 43 equivalent seconds. Neither schedule cleans early.
+
+The search can also replace a schedule that is worse on both objectives. In the eight-wafer pure $2\times2$ batch at $\bar g_B=1\%$, both objectives initially fell. When makespan then fell from 549 to 544~s, the process objective rose from 39.87 to 86.87 equivalent seconds. In the 16-wafer mixed batch both objectives improved at successive handoffs. These changes depend on the pairing and resource order found in the search. Establishing that a process penalty is unavoidable requires comparing the best attainable process objective over all structures at the specified makespan.
+
+For 16 wafers under conventional unloading, enumeration of 24 chamber occupancy and cycle-count patterns gives a lower bound of 828~s for pure $4\times1$, and a product-route projection gives 805~s for pure $2\times2$. For the equal-mix batch all 35 candidate patterns are infeasible at 809~s. All durations and minimum time differences are integer seconds. Rounding event times down at fixed operation order would convert any continuous makespan below 810~s into an integer makespan of at most 809~s. Thus 810~s is a lower bound. Product returns in complete schedules match all three bounds, establishing first-stage optima of 828, 805, and 810~s. For pure $2\times2$, the same 805~s handoff meets both the $1\%$ and $0.01\%$ thresholds. To select thresholds with makespan priority, we normalized each objective by its lowest value over the nine combinations for that instance, using a divisor of 1~s for a zero minimum. With equal instance weights, we first minimized mean normalized makespan and then mean normalized process objective, rounding means to six decimal places and choosing the looser threshold in a tie. At $\bar g_A=0.01\%$ the mean normalized makespan was lowest (1.000000). Here $\bar g_B=1\%$ and $0.01\%$ both gave the lowest mean normalized process objective (1.342529), so we selected $1\%$. Computing time was outside this selection criterion.
+
+\subsection{Two-stage results and Pareto trade-offs}
 \label{sec:stage2-validation-cn}
-Equal-budget objective comparisons, refinement of the same schedule, and rhythm-weight ablation respectively examine time-limited solution quality, waiting reduction under a retained batch-makespan bound, and the tradeoff between rhythm deviation and waiting time.
 
-\paragraph{Time-limited comparison of two-stage and normalized joint objectives}
-Let $f_A=C_{\max}$ be the batch-makespan objective and $f_B$ the objective for waiting time and rhythm deviation in Eq.~\eqref{eq:secondary-objective-cn}. The two-stage procedure optimizes $f_A$ before $f_B$, whereas the joint procedure optimizes both simultaneously. To place the two objectives on comparable numerical scales, the joint objective is
+Table~\ref{tab:matched-objectives-cn} compares makespan-only optimization, a representative schedule attaining the minimum $f_B$, and two-stage RL-DMCT for equal-mix batches. For each configuration the minimum-$f_B$ column reports one feasible schedule attaining the conventional-unloading process lower bound. Its $f_A$ is its actual makespan. Other schedules with the same $f_B$ may have different makespans. Makespan-only and two-stage results are paired by solver seed and averaged over the same three seeds. In the 16-wafer instances, all three seeds start from the shortest verified schedule in the feasible pool for that configuration and use the same conventional-unloading makespan lower bound. A qualifying initial schedule passes directly to stage two, which retains the handoff structure and makespan cap. The relative gap threshold is $1\%$ in each stage. Units are seconds for $f_A$ and equivalent seconds for $f_B$.
+
+\begin{table}[!htbp]\centering\small
+\caption{Single-objective and two-stage schedules for mixed batches under conventional unloading}
+\label{tab:matched-objectives-cn}
+\setlength{\tabcolsep}{3.3pt}
+\begin{tabular}{@{}*{8}{c}@{}}\toprule
+\multirow{2}{*}{Wafers} & \multirow{2}{*}{$H$} & \multicolumn{2}{c}{$f_A$ only} & \multicolumn{2}{c}{Minimum $f_B$} & \multicolumn{2}{c}{RL-DMCT}\\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(l){7-8}
+ & & $f_A$ & $f_B$ & $f_A$ & $f_B$ & $f_A$ & $f_B$\\\midrule
+2 & 3 & 324 & 5 & 324 & 3.5000 & 324 & 5\\
+4 & 3 & 397 & 5.5 & 417 & 3.4688 & 397 & 3.5\\
+4 & 10 & 397 & 5.5 & 417 & 3.4688 & 397 & 3.5\\
+8 & 3 & 553 & 153.042 & 553.75 & 3.4688 & 553 & 80.75\\
+8 & 10 & 553 & 74.25 & 576.625 & 3.4297 & 553 & 53.042\\
+16 & 3 & 1231 & 4073.875 & 2264.0625 & 3.4512 & 1231 & 553.75\\
+16 & 10 & 810 & 2681 & 1446.125 & 3.4043 & 810 & 934.5\\
+\bottomrule\end{tabular}\end{table}
+
+\paragraph{Effect of the second stage}
+In six of the seven configurations, the second stage reduced the mean process objective at the same makespan. The two-wafer case was unchanged. In the 16-wafer mixed batch at $H=10$, retiming within the 810~s makespan reduced the mean process objective from 2681 to 934.5 equivalent seconds (65.14\%) by shortening mean residence and reducing within-recipe variation.
+
+\paragraph{Structural choices at the same makespan}
+The two-wafer schedule attains 5 equivalent seconds at 324~s, while another schedule attains 3.5 at the same makespan. At 553~s, the two-stage means for eight products are 80.75 and 53.042 at $H=3$ and 10. Search over alternative structures attains 3.75 at both thresholds, differences of 77.00 and 49.292 equivalent seconds. For 16 products at $H=10$, the gap between the two-stage mean of 934.5 and an alternative schedule scoring 457.625 is 476.875 equivalent seconds at 810~s. The latter schedule meets the same conventional-unloading deadline. Each difference compares a three-seed mean with one feasible alternative and quantifies an improvement available by changing structure. A second-stage optimality gap measures only how much can be gained within the handoff structure.
+
+Cycle capacity helps explain the makespan difference for 16 products. At $H=3$, the two chambers can run six production cycles in total before their first cleanings. Eight $4\times1$ products require at least two cycles. Even as a single chain, eight $2\times2$ products require at least five. Production must therefore continue after an in-batch cleaning. The minimum conventional makespan lies between 1219 and 1231~s. At $H=10$ the same product mix can return in 810~s. For both 16-wafer handoff schedules, the second stage shortened mean residence and reduced the within-recipe range at the inherited makespan and resource order.
+
+\paragraph{Releasing resource order at a fixed makespan}
+We compared three search domains on the two- and four-wafer mixed instances. Makespan was capped at 324 and 397~s, respectively, with tolerance $2\times10^{-6}$~s. For each batch, three searches had the same initial conventional-unloading schedule, candidate domain, and 40~s solve budget. The two- and four-wafer domains contained five and seven candidate PW pairs, respectively, with two cycles per chamber. When only synchronization and timings could change, the optimal process objectives were 5 and 3.5 equivalent seconds. Allowing handling order and terminal unloading order to change, while fixing pairings, chamber assignments, and cycle occupancies, produced schedules with a process objective of 3 in 3 and 10~s, respectively. Both attain the bound in Proposition~1.
+
+Opening pairing, chamber assignments, and cycle occupancy as well exhausted the 40~s budget in both instances, returning objectives of 5 and 3.5 with a dual lower bound of 3 in each. The better schedules from the narrower search remained feasible, but the solver did not recover them in the larger domain from the same initial schedule and budget. In these instances, changing selected resource orders recovered an improvement lost under fixed order more efficiently than opening every decision at once.
+
+\paragraph{Pareto trade-offs under conventional unloading}
+Let $m=N_\psi>0$ chained products form $s$ chains, with $k$ products in terminal pairs. The contamination threshold $H$ permits at most $2(H-2)$ products per chain before its terminal pair, and $s\le k$. Thus $m\le2(H-2)s+k\le(2H-3)k$ and $k\ge k_0=\lceil m/(2H-3)\rceil$. Under conventional unloading each terminal product incurs at least 7~s of residence, so every other product of that recipe incurs at least $7-D_{\rm res}$. Setting $a=(m-k_0)/N$, completing the square, and using $E\ge0$ gives, with durations in seconds,
 \[
-\min\ J_\rho=\frac{f_A}{f_A^0}+\rho\frac{f_B}{f_B^0},
-\qquad \rho\in\{0.01,0.1,1\},
+\bar r+aD_{\rm res}\ge\frac{7m}{N},
+\qquad
+f_B\ge\frac{7m}{N}-\frac{\delta a^2}{2}.
 \]
-where $f_A^0$ and $f_B^0$ are the corresponding values of the same initial schedule. Each normalization denominator has a lower limit of one and is fixed before solving.
+For 16 products in an equal mix, schedules at $H=3$ and $H=10$ attain this bound at 3.451171875 and 3.404296875 equivalent seconds, respectively.
 
-Both procedures use SCIP, the same initial schedule and solver seed, and a total nominal solve budget of 300~s. The two-stage procedure allocates 270~s to minimizing $f_A$, then 30~s to minimizing $f_B$ while preserving the makespan bound and principal discrete structure. The joint procedure uses all 300~s for $J_\rho$. Model construction and solution validation times are recorded separately. The comparison includes four mixed-recipe products, 16 pure $4\times1$ products, and 16 pure $2\times2$ products. The last instance retains the schedule and parameters of the rhythm-weight comparison; the other two use the default process settings, with matched comparisons within each configuration. Three solver seeds are specified per instance, and objectives are calculated from the event times of the final schedules. Table~\ref{tab:joint-two-stage-cn} reports means over valid same-seed pairs within the solve budget.
+Figure~\ref{fig:frontier-eight-cn} shows two continuous segments of the conventional-unloading front for each of the 4-, 8-, and 16-wafer instances. The four-product pure chained and 16-product mixed instances were evaluated at 70 and 173 makespan caps, respectively. Conventional-unloading lower bounds are available for the four-product pure chained and eight-product mixed segments and for the 810--811~s segment of the 16-product mixed instance. Its remaining segments were selected by dominance among verified schedules. The three segments for four pure chained products correspond to $j=1,2,3$ products leaving before the terminal pair. Terminal residence is 7~s and the other products approach 7~s together, giving $f_B=7-jD_{\rm res}/4+D_{\rm res}^2/2$.
 
-{{TABLE:tab:joint-two-stage-cn}}
+Both eight-wafer equal-mix configurations ($H=3,10$) admit the family
+\begin{equation}
+\begin{aligned}
+(f_A,f_B)&=(553+t,\;3.75-0.75t+0.5t^2),\\
+&\qquad 0\le t\le0.75 .
+\end{aligned}
+\label{eq:frontier-eight-cn}
+\end{equation}
+The four parallel products incur zero residence, the four chained products incur $6+t,6+t,7,7$~s, and $E=0$. As $t$ increases, the range falls from 1 to 0.25~s and the process objective from 3.75 to 3.46875. With product-first unloading, the schedule attaining $(552,3)$ dominates the entire segment. This trade-off therefore arises from conventional unloading. At $H=10$ a longer chain can also attain 3.4296875 equivalent seconds at 576.625~s.
 
-Both objectives tie for the four-product mixed instance. On the two 16-product instances, the two-stage procedure matches the batch makespans obtained with all three joint weights, while reducing $f_B$ from 1523 to 1044 and from 22496 to 21266, respectively, corresponding to reductions of 31.45\% and 5.47\%. Total waiting time decreases from 963 to 744~s for pure $4\times1$ processing. For pure $2\times2$ processing, total waiting time decreases from 1766 to 1016~s and rhythm deviation from 792 to 784~s. These results show that, within this 300~s budget, first establishing the batch-makespan bound and principal structure and then concentrating on waiting time and rhythm deviation improves the second objective while preserving batch makespan.
+In the 16-wafer instance at $H=10$, a schedule attains 457.625 equivalent seconds at 810~s. Setting $t=f_A-810$, the same discrete structure realizes the continuous family
+\begin{equation}
+\begin{aligned}
+f_B&=7.625-0.125t+\frac{(30-t)^2}{2},\\
+&\qquad 0\le t\le2 .
+\end{aligned}
+\label{eq:frontier-sixteen-cn}
+\end{equation}
+As makespan increases from 810 to 812~s with pairings and resource order fixed, mean residence is $7.625-0.125t$ and the within-recipe range is $30-t$. A lower bound certifies the interval from 810 to 811~s. Beyond 811~s, the branch is nondominated among the known schedules up to but excluding 812~s. At 812~s, a different resource order reduces the range to 15~s and dominates the endpoint. When the conventional-unloading minimum of 3.404296875 equivalent seconds takes priority, a schedule with a makespan of 987.125~s attains it, returning 459~s earlier than the equally scoring schedule in Table~\ref{tab:matched-objectives-cn}.
 
-\paragraph{Refinement of the same schedule with chamber eligibility restrictions}
-Eight single- or dual-source mixed-recipe instances are each run with three seeds. Two additional eight-product instances assign different eligible chamber sets to Pjobs, giving 30 paired stage comparisons. Each run splits 300~s into 270~s for the primary problem and 30~s for refinement. Comparing stages within the same run controls for differences in primary-search trajectories. In the two restricted instances, some Pjobs can use only CH2, some only CH3, and others either chamber; each product must be processed in an eligible chamber.
-{{TABLE:tab:refinement-ablation-cn}}
-Table~\ref{tab:refinement-ablation-cn} compares mean total waiting time before and after refinement. Each retains batch makespan within tolerance and reduces total waiting time. Individual reductions are 29.66\%--95.85\% in the 24 runs without additional chamber restrictions and 46.74\%--67.40\% in the six restricted runs. These reductions include auxiliary waiting unpenalized by the primary objective, showing that route waiting can be compressed without increasing batch makespan.
+\begin{figure}[!t]\centering
+\includegraphics[width=\linewidth]{Figure6}
+\caption{Known nondominated continuous segments for makespan and process objective under conventional unloading. Filled circles mark solved schedules. Open circles mark endpoints excluded from the displayed segments.}
+\label{fig:frontier-eight-cn}
+\end{figure}
 
-\paragraph{Controlled rhythm-weight ablation}
-For a dual-source instance with 16 products, pure $2\times2$ processing, and $H=10$, each seed shares the same saved primary assignment across weights $\lambda\in\{0,5,25,100\}$. Each weight--seed combination receives 60~s of refinement. The objective sums total waiting time, ten times maximum individual waiting time, and $\lambda$ times rhythm deviation. The principal discrete structure and batch-makespan bound are identical.
-{{TABLE:tab:rhythm-weight-cn}}
-As Table~\ref{tab:rhythm-weight-cn} shows, adding the rhythm term decreases deviation from 792 to 784~s, increases total waiting time from 1000 to 1016~s, and preserves batch makespan at 2537~s. Weights 5, 25, and 100 yield identical metrics, selecting the same tradeoff between waiting time and rhythm deviation for this structure.
-
-\subsection{Contributions of structured initialization and learned cut selection}
+\subsection{RL-DMCT components and process-objective parameters}
 \label{sec:algorithm-contribution-cn}
-Four dual-source instances with feasible initial schedules are used: two products under pure $4\times1$ processing across LPs or within one LP, two products with mixed recipes and $H=3$, and four products with mixed recipes and $H=10$. Initial batch makespans are 324, 324, 518, and 542~s, respectively. Comparisons within each instance share the original schedule and examine structural search, SPBS and cut selection, and training-seed effects in turn.
 
-\subsubsection{Complementarity of fixed-structure optimization and subsequent joint search}
-\label{sec:journal-structure-cn}
-Joint search, fixed original structure, and fixed-then-joint search are compared in 36 runs. The nominal primary budget is 300~s, split into 60+240~s for fixed-then-joint search. Unused fixed-stage time is not added to joint search.
-{{TABLE:tab:journal-structure-cn}}
-Mean batch makespans are given in Table~\ref{tab:journal-structure-cn}. For the two-product mixed instance, all three fixed-structure runs reach the restricted optimum of 507~s, with mean total elapsed time 3.37~s. Fixed-then-joint search obtains a best feasible value of 503~s, a mean of 505.67~s, and mean elapsed time 243.65~s. Direct joint search gives a mean upper bound of 513.34~s and elapsed time 300.73~s. Thus, fixed-structure optimization quickly lowers the initial upper bound, and subsequent discrete adjustment improves it further. The other three instances have identical final objectives across strategies: both pure $4\times1$ cases reach the complete-problem optimum of 324~s, and the four-product mixed case retains its feasible bound of 542~s.
+\paragraph{Structured initialization and cut selection}
+On the four-wafer mixed instance with $H=10$, we compare the full RL-DMCT algorithm, comprising SPBS and RL-DMCT-S, with variants that disable reranking, remove the staged refinement of the initial solution, or replace the cut selector with HEM or SCIP's default. All variants use the same two stages. All share the refined initial solution except the variant without SPBS refinement, which retains the base feasible solution and RL-DMCT-S. Every configuration runs on a single CPU thread, and the learned policies use frozen weights. For each solve seed, the reference objective pair comes from RL-DMCT with both gap thresholds at $1\%$. Its cumulative runtime sets the common budget for that seed. Each comparator stops if it first matches or improves both reference values. Otherwise, we report its shortest makespan by termination and the lowest process objective found at that makespan. Table~\ref{tab:mixed-ablation-cn} gives the mean and sample standard deviation of both objectives across three solve seeds.
 
-Thus, structural adjustment can improve a fixed-structure optimum, whereas the benefit of expanding search depends on the instance and budget, consistent with Section~\ref{sec:structure-comparison-cn}.
+\begin{table*}[!htbp]\centering\small
+\caption{Algorithm comparison with budgets paired by seed on the four-wafer mixed instance}
+\label{tab:mixed-ablation-cn}
+\setlength{\tabcolsep}{2.3pt}
+\begin{tabular}{@{}*{5}{c}@{}}\toprule
+Configuration & $f_A$ (s) & $f_B$ (eq.~s) & Time (s) & Cut rounds\\\midrule
+RL-DMCT & $398.00\pm1.73$ & $7.83\pm4.48$ & 2092.13 & 2494.33\\
+No reranking & $403.67\pm4.04$ & $9.50\pm2.60$ & 1728.81 & 1070.33\\
+No SPBS refinement & $406.33\pm5.51$ & $10.83\pm4.62$ & 1379.76 & 368.67\\\midrule
+HEM & $403.00\pm3.00$ & $32.17\pm41.97$ & 2088.77 & 1299.33\\
+Default SCIP & $405.00\pm1.73$ & $11.17\pm0.29$ & 2092.13 & 844.67\\
+\bottomrule\end{tabular}
+\end{table*}
 
-\subsubsection{Gains from initialization and cut selection}
-\label{sec:journal-ablation-cn}
-{{TABLE:tab:journal-algorithm-cn}}
-With training seed one, six methods are compared to assess initialization and cut selection. Four instances and three solver seeds give 72 runs. Section~\ref{sec:journal-training-cn} adds training seeds to assess consistency.
+Removing either component increased makespan for each of the three paired seeds. With the same network weights, disabling reranking increased mean makespan by 5.67~s. The 5.00~s difference between RL-DMCT and HEM also reflects differences in features and trained parameters. Variation in the process objective depends on how much within-recipe variation remains in the schedule. For HEM with seed~1, mean residence was only 8.5~s, but a 12~s range contributed 72 equivalent seconds to the squared penalty. For seed~3, all four comparators reduced the process objective while delaying the last product return. None of the 12 paired comparator runs matched both RL-DMCT objectives within budget. Some terminated early on meeting their own stopping criteria. The reported time includes initial-solution refinement and the stages actually executed.
 
-All 72 runs yield feasible schedules. The two pure $4\times1$ instances are solved to optimality, whereas the mixed instances yield time-limited feasible solutions.
+In all three RL-DMCT handoff structures, each recipe occupied one product pair. The within-recipe range was therefore always zero. Stage~2 retained the process objective reached at handoff for each seed, so the schedule differences in this comparison arose in Stage~1. The cut-round count measures calls to the selector. The policies visit different search nodes and can make different contributions to the lower bound per round.
 
-Table~\ref{tab:journal-algorithm-cn} reports mean batch makespans. For the two-product mixed case, SPBS outputs 511, 505, and 511~s; subsequent RL-DMCT-S search gives 511, 501, and 503~s. Its mean of 505~s is below 508.67~s for HEM+SPBS. For the four-product mixed case, SPBS reduces 542 to 541~s, a 0.18\% reduction, with no further main-solve improvement. Thus, SPBS improves mixed-instance starting points, while additional cut-selection gains occur in particular instances and seeds.
+\paragraph{Prespecified budgets and common makespan targets}
+With front-first unloading, five prespecified two-wafer configurations covered single-port and cross-port supply, both individual modes and mixed processing. Each configuration allotted 12~s to initialization and 48~s to Stage~1 out of a 60~s budget. RL-DMCT and HEM each used all combinations of three training seeds and three solve seeds. Default SCIP ran once per solve seed. All three methods shared the same initial solution for each solve seed. All 45 paired RL-DMCT and HEM runs returned identical makespans, which default SCIP matched at the corresponding solve seed. RL-DMCT and HEM selected cuts in 1378 and 1350 rounds, respectively. Their cumulative network inference times in these GPU runs were 37.81 and 28.33~s.
 
-Section~\ref{sec:journal-transfer-cn} compares components across training seeds with shared initialization.
+For another single-port, chain-only configuration ($H=2,D=4$) with a common 300~s budget, mean makespans were 336.00, 336.89 and 337.00~s for RL-DMCT, HEM and default SCIP, respectively. Relative to HEM, RL-DMCT recorded two wins, six ties and one loss. We used the shortest makespan observed across all methods, 331~s, as a post hoc common target. One of nine RL-DMCT runs reached it after 283.812~s. None of nine HEM runs or three default SCIP runs reached it. For a cross-port mixed configuration from the 60~s group, the common target was 494~s. It was reached in 6/9, 6/9 and 2/3 runs, respectively. All three methods had the same median time to target among successful runs, 1.031~s, during shared initialization.
 
-For the two pure $4\times1$ cases without SPBS, mean main-solve times for SCIP, HEM, and RL-DMCT-S are 69.00, 50.67, and 51.67~s across LPs and 37.33, 12.67, and 52.67~s within one LP. Corresponding total elapsed means are 71.14, 54.36, and 55.05~s and 39.36, 16.16, and 55.52~s.
+Three further configurations used cross-port chain-only, cross-port mixed and single-port mixed supply. Default SCIP, deterministic role-based reranking and the frozen network with reranking started from the same solution and searched for 30~s on the CPU with the same solve seed. The deterministic variant selected a fixed fraction of cuts and reranked them by quality and role coverage. All three methods selected cuts in each configuration and returned the same respective makespans of 344, 509 and 519~s. In a restricted 16-wafer model, three additional RL-DMCT runs made no cut-selection calls within the 210~s Stage~1 budget and had an initial makespan of 1688~s. RL-DMCT shortened makespan on the four-wafer instance in Table~\ref{tab:mixed-ablation-cn}. The prespecified-budget comparisons with HEM were predominantly ties, with no consistent cut-selection advantage across instances.
 
-For the two-product mixed instance, mean total elapsed times of SCIP+SPBS, HEM+SPBS, and RL-DMCT range from 255.60 to 257.64~s. Batch makespan and equipment occupancy can change differently. For four mixed products, adding SPBS reduces batch makespan from 542 to 541~s but extends the end of equipment occupancy from 553 to 591~s, reflecting the occupancy tail under a batch-makespan objective.
+\paragraph{Scope of the pairing and chamber-assignment search}
+A separate 16-wafer equal-mix instance tests whether a wider discrete search improves the handoff schedule. The four ports supplied 5, 3, 3 and 5 products, respectively. The first two supplied $4\times1$ products and the other two $2\times2$ products, with $H=6$ and $D=8$. Three strategies shared the SPBS-refined start, the cut policy trained with seed~1, 32 candidate pairs and seven candidate cycles per chamber. The fixed-structure search could change transfer orders, synchronization and event times. The open search could also change pairings, chamber assignments and cycles. Each strategy received 210~s for Stage~1. The strategy that switched from fixed to open search split that time into 60 and 150~s. Stage~2 received 30~s in every case. The common limits of 32 pairs and seven cycles per chamber define the restricted domain of this comparison.
 
-\subsubsection{Consistency of initialization gains across training seeds}
-\label{sec:journal-training-cn}
-Adding training seeds two and three to the preceding comparisons gives 168 runs: 72 shared with the preceding experiment and 96 additional runs. HEM and RL-DMCT-S each account for 72 runs, and SCIP for 24. Results follow the aggregation defined in Section~\ref{sec:experiment-settings-cn}. Both pure $4\times1$ cases retain the proven optimum of 324~s. Table~\ref{tab:journal-training-cn} reports the mixed instances.
-{{TABLE:tab:journal-training-cn}}
-Table~\ref{tab:journal-training-cn} shows that SPBS improves mean batch makespan for every method on both mixed instances, with the same direction across all three training seeds. For two mixed products, each training seed uses SPBS inputs of 511, 505, and 511~s. RL-DMCT means by training seed are 505, 509, and 509~s, compared with 508.67, 509, and 509~s for HEM+SPBS. Additional cut-selection improvement over HEM+SPBS occurs in training seed one. For four mixed products, all training seeds improve from 542 to 541~s through initialization. One HEM+SPBS run and one RL-DMCT run have actual main-solve times of 245 and 243~s, respectively.
+For each solve seed, all three search strategies returned the same schedule, with a makespan of 1688~s. Retiming at that makespan improved the process objective. Two seeds reduced the within-recipe range to 3~s in their handoff structures. For the remaining seed, optimal timing within its structure still left a 19~s range. The squared penalty alone increased from 4.5 to 180.5 equivalent seconds. Within the available budget, releasing pairings and chamber assignments produced no better handoff structure. The choice of seed affected the results more than the choice among these three search strategies.
 
-\subsection{Initialization and cut-selection gains under supply and inventory changes}
-\label{sec:journal-transfer-cn}
-{{TABLE:tab:journal-transfer-cn}}
-To examine initialization and cut selection under different inputs, supply distribution and auxiliary inventory are varied. Comparisons separately evaluate improvement of initial schedules and the further improvement obtained by cut-selection components from the same initial schedule.
+\paragraph{Weight of the squared residence range}
+The time scale $\delta$ sets the relative value of equalizing residence times. For the schedule family in Eq.~\eqref{eq:frontier-eight-cn}, the process objective is $3.25+t/4+(1-t)^2/(2\delta)$. Each additional second of makespan raises mean residence by 0.25~s, and the marginal benefit of reducing the range is $D_{\rm res}/\delta$. This structure permits $t$ as large as 1~s. Setting the derivative to zero shows that increasing $\delta$ from 0.5 to 2~s decreases the minimizing $t$ from 0.875 to 0.5. The corresponding makespan falls from 553.875 to 553.5~s and mean residence from 3.46875 to 3.375~s, while the range increases from 0.125 to 0.5~s.
 
-\paragraph{Common starting points under supply, cleaning-threshold, and inventory changes}
-Crossing $N\in\{2,4,8\}$, three recipe patterns, and three scenarios gives 27 test instances. S1 places all products at LP1, with $H=2$ and four auxiliaries. S2 distributes products round-robin over LP1--LP4, with $H=3$ and six auxiliaries. S3 places the first half at LP1 and the remainder at LP2, with $H=5$ and eight auxiliaries. These combinations vary supply distribution, cleaning frequency, and auxiliary inventory. SCIP searches without an initial solution using seed 17 and a nominal 1200~s budget, obtaining feasible schedules for six two-product instances. These six schedules initialize subsequent comparisons. Initial search time is recorded separately from the subsequent 300~s improvement budget.
+\paragraph{Weight of the chamber contamination term}
+Of 515 feasible schedules across 18 configurations, 110 included cleaning below the threshold. We compared $\gamma=0,0.5,1,2$~s/cycle on these same schedules. Within each configuration we first minimized the process objective and broke ties by shorter makespan. In the two-wafer mixed instance, zero weight yielded 23 tied schedules with a 324~s makespan and $E$ equal to 0, 3, 4 or 7. Each positive weight retained only the 14 schedules with $E=0$. The selected sets for the other 17 configurations were identical across weights. The contamination term can therefore distinguish schedules with the same product residence times.
 
-On these six instances, comparisons use multiple training seeds and three additional SPBS ablations, giving 414 runs. One shared SPBS solve per instance and solver seed produces 18 initial schedules, three with improved batch makespan. All SPBS methods in a matched group use the same schedule. Of the algorithm runs, 209 prove complete-problem optimality and 205 return time-limited feasible solutions. All actual main solves stay within their assigned budgets.
+For the two-wafer mixed instance ($H=5$), we also compared two front-first structures, one without cleaning and one with two early cleanings. For each structure and weight, we capped makespan at 324~s and optimized synchronization and event times to minimize the process objective. At that structure's optimal process objective, we then minimized the time by which all wafers had returned, the later of the last product and last auxiliary return. Bounds coincided in all eight process-objective solves. The structure without cleaning scored 3.5 equivalent seconds for all four weights. The two early cleanings gave $E=7$, and their structure scored 3.5, 7, 10.5 and 17.5 equivalent seconds at $\gamma=0,0.5,1,2$, respectively. The two structures tied on the process objective at zero weight, and the structure without cleaning had the lower score at every positive weight. Breaking the zero-weight tie by the return of all wafers also favored the structure without cleaning, which achieved 324~s versus 1323~s. At $\gamma=1$, the other structure cleaned CH2 from 296 to 796~s and CH3 from 811 to 1311~s. Both returned the last product at 324~s and required eight auxiliary wafers at peak, with eight and 16 loans in total, respectively. These optima apply to the two specified structures.
 
-\paragraph{Initialization gains depend on input structure and budget allocation}
-Table~\ref{tab:journal-transfer-cn} shows that all methods prove the 324~s optimum for the three pure $4\times1$ instances. Mixed S2 starts at 521~s; shared SPBS gives 494, 494, and 488~s, averaging 492~s. Every method retains these starts, so improvement comes from initialization. Shared starts for mixed S3 are all 327~s. RL-DMCT subsequently reduces the mean to 326.11~s, while HEM+SPBS remains at 327~s. For pure $2\times2$ S2, RL-DMCT's 343.33~s is below HEM+SPBS's 344~s but above 342~s without SPBS. Initialization does not improve this starting point and reduces the time available for the main solve. Together with Section~\ref{sec:journal-training-cn}, these results show that SPBS supplies improved starts for some mixed instances, with gains depending on input structure and budget allocation.
+\FloatBarrier
 
-\paragraph{Additional cut-selection gains from shared initial solutions}
-Table~\ref{tab:journal-transfer-components-cn} compares components after shared SPBS initialization. RL-DMCT and HEM+SPBS are paired by instance, training seed, and solver seed. Relative batch-makespan differences are first averaged within each instance and then equally across the six instances. Mean improvement is 0.0776\%, the median is zero, and the win/tie/loss count is 2/4/0. A descriptive 95\% interval obtained by resampling instances is $[0,0.1682]\%$. Instance-averaged improvements for the three training seeds are 0.0510\%, 0.1309\%, and 0.0510\%.
-{{TABLE:tab:journal-transfer-components-cn}}
-In Table~\ref{tab:journal-transfer-components-cn}, the full combination has lower mean batch makespan than all three ablations on pure $2\times2$ S2 and mixed S3, tying on the remaining four instances. Mean paired improvements across six instances are 0.0605\%, 0.0776\%, and 0.0606\% over feature extension only, no reranking, and greedy replacement of beam search, respectively. These results show that the complete cut-selection combination further improves time-limited solution quality on these two instances from shared initial solutions.
-
-\subsection{Schedule validation under full-occupancy and shared-resource constraints}
+\subsection{Batch size, chamber residence and tool release}
 \label{sec:coverage-scale-cn}
-The following schedules show auxiliary filling and two-chamber resource sharing. They complement the finite-budget comparisons with concrete wafer-level execution sequences.
 
-\subsubsection{Auxiliary filling in an optimal two-product schedule}
-Figure~\ref{fig:small-optimal-gantt-cn} shows a schedule minimizing batch makespan for two products at the same LP under pure $4\times1$ processing. Both belong to Pjob1 and originate from LP1; auxiliary inventory is eight and the cleaning threshold is three. The primary lower bound and schedule batch makespan are both 324~s, establishing global optimality for batch makespan.
-{{FIG:fig:small-optimal-gantt-cn}}
-The two products form one PW pair and auxiliaries D1 and D2 form another, filling all four positions of CH2 for a 180~s exposure from 104 to 284~s. Products pass through ATR, AL, and the upper LL before VTR loads them. The auxiliary pair is loaded first, ensuring full occupancy when processing starts. After processing, products return through the lower LL to LP1, while auxiliaries return to vacuum storage at 294~s.
+\paragraph{Auxiliary inventory, cleaning threshold and schedule construction for larger batches}
+Table~\ref{tab:scale-review-cn} uses the same 25-wafer batch to examine the effects of auxiliary inventory $D$ and cleaning threshold $H$ separately. The 50- and 75-wafer mixed batches show the computational cost of constructing a resource order and timing its operations for larger batches. At each step the procedure groups up to four products in job release order and retains four candidate schedules. After fixing pairings, chamber assignments and resource order, a linear program minimizes makespan for that order. Residence and cleaning measures are computed from the resulting operation times. All configurations use one solver thread.
 
-Both products return by 324~s, and lower-LL pressure reset continues until 342~s. The schedule shows auxiliary filling when fewer than four products are present and the complete supply and return routes, distinguishing batch makespan from equipment reset. The chamber executes one cycle and does not reach the cleaning threshold.
+\begin{table*}[t]\centering\small
+\caption{Schedule construction and fixed-order timing by batch size and process parameters}
+\label{tab:scale-review-cn}
+\begin{tabular}{@{}*{12}{c}@{}}\toprule
+$N_\zeta+N_\psi$ & $H$ & $D$ & Cleanings & $E$ & $f_A$ (s) & $\bar r$ (s) & $D_{\rm res}$ (s) & LP vars. & LP rows & Build (s) & Solve (s)\\\midrule
+$12+13$ & 3 & 4 & 4 & 2 & 4143 & 34.92 & 100 & 376 & 2852 & 0.097 & 0.026\\
+$12+13$ & 3 & 8 & 5 & 3 & 2988 & 33.64 & 100 & 391 & 2967 & 0.096 & 0.013\\
+$12+13$ & 6 & 4 & 1 & 2 & 3361 & 34.28 & 100 & 331 & 2537 & 0.093 & 0.011\\
+$17+33$ & 6 & 6 & 4 & 1 & 6815 & 30.06 & 100 & 716 & 5660 & 0.348 & 0.027\\
+$37+38$ & 3 & 8 & 13 & 2 & 9084 & 36.61 & 100 & 1108 & 8624 & 0.702 & 0.042\\
+\bottomrule\end{tabular}
+\end{table*}
+For the 25-wafer batch at $H=3$, increasing the auxiliary inventory from four to eight shortened makespan from 4143 to 2988~s, a reduction of 1155~s (27.88\%), even though cleanings increased from four to five. Cleaning count alone therefore gives an incomplete account of batch completion time. With four auxiliaries, raising $H$ from 3 to 6 reduced cleanings from four to one and shortened makespan by 782~s (18.88\%). For the 75-wafer instance, constructing the resource order took 0.702~s and finding its minimum makespan took a further 0.042~s. All five schedules had a within-recipe residence range of 100~s, showing the variation left by makespan-only timing in these instances.
 
-\subsubsection{Two-chamber processing and transport in a feasible 16-product schedule}
-Figure~\ref{fig:current-defaults-gantt-cn} shows a feasible schedule for 16 pure $4\times1$ products. Each of the four LPs contains four products, all in Pjob1 and eligible for CH2 and CH3. Auxiliary inventory is eight and the cleaning threshold is three.
-{{FIG:fig:current-defaults-gantt-cn}}
-A preconstructed wafer-operation sequence is checked by substituting its pairs, chamber assignments, and event times into the complete model. The model contains 64 candidate PW pairs, 32 candidate cycles per chamber, 177905 variables, and 671864 constraints. All assignments satisfy chamber eligibility, finite capacities, nonprocessing residency limits, and nondecreasing release within each job. Independent event-time validation also passes.
+\paragraph{Resource use and tool release}
+Four load ports supply the wafers, which share two chambers and the vacuum transfer robot. The four-wafer $4\times1$ instance uses $H=10$. The 16-wafer $4\times1$ and 75-wafer mixed instances use $H=3$. All three have eight auxiliary wafers.
 
-The 16 products form eight PW pairs and complete four full-occupancy cycles across CH2 and CH3. Each product receives one 180~s exposure and returns to its original LP by $C_{\max}=920$~s.
+\begin{figure}[!tbp]\centering
+\includegraphics[width=\linewidth]{Figure7}
+\caption{Auxiliary-wafer loading and product return in the four-wafer $4\times1$ schedule}
+\label{fig:small-optimal-gantt-cn}
+\end{figure}
 
-The 152 events in Fig.~\ref{fig:current-defaults-gantt-cn} cover all transport and processing resources, with chamber processing overlapping other products' supply and return. Lower-LL reset ends at 938~s, 18~s after batch makespan. Each chamber executes two cycles, below the cleaning threshold of three; products fill every position, so no auxiliaries are borrowed.
+Each port supplies one product wafer. Sending one product pair to each chamber lets the two 180~s production cycles overlap (Fig.~\ref{fig:small-optimal-gantt-cn}). In both chambers the robot places the auxiliary pair first, places the product pair last and removes the product pair as soon as processing ends. All four products therefore have zero nonprocessing residence. The process objective falls from 45 equivalent seconds under the original handling order to zero at the same makespan of 397~s. During each of the two remaining 3~s waits in CH3, only auxiliary wafers are present.
+
+\begin{figure}[!tbp]\centering
+\includegraphics[width=\linewidth]{Figure8}
+\caption{Resource occupancy over two production cycles per chamber in the 16-wafer $4\times1$ schedule}
+\label{fig:current-defaults-gantt-cn}
+\end{figure}
+
+The 16 products fill four production cycles, two per chamber (Fig.~\ref{fig:current-defaults-gantt-cn}). Changing the robot service order shortens the time each chamber stands empty between cycles from 133 to 103~s in CH2 and from 122 to 101~s in CH3. The last product returns at 896~s, down from 920~s. Mean nonprocessing residence remains 6~s and the within-recipe range remains 12~s, giving a process objective of 78 equivalent seconds. The tool is released at 914~s after the load lock resets.
+
+\begin{figure}[!tbp]\centering
+\includegraphics[width=\linewidth]{Figure9}
+\caption{Production, chamber cleaning and tool release in the 75-wafer mixed schedule}
+\label{fig:scale75-mixed-cn}
+\end{figure}
+
+Figure~\ref{fig:scale75-mixed-cn} and the last row of Table~\ref{tab:scale-review-cn} both cover batches of 37 $4\times1$ and 38 $2\times2$ products. In both instances LP1--LP4 supply $(10,9,9,9)$ parallel products. The ports supply $(10,10,9,9)$ chained products in the table and $(9,10,10,9)$ in the figure. The 9084~s makespan in the table is the shortest under the resource order returned by the construction procedure. For the port allocation in the figure, we retained the initial pairings, chamber assignments and sequence of production and cleaning cycles in each chamber. Adjusting handling order and operation times within local time windows reduced the combined time that wafers waited in otherwise inactive chambers from 840 to 609~s. The chambers still spend a combined 731~s empty between successive operations. The longest empty interval falls from 253 to 249~s in CH2 and from 188 to 163~s in CH3.
+
+The chambers complete 39 production cycles and 13 cleanings. Each cleaning follows three production cycles, giving $E=0$. The revised handling order reduces mean nonprocessing residence from 13 to 12.85~s and the within-recipe residence range from 64 to 53~s. The process objective falls from 2061 to 1417.35 equivalent seconds. The last product returns at 6050~s, down from 6053~s. Terminal cleaning and auxiliary-wafer returns keep the tool occupied until 6533~s. The batch yields 44.63 products/h up to the last product return, or 41.33 products/h over the full occupancy period if the next batch must wait for tool release.
+
+The 75-wafer schedule satisfies the full front-first model. With 414 candidate wafer pairs and 226 candidate cycles per chamber, the model has 6\,764\,011 variables and 24\,271\,470 constraints.
 
 \FloatBarrier
 \section{Conclusions}
-Complex processes and high-throughput requirements in advanced fabrication require rotating-chamber CTs to satisfy full occupancy, continuous processing, and cleaning while coordinating finite auxiliary inventories and shared handling resources. Changes in operation durations or process parameters also require timely schedule updates, so solution methods must obtain high-quality schedules within limited computation time. This study addresses batch makespan, waiting time, and rhythm deviation optimization for dual-source mixed-flow rotating-chamber CTs under these requirements.
+\label{sec:conclusion-cn}
 
-To increase throughput, the studied tool uses a four-finger VTR and a two-finger ATR. VTR has two clean and two dirty wafer-carrying positions, and a rotating chamber provides robot access to two wafer positions at a time. Based on this paired transport and handling structure, the two-stage MILP uses two-wafer PW pairs as the minimum modeling unit. It jointly arranges pairing, chamber assignment, processing cycles, and auxiliary loans and returns at the pair level while retaining individual-wafer supply, alignment, and return times. Stage one minimizes batch makespan. Stage two minimizes a weighted objective for waiting time and rhythm deviation while preserving the makespan bound and principal discrete structure, thereby coordinating batch makespan, waiting time, and production-rhythm stability.
+Advanced semiconductor fabrication requires rotating-chamber cluster tools to meet throughput and process-quality requirements within a limited scheduling time budget. Full occupancy makes production and cleaning compete for the same physical auxiliary wafers. At the end of a chain, the choice of which pair to unload first affects both product return time and nonprocessing chamber residence. Our bi-objective model schedules product pairing, chamber assignment, consecutive chain treatments, auxiliary-wafer reuse and cleaning transfers for finite batches with dual-source mixed flow. It tracks chamber contamination across production and cleaning cycles. The job and PW-pair encoding links source inventories and processing positions to individual wafers. Structured construction and hierarchical SPBS refinement provide a feasible starting schedule. Decoding recovers individual wafer identities, resource assignments, and operation times.
 
-To address the combinatorial complexity of searching pairing, cycles, and resource orders simultaneously, structured initialization first determines pairing, chamber assignments, and cycle arrangements, then progressively releases resource service orders and adjusts operation times. This reduces the discrete decisions initially adjusted together and provides a better starting point for subsequent time-limited joint search.
+Terminal unloading order changes the trade-off between makespan and residence. The 6~s residence lower bound for a chained product and the batch makespan bounds are attained together in the two-, four-, and eight-wafer equal-mix instances studied. Their complete Pareto fronts are singletons, with makespans of 324, 397, and 552~s, respectively, and a process objective of 3 equivalent seconds in each case. Continuous segments that are nondominated among known schedules under conventional unloading illustrate trade-offs achieved by retiming. In the eight-wafer batch the product-first schedule $(552,3)$ dominates the entire illustrated segment, showing how a permissible change of unloading order improves both objectives.
 
-When the number of cuts per round is limited, similar candidates may be selected repeatedly. Generic quality and variable-role features are therefore extracted, and a reinforcement-learning policy determines the selection count and candidate order. Structure-aware reranking then uses variable-role coverage and candidate similarity to account for both individual cut quality and complementarity within the selected set.
+RL-DMCT extends HEM cut selection with variable-role features and candidate reranking. Combined with structured initialization, it first searches for a short makespan and then optimizes the process objective under the inherited discrete structure and makespan cap. At the same 810~s makespan in the 16-wafer mixed batch with $H=10$, the mean process objective fell from 2681 equivalent seconds with makespan-only optimization to 934.5 with two-stage optimization, a 65.14\% reduction. For the 16 parallel-recipe products, changing the robot service order allowed both chambers to start their second cycle earlier. The last product returned 24~s earlier with the same mean nonprocessing residence of 6~s and within-recipe range of 12~s.
 
-Under an equal 300~s budget, the two-stage method matches the batch makespans of the normalized joint objective on two 16-product instances and reduces the weighted objective for waiting time and rhythm deviation by 31.45\% and 5.47\%, respectively, showing that staged optimization coordinates both scheduling objectives within the given budget. Structured initialization reduces mean batch makespan for mixed S2 from 521 to 492~s, validating the use of equipment operating structure to improve the search starting point. In ablations with shared initial solutions, the complete cut-selection combination gives lower mean batch makespans than all three variants on two instances and ties on the other four, showing that variable-role features and structure-aware reranking further improve time-limited solution quality on some instances.
-
-Future work will investigate adaptive time allocation between structured initialization and two-stage solving, together with cut-selection policies adjusted to the search state, to improve solution quality for larger instances within limited computation time.
-
-\section*{CRediT authorship contribution statement}
-\textbf{Lincong~Wei:} Conceptualization, Methodology, Software, Validation, Formal analysis, Investigation, Data curation, Visualization, Writing -- original draft, Writing -- review \& editing.
-\textbf{Lizhen~Shao:} Conceptualization, Methodology, Formal analysis, Writing -- review \& editing, Project administration.
-\textbf{Wei~Wang:} Formal analysis, Investigation, Writing -- review \& editing, Supervision. All authors reviewed and approved the final manuscript.
-
-\section*{Funding}
-This research did not receive any specific grant from funding agencies in the public, commercial, or not-for-profit sectors.
-
-\section*{Declaration of competing interest}
-The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
-
-\section*{Data availability}
-The data, mathematical instances, trained models, and software implementation supporting this study are available from the corresponding author upon reasonable request.
-
-\section*{Declaration of generative AI and AI-assisted technologies in the manuscript preparation process}
-During the preparation of this work, the authors used OpenAI ChatGPT and Codex to assist with language editing, Chinese--English translation, LaTeX consistency checks, and experimental visualization. After using these tools, the authors reviewed and edited the content as needed and take full responsibility for the content of the publication.
-
-{{BIBLIOGRAPHY}}
+In the paired-budget comparison for the four-wafer mixed batch, RL-DMCT achieved a mean makespan of 398~s and a mean process objective of 7.83 equivalent seconds, compared with 403~s and 32.17 equivalent seconds for HEM. Disabling candidate reranking increased mean makespan to 403.67~s, and removing hierarchical refinement of the initial schedule increased it to 406.33~s. Both components contributed to the search on this instance. RL-DMCT and HEM tied on makespan in 45 prespecified fixed-budget comparisons across five two-wafer configurations. The Pareto fronts identify trade-offs and dominance between objective pairs. The decoded Gantt charts locate waiting and show how products and auxiliaries share the tool's resources.

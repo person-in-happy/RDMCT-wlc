@@ -14,6 +14,15 @@
 
 ## 代码与历史归属
 
+- 当前中文稿的 RL-DMCT 两阶段搜索使用[允许两种末端卸片次序的模型](experiments/terminal_unload_20261125/extended_model.py)和[间隙与停滞节点求解入口](experiments/stall_nodes_20261127/run.py)。从仓库根目录执行下列命令，可从已有排程开始搜索，也可将输入换成含 `load_ports` 的 Pjob 配置。配置输入会构造初解并执行 SPBS，已有排程作为准备好的初解直接进入两阶段搜索。
+
+  ```powershell
+  JMS-version/.solver_env/Scripts/python.exe JMS-version/experiments/stall_nodes_20261127/run.py JMS-version/results/terminal_unload_20261125/two_event_replay/H3/schedule.json output/stall_nodes/two
+  ```
+
+  A、B 的相对间隙默认分别为 0.01% 和 1%。`--stall-nodes-a`、`--stall-nodes-b` 分别控制两个阶段的连续无改善节点数，初始设定均为 1000，取 `-1` 关闭对应阶段的停滞条件。要限制根节点等耗时较长的搜索，可另设 `--seconds-a`、`--seconds-b`，单位为 SCIP 搜索秒，初始化与验解时间另计。第一阶段默认开放完整候选域。使用 `--use-input-candidate-limits` 可显式保留输入中的候选上限，此时按记录的求解范围解释上下界。
+
+  同一条命令可从已验证的阶段终点续跑。中断的阶段从该阶段输入重新建立搜索树，已用的阶段搜索时间从指定预算中扣除。前台和 `status.json` 显示进度与估时依据。`A/record.json` 和 `B/record.json` 分别保存实际触发原因、可行上界、对偶或解析下界、实际间隙、节点数和验证结果。最终排程在 `B/schedule.json`。
 - [当前默认参数后端](model4_pjob_nonprocessing_20261103/README_CN.md)提供完整配置 D 的设备与工期模型。新工艺目标实验用[目标与事件计分实现](experiments/product_wait_20261122/objective.py)建立产品等待项，使用[实验入口](experiments/product_wait_20261122/run.py)。旧批次内置的全晶圆等待目标仅供复现历史运行。
 - `model4_pjob_nondecreasing_20261102/`：此前非递减实现，配置和预算按冻结批次解释。
 - [严格取片后端](model4_pjob_fifo_20261029/README.md)、[早期 Pjob 后端](model4_pjob_20261027/README.md)：历史模型与复现依赖。

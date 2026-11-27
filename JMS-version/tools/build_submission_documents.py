@@ -9,30 +9,27 @@ PAPER=Path(__file__).resolve().parents[1]
 OUT=PAPER/'output/submission'
 TITLE=re.search(r'\\title\{([^}]+)\}',(PAPER/'JMS_Submission_EN.tex').read_text('utf-8'))[1]
 AFFILIATION='Department of Control Science and Engineering, University of Science and Technology Beijing, No. 30 Xueyuan Road, Haidian District, Beijing 100083, China'
-HIGHLIGHTS=[
- 'PW-pair modeling links full occupancy, cleaning, and finite auxiliary reuse.',
- 'Two-stage solving improves the secondary objective at equal 300 s budgets.',
- 'Structured initialization improves mixed-recipe schedules within limited time.',
- 'Variable-role features guide learned cut selection and structural reranking.',
- 'Shared-start ablations and event replay validate the proposed methods.'
+KEYWORDS = [k.strip() for k in re.search(r'\\begin\{keyword\}(.*?)\\end\{keyword\}', (PAPER/'JMS_Submission_EN.tex').read_text('utf-8'), re.S)[1].split(r'\sep')]
+HIGHLIGHTS = [
+ 'Production and chamber cleaning compete for the same reusable auxiliary wafers.',
+ 'With flexible unloading, 2-, 4- and 8-wafer mixed batches attain both bounds.',
+ 'At 810 seconds, retiming cuts the mean process objective by 65.14% for 16 wafers.',
+ 'Refining the initial schedule cuts mean makespan from 406.33 to 398 seconds.'
 ]
 COI='The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.'
 FUNDING='This research did not receive any specific grant from funding agencies in the public, commercial, or not-for-profit sectors.'
-CREDIT=[
- ('Lincong Wei','Conceptualization, Methodology, Software, Validation, Formal analysis, Investigation, Data curation, Visualization, Writing - original draft, Writing - review & editing.'),
- ('Lizhen Shao','Conceptualization, Methodology, Formal analysis, Writing - review & editing, Project administration.'),
- ('Wei Wang','Formal analysis, Investigation, Writing - review & editing, Supervision.')
+CREDIT = [
+ ('Lincong Wei','Software, Validation, Formal analysis, Investigation, Data curation, Visualization, Writing - original draft, Project administration, Writing - review & editing.'),
+ ('Lizhen Shao','Methodology, Formal analysis, Investigation, Writing - review & editing, Supervision.'),
+ ('Wei Wang','Conceptualization, Formal analysis, Data curation, Writing - review & editing, Supervision.')
 ]
-COVER=[
- ('Normal','The Editors'),
- ('Normal','Journal of Manufacturing Systems'),
+COVER = [
  ('Normal','Dear Editors,'),
  ('Normal',f'Please consider our research article, "{TITLE}," for publication in the Journal of Manufacturing Systems.'),
- ('Normal','Advanced fabrication combines complex process requirements with high throughput, requiring timely schedules for rotating-chamber cluster tools. Full occupancy, continuous processing, cleaning, and a finite reusable auxiliary inventory couple wafer pairing and processing with shared transport. Four-finger vacuum and two-finger atmospheric robots motivate two-wafer PW pairs as the minimum modeling unit, while individual wafer operations retain their own timing variables.'),
- ('Normal','The study makes three contributions. A two-stage mixed-integer linear programming model first minimizes batch makespan, then minimizes a weighted objective for waiting time and rhythm deviation while preserving the makespan bound and principal discrete structure. Structured initialization progressively releases resource service orders to improve the starting schedule. Variable-role features and structure-aware reranking combine with reinforcement-learning-based cut selection to account for cut quality and complementarity.'),
- ('Normal','With equal 300 s solve budgets, the two-stage method matches the batch makespans of normalized joint objectives on two 16-product instances and reduces the weighted objective for waiting time and rhythm deviation by 31.45% and 5.47%. Structured initialization reduces mean batch makespan for mixed S2 from 521 to 492 s. With shared initial solutions, the complete cut-selection combination improves on all three ablations on two instances and ties on the other four. Full-model checks and independent event replay also validate the two- and 16-product schedules.'),
- ('Normal','We believe the work will interest readers studying the integrated operation and control of semiconductor manufacturing equipment, particularly the interaction of reusable material resources, processing cycles, and shared handling systems.'),
- ('Normal','Thank you for considering our manuscript.'),
+ ('Normal','In a semiconductor cluster tool, a chamber can start processing only when all four positions are occupied. The same reusable wafers fill empty positions in production and occupy the chamber during cleaning. The order in which the robot unloads the pairs determines when products leave the chamber and return to their load ports. It also determines when auxiliary wafers become available for the next operation.'),
+ ('Normal','Our model connects wafer pairing and chamber assignment to the actions of the robots and load locks. Allowing the chamber to turn and unload the rear product pair first at the end of a chain yields schedules that attain both objective bounds for equal-mix batches of two, four, and eight products. Under conventional unloading, our two-stage method holds the makespan at 810 seconds in a 16-product mixed batch while reducing the mean process objective by 65.14% relative to makespan-only optimization.'),
+ ('Normal','The distinction between product completion and tool release matters when scheduling the next batch. In a 75-product schedule, the last product returns at 6050 seconds, while cleaning and auxiliary returns keep the tool occupied until 6533 seconds. The wafer-level schedules identify the resources responsible for this difference.'),
+ ('Normal','Thank you for considering the manuscript.'),
  ('Normal','Sincerely,'),
  ('Normal','Lizhen Shao\nCorresponding author\nUniversity of Science and Technology Beijing\nlshao@ustb.edu.cn'),
 ]
@@ -64,18 +61,31 @@ def document(filename,paragraphs):
     with ZipFile(OUT/(filename+'.docx'),'w',ZIP_DEFLATED) as z:
         for name,text in files.items():z.writestr(name,text.encode('utf-8'))
 
+def declaration_of_interest():
+    template = PAPER / 'submission/elsevier_declaration_template.docx'
+    with ZipFile(template) as original, ZipFile(OUT/'Declaration_of_Interest.docx', 'w', ZIP_DEFLATED) as completed:
+        for entry in original.infolist():
+            data = original.read(entry.filename)
+            if entry.filename == 'word/document.xml':
+                xml = data.decode('utf-8')
+                unchecked = '<w14:checked w14:val="0"/>'
+                assert xml.count(unchecked) == 3 and COI in re.sub('<[^>]*>', '', xml.split(unchecked)[1])
+                xml = xml.replace(unchecked, '<w14:checked w14:val="1"/>', 1)
+                data = xml.replace('☐', '☒', 1).encode('utf-8')
+            completed.writestr(entry, data)
+
 def main():
     OUT.mkdir(parents=True,exist_ok=True)
     assert 3<=len(HIGHLIGHTS)<=5 and all(len(x)<=85 for x in HIGHLIGHTS)
     document('Highlights',[('Title','Highlights')]+[('ListBullet',x) for x in HIGHLIGHTS])
     document('Cover_Letter',COVER)
-    document('Declaration_of_Interest',[('Title','Declaration of competing interest'),('Normal',TITLE),('Normal','Lincong Wei, Lizhen Shao, Wei Wang'),('Normal',COI)])
-    document('Title_Page',[('Title',TITLE),('Normal','Lincong Wei, Lizhen Shao, Wei Wang'),('Normal',AFFILIATION),('Heading1','Corresponding author'),('Normal','Lizhen Shao\nEmail: lshao@ustb.edu.cn\n'+AFFILIATION),('Heading1','Article type'),('Normal','Research article'),('Heading1','Keywords'),('Normal','Semiconductor manufacturing systems; cluster tools; dual-source material flow; mixed-integer linear programming; learning-based cut selection'),('Heading1','Funding'),('Normal',FUNDING)])
-    document('CRediT_Statement',[('Title','CRediT authorship contribution statement'),('Normal',TITLE)]+[('Normal',name+': '+roles) for name,roles in CREDIT]+[('Normal','All authors reviewed and approved the final manuscript.')])
+    declaration_of_interest()
+    document('Title_Page',[('Title',TITLE),('Normal','Lincong Wei, Lizhen Shao, Wei Wang'),('Normal',AFFILIATION),('Heading1','Corresponding author'),('Normal','Lizhen Shao\nEmail: lshao@ustb.edu.cn\n'+AFFILIATION),('Heading1','Article type'),('Normal','Research article'),('Heading1','Keywords'),('Normal','; '.join(KEYWORDS)),('Heading1','Funding'),('Normal',FUNDING)])
+    document('CRediT_Statement',[('Title','CRediT authorship contribution statement'),('Normal',TITLE)]+[('Normal',name+': '+roles) for name,roles in CREDIT])
     s=(PAPER/'JMS_Submission_EN.tex').read_text('utf-8')
     abstract=re.search(r'\\begin\{abstract\}([\s\S]*?)\\end\{abstract\}',s)[1].strip()
     abstract=abstract.replace('$4\\times1$','4 × 1').replace('$2\\times2$','2 × 2').replace('~',' ').replace('\\%','%')
-    metadata={'title':TITLE,'article_type':'Research article','authors':[{'given_name':'Lincong','family_name':'Wei','corresponding':False},{'given_name':'Lizhen','family_name':'Shao','corresponding':True,'email':'lshao@ustb.edu.cn'},{'given_name':'Wei','family_name':'Wang','corresponding':False}],'affiliation':AFFILIATION,'abstract':abstract,'keywords':['semiconductor manufacturing systems','cluster tools','dual-source material flow','mixed-integer linear programming','learning-based cut selection'],'funding':FUNDING,'competing_interests':COI,'highlights':HIGHLIGHTS,'highlight_character_counts':[len(x) for x in HIGHLIGHTS]}
+    metadata={'title':TITLE,'article_type':'Research article','authors':[{'given_name':'Lincong','family_name':'Wei','corresponding':False},{'given_name':'Lizhen','family_name':'Shao','corresponding':True,'email':'lshao@ustb.edu.cn'},{'given_name':'Wei','family_name':'Wang','corresponding':False}],'affiliation':AFFILIATION,'abstract':abstract,'keywords':KEYWORDS,'funding':FUNDING,'competing_interests':COI,'highlights':HIGHLIGHTS,'highlight_character_counts':[len(x) for x in HIGHLIGHTS]}
     (PAPER/'submission/submission_metadata.json').write_text(json.dumps(metadata,ensure_ascii=False,indent=2)+'\n','utf-8')
     (OUT/'Submission_Metadata.txt').write_text('TITLE\n'+TITLE+'\n\nAUTHORS\nLincong Wei; Lizhen Shao; Wei Wang\n\nAFFILIATION\n'+AFFILIATION+'\n\nCORRESPONDING AUTHOR\nLizhen Shao; lshao@ustb.edu.cn\n\nABSTRACT\n'+abstract+'\n\nKEYWORDS\n'+'; '.join(metadata['keywords'])+'\n\nFUNDING\n'+FUNDING+'\n','utf-8')
     print('Created five editable Word documents. Highlight lengths:',metadata['highlight_character_counts'])

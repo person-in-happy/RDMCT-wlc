@@ -1,33 +1,18 @@
-# C&IE 当前材料入口
+# Computers & Industrial Engineering 稿件
 
-当前中文审阅稿为 [rdmct_cie_analysis_focused_zh.tex](rdmct_cie_analysis_focused_zh.tex)（[PDF](rdmct_cie_analysis_focused_zh.pdf)），模型与证据来自迁移时的 `JMS-version/JMS_Review_CN.tex`，迁移快照见[修订记录](../revisions/20261109_jms_alignment/migration_manifest.json)。此稿尚不是已完成的英文投稿稿；JMS 后续修改也不会自动同步。
+2026-11-27 中英文稿已同步 JMS 正文中的机械手和腔室术语、公式说明、表 3 与表 6。图 1、2 对齐了 AL，图 5 以 90 mm 宽单栏排成三行两列。(a、b) 为 4 片，(c、d) 为 8 片，(e、f) 为 16 片。六幅子图各自标出总加工时间和工艺目标，35 个实心圆表示已求得排程的目标值。图 6 至 8 采用经验证的排程。图 8 已换用缩短两腔首、次并行加工间隔的 75 片排程，其正文数值保留上一排程的结果。两个版本的证据见审查记录。C&IE 稿保留突出两阶段求解方法的摘要、独立标题页、匿名主稿、单栏连续行号及 APA 作者–年份引文。[JMS 中文正文](../../JMS-version/JMS_Review_CN.tex) · [JMS 英文正文](../../JMS-version/submission/manuscript_body_en.tex)
 
-## 当前文件
+| 用途 | 文件 |
+| --- | --- |
+| 英文匿名主稿 | [PDF](rdmct_cie_analysis_focused.pdf) · [LaTeX](rdmct_cie_analysis_focused.tex) · [可独立编译的平铺源包](CIE_anonymous_source_20261126.zip) |
+| 中文审阅稿 | [PDF](rdmct_cie_analysis_focused_zh.pdf) · [LaTeX](rdmct_cie_analysis_focused_zh.tex) |
+| 独立标题页和作者贡献 | [PDF](title_page.pdf) · [LaTeX](title_page.tex) |
+| 投稿栏位用文字 | [英文摘要](abstract_current_en.txt) · [英文 Highlights](highlights_analysis_focused.txt) · [英文图题](figure_captions.txt) |
+| 正文所引补充数据 | [108 组阈值记录、训练日志及检查点标识](Supplementary_Data.zip) |
+| 来源、核查及待确认事项 | [审查记录](CIE_CURRENT_REVIEW_CN.md) |
 
-| 文件 | 用途 |
-|---|---|
-| [CIE_CURRENT_REVIEW_CN.md](CIE_CURRENT_REVIEW_CN.md) | 迁移审查、研究缺口、作者确认事项与提交边界 |
-| [CIE_CURRENT_EXPERIMENT_COMMANDS.md](../docs/CIE_CURRENT_EXPERIMENT_COMMANDS.md) | 当前联合模型 D 的补强实验与端到端预算协议 |
-| `rdmct_cie_draft_zh.tex/pdf` | 当前中文稿的兼容入口 |
-| `rdmct_cie_current_references.bib` | 当前中文稿文献库 |
-| `abstract_current_en.txt`、`highlights_analysis_focused.txt` | 当前英文摘要和 Highlights 草稿 |
-| `title_page.tex/pdf`、`cover_letter_draft.tex/pdf` | 标题页与投稿信草稿，仍须作者确认 |
-| `CIE_current_CN_review_source_20261109.zip` | 中文审阅源包，稿件改动后需重建 |
+英文匿名包装入口为 `manuscript_analysis_focused_anonymous.tex`，中文兼容入口为 `rdmct_cie_draft_zh.tex`。两者各自指向上表相应主稿。编译顺序为 XeLaTeX、Biber、XeLaTeX 两遍。在本目录编译时使用 `figures_current/` 和 `rdmct_cie_current_references.bib`。英文平铺源包内的主文件名为 `manuscript.tex`。
 
-新增实验是否完成，以实际批次、冻结配置及完整验解记录为准；共享实验最新状态查看 [JMS 期刊命令](../../JMS-version/JOURNAL_EXPERIMENT_COMMANDS.md)，避免重复启动。
+## 历史材料
 
-## 历史资产
-
-以下文件保留原模型与日期归属，不与当前中文稿、新 Highlights 或新标题页混合提交：
-
-- `rdmct_cie_draft.tex/pdf`、`rdmct_cie_analysis_focused.tex/pdf`：旧模型英文稿。
-- `manuscript_anonymous.tex/pdf`、`manuscript_analysis_focused_anonymous.tex/pdf`：旧英文匿名包装入口。
-- `rdmct_cie_supplement.tex/pdf`、`rdmct_cie_references.bib`、`highlights.txt`、`highlights_analysis_focused_zh.txt`、`figure_captions.txt`：旧模型补充材料、文献与配套文字。
-- `CIE_RDMCTHBS_anonymous_source_20260817.zip`、`CIE_RDMCTHBS_anonymous_supplement_source_20260817.zip`：历史匿名源包。
-- [旧版本与冻结哈希](manuscript_versions.md)、[源包审计清单](source_bundle_manifest.md)、[历史实验审计](experiment_audit_zh.md)：用于追溯旧稿和冻结证据。
-
-正式提交前须完成英文全文和图内标签同步、作者信息与逐作者贡献确认、数据/代码评审链接、官方作者指南复核及新增实验审查。具体缺口集中维护在 [CIE_CURRENT_REVIEW_CN.md](CIE_CURRENT_REVIEW_CN.md)，不再使用旧双作者元数据页。
-
-## 2026-11-11 学术写作修订
-
-当前中文源稿及PDF已完成学术写作修订（34页），补入三训练种子与清洁/库存配对结果；独立英文摘要和highlights同步更新。旧英文全文仍为历史模型。详见[三稿审查记录](../../JMS-version/revisions/20261111_academic_writing_review/REVIEW_CN.md)。当前英文参考文献需用XeLaTeX+Biber构建。
+`rdmct_cie_draft.tex`、`manuscript_anonymous.tex`、旧的补充稿与投稿信草稿、日期为 20260817、20261109、20261111 的压缩包分别对应此前版本。追溯入口见[历史版本与哈希](manuscript_versions.md)。既往实验的运行记录见[执行手册](../docs/cie_submission_runbook_zh.md)。

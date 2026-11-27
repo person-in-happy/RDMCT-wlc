@@ -1,0 +1,716 @@
+{
+  "basis": "Distinct objective coordinates from individually solved physical schedules on the six displayed continuous branches. One witness per cleaning threshold at coincident coordinates. Open endpoints, dominated points, and schedules produced only by interpolation are excluded from the filled symbols.",
+  "coordinates_tolerance": 1e-05,
+  "marker_count": 35,
+  "window_counts": [
+    [
+      7,
+      5
+    ],
+    [
+      5,
+      4
+    ],
+    [
+      3,
+      11
+    ]
+  ],
+  "panel_branches": [
+    "4p_425",
+    "4p_491",
+    "8m_553",
+    "8m_576",
+    "16m_873",
+    "16m_986"
+  ],
+  "source_files": {
+    "results/pareto_publication_20261125/displayed_curves.json": "64172fe610ed89cdd523130efe50541315202f813a12041c9e5282c243ba0db0",
+    "results/pareto_publication_20261125/sample_union.csv": "5fbd286ece09702e3e4e9e97a3fa7bde79fbc0f2f6b49456fc09b370bbd2282f",
+    "results/pareto_publication_20261125/pure4_front.csv": "c133d9c4076a46e45b44fd501be28f467473fa6482e5fc53fe2f07cd61eba752",
+    "results/pareto_publication_20261125/mixed16_front.csv": "91fa3339f13ae3f0a6c8c0725ec3158e5a1da250755d38819bf1b744460cc9a6",
+    "results/huber_residence_20261125/reuse/epsilon_summary.csv": "ecefd2be09941738e3ffc743483749804893eca61bfc5456f9c8cf0707e6235c"
+  },
+  "markers": [
+    {
+      "size": 4,
+      "branch": "4p_425",
+      "fA": 425.125,
+      "fB": 6.945312484684205,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/pareto_four_enriched_20261125/mid_continuation/split/cap_425.125/schedule.json",
+          "schedule_sha256": "d8069cd69f44720658420a9a57a8f7e08c5910832d5348240944dce7fc9f6003",
+          "result_sha256": "b2d0fe9cc5d47650d0e6fd9b1a293f53a73432cf604da7dfa39b7e88358696a5",
+          "physical_checks": 2358,
+          "mean_residence": 6.562499991823621,
+          "residence_range": 0.8749999918406672,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 4,
+      "branch": "4p_425",
+      "fA": 425.1875,
+      "fB": 6.92382811150941,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/pareto_four_enriched_20261125/mid_continuation/split/cap_425.1875/schedule.json",
+          "schedule_sha256": "3c76aa5a7ed0c2aca0868844f186b159a35a15efd703607cfa4636a7683ada2d",
+          "result_sha256": "15a28f46bb7351c3385ff0ab4d69e74ecf76173d928b2fe7f608cf017077dd80",
+          "physical_checks": 2358,
+          "mean_residence": 6.593749990433935,
+          "residence_range": 0.8124999951698157,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 4,
+      "branch": "4p_425",
+      "fA": 425.25,
+      "fB": 6.9062499857040365,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/pareto_four_enriched_20261125/mid_continuation/split/cap_425.25/schedule.json",
+          "schedule_sha256": "4177c93d2467d6578846d9fd2d8a72f480d50742543a37415a78a84eb4c902c7",
+          "result_sha256": "1b0f8621e1a37c14713c65ae3e94df01e4e38ed19ac4d6f52a6f69ff4d3fc959",
+          "physical_checks": 2358,
+          "mean_residence": 6.624999991310666,
+          "residence_range": 0.7499999925244936,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 4,
+      "branch": "4p_425",
+      "fA": 425.3125,
+      "fB": 6.892578112088458,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/pareto_four_enriched_20261125/mid_continuation/split/cap_425.3125/schedule.json",
+          "schedule_sha256": "6324894dabba85c9cff9df41d6b3142c06d15a75e4159457e71bc92cd07c4ff2",
+          "result_sha256": "24bc0f4964f0e4513dd4f083855f4a5b4268de8250e45aa5d62da0458a7a8ad3",
+          "physical_checks": 2358,
+          "mean_residence": 6.6562499893919025,
+          "residence_range": 0.6874999966495352,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 4,
+      "branch": "4p_425",
+      "fA": 425.375,
+      "fB": 6.882812486622939,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/pareto_four_enriched_20261125/mid_continuation/split/cap_425.375/schedule.json",
+          "schedule_sha256": "de2d0263bf5b19c299568fb451ae75c802ae2e20cabd1f28567bdc2ead6fc5d2",
+          "result_sha256": "0e7e4668269546f38f73989a95f8abfd89b9c2a8e234afb83f14e4570c1c43c1",
+          "physical_checks": 2358,
+          "mean_residence": 6.687499989594109,
+          "residence_range": 0.624999995246128,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 4,
+      "branch": "4p_425",
+      "fA": 425.4375,
+      "fB": 6.876953125,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/pareto_four_enriched_20261125/mid_continuation/split/cap_425.4375/schedule.json",
+          "schedule_sha256": "4d15d5f793788664371aaa32af5f470e58a533dded720d8635accf1b0cb15cdf",
+          "result_sha256": "044e0db9371ebbf35ab19c0215cf43a9228482980a295c813deae40a721eda63",
+          "physical_checks": 2358,
+          "mean_residence": 6.71875,
+          "residence_range": 0.5625,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 4,
+      "branch": "4p_425",
+      "fA": 425.5,
+      "fB": 6.87499998785653,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/pareto_four_enriched_20261125/mid_continuation/split/cap_425.5/schedule.json",
+          "schedule_sha256": "510b40496d655858fcfdca96fe3bc57267490c90a51248fc5ccc4e6ed2ec21b9",
+          "result_sha256": "79bafdd60feac590b9073c5b36f02270c1f2e648b190537589314301073ffa15",
+          "physical_checks": 2358,
+          "mean_residence": 6.749974329213046,
+          "residence_range": 0.5000513146537742,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 4,
+      "branch": "4p_491",
+      "fA": 491.0,
+      "fB": 6.75,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/pareto_four_enriched_20261125/continuation/long/cap_491/schedule.json",
+          "schedule_sha256": "2ba7fd165b9e68da9ce03b32c0e859e8dd1c4c4e43da8feb4263dc4747487e61",
+          "result_sha256": "a64c576c30ca084cb027fc21cbc50918ebcef5bf1c4071930888984d38728ec8",
+          "physical_checks": 1681,
+          "mean_residence": 6.25,
+          "residence_range": 1.0,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 4,
+      "branch": "4p_491",
+      "fA": 491.0625,
+      "fB": 6.736328117899785,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/pareto_four_enriched_20261125/continuation/long/cap_491.0625/schedule.json",
+          "schedule_sha256": "d73117604c49703da49944eda9782a3e0b4e027db9ebc2e0b15a93c22114bb22",
+          "result_sha256": "3b5e284a0cc3fc25a1eb7f1cffdea20224ce61e3b908e91638a9ca47e40ab8a8",
+          "physical_checks": 1680,
+          "mean_residence": 6.296874954366714,
+          "residence_range": 0.9375000411019414,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 4,
+      "branch": "4p_491",
+      "fA": 491.125,
+      "fB": 6.7265625,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/pareto_four_enriched_20261125/continuation/long/cap_491.125/schedule.json",
+          "schedule_sha256": "6d844dc9081752d3160a3b859f209161f1c40cda3b24172e3c824c883424c244",
+          "result_sha256": "f275c7e44f1c524be680e8b41b562cda4c93f73dacd620630849bf3c95ee646c",
+          "physical_checks": 1680,
+          "mean_residence": 6.34375,
+          "residence_range": 0.875,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 4,
+      "branch": "4p_491",
+      "fA": 491.1875,
+      "fB": 6.72070310593117,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/pareto_four_enriched_20261125/continuation/long/cap_491.1875/schedule.json",
+          "schedule_sha256": "b16e1504cb5ffbaabd0db8c6ea62b85e4946a2976a9dc5a61b8a805ec4412041",
+          "result_sha256": "a979f78cbefc12dfb1fa5fc560b7670c8b30c1688eb691fe772612e33c4128e7",
+          "physical_checks": 1680,
+          "mean_residence": 6.390624995532761,
+          "residence_range": 0.812499982028811,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 4,
+      "branch": "4p_491",
+      "fA": 491.25,
+      "fB": 6.718750001399648,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/pareto_four_enriched_20261125/continuation/long/cap_491.25/schedule.json",
+          "schedule_sha256": "5b49c52f43c039613d036dc8302dd1fdb00d965b517b2302beba92cfb2e677ea",
+          "result_sha256": "bf4271abe8a467390f3797ddc60f663d06671bc0979cab289f9f2e3729f75e87",
+          "physical_checks": 1680,
+          "mean_residence": 6.437382145892741,
+          "residence_range": 0.7501571242171963,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 8,
+      "branch": "8m_553",
+      "fA": 553.0,
+      "fB": 3.75,
+      "witnesses": [
+        {
+          "H": 3,
+          "schedule": "results/huber_residence_20261125/reuse/epsilon/H3_short_cap553/schedule.json",
+          "schedule_sha256": "5af87f14af0e166497d721420b10a6216ae794d1c175103ecfcd47d3a7364c28",
+          "result_sha256": "b4b541da2327d13a343af5ca508f1069dc981ef31b384627e39252fa40e9bd7d",
+          "physical_checks": 4784,
+          "mean_residence": 3.25,
+          "residence_range": 1.0,
+          "unused_cycles": 0
+        },
+        {
+          "H": 10,
+          "schedule": "results/huber_residence_20261125/reuse/epsilon/H10_short_cap553/schedule.json",
+          "schedule_sha256": "ab694dad64ebddf2475bf6138f8f52f9e034d8710b705154665aa419ec5157e9",
+          "result_sha256": "6854522a8dd9b90f20a75f5e286c2669ad718f1ed7a2a32d9e0e066417e43521",
+          "physical_checks": 3887,
+          "mean_residence": 3.25,
+          "residence_range": 1.0,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 8,
+      "branch": "8m_553",
+      "fA": 553.25,
+      "fB": 3.59375,
+      "witnesses": [
+        {
+          "H": 3,
+          "schedule": "results/huber_residence_20261125/reuse/epsilon/H3_short_cap2213_over_4/schedule.json",
+          "schedule_sha256": "b53e39ef2779357b5ff293827decd9a00e6f541d932330d5b9603fea09a3dd1c",
+          "result_sha256": "0b3e76e0de73511a1b35f11f9c06cf46779aec7b725c121c55b33959b742e00f",
+          "physical_checks": 4779,
+          "mean_residence": 3.3125,
+          "residence_range": 0.75,
+          "unused_cycles": 0
+        },
+        {
+          "H": 10,
+          "schedule": "results/huber_residence_20261125/reuse/epsilon/H10_short_cap2213_over_4/schedule.json",
+          "schedule_sha256": "4ddbfe8b0b112c4672cfc850a9a7217c6b22e7f6d17fcdd3410fb5d8518e18fc",
+          "result_sha256": "5521adf8daa0a128376c24705c81aef21d509414a30745edf3217ac0183d6611",
+          "physical_checks": 3885,
+          "mean_residence": 3.3125,
+          "residence_range": 0.75,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 8,
+      "branch": "8m_553",
+      "fA": 553.3749999989199,
+      "fB": 3.539062500405052,
+      "witnesses": [
+        {
+          "H": 3,
+          "schedule": "results/huber_residence_20261125/reuse/epsilon/H3_short_cap4427_over_8/schedule.json",
+          "schedule_sha256": "82682d2f36e99ca7da08941e6aca75e26684d8a3e25f66b366939f47bfc205d9",
+          "result_sha256": "6b8ba5a8edab5b93592e82be6578fde0a64f6dab6dc1d76d8b1b91d28f258fe0",
+          "physical_checks": 4781,
+          "mean_residence": 3.3437499997299653,
+          "residence_range": 0.6250000010801386,
+          "unused_cycles": 0
+        },
+        {
+          "H": 10,
+          "schedule": "results/huber_residence_20261125/reuse/epsilon/H10_short_cap4427_over_8/schedule.json",
+          "schedule_sha256": "193e20409cbc234b5527e003c4444426dac8176b0a416e64efe4dca451b77dbc",
+          "result_sha256": "e015910dacc48382ee5e0820b3b0dc825056ed127f754d059e45523164e53e61",
+          "physical_checks": 3885,
+          "mean_residence": 3.3437499997379234,
+          "residence_range": 0.6250000010483063,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 8,
+      "branch": "8m_553",
+      "fA": 553.5,
+      "fB": 3.5,
+      "witnesses": [
+        {
+          "H": 3,
+          "schedule": "results/huber_residence_20261125/reuse/epsilon/H3_short_cap1107_over_2/schedule.json",
+          "schedule_sha256": "ace4c185a423e3fe383ec3539d066b66ecb9d1f8a061f690380ae7dacbe94483",
+          "result_sha256": "0e63115ebf00edb575afe3b814027afd116ddd4053fd9e7e39d0c4b1db9a626c",
+          "physical_checks": 4779,
+          "mean_residence": 3.375,
+          "residence_range": 0.5,
+          "unused_cycles": 0
+        },
+        {
+          "H": 10,
+          "schedule": "results/huber_residence_20261125/reuse/epsilon/H10_short_cap1107_over_2/schedule.json",
+          "schedule_sha256": "c090dec0a38c1122f5a2f8025610148c62726096a36805aee1ce75341edeb99b",
+          "result_sha256": "427aa80c770c72822b0967004cd7b5c5162524877f47291ad6665a21d46e8b0e",
+          "physical_checks": 3885,
+          "mean_residence": 3.375,
+          "residence_range": 0.5,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 8,
+      "branch": "8m_553",
+      "fA": 553.75,
+      "fB": 3.46875,
+      "witnesses": [
+        {
+          "H": 3,
+          "schedule": "results/huber_residence_20261125/reuse/epsilon/H3_short_cap2215_over_4/schedule.json",
+          "schedule_sha256": "9d9011e6fade5f86710d1cf95b1fa4a91ff2a3914c518a7e385f8a93ec7430b3",
+          "result_sha256": "096c58ec83ca87259f1fec4070395f024d22e4221cf7494412a936e46d22432f",
+          "physical_checks": 4779,
+          "mean_residence": 3.4375,
+          "residence_range": 0.25,
+          "unused_cycles": 0
+        },
+        {
+          "H": 10,
+          "schedule": "results/huber_residence_20261125/reuse/epsilon/H10_short_cap2215_over_4/schedule.json",
+          "schedule_sha256": "b5ff673cbfb74a6354fb332cf96f7c46d96aedff3265b1c1d40397958a770df3",
+          "result_sha256": "af4d544df3ba87ebce195657d078afe9c31fc124e5f2f9889c9017360eba0c5e",
+          "physical_checks": 3885,
+          "mean_residence": 3.4375000002499974,
+          "residence_range": 0.2500000009999894,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 8,
+      "branch": "8m_576",
+      "fA": 576.375,
+      "fB": 3.4609374865304403,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/pareto_square_20261125/fixed/long8/cap_576.375/schedule.json",
+          "schedule_sha256": "70392beb088d7deb61b33d78f2871b5103ba8c1586b4b8f2468cbcca9d577de2",
+          "result_sha256": "58880a60a48a989123b9304ca35ec834cab2ccae657caf7ea2697f055a999239",
+          "physical_checks": 4320,
+          "mean_residence": 3.2656249977646716,
+          "residence_range": 0.6249999820252299,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 8,
+      "branch": "8m_576",
+      "fA": 576.5,
+      "fB": 3.4374999887803064,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/pareto_square_20261125/fixed/long8/cap_576.5/schedule.json",
+          "schedule_sha256": "b60dc602a7b63173fe403d5b5beaa9f78e38db1622311d3154eb91d37645071b",
+          "result_sha256": "dc2ed22987cb310e828a34e4aa4cc09196b910a54648f9a50ef750aa94e0e88a",
+          "physical_checks": 4315,
+          "mean_residence": 3.3124999977411314,
+          "residence_range": 0.49999998207835006,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 8,
+      "branch": "8m_576",
+      "fA": 576.5625,
+      "fB": 3.431640617823655,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/pareto_square_20261125/fixed/long8/cap_576.5625/schedule.json",
+          "schedule_sha256": "57b1fb912fd4d6aa1cb951499e1d75ac973b408168611a8e03423759f9c029d1",
+          "result_sha256": "974b6034aa3193df3b0aa3c4af49e329f543a40f1bdf92e1c8036b7af2489885",
+          "physical_checks": 4320,
+          "mean_residence": 3.335937485629639,
+          "residence_range": 0.43750001644346526,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 8,
+      "branch": "8m_576",
+      "fA": 576.625,
+      "fB": 3.429687501992292,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/pareto_square_20261125/fixed/long8/cap_576.625/schedule.json",
+          "schedule_sha256": "0cb60bd528f4e672a8f08714d8432e90d4475a3379878646822111467c96ceb8",
+          "result_sha256": "eabb45bf36fde938bd07daf6c68b747148553cc6fe8ab5e629de6d8f7d1d5ac2",
+          "physical_checks": 4320,
+          "mean_residence": 3.3593313401027594,
+          "residence_range": 0.375116413635908,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 16,
+      "branch": "16m_873",
+      "fA": 873.625,
+      "fB": 3.4785156004520315,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/pareto_enriched_20261125/fixed/cross873/cap_873.625/schedule.json",
+          "schedule_sha256": "24a6bea08fecdf760a04b5ca094da160c1a6f215c8496d1c7ef221d6cbb18e3e",
+          "result_sha256": "12ad7d7b43469f65b8f81d0a10e91dde8385968f0f2f039a7325f38d5a3f4090",
+          "physical_checks": 11006,
+          "mean_residence": 3.242187500033257,
+          "residence_range": 0.6874999642454895,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 16,
+      "branch": "16m_873",
+      "fA": 874.0,
+      "fB": 3.437499987731663,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/pareto_enriched_20261125/fixed/cross873/cap_874/schedule.json",
+          "schedule_sha256": "b258befa177fbea9bb69303755e5ad810cd687aa269e54612ebb509571cee655",
+          "result_sha256": "00fb82d0d794828765322df189a55a2afb03962dd12f7ee1f3823df36daca03f",
+          "physical_checks": 11006,
+          "mean_residence": 3.3125000009630483,
+          "residence_range": 0.49999997353722847,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 16,
+      "branch": "16m_873",
+      "fA": 874.25,
+      "fB": 3.429687488885827,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/pareto_enriched_20261125/fixed/cross875/cap_874.25/schedule.json",
+          "schedule_sha256": "edece6c5c8496b14f05024014f01590bc0d02e78d5075e291a4e613ac106b8e3",
+          "result_sha256": "61f53d5432c5513888416c4733441506167d0265925f5c50f7119327b023a602",
+          "physical_checks": 11006,
+          "mean_residence": 3.359349245855192,
+          "residence_range": 0.3750686417994302,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 16,
+      "branch": "16m_986",
+      "fA": 986.75,
+      "fB": 3.421874986324895,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/square_reverse16_20261125/micro/left/cap_986.75/schedule.json",
+          "schedule_sha256": "735dcf015ca76a193949c447a5687e0e66fe581cf99073fd252b1df4bee65b35",
+          "result_sha256": "1cffb7f8f58d81c2aaf7dd03b9db21e9f590faa37c73968232496405b6e7b880",
+          "physical_checks": 11624,
+          "mean_residence": 3.2265625023099744,
+          "residence_range": 0.6249999744238721,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 16,
+      "branch": "16m_986",
+      "fA": 986.875,
+      "fB": 3.4121093628367416,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/square_reverse16_20261125/micro/left/cap_986.875/schedule.json",
+          "schedule_sha256": "3f5adc8089820d9e8b1a9abfde4da7c51be2170d9bceabaa669a6fc072da5b5b",
+          "result_sha256": "a67501d59edc40fb7d2a73402b0be078ca98a28f46cf92e875862e7d452317e3",
+          "physical_checks": 11624,
+          "mean_residence": 3.253906252450939,
+          "residence_range": 0.5624999740192038,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 16,
+      "branch": "16m_986",
+      "fA": 987.0,
+      "fB": 3.406249984312766,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/square_reverse16_20261125/micro/left/cap_987.0/schedule.json",
+          "schedule_sha256": "2c46652e511dbc49b20042bf397c1e0e335d2c26f52e2d7c99ad9ff9cd83683a",
+          "result_sha256": "11675a641582623dbfcb2679529dda264825c243e00d0dccab2823ed24ffabfd",
+          "physical_checks": 11624,
+          "mean_residence": 3.2812500020726674,
+          "residence_range": 0.499999964480196,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 16,
+      "branch": "16m_986",
+      "fA": 987.015625,
+      "fB": 3.405792222211855,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/square_reverse16_20261125/micro/near_global/cap_987.015625/schedule.json",
+          "schedule_sha256": "5ec63857867c5b38a8a7eccb80980ab62f75eba22cb4dfcde2bf7c242b14ab32",
+          "result_sha256": "83c59b923060a9915d0b949621382ee319e2e9e3f669d4da16d62e0cbf18d3aa",
+          "physical_checks": 11624,
+          "mean_residence": 3.284667962797208,
+          "residence_range": 0.4921874834138862,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 16,
+      "branch": "16m_986",
+      "fA": 987.03125,
+      "fB": 3.4053954928796544,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/square_reverse16_20261125/micro/near_global/cap_987.03125/schedule.json",
+          "schedule_sha256": "fce663b5ece6ef3fdffde830c459a6eec927185745ceac1e088c8834d239976f",
+          "result_sha256": "31f65ca267068687c98d4ba0dbb192ab070d987e5f5c63a38736f6078b1d76ff",
+          "physical_checks": 11624,
+          "mean_residence": 3.2880859383114327,
+          "residence_range": 0.48437496749568254,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 16,
+      "branch": "16m_986",
+      "fA": 987.046875,
+      "fB": 3.4050598001021863,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/square_reverse16_20261125/micro/near_global/cap_987.046875/schedule.json",
+          "schedule_sha256": "9dfea6a24a1c3f87879a57b7bbc68131883ddba109bccdbd617862bbeaea0949",
+          "result_sha256": "ddd46253443e2162fa52e27ad30f5ded38966e68de42526a82557340b1839bfc",
+          "physical_checks": 11624,
+          "mean_residence": 3.291503904080045,
+          "residence_range": 0.47656247443990196,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 16,
+      "branch": "16m_986",
+      "fA": 987.0625,
+      "fB": 3.4047851423086275,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/square_reverse16_20261125/micro/near_global/cap_987.0625/schedule.json",
+          "schedule_sha256": "913272e98adb15a1528b2a6480f5daf8a8e5318e47bb51b876921afe9a63c723",
+          "result_sha256": "d35bd30923fd8ef8f2b573e2c1bcd9d7855a6b13a69ad2f1efa7ae62f9860b9e",
+          "physical_checks": 11624,
+          "mean_residence": 3.294921870081943,
+          "residence_range": 0.4687499807502604,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 16,
+      "branch": "16m_986",
+      "fA": 987.078125,
+      "fB": 3.4045715197984747,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/square_reverse16_20261125/micro/near_global/cap_987.078125/schedule.json",
+          "schedule_sha256": "4f004dd274ab88861e46a3e4743a2d520190a9d46d3871ae74dc020aea6106a5",
+          "result_sha256": "72ed87fc30df54d9fff6dff529d6881085ae170197070eb077860697300e1b01",
+          "physical_checks": 11624,
+          "mean_residence": 3.2983398321356034,
+          "residence_range": 0.4609374961160597,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 16,
+      "branch": "16m_986",
+      "fA": 987.09375,
+      "fB": 3.4044189313438564,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/square_reverse16_20261125/micro/near_global/cap_987.09375/schedule.json",
+          "schedule_sha256": "f5a0d6461afffd9edba32fe714b64099c101e1bdd88fba584dc41a6e9272ffa9",
+          "result_sha256": "6aea60df9a83f8c2cc67adfb275e1eea05853fa66a1d7225de9fbbce8c0dd1be",
+          "physical_checks": 11624,
+          "mean_residence": 3.301757813103194,
+          "residence_range": 0.45312496784146106,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 16,
+      "branch": "16m_986",
+      "fA": 987.109375,
+      "fB": 3.404327381120391,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/square_reverse16_20261125/micro/near_global/cap_987.109375/schedule.json",
+          "schedule_sha256": "cf01c1cb77f8a35369aea9f2d53293fae03a45506f82a45a9ca0a25fd8eb8508",
+          "result_sha256": "be9f95097f907a3dec26f0a29ed17e71bcdbce6395456af343309419bb00dd28",
+          "physical_checks": 11624,
+          "mean_residence": 3.3051756607242027,
+          "residence_range": 0.4453127449247063,
+          "unused_cycles": 0
+        }
+      ]
+    },
+    {
+      "size": 16,
+      "branch": "16m_986",
+      "fA": 987.125,
+      "fB": 3.4042968769536,
+      "witnesses": [
+        {
+          "H": 10,
+          "schedule": "results/square_reverse16_20261125/micro/near_global/cap_987.125/schedule.json",
+          "schedule_sha256": "06c663d5a302a14c116b8c347060d87c8b3d31d1a51d9275301d19d139c0411e",
+          "result_sha256": "bb015487621493d521c8af23e03bcb40fa8a1426cb7e48372ddf8dcdb8bbe05d",
+          "physical_checks": 11627,
+          "mean_residence": 3.3085301536454423,
+          "residence_range": 0.4376453434189784,
+          "unused_cycles": 0
+        }
+      ]
+    }
+  ]
+}

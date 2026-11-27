@@ -17,7 +17,7 @@ ARCHIVE = JMS / "results/gantt_huber_comparison_20261125"
 OUTPUT = JMS / "figures/huber_gantt_20261125"
 
 
-def time_axis(ax, finish, release, step):
+def time_axis(ax, finish, release, step, terminal_labels=("完工", "释放")):
     """Anchor labels to actual times; give the two nearby terminal ticks separate rows."""
     ax.set_xlim(0, release * 1.035)
     ax.tick_params(axis="x", labelsize=7.2, width=.7, length=3, pad=2.5)
@@ -29,8 +29,8 @@ def time_axis(ax, finish, release, step):
     axis_trace = ax.get_xaxis_transform()
     labels = []
     for t, name, style, color, offset in (
-        (finish, "完工", "--", "#222222", 5.5),
-        (release, "释放", ":", "#5C5C5C", 15.5),
+        (finish, terminal_labels[0], "--", "#222222", 5.5),
+        (release, terminal_labels[1], ":", "#5C5C5C", 15.5),
     ):
         ax.axvline(t, color=color, ls=style, lw=.8, zorder=3)
         ax.annotate("", xy=(t, 0), xycoords=axis_trace, xytext=(0, -offset + 1.6),
@@ -57,7 +57,7 @@ def time_axis(ax, finish, release, step):
     return labels
 
 
-def draw(record):
+def draw(record, *, target=None, legend_labels=None, terminal_labels=("完工", "释放")):
     info = record["summary"]
     source, certificate = (JMS / info[key] for key in ("source", "certificate"))
     assert sha(source) == info["source_sha256"] and sha(certificate) == info["certificate_sha256"]
@@ -106,8 +106,10 @@ def draw(record):
                 interior.append((artist, cycle["start"], cycle["end"]))
     ax.set_yticks(range(len(lanes)), ["真空辅助库 VS" if s == "VS" else s for s in lanes], fontsize=7.5)
     ax.set_ylim(len(lanes) - .5, -.5)
-    labels = time_axis(ax, finish, release, {4: 100, 16: 200, 75: 1000}[n])
-    key = fig.legend(handles=[Patch(facecolor=colors[action], label=LEGEND_LABELS.get(action, action))
+    labels = time_axis(ax, finish, release, {4: 100, 16: 200, 75: 1000}[n], terminal_labels)
+    if legend_labels is None:
+        legend_labels = LEGEND_LABELS
+    key = fig.legend(handles=[Patch(facecolor=colors[action], label=legend_labels.get(action, action))
                               for action in legend], loc="lower center", bbox_to_anchor=(.51, .035 / height),
                      ncol=4, frameon=False, fontsize=7.2, columnspacing=.85, handlelength=1.2,
                      handletextpad=.5, labelspacing=.4, borderpad=.2, borderaxespad=0)
@@ -121,7 +123,8 @@ def draw(record):
     for artist, start, end in interior:
         box = artist.get_window_extent(renderer)
         assert ax.transData.transform((start, 0))[0] <= box.x0 <= box.x1 <= ax.transData.transform((end, 0))[0]
-    target = OUTPUT / f"fig_schedule_n{n}_huber_cn.pdf"
+    if target is None:
+        target = OUTPUT / f"fig_schedule_n{n}_huber_cn.pdf"
     fig.savefig(target, facecolor="white", metadata={"CreationDate": None, "ModDate": None})
     plt.close(fig)
     return dict(n=n, source=info["source"], source_sha256=sha(source), certificate=info["certificate"],

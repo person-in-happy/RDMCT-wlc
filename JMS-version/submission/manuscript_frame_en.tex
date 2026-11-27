@@ -1,0 +1,69 @@
+% !TeX program = pdflatex
+\documentclass[final,5p,times,twocolumn]{elsarticle}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs,array,multirow,makecell}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}m{#1}}
+\usepackage{graphicx,caption,enumitem,placeins,float,flafter}
+\usepackage[expansion=false]{microtype}
+\usepackage{xurl,xcolor}
+\urlstyle{same}
+\definecolor{JMSCiteBlue}{HTML}{0072B2}
+\usepackage[colorlinks=true,citecolor=JMSCiteBlue,linkcolor=JMSCiteBlue,urlcolor=JMSCiteBlue]{hyperref}
+\pdfstringdefDisableCommands{\def\corref#1{}}
+\graphicspath{{figures/submission_en/}}
+\setlength{\emergencystretch}{3em}
+\setcounter{topnumber}{2}
+\setcounter{dbltopnumber}{3}
+\renewcommand{\topfraction}{0.90}
+\renewcommand{\dbltopfraction}{0.80}
+\renewcommand{\textfraction}{0.10}
+\renewcommand{\floatpagefraction}{0.85}
+\renewcommand{\dblfloatpagefraction}{0.85}
+\captionsetup{font=small,labelfont=bf,labelsep=space}
+\journal{Journal of Manufacturing Systems}
+\biboptions{numbers,sort&compress}
+\hypersetup{pdftitle={Bi-objective scheduling of dual-source mixed-flow rotating-chamber cluster tools under full-occupancy processing},pdfauthor={Lincong Wei; Lizhen Shao; Wei Wang}}
+\begin{document}
+\raggedbottom
+\begin{frontmatter}
+\title{Bi-objective scheduling of dual-source mixed-flow rotating-chamber cluster tools under full-occupancy processing}
+\author[ustb]{Lincong Wei}
+\author[ustb]{Lizhen Shao\corref{cor1}}
+\ead{lshao@ustb.edu.cn}
+\author[ustb]{Wei Wang}
+\cortext[cor1]{Corresponding author.}
+\address[ustb]{Department of Control Science and Engineering, University of Science and Technology Beijing, No. 30 Xueyuan Road, Haidian District, Beijing 100083, China}
+\begin{abstract}
+Advanced semiconductor manufacturing requires high throughput and complex process recipes. Schedules for rotating-chamber cluster tools must balance batch makespan and process quality within a limited computation time. All four chamber positions must be occupied during processing. The same physical auxiliary wafers fill unused positions in production and occupy the chamber during cleaning. Their loading and unloading order affects both the time at which product wafers return to their load ports and how long they wait in the chamber, making it harder to allocate resources and sequence robot operations. We formulate a bi-objective mixed-integer model that minimizes batch makespan and a process objective combining mean nonprocessing residence time, within-recipe variation in residence time, and the shortfall from the chamber contamination threshold at each cleaning, measured in production cycles. For batches of 2, 4, and 8 product wafers split equally between two recipes, the schedules attain the lower bounds on both objectives simultaneously. For the 16-wafer mixed batch, two-stage optimization reduces the mean process objective by 65.14\% relative to makespan-only optimization at the same makespan of 810~s. In the four-wafer mixed-batch ablation, mean makespan falls from 403~s with the hierarchical sequence model (HEM) cut-selection baseline to 398~s with the proposed method. Removing hierarchical refinement of the initial schedule increases the mean to 406.33~s. Pareto fronts show which objective pairs dominate others, and Gantt charts show when wafers occupy each resource.
+\end{abstract}
+\begin{keyword}
+Cluster tools \sep Dual-source mixed flow \sep Full-occupancy processing \sep Bi-objective scheduling \sep Reinforcement learning \sep Structured initialization
+\end{keyword}
+\end{frontmatter}
+
+\input{submission/manuscript_body_en}
+
+\section*{CRediT authorship contribution statement}
+\textbf{Lincong~Wei} contributed to software, validation, formal analysis, investigation, data curation, visualization, writing the original draft, project administration, and manuscript review and editing.
+\textbf{Lizhen~Shao} contributed to methodology, formal analysis, investigation, manuscript review and editing, and supervision.
+\textbf{Wei~Wang} contributed to conceptualization, formal analysis, data curation, manuscript review and editing, and supervision.
+
+\section*{Funding}
+This research did not receive any specific grant from funding agencies in the public, commercial, or not-for-profit sectors.
+
+\section*{Declaration of competing interest}
+The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
+
+\section*{Data availability}
+The supplementary data include the 108 threshold records, training logs and checkpoint identifiers. The remaining data supporting the findings will be available from the corresponding author upon reasonable request after publication.
+
+\section*{Declaration of generative AI and AI-assisted technologies in the manuscript preparation process}
+The authors used OpenAI ChatGPT and Codex to assist with language editing, translation between Chinese and English, literature searches, organizing research materials, \LaTeX{} consistency checks, verification of numerical results, and visualization of experimental results. The authors take responsibility for the manuscript, methods, and results.
+
+\FloatBarrier
+\small
+\setlength{\bibsep}{0pt}
+\input{ordered-bibliography}
+\end{document}

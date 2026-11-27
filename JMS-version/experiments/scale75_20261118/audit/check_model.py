@@ -74,14 +74,25 @@ def witness(data):
             before, carry_before = current, carry
     for e in events.values():
         v[e["name"]+"_s"] = e["start"]
-    # This schedule uses sequential atomic robot actions, including within a pair.
-    # Only one orientation will be requested for each pair by the generator.
+    # The model may order simultaneous same-pair pickups or placements either
+    # way in its capacity prefix. Both have the same signed capacity change.
+    job_pair = {job["name"]: job["pair"] for job in jobs}
     for robot in ("ATR", "VTR"):
         ordered = sorted((e for e in events.values() if e["robot"] == robot), key=lambda e: e["start"])
         for i, e in enumerate(ordered):
-            if i and ordered[i-1]["end"] > e["start"] + 1e-8:
-                raise ValueError("This witness decoder expects sequential atomic handling")
             for later in ordered[i+1:]:
+                if e["end"] > later["start"] + 1e-8:
+                    pair = job_pair.get(e.get("job"))
+                    compatible = (pair is not None and pair == job_pair.get(later.get("job"))
+                                  and e["job"] != later["job"]
+                                  and e["kind"] == later["kind"]
+                                  and e["kind"] not in ("al_put", "al_pick")
+                                  and e["location"] == later["location"]
+                                  and (e["start"], e["end"]) == (later["start"], later["end"]))
+                    if not compatible:
+                        raise ValueError(f"Incompatible robot operations: {e['name']}, {later['name']}")
+                    for a,b in ((e,later),(later,e)):
+                        v[f"sync_{a['name']}_{b['name']}"] = 1
                 v[f"order_{e['name']}_{later['name']}"] = 1
     width = cfg.horizon + max(cfg.upper_reset, cfg.lower_reset)
     for j in jobs:

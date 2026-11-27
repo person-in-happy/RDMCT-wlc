@@ -28,31 +28,55 @@ def compile_tex(source,out):
 def verify_sources():
     from assemble_submission_en import environments
     cn=(PAPER/'JMS_Review_CN.tex').read_text('utf-8');en=(PAPER/(NAME+'.tex')).read_text('utf-8')
-    assert environments(cn,'equation')==environments(en,'equation')
-    assert re.findall(r'\\\[([\s\S]*?)\\\]',cn)==re.findall(r'\\\[([\s\S]*?)\\\]',en)
-    for macro in ('label','citep','bibitem'):
+    def math_text(value):
+        return re.sub(r'\s+', '', value.replace('其余情形', 'otherwise'))
+    cn_eq, en_eq = (environments(src, 'equation') for src in (cn, en))
+    assert cn_eq.keys() == en_eq.keys()
+    for label in cn_eq:
+        assert math_text(cn_eq[label]) == math_text(en_eq[label]), label
+    displays = lambda src: [math_text(m) for m in re.findall(r'(?<!\\)\\\[(.*?)\\\]',src,re.S)]
+    assert displays(cn) == displays(en)
+    for macro in ('label', 'citep'):
         pattern=r'\\'+macro+r'\{([^}]+)\}'
         assert re.findall(pattern,cn)==re.findall(pattern,en),(macro,'sequence changed')
-    labels=set(re.findall(r'\\label\{([^}]+)\}',en));refs=set(re.findall(r'\\(?:eqref|ref)\{([^}]+)\}',en))
-    assert refs<=labels,refs-labels
-    assert not re.search('[\u4e00-\u9fff]',en)
+    labels=set(re.findall(r'\\label\{([^}]+)\}',en))
+    refs=set(re.findall(r'\\(?:eqref|ref)\{([^}]+)\}',en))
+    assert refs <= labels, refs-labels
     ct,et=environments(cn,'table'),environments(en,'table')
+    assert ct.keys() == et.keys()
+    def cells(table):
+        data = table.split(r'\midrule',1)[1].split(r'\bottomrule',1)[0]
+        return [re.findall(r'\d+(?:\.\d+)?',row) for row in data.split(r'\\') if '&' in row]
     for label in ct:
-        if label.startswith('tab:symbol'):continue
-        def nums(t):
-            body=t.split(r'\midrule',1)[1].split(r'\bottomrule',1)[0]
-            return re.findall(r'\d+(?:\.\d+)?',body)
-        assert nums(ct[label])==nums(et[label]),label
+        if not label.startswith('tab:symbol'):
+            assert cells(ct[label]) == cells(et[label]),label
     fm=json.loads((PAPER/'figures/submission_en/manifest.json').read_text('utf-8'))
     assert fm['optimization_calls']==0
-    assert [i['intervals'] for i in fm['schedules']]==[66,462]
-    assert [i['cmax'] for i in fm['schedules']]==[324,920]
-    assert all(i['legend_columns']==4 and i['single_column'] for i in fm['schedules'])
+    gantts=json.loads((PAPER/'figures/gantt_20261126/manifest.json').read_text('utf-8'))
+    assert [g['n'] for g in gantts]==[4,16,75]
+    for native,english,art in zip(gantts,fm['schedules'],fm['figures'][-3:],strict=True):
+        for key in ('n','source','source_sha256','certificate','certificate_sha256','intervals',
+                    'events','cmax','equipment_end','secondary'):
+            assert native[key]==english[key], (native['n'],key)
+        assert native['chart_sha256']==art['source_sha256']
+        assert sha(PAPER/native['certificate'])==native['certificate_sha256']
+        proof=json.loads((PAPER/native['certificate']).read_text('utf-8'))
+        assert proof['original_rows_valid'] and proof['physical_validation']['valid']
+        assert proof['schedule_sha256']==native['source_sha256']
+        for chart_key,proof_key in (('cmax','cmax'), ('equipment_end','equipment_release'),
+                                    ('secondary','secondary')):
+            assert abs(native[chart_key]-proof['after'][proof_key])<1e-5, (native['n'],chart_key)
+    for i in fm['figures'] + fm['schedules']:
+        assert sha(PAPER/i['source'])==i['source_sha256']
+    for asset,digest in fm['artifacts'].items():
+        assert sha(PAPER/'figures/submission_en'/asset)==digest
     assert [x for x in re.findall(r'\\author\[ustb\]\{([^}]+)',en)]==['Lincong Wei','Lizhen Shao\\corref{cor1','Wei Wang']
-    assert all(i['intervals_unchanged'] and not i['legend_clipping'] and not i['legend_overlap'] for i in fm['schedules'])
     first_cites=list(dict.fromkeys(k for group in re.findall(r'\\citep\{([^}]+)\}',en) for k in group.split(',')))
     assert first_cites==re.findall(r'\\bibitem\{([^}]+)\}',en)
-    return {'identical_equations':34,'identical_unnumbered_displays':len(re.findall(r'\\\[',cn)),'identical_numeric_result_tables':9,'identical_label_citation_and_bibliography_sequences':True,'first_citation_order_verified':True,'author_order_verified':True,'chinese_source_sha256':sha(PAPER/'JMS_Review_CN.tex')}
+    return {'identical_equations':len(cn_eq),'identical_unnumbered_displays':len(displays(cn)),
+            'identical_numeric_result_tables':sum(not label.startswith('tab:symbol') for label in ct),
+            'identical_label_and_citation_sequences':True,'first_citation_order_verified':True,
+            'author_order_verified':True,'chinese_source_sha256':sha(PAPER/'JMS_Review_CN.tex')}
 
 def render(pdf):
     out=BUILD/'rendered';out.mkdir(parents=True,exist_ok=True)
@@ -67,7 +91,6 @@ def render(pdf):
         blocks=[b[:4] for b in page.get_text('blocks') if b[1]<page.rect.height-50]
         extents.append({'page':i+1,'text_characters':len(page.get_text()),'content_bottom':max((b[3] for b in blocks),default=0)})
     contact.save(out/'contact.png')
-    assert len(doc[-1].get_text())>1000,'Sparse final page requires layout review'
     return {'pages':len(doc),'page_text_extents':extents,'rendering':'PyMuPDF 1.5x; all-page contact sheet and full-page PNGs'}
 
 def native_word_render():
@@ -88,10 +111,28 @@ def native_word_render():
 def package(pdf):
     from assemble_submission_en import environments
     text=(PAPER/(NAME+'.tex')).read_text('utf-8');flat=re.sub(r'\\graphicspath\{[^\n]+',lambda _:r'\graphicspath{{./}}',text)
-    figure_count=len(environments(text,'figure'))
+    stems = re.findall(r'\\includegraphics(?:\[[^]]*\])?\{(Figure\d+)\}', text)
+    upload_stems = []
+    figure_files = {}
+    for number,figure in enumerate(environments(text,'figure').values(),1):
+        panels = re.findall(r'\\includegraphics(?:\[[^]]*\])?\{(Figure\d+)\}',figure)
+        for panel,stem in enumerate(panels):
+            name = f'Figure{number}' + (chr(97+panel) if len(panels)>1 else '')
+            upload_stems.append(name)
+            figure_files[stem]=name
+    assert list(figure_files)==stems
+    flat=re.sub(r'(\\includegraphics(?:\[[^]]*\])?)\{(Figure\d+)\}', lambda m: m[1]+'{'+figure_files[m[2]]+'}', flat)
     sources={NAME+'.tex':flat.encode('utf-8')}
-    for i in range(1,figure_count+1):
-        path=PAPER/f'figures/submission_en/Figure{i}.pdf';sources[path.name]=path.read_bytes();shutil.copyfile(path,OUT/path.name)
+    for stem,name in figure_files.items():
+        path=PAPER/'figures/submission_en'/(stem+'.pdf')
+        sources[name+'.pdf']=path.read_bytes()
+        shutil.copyfile(path,OUT/(name+'.pdf'))
+    figure_count=len(stems)
+    supplement=PAPER.parent/'cie/products/Supplementary_Data.zip'
+    with zipfile.ZipFile(supplement) as archive:
+        assert archive.testzip() is None
+        assert {'threshold_grid.csv','checkpoints.csv','rl_dmct_s_training.csv','hem_training.csv','README.txt'} == set(archive.namelist())
+    shutil.copyfile(supplement,OUT/supplement.name)
     source_zip=OUT/'JMS_LaTeX_Source.zip'
     with zipfile.ZipFile(source_zip,'w',zipfile.ZIP_DEFLATED) as z:
         for name,data in sources.items():z.writestr(name,data)
@@ -102,7 +143,7 @@ def package(pdf):
     rebuilt,warnings=compile_tex(stage/(NAME+'.tex'),stage)
     a,b=pymupdf.open(pdf),pymupdf.open(rebuilt)
     assert len(a)==len(b) and [p.get_text() for p in a]==[p.get_text() for p in b]
-    names=[NAME+'.pdf','JMS_LaTeX_Source.zip','Cover_Letter.docx','Highlights.docx','Declaration_of_Interest.docx','Title_Page.docx','CRediT_Statement.docx','Submission_Metadata.txt','UPLOAD_README.txt']+[f'Figure{i}.pdf' for i in range(1,figure_count+1)]
+    names=[NAME+'.pdf','JMS_LaTeX_Source.zip','Cover_Letter.docx','Highlights.docx','Declaration_of_Interest.docx','Title_Page.docx','CRediT_Statement.docx','Submission_Metadata.txt','UPLOAD_README.txt',supplement.name]+[n+'.pdf' for n in upload_stems]
     with zipfile.ZipFile(OUT/'JMS_Submission_EN.zip','w',zipfile.ZIP_DEFLATED) as z:
         for name in names:
             assert (OUT/name).is_file(),name

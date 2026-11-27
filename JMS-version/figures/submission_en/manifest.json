@@ -1,238 +1,169 @@
 {
-  "topology": [
+  "optimization_calls": 0,
+  "figures": [
     {
-      "source": "figures\\pjob_sequence_cn\\fig_system_pjob_cn.svg",
-      "source_sha256": "42e2e3db18685373c79c4f3489790bf6962e0f4a0bac75d70ce3f9c3af11ffc8",
-      "figure": 1
+      "figure": 1,
+      "source": "figures/revision_20261127/fig_system_pjob_cn.pdf",
+      "source_sha256": "e9bc7d0b60abdb0cc2214bfd24b22c1893a345a2684c040920f08034ab1a7c0c",
+      "translated_labels": 11
     },
     {
-      "source": "figures\\pjob_sequence_cn\\fig_single_source_pjob_cn.svg",
-      "source_sha256": "fefa5f82be9ac35e007cdc4f43b6522686745f520a6dd58f48a7d00de5ffd850",
-      "figure": 2
+      "figure": 2,
+      "source": "figures/revision_20261127/fig_single_source_pjob_cn.pdf",
+      "source_sha256": "860f93dbedaae9ac74e754b86aa2b370e9dafb9ad942a7c69237c0a8862f457b",
+      "translated_labels": 12
+    },
+    {
+      "figure": 3,
+      "source": "figures/compact_20261117/fig_chain_cn_nature.pdf",
+      "source_sha256": "31950f21ca47f2d6d245bca5e841bf4933b6b0736d3804426514473f4c1dea4d",
+      "translated_labels": 17
+    },
+    {
+      "figure": 4,
+      "source": "figures/review_20261125/terminal_choices.pdf",
+      "source_sha256": "5a9b771da75b96593b496e286a3cb32f6fafeb51f38d367a04fda3b3f97449be",
+      "translated_labels": 9
+    },
+    {
+      "figure": 5,
+      "source": "figures/compact_20261117/fig_parallel_cn_nature.pdf",
+      "source_sha256": "fe9fb995fdee3a5578cb128209072e5a612baba53af4cf9e5f5b57e8a8950832",
+      "translated_labels": 12
+    },
+    {
+      "figure": 6,
+      "source": "figures/revision_20261127/tradeoffs.pdf",
+      "source_sha256": "56c7954355b4fc66d113f3a7bc5067a6070a4b857df840cd5eb772d359f0a4e4",
+      "windows_per_row": [
+        2,
+        2,
+        2
+      ],
+      "window_counts": [
+        [
+          7,
+          5
+        ],
+        [
+          5,
+          4
+        ],
+        [
+          3,
+          11
+        ]
+      ],
+      "marker_count": 35,
+      "marker_manifest": "figures/revision_20261127/pareto_solved_schedules.json",
+      "marker_manifest_sha256": "fc980f44cf71e51eccc088162150bd8fea70b6a32b7e26c8f66d3a173b06fcaf",
+      "panel_branches": [
+        "4p_425",
+        "4p_491",
+        "8m_553",
+        "8m_576",
+        "16m_873",
+        "16m_986"
+      ],
+      "branch_manifest": "results/pareto_publication_20261125/displayed_curves.json"
+    },
+    {
+      "figure": 7,
+      "source": "figures/gantt_20261126/fig_schedule_n4_square_cn.pdf",
+      "source_sha256": "33bcd89e93dad97955aa858323d31b33b242672b6fc827363633a6bb6c863008",
+      "translated_labels": 28
+    },
+    {
+      "figure": 8,
+      "source": "figures/gantt_20261126/fig_schedule_n16_square_cn.pdf",
+      "source_sha256": "343b586daca5fb10b74926562b7447a927335408a176183593dac37f91d28427",
+      "translated_labels": 27
+    },
+    {
+      "figure": 9,
+      "source": "figures/gantt_20261126/fig_schedule_n75_square_cn.pdf",
+      "source_sha256": "dd3f2a0362c3701b62df61f0ec5283f29793987c64b1af6b3fb07d0fc49748ee",
+      "translated_labels": 30
     }
   ],
-  "parallel": {
-    "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\figures\\fig_parallel_en_nature.pdf",
-    "source_sha256": "25a826f7f3c2ac1978a94ed986ed9e64afdd13ec65aa868122852490e88a8827",
-    "label_replacements": {
-      "four slots full": "full occupancy",
-      "four spaces": "all four wafers"
-    }
-  },
-  "chain": {
-    "source": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\figures\\terminology_en\\fig_chain_en_nature.pdf",
-    "source_sha256": "4e84a929fc065a3342c7a244c2fccfe85d2a7b1b53fab644f4203daa37badeba",
-    "legend": "Auxiliary PW pair",
-    "original_drawing_unchanged": true
-  },
   "schedules": [
     {
-      "stem": "Figure5",
-      "result": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\revisions\\20261103_results_default_residency\\validated\\n2_H3_4x1_dual_same_lp__pjob_a87d0cfeda\\result.json",
-      "result_sha256": "ee029a795ca9228f05cfa1c9e1d5389e82ddcbb7a10d54bd53e9b6fdc32b2330",
-      "evidence": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\figures\\current_defaults_20261103\\swimlane_actions.json",
-      "evidence_sha256": "f432754b2515f26a0ffc29894b7a703784f8633e8ebcfbf6c00f89a00aa6a53e",
-      "lanes": 11,
-      "intervals": 66,
-      "events_covered": 26,
-      "cmax": 324.0,
-      "resource_end": 342.0,
+      "n": 4,
+      "source": "results/chamber_wait_20261126/holding_tiebreak/n4/schedule.json",
+      "source_sha256": "c448a58983ab2cdcf0f96a07250078df6e25d527f043107ec44abdfb2c9425e5",
+      "certificate": "results/chamber_wait_20261126/holding_tiebreak/n4/evidence.json",
+      "certificate_sha256": "c289dcb9249eabad8ea98093c84950cf5bf08d4f5ac9e16b74642f139eaaa4a2",
+      "intervals": 147,
+      "events": 52,
+      "cmax": 397.0,
+      "equipment_end": 408.0,
+      "secondary": 0.0,
+      "figure": 7,
       "intervals_unchanged": true,
-      "action_legend": [
-        "ATR pick",
-        "ATR place",
-        "Loaded move",
-        "Wafer hold",
-        "Align",
-        "LL pump",
-        "LL vacuum",
-        "LL vent",
-        "Atm. wait",
-        "VTR transfer",
-        "Process",
-        "Chamber wait",
-        "Rotate",
-        "Empty/reset"
-      ],
-      "end_marker_legend": [
-        "Batch makespan: 324 s",
-        "Equipment occupancy ends: 342 s"
-      ],
-      "symbol_keys": [
-        "P1[1:2]: Pjob1 products 1-2; D1, D2: auxiliaries"
-      ],
-      "figure_size_inches": [
-        3.55,
-        3.81
-      ],
-      "row_height_inches": 0.21,
-      "axis_label_placement": "after final tick on the same line",
-      "last_tick": 300.0,
-      "display_xlim": [
-        0.0,
-        366.99926464994803
-      ],
-      "legend_count": 2,
-      "symbol_key_lines": 1,
-      "legend_clipping": false,
-      "legend_overlap": false,
       "legend_columns": 4,
       "single_column": true
     },
     {
-      "stem": "Figure6",
-      "result": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\review\\gantt_current_model_20261111\\n16_current_D_920\\result.json",
-      "result_sha256": "f15b7747f61eab5c02adc44d9066b93e11550660a4d74a20f62771513029da30",
-      "evidence": "D:\\git\\git\\RDMCT-A3C\\JMS-version\\review\\gantt_current_model_20261111\\n16_current_D_920\\figure_evidence.json",
-      "evidence_sha256": "53c520b337a99f07f012a4f1f59192345f40dc44ba63e2dcf6cded0d21d56e03",
-      "lanes": 13,
-      "intervals": 462,
-      "events_covered": 152,
-      "cmax": 920.0,
-      "resource_end": 938.0,
+      "n": 16,
+      "source": "results/chamber_wait_20261126/holding_tiebreak/n16/schedule.json",
+      "source_sha256": "662774eea3c41e54b5451d6ec6f0fc3a448d3d178d8c1287410bce89ef8ac2ee",
+      "certificate": "results/chamber_wait_20261126/holding_tiebreak/n16/evidence.json",
+      "certificate_sha256": "0c95d801ca842d35510e36ddebdb0e366d4a45fd2b047f7a6e1242d8d5c57557",
+      "intervals": 486,
+      "events": 152,
+      "cmax": 896.0,
+      "equipment_end": 914.0,
+      "secondary": 78.0,
+      "figure": 8,
       "intervals_unchanged": true,
-      "action_legend": [
-        "ATR pick",
-        "ATR place",
-        "Loaded move",
-        "Wafer hold",
-        "Align",
-        "LL pump",
-        "LL vacuum",
-        "LL vent",
-        "Atm. wait",
-        "VTR transfer",
-        "Process",
-        "Chamber wait",
-        "Rotate",
-        "Empty/reset"
-      ],
-      "end_marker_legend": [
-        "Batch makespan: 920 s",
-        "Equipment occupancy ends: 938 s"
-      ],
-      "symbol_keys": [
-        "P1[i:j]: Pjob1 products i-j"
-      ],
-      "figure_size_inches": [
-        3.55,
-        4.2299999999999995
-      ],
-      "row_height_inches": 0.21,
-      "axis_label_placement": "after final tick on the same line",
-      "last_tick": 800.0,
-      "display_xlim": [
-        0.0,
-        978.6647057331946
-      ],
-      "legend_count": 2,
-      "symbol_key_lines": 1,
-      "legend_clipping": false,
-      "legend_overlap": false,
+      "legend_columns": 4,
+      "single_column": true
+    },
+    {
+      "n": 75,
+      "source": "results/chamber_wait_20261126/n75_first_parallel_sync/result.json",
+      "source_sha256": "ea6ffb9ae83ef2e94559c1ab705610458f456c3f2bbf8b1c56917aa0c6f7b685",
+      "certificate": "results/chamber_wait_20261126/n75_first_parallel_sync/evidence.json",
+      "certificate_sha256": "d484e3699f7466c80844f3aa8efbf6218601b5d70de0b37b3b3aa498003df133",
+      "intervals": 3278,
+      "events": 1045,
+      "cmax": 6050,
+      "equipment_end": 6533,
+      "secondary": 1366.6933333333334,
+      "figure": 9,
+      "intervals_unchanged": true,
       "legend_columns": 4,
       "single_column": true
     }
   ],
-  "cropping": {
-    "Figure1": {
-      "original_size_points": [
-        198.89999389648438,
-        167.38377380371094
-      ],
-      "cropped_size_points": [
-        198.89999389648438,
-        162.5
-      ],
-      "padding_points": 2,
-      "horizontal_scale_preserved": true,
-      "visible_pixels_unchanged": true
-    },
-    "Figure2": {
-      "original_size_points": [
-        198.89999389648438,
-        175.4304656982422
-      ],
-      "cropped_size_points": [
-        198.89999389648438,
-        170.0
-      ],
-      "padding_points": 2,
-      "horizontal_scale_preserved": true,
-      "visible_pixels_unchanged": true
-    },
-    "Figure3": {
-      "original_size_points": [
-        198.89999389648438,
-        242.67413330078125
-      ],
-      "cropped_size_points": [
-        198.89999389648438,
-        226.25
-      ],
-      "padding_points": 2,
-      "horizontal_scale_preserved": true,
-      "visible_pixels_unchanged": true
-    },
-    "Figure4": {
-      "original_size_points": [
-        198.89999389648438,
-        149.44090270996094
-      ],
-      "cropped_size_points": [
-        198.89999389648438,
-        146.0
-      ],
-      "padding_points": 2,
-      "horizontal_scale_preserved": true,
-      "visible_pixels_unchanged": true
-    },
-    "Figure5": {
-      "original_size_points": [
-        255.60000610351562,
-        274.32000732421875
-      ],
-      "cropped_size_points": [
-        255.60000610351562,
-        264.25
-      ],
-      "padding_points": 2,
-      "horizontal_scale_preserved": true,
-      "visible_pixels_unchanged": true
-    },
-    "Figure6": {
-      "original_size_points": [
-        255.60000610351562,
-        304.55999755859375
-      ],
-      "cropped_size_points": [
-        255.60000610351562,
-        294.5
-      ],
-      "padding_points": 2,
-      "horizontal_scale_preserved": true,
-      "visible_pixels_unchanged": true
-    }
-  },
-  "optimization_calls": 0,
-  "renderer_sha256": "466f4c288d43f2b66ee6d54f7e0d2eb3cdd68f67f81315ed6a56012743ff6de9",
+  "renderer_sha256": "fd6c3a0404a7430d74787deabd7b5d563dc9da9c03f990c3c2f1bd1302f04f85",
   "artifacts": {
-    "Figure1.pdf": "2d11fcabd0c0f352f9f6ba6e4b3c08855bcd904a619dc110f23db9e24b8ca03d",
-    "Figure1.png": "9180cef8011dd0cfc8e316be11b9b2c788e23fd41b9f3ec894dd2b22553d9c50",
-    "Figure1.svg": "3da794cf89639afc086aff8e25ef7951de97cf7c1a522b072cc01aa26646ac68",
-    "Figure2.pdf": "092b16714be612a2925c0dfff22ada2f8f940c6b8a4ce8005caee75b270be336",
-    "Figure2.png": "c395af7099972f79200143ab0aa251ff1ece4c6b6eacb097ac1368157e7b9da7",
-    "Figure2.svg": "7efe9f510724301c149ded8cb45349a471746f632188bcfb52ff61d5c6d6d357",
-    "Figure3.pdf": "020e7db44f41bea53f8fd3746289f6d537239a6c5da7580969ad52928c4a3e6a",
-    "Figure3.png": "4c840d5c33dccb8c5716f7f6a3e60e26d38b14619c1abd9123ae464afbf57f64",
-    "Figure3.svg": "55d29b0919ab619eed618b82fe7867a257c3e9230f18a4c717cb149a400fb371",
-    "Figure4.pdf": "604e243d6d61039507da3c6ca71f6535a80f060c04c8c6c2b5f1099a278673fb",
-    "Figure4.png": "0b607a90958bbce25b228481722fd25b2108656ca8d0bfb295c4f706a8b4b2a3",
-    "Figure4.svg": "985d923c8ae9e8e5e2886382223fafdf06a4876559368e9226d6b1967abffc69",
-    "Figure5.pdf": "e16ff742843d900b75046689ce3e771a86504a83b49acb2ac199326e06e5de11",
-    "Figure5.png": "7f8efd8b73292bc916696595914f528a494d1c09a8c2e6bdb1cf37fd19dfbcdf",
-    "Figure5.svg": "7f8f8a88d8513607ee6f257abd1606b3d663d865a91e7cf2f4dd7d46264fad53",
-    "Figure6.pdf": "f0163e6fcabcc05d973ae1e94c9daf5366701fbd0052d4bbaf1a2a017c351263",
-    "Figure6.png": "35f430bba6d7dfc7c48819826a2a4f4b21ad6f57a26b7044e158264189346c64",
-    "Figure6.svg": "d898373de49bc338de31e5fd560a36f2e79afdc19d8843095992fd6f740d5478"
+    "Figure1.pdf": "b9158c12de32a6ca8e38f6c73e506d90c6f6c69a21512fe362940ca39d05135d",
+    "Figure1.png": "58aa3073b34363b2d9966f61bf8613f49785f6175086bf01b2b331ffd36e3b57",
+    "Figure1.svg": "0ceddd8a1ec2c16f70aa69a7eb0b6fc6d6d00c24a01be5308d796024c651e255",
+    "Figure2.pdf": "b98bd9a7e8750464b55d019565cec7714df7ce62201273dc38fc75aec927a60b",
+    "Figure2.png": "5bde1bf319d8fef37ef842e7e13782062b7ac76fd709996a9690ea209abb7abc",
+    "Figure2.svg": "778fe809a4b2306c1037b510b5f40437ebd5495a1364d2adfd93d71ebe64b747",
+    "Figure3.pdf": "6906c966dbd7b7a09f3330c0bbf3b3444893037c8bfdfa8f725e2f6019fff079",
+    "Figure3.png": "2f1837b05cceb9b463225780666886505213f2a455cbe2afaf40232fba149237",
+    "Figure3.svg": "a1f7ce9f7cc087d829d9ae1ba0c7f84bdd20a12869567ad4be4b12e24bf30247",
+    "Figure4.pdf": "63938653a82362c5da647c9f613908c6f45d6783befdee947204d705e7f11695",
+    "Figure4.png": "01dae56725da99281621f3985439a4ee7b815c0605f85a00118b99e5c442cea6",
+    "Figure4.svg": "f110e579285a2e91f62fcc91973019cf04c3eaa93214ae9f94da12f98647963d",
+    "Figure5.pdf": "b9b3df09b1143e93d2ff3108c810a65e9e8da2ead8a90a12b9883420b725256c",
+    "Figure5.png": "358de012190bbcedca3d0e24a168ff099c0b49269a7ca7304322fc1030b6d563",
+    "Figure5.svg": "6271fa646b41f7ecf2e65eb8fe753a18500f1a1dba20730895b955a80339518a",
+    "Figure6.pdf": "9428df209dc347097d82cb18915339534c68483d285b9e022a88e72176e45702",
+    "Figure6.png": "b6ed7b328de38b02f5ca37bf981c18d93f173bcfce714da0a62ebc752746fa1a",
+    "Figure6.svg": "e59157f09746b7a84d3c3395b20b0fdf837f3102ab6171b8b9c6a742a2a6a2ac",
+    "Figure7.pdf": "1d1510468dd2f442143111e932184e0e2dcb556db1af8ca16cc282f25c2a33b3",
+    "Figure7.png": "00ec3a5ac74177d8af186a85199b7ffc66f80e03ff81c123448cbf873ecd0b39",
+    "Figure7.svg": "745066e7c3929abae09b099460fa6a31ae082b9a332fb4d266c6d30df005f01d",
+    "Figure8.pdf": "719b532bc8ee907a2db4becfb98c09d304123df7a14b0dd335734f94fe0efde3",
+    "Figure8.png": "1702a9b8f8d368bc061aa180731cebe44ee8b0f7461533f4149185931d856dac",
+    "Figure8.svg": "1ee2cdde05769c1d9446ec8cbd206f34bd8a48faeec04d9175287d8e482cdd3a",
+    "Figure9.pdf": "60210c70e91ff824fabdfa1ccecd64c8ecb75cb8b0f4342f97544158513f47f6",
+    "Figure9.png": "f736932c01ba645ab4f99521f5612f1695b04f9679741c0f615bd8b22fbb2b41",
+    "Figure9.svg": "e8083000d6ab7ed77432b093bbf61da5cdd991fb50373ee965fb992a42805add"
   }
 }
